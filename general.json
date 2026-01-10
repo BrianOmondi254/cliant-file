@@ -1,0 +1,92 @@
+[
+  {
+    "groupName": "ONE SACCO ",
+    "phone": "0700051102",
+    "firstName": "brian",
+    "secondName": "omondi",
+    "lastName": "okeyo",
+    "county": "Kajiado",
+    "processorPhone": "0740415992",
+    "createdAt": "2025-12-27T12:22:32.515Z",
+    "trustee_1": {
+      "type": "trustee",
+      "index": "1",
+      "title": "Chairperson",
+      "phone": "0700051102",
+      "id": "35951448"
+    },
+    "trustee_2": {
+      "type": "trustee",
+      "index": "2",
+      "title": "Trustee",
+      "phone": "0741415992",
+      "id": "35954447"
+    },
+    "trustee_3": {
+      "type": "trustee",
+      "index": "3",
+      "title": "Trustee",
+      "phone": "0742425992",
+      "id": "35951447"
+    },
+    "official_1": {
+      "type": "official",
+      "index": "1",
+      "phone": "0710051102",
+      "id": "35951446"
+    },
+    "member_1": {
+      "type": "member",
+      "index": "1",
+      "phone": "0751426962",
+      "id": "35951444"
+    },
+    "member_2": {
+      "type": "member",
+      "index": "2",
+      "phone": "0734458676",
+      "id": "35951445"
+    },
+    "member_3": {
+      "type": "member",
+      "index": "3",
+      "phone": "0721813406",
+      "id": "35951446"
+    },
+    "membersPopulatedAt": "2026-01-06T22:41:44.120Z",
+    "agentProcessed": "0740415992"
+  },
+  {
+    "groupName": "aliance plus group",
+    "phone": "0700000000",
+    "firstName": "brian",
+    "secondName": "omondi",
+    "lastName": "okeyo",
+    "county": "Embu",
+    "processorPhone": "0700051102",
+    "createdAt": "2025-12-27T12:25:44.915Z"
+  },
+  {
+    "groupName": "joyfull women group",
+    "phone": "0740050010",
+    "firstName": "duncan",
+    "secondName": "ochieng",
+    "lastName": "otieno",
+    "county": "Mombasa",
+    "constituency": "Kisauni",
+    "processorPhone": "0700051102",
+    "createdAt": "2026-01-06T10:40:12.140Z"
+  },
+  {
+    "groupName": "luo dayaspora group",
+    "phone": "0740415992",
+    "firstName": "ojuang ",
+    "secondName": "junia",
+    "lastName": "owuor",
+    "county": "Mombasa",
+    "constituency": "Changamwe",
+    "ward": "Airport",
+    "processorPhone": "0740415992",
+    "createdAt": "2026-01-06T18:21:10.402Z"
+  }
+]

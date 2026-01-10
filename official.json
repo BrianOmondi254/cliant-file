@@ -1,0 +1,34 @@
+[
+  {
+    "phoneNumber": "0711155510",
+    "name": "JANET  ODONGO ODONGO",
+    "pin": "$2b$10$CCmLYpO.X5iinRt3VkI/muQE4mAN4RvQr0LQzzo6Uo21bMUx9i/Lq",
+    "createdAt": "2025-12-28T16:50:24.204Z",
+    "docet": "Operation",
+    "status": "active"
+  },
+  {
+    "phoneNumber": "0700051102",
+    "name": "BRIAN OMONDI BRIAN",
+    "pin": "$2b$10$Va4vln7dWjz3Ml42a6okOuM3/u2ytT3jJiLjKLozGwrI1MaCEW9ci",
+    "createdAt": "2025-12-29T13:24:00.310Z",
+    "docet": "Operation",
+    "status": "active"
+  },
+  {
+    "phoneNumber": "0742425992",
+    "name": "AWUOR CONCILIA OWUOR",
+    "pin": "$2b$10$os6nle7pCFS/txp1MFOayeq79.v1hfd7OvpRaCq3pHAfADxwFGmmi",
+    "createdAt": "2025-12-31T15:22:33.339Z",
+    "docet": "Finance",
+    "status": "active"
+  },
+  {
+    "phoneNumber": "0711051102",
+    "name": "BRIAN KISERA KISERA",
+    "pin": "$2b$10$CsH6icG./XRNywKc75AAMeXIEeK9gw0ZwJAKiNVkB2TQu/mJ0j2Ii",
+    "createdAt": "2026-01-04T09:52:56.944Z",
+    "docet": "IT",
+    "status": "active"
+  }
+]

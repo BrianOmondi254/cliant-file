@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>General Account</title>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+:root {
+  --primary: #28a745;
+  --primary-dark: #218838;
+  --bg: #eceff1;
+  --card: #ffffff;
+  --text: #333;
+  --text-muted: #666;
+  --border: #ddd;
+  --focus-ring: rgba(40, 167, 69, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+}
+
+.form-wrapper {
+  width: 100%;
+  max-width: 420px;
+}
+
+.step-box {
+  background: var(--card);
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  animation: fade 0.5s ease-out;
+}
+
+@keyframes fade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h3 {
+  margin: 0 0 25px;
+  text-align: center;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+h3 i {
+  color: var(--primary);
+  margin-right: 10px;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  margin-top: 16px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.input-group {
+  position: relative;
+}
+
+.input-group i {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1rem;
+  pointer-events: none;
+  transition: color 0.3s ease;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px 12px 12px 42px; /* Left padding for icon */
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  color: var(--text);
+  background-color: #fafafa;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--focus-ring);
+  background-color: #fff;
+}
+
+input:focus + i, select:focus + i,
+.input-group:focus-within i {
+  color: var(--primary);
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--primary);
+  color: white;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Hide step by default */
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<form action="/general" method="POST" class="form-wrapper" onsubmit="return handleGeneralSubmit(event)">
+
+  <!-- STEP 0: VERIFICATION (Only if NOT creating directly) -->
+  <% if (!locals.isCreation) { %>
+  <div class="step-box" id="verificationStep">
+    <h3><i class="fas fa-user-check"></i> Agent Verification</h3>
+    
+    <label>Select Group Name</label>
+    <div class="input-group">
+      <i class="fas fa-users"></i>
+      <select id="verifyGroup" onchange="showPhoneInput()">
+        <option value="" disabled selected>-- Select Group --</option>
+        <% if (locals.groups && groups.length > 0) { %>
+          <% groups.forEach(function(group) { %>
+            <option value="<%= group.groupName %>"><%= group.groupName %></option>
+          <% }); %>
+        <% } else { %>
+          <option value="" disabled>No groups found. Debug: <%= locals.debugMsg %></option>
+        <% } %>
+      </select>
+    </div>
+
+    <div id="phoneVerifyContainer" class="hidden">
+      <label>Enter Chairperson Phone Number</label>
+      <div class="input-group">
+        <i class="fas fa-phone"></i>
+        <input type="number" id="verifyPhone" placeholder="07XX XXX XXX">
+      </div>
+      <button type="button" onclick="verifyChairperson()">Verify <i class="fas fa-search"></i></button>
+    </div>
+    
+    <p id="verifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
+  </div>
+  <% } %>
+
+  <!-- STEP 1 (Shown directly if isCreation is true) -->
+  <div class="step-box <%= locals.isCreation ? '' : 'hidden' %>" id="cAccount">
+    <h3><i class="fas fa-users-cog"></i>Create Group Account</h3>
+
+    <label>Group Name</label>
+    <div class="input-group">
+      <i class="fas fa-users"></i>
+      <% if (locals.isCreation) { %>
+        <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
+      <% } else { %>
+        <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" readonly required style="background:#e9ecef;">
+      <% } %>
+    </div>
+
+    <label>Chairperson Phone</label>
+    <div class="input-group">
+      <i class="fas fa-phone"></i>
+      <% if (locals.isCreation) { %>
+        <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number" required>
+      <% } else { %>
+        <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" readonly required style="background:#e9ecef;">
+      <% } %>
+    </div>
+
+    <label>First Name</label>
+    <div class="input-group">
+      <i class="fas fa-user"></i>
+      <input type="text" name="firstName" placeholder="First name" required>
+    </div>
+
+    <label>Second Name</label>
+    <div class="input-group">
+      <i class="fas fa-user-tag"></i>
+      <input type="text" name="secondName" placeholder="Second name">
+    </div>
+
+    <label>Last Name</label>
+    <div class="input-group">
+      <i class="fas fa-user"></i>
+      <input type="text" name="lastName" placeholder="Last name" required>
+    </div>
+
+    <button type="button" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-box hidden" id="Regions">
+    <h3><i class="fas fa-map-marked-alt"></i>Select Location</h3>
+
+    <label>County</label>
+    <div class="input-group">
+      <i class="fas fa-globe-africa"></i>
+      <select name="county" id="countySelect" onchange="loadConstituencies()" required>
+        <option value="">-- Select County --</option>
+      </select>
+    </div>
+
+    <label>Constituency</label>
+    <div class="input-group">
+      <i class="fas fa-map-pin"></i>
+      <select name="constituency" id="constituencySelect" onchange="loadWards()" required>
+        <option value="">-- Select Constituency --</option>
+      </select>
+    </div>
+
+    <label>Ward</label>
+    <div class="input-group">
+      <i class="fas fa-map-marker-alt"></i>
+      <select name="ward" id="wardSelect" onchange="checkManualWard()" required>
+        <option value="">-- Select Ward --</option>
+      </select>
+    </div>
+
+    <!-- Manual Ward Input -->
+    <div id="manualWardContainer" class="hidden" style="margin-top: 10px;">
+      <label>Enter Ward Name Manually</label>
+      <div class="input-group">
+        <i class="fas fa-edit"></i>
+        <input type="text" id="manualWardInput" placeholder="Type Ward Name">
+      </div>
+    </div>
+
+    <button type="button" onclick="showMembership()">Next <i class="fas fa-arrow-right"></i></button>
+  </div>
+
+  <!-- STEP 3: MEMBERSHIP (Dynamic) -->
+  <div class="step-box hidden" id="Membership">
+    <h3><i class="fas fa-users"></i> Membership Details</h3>
+    
+    <div id="trusteesContainer"></div>
+    <div id="officialsContainer"></div>
+    <div id="membersContainer"></div>
+
+    <button type="submit">Submit Account <i class="fas fa-check-circle"></i></button>
+  </div>
+
+</form>
+
+<script>
+function showPhoneInput() {
+  const group = document.getElementById("verifyGroup").value;
+  const phoneContainer = document.getElementById("phoneVerifyContainer");
+  const phoneInput = document.getElementById("verifyPhone");
+  
+  if (group) {
+    phoneContainer.classList.remove("hidden");
+  } else {
+    phoneContainer.classList.add("hidden");
+    phoneInput.value = ""; // Clear input if no group selected
+  }
+}
+
+async function verifyChairperson() {
+  const phone = document.getElementById("verifyPhone").value;
+  const group = document.getElementById("verifyGroup").value;
+  const msg = document.getElementById("verifyMsg");
+  
+  if (!phone || !group) {
+    msg.textContent = "Please select a group and enter a phone number.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/general/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        chairpersonalphonenumber: phone,
+        groupName: group
+      })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById("verificationStep").classList.add("hidden");
+      document.getElementById("cAccount").classList.remove("hidden");
+      
+      // Auto-fill and lock phone AND group
+      document.getElementById("confirmedPhone").value = phone;
+      document.getElementById("confirmedGroup").value = group;
+
+      // Generate Fields from Counts
+      generateFields("Trustee", data.counts.trustees, "trusteesContainer");
+      generateFields("Official", data.counts.officials, "officialsContainer");
+      generateFields("Member", data.counts.members, "membersContainer");
+
+    } else {
+      msg.textContent = data.message || "Verification failed.";
+    }
+  } catch (err) {
+    console.error(err);
+    msg.textContent = "Error verifying details.";
+  }
+}
+
+function generateFields(label, count, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `<h4>${label}s (${count})</h4>`; // Header
+  
+  for (let i = 1; i <= count; i++) {
+    const div = document.createElement("div");
+    div.className = "input-group";
+    div.style.marginBottom = "10px";
+    div.innerHTML = `
+      <input type="text" name="${label.toLowerCase()}_${i}" placeholder="${label} ${i} Name" required>
+    `;
+    container.appendChild(div);
+  }
+}
+
+function nextStep() {
+  document.getElementById("cAccount").classList.add("hidden");
+  document.getElementById("Regions").classList.remove("hidden");
+}
+
+function showMembership() {
+  document.getElementById("Regions").classList.add("hidden");
+  document.getElementById("Membership").classList.remove("hidden");
+}
+
+function handleGeneralSubmit(event) {
+  const wardSelect = document.getElementById("wardSelect");
+  if (wardSelect.value === "OTHER") {
+    const manualWard = document.getElementById("manualWardInput").value.trim();
+    if (!manualWard) {
+      alert("Please enter your ward name.");
+      document.getElementById("manualWardInput").focus();
+      return false;
+    }
+    const opt = document.createElement("option");
+    opt.value = manualWard;
+    opt.text = manualWard;
+    wardSelect.appendChild(opt);
+    wardSelect.value = manualWard;
+  }
+  return true;
+}
+
+// Manual ward entry removed for consistency — users must select from lists
+
+function initCounties() {
+  const countySelect = document.getElementById("countySelect");
+  if (!countySelect) return;
+  countySelect.innerHTML = '<option value="">-- Select County --</option>';
+  fetch('/api/locations/counties')
+    .then(r => r.json())
+    .then(list => {
+      list.forEach(county => {
+        const option = document.createElement('option');
+        option.value = county;
+        option.textContent = county;
+        countySelect.appendChild(option);
+      });
+    }).catch(err => console.error('Failed to load counties', err));
+}
+
+function loadConstituencies() {
+  const countySelect = document.getElementById("countySelect");
+  const constituencySelect = document.getElementById("constituencySelect");
+  const wardSelect = document.getElementById("wardSelect");
+  const selectedCounty = countySelect.value;
+  constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
+  wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+  if (!selectedCounty) return;
+  fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/constituencies`)
+    .then(r => r.json())
+    .then(list => {
+      list.forEach(cons => {
+        const option = document.createElement('option');
+        option.value = cons;
+        option.textContent = cons;
+        constituencySelect.appendChild(option);
+      });
+    }).catch(err => console.error('Failed to load constituencies', err));
+}
+
+function loadWards() {
+  const countySelect = document.getElementById("countySelect");
+  const constituencySelect = document.getElementById("constituencySelect");
+  const wardSelect = document.getElementById("wardSelect");
+  const selectedCounty = countySelect.value;
+  const selectedConstituency = constituencySelect.value;
+  wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+  if (!selectedCounty || !selectedConstituency) return;
+  fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/${encodeURIComponent(selectedConstituency)}/wards`)
+    .then(r => r.json())
+    .then(list => {
+      if (!Array.isArray(list) || list.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '(No Wards Listed)';
+        option.disabled = true;
+        wardSelect.appendChild(option);
+        return;
+      }
+      list.sort().forEach(ward => {
+        const option = document.createElement('option');
+        option.value = ward;
+        option.textContent = ward;
+        wardSelect.appendChild(option);
+      });
+    }).catch(err => console.error('Failed to load wards', err));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initCounties();
+});
+</script>
+
+</body>
+</html>

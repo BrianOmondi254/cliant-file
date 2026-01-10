@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinCore Dashboard</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius: 0.75rem;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+        }
+
+        /* --- UTILITIES --- */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .text-center { text-align: center; }
+        .w-full { width: 100%; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        .text-sm { font-size: 0.85rem; }
+        .text-muted { color: var(--text-muted); }
+
+        /* --- HEADER --- */
+        header {
+            background-color: var(--bg-card);
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-content { max-width: 800px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .account-types { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 2px; }
+        .tag {
+            padding: 0.4rem 1rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+            border: 1px solid var(--border); color: var(--text-muted); background: transparent; white-space: nowrap; transition: all 0.2s;
+        }
+        .tag:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+        .tag.active { background-color: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3); }
+        .header-actions { display: flex; align-items: center; gap: 1.5rem; }
+        .action-icon { color: var(--text-main); font-size: 1.25rem; cursor: pointer; position: relative; transition: color 0.2s; padding: 0.5rem; border-radius: 50%; }
+        .action-icon:hover { color: var(--primary); background-color: #f1f5f9; }
+        #msgBadge {
+            position: absolute; top: 2px; right: 2px; background-color: var(--danger); color: white;
+            font-size: 0.65rem; font-weight: bold; min-width: 16px; height: 16px; border-radius: 9999px;
+            display: flex; justify-content: center; align-items: center; padding: 0 4px; border: 2px solid var(--bg-card);
+        }
+        .btn-logout {
+            padding: 0.5rem 1rem; border: 1px solid var(--danger); color: var(--danger); background: transparent;
+            border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-logout:hover { background-color: var(--danger); color: white; }
+
+        /* --- MAIN BODY --- */
+        main { flex: 1; padding: 2rem 1rem; max-width: 700px; margin: 0 auto; width: 100%; }
+        h1 { text-align: center; margin-bottom: 2rem; color: var(--text-main); font-weight: 700; font-size: 1.5rem; }
+        
+        /* Menu List */
+        .menu-list { width: 100%; background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--border); }
+        .block-btn {
+            display: flex; align-items: center; justify-content: flex-start;
+            width: 100%; padding: 1.25rem;
+            background-color: var(--bg-card); color: var(--text-main); border: none; border-bottom: 1px solid var(--border);
+            font-size: 1rem; cursor: pointer; transition: background 0.2s; text-align: left; font-weight: 500;
+        }
+        .block-btn:last-child { border-bottom: none; }
+        .block-btn:hover { background-color: #f8fafc; padding-left: 1.5rem; color: var(--primary); }
+
+        /* Login/Wrapper Boxes */
+        .box-wrapper {
+            background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius); box-shadow: var(--shadow-lg);
+            text-align: center; border: 1px solid var(--border); max-width: 450px; margin: 0 auto;
+        }
+
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 1rem; text-align: left; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+        .form-input {
+            width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 1rem;
+            transition: border-color 0.2s; background: #fff;
+        }
+        .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .form-input:read-only { background: #e2e8f0; color: #64748b; border-color: #cbd5e1; cursor: not-allowed; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; justify-content: center; align-items: center; padding: 0.75rem 1.5rem; border: none;
+            border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; width: 100%; gap: 0.5rem;
+        }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background-color: #e2e8f0; }
+        .btn-success { background-color: var(--success); color: white; }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+        }
+        .modal-overlay.open { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: white; padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 450px;
+            text-align: center; box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.3s ease;
+            max-height: 90vh; display: flex; flex-direction: column;
+            position: relative; /* Context for X button */
+        }
+        .modal-overlay.open .modal-content { transform: translateY(0); }
+        
+        /* New Close Button (X) */
+        .modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+        .modal-close-btn:hover { color: var(--danger); }
+
+        .modal-header { margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 700; color: var(--text-main); padding-right: 30px; /* Space for X button */ }
+        .modal-body { flex: 1; overflow-y: auto; margin-bottom: 0; text-align: left; padding-bottom: 10px; }
+        
+        .modal-list-btn {
+            display: block; width: 100%; padding: 1rem; margin-bottom: 0.75rem; background-color: #f8fafc;
+            border: 1px solid var(--border); border-radius: 0.5rem; cursor: pointer; font-size: 0.95rem;
+            font-weight: 500; transition: all 0.2s; text-align: left;
+        }
+        .modal-list-btn:hover { background-color: #eff6ff; border-color: var(--primary); color: var(--primary); }
+
+        /* Statement Table */
+        .stmt-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        .stmt-table th { text-align: left; padding: 8px; background: #f1f5f9; color: #64748b; font-size: 0.75rem; text-transform: uppercase; }
+        .stmt-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+        .stmt-table tr:last-child td { border-bottom: none; font-weight: bold; background: #f0fdf4; }
+
+        /* Result Boxes */
+        .result-box { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; text-align: left; border: 1px solid; }
+        .result-box.success { background-color: #f0fdf4; border-color: #86efac; }
+        .result-box.success h4 { color: #15803d; }
+        .result-box.error { background-color: #fef2f2; border-color: #fca5a5; }
+        .result-box.error h4 { color: #b91c1c; }
+        .result-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; color: var(--text-muted); }
+        .result-row span:last-child { font-weight: 600; color: var(--text-main); }
+
+        /* Batch Review Items */
+        .review-item { border: 1px solid var(--border); padding: 10px; margin-bottom: 10px; border-radius: 6px; background: #f8fafc; }
+        .review-details { font-size: 0.85rem; margin-bottom: 8px; color: var(--text-main); }
+        .review-actions { display: flex; gap: 5px; }
+        .btn-small { flex: 1; padding: 4px 8px; font-size: 0.75rem; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: white; }
+        .btn-small.active-accept { background-color: var(--success); color: white; border-color: var(--success); }
+        .btn-small.active-review { background-color: var(--warning); color: white; border-color: var(--warning); }
+
+        /* Toast */
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #334155; color: white; padding: 12px 24px; border-radius: 50px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 0.9rem; animation: slideUp 0.3s ease forwards; display: flex; align-items: center; gap: 10px; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+                        <div class="account-types">
+                                <% if (typeof showAgent !== 'undefined' ? showAgent : true) { %>
+                                    <div class="tag" onclick="app.switchRole('Agent')">Agent</div>
+                                <% } %>
+
+                                <% if (typeof showDealer !== 'undefined' ? showDealer : true) { %>
+                                    <div class="tag" onclick="app.switchRole('Dealer')">Dealer</div>
+                                <% } %>
+
+                                <% /* General: always display, but if user is not part of general group clicking goes to create page */ %>
+                                <% if (typeof generalExists === 'undefined' || generalExists) { %>
+                                    <div class="tag" onclick="app.switchRole('General')">General</div>
+                                <% } else { %>
+                                    <div class="tag" onclick="window.location='/personal/general?mode=create'">General</div>
+                                <% } %>
+
+                                <div class="tag active" onclick="app.switchRole('Personal')">Personal</div>
+                        </div>
+            <div class="header-actions">
+                <div class="action-icon" onclick="app.openInbox()" title="View Messages">
+                    <i class="fa-regular fa-envelope"></i>
+                    <span id="msgBadge" class="hidden">0</span>
+                </div>
+                <a href="/logout" class="btn-logout">Log Out <i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <main id="mainContainer"></main>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal-content">
+            <!-- X Close Button -->
+            <button class="modal-close-btn" onclick="app.closeModal()" title="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="modal-header" id="modalTitle">Title</div>
+            <div class="modal-body" id="modalBody"></div>
+            <!-- Footer removed -->
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const app = {
+            data: {
+                role: 'Personal',
+                balance: 1500.00,
+                transactions: [],
+                unread: 0,
+                batch: [],
+                PIN: "1234",
+                AGENT_ID: "1234",
+                ACCOUNT_NUM: "1234"
+            },
+
+            init() {
+                this.seedHistory();
+                this.render();
+            },
+
+            seedHistory() {
+                const dummy = [
+                    { type: 'deposit', acc: 'M-Pesa Deposit', amt: 500, date: '10:00 AM', balance: 1500 },
+                    { type: 'withdraw', acc: 'Agent Withdrawal', amt: 200, date: '09:30 AM', balance: 1000 },
+                    { type: 'transfer', acc: 'Send to John', amt: 50, date: 'Yesterday', balance: 1200 },
+                    { type: 'deposit', acc: 'Salary', amt: 1200, date: 'Yesterday', balance: 1250 }
+                ];
+                this.data.transactions = dummy;
+            },
+
+            render() {
+                const container = document.getElementById('mainContainer');
+                const role = this.data.role;
+
+                if (role === 'Personal') this.renderPersonalView(container);
+                else if (role === 'General') this.renderGeneralView(container);
+                else if (role === 'Agent') this.renderAgentView(container);
+                else if (role === 'Dealer') this.renderDealerView(container);
+
+                document.querySelectorAll('.tag').forEach(tag => {
+                    tag.classList.remove('active');
+                    if(tag.innerText.includes(role)) tag.classList.add('active');
+                });
+            },
+
+            renderPersonalView(container) {
+                container.innerHTML = `
+                    <h1>Personal Wallet</h1>
+                    <div class="menu-list">
+                        <button class="block-btn" onclick="app.openModal('Send Money')">Send Money</button>
+                        <button class="block-btn" onclick="app.openModal('Withdraw')">Withdraw Money</button>
+                        <button class="block-btn" onclick="app.openModal('Balance')">Account Balance</button>
+                        <button class="block-btn" onclick="app.openModal('Change PIN')">Change PIN</button>
+                        <button class="block-btn" onclick="app.openModal('Statement')">Account Statement</button>
+                    </div>
+                `;
+            },
+
+            renderGeneralView(container) {
+                container.innerHTML = `<h1>General Account</h1><div class="box-wrapper"><p style="color:var(--text-muted)">Under Construction</p></div>`;
+            },
+
+            renderAgentView(container) {
+                container.innerHTML = `<h1>Agent Dashboard</h1><div class="box-wrapper"><p>Agent content is under construction.</p></div>`;
+            },
+
+            renderDealerView(container) {
+                container.innerHTML = `<h1>Dealer Dashboard</h1><div class="box-wrapper"><p>Dealer content is under construction.</p></div>`;
+            },
+
+            openModal(action) {
+                const modal = document.getElementById('modalOverlay');
+                modal.classList.add('open');
+                const title = document.getElementById('modalTitle');
+                const body = document.getElementById('modalBody');
+
+                if (action === 'Send Money') {
+                    title.innerText = 'Send Money';
+                    body.innerHTML = `
+                        <button class="modal-list-btn" onclick="app.flowSendGeneral()">Send to General Account</button>
+                        <button class="modal-list-btn" onclick="app.flowMyAccount()">Send for My Account</button>
+                    `;
+                }
+                else if (action === 'Withdraw') {
+                    title.innerText = 'Withdraw Money';
+                    body.innerHTML = `
+                        <button class="modal-list-btn" onclick="app.flowWithdrawMpesa()">To M-Pesa</button>
+                        <button class="modal-list-btn" onclick="app.flowWithdrawAgent()">Via Agent</button>
+                    `;
+                }
+                else if (action === 'Balance') {
+                    title.innerText = 'Account Balance';
+                    body.innerHTML = `<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="checkPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processCheckBalance()">Check Balance</button>`;
+                }
+                else if (action === 'Change PIN') {
+                    title.innerText = 'Change PIN';
+                    body.innerHTML = `<button class="modal-list-btn" onclick="app.flowForgotPin()">Forgotten PIN</button><button class="modal-list-btn" onclick="app.flowNewPin()">New PIN</button>`;
+                }
+                else if (action === 'Statement') {
+                    title.innerText = 'Account Statement';
+                    body.innerHTML = `<button class="modal-list-btn" onclick="app.flowMiniStatement()">Mini Statement</button><button class="modal-list-btn" onclick="app.flowFullStatement()">Full Statement</button>`;
+                }
+            },
+
+            closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
+
+            // --- SEND MONEY FLOW ---
+
+            flowSendGeneral() {
+                this.updateModalContent('Select Group', `
+                    <select id="groupSelect" class="form-input" onchange="app.flowSelectRecipient()">
+                        <option value="">-- Select Group --</option>
+                        <option value="Group A">Group A</option>
+                        <option value="Group B">Group B</option>
+                        <option value="Group C">Group C</option>
+                    </select>
+                `);
+            },
+
+            flowSelectRecipient() {
+                const group = document.getElementById('groupSelect').value;
+                if(!group) return;
+                this.updateModalContent('Select Type', `
+                    <p style="margin-bottom:10px;">Group: <b>${group}</b></p>
+                    <button class="modal-list-btn" onclick="app.flowBatchPayment()">Send for other member</button>
+                    <button class="modal-list-btn" onclick="app.flowMyAccount()">Send for my account</button>
+                `);
+            },
+
+            flowMyAccount() {
+                this.updateModalContent('My Account', `
+                    <button class="modal-list-btn" onclick="app.flowTransactionForm('My Saving', 'Saving')">My Saving Account</button>
+                    <button class="modal-list-btn" onclick="app.flowTransactionForm('Loan', 'Pay Loan')">Pay Loan</button>
+                    <button class="modal-list-btn" onclick="app.flowTransactionForm('Due', 'Pay Due Balance')">Pay Due Balance</button>
+                `);
+            },
+
+            flowBatchPayment() {
+                this.data.batch = [];
+                this.updateModalContent('Batch Payment', `
+                    <div id="batchForm">
+                        <div class="form-group"><label class="form-label">Membership No.</label><input type="text" id="memNum" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Account No.</label><input type="text" id="settleAcc" class="form-input"></div>
+                        <div class="form-group"><label class="form-label">Amount</label><input type="number" id="payAmt" class="form-input"></div>
+                        <div class="flex" style="gap:10px;">
+                            <button class="btn btn-success" onclick="app.addToBatch()">Add</button>
+                            <button class="btn btn-primary" onclick="app.reviewBatch()">Pay</button>
+                        </div>
+                    </div>
+                    <p id="batchCounter" class="text-center mt-4" style="font-size:0.85rem; color:var(--text-muted);">0 items added</p>
+                `);
+            },
+
+            addToBatch() {
+                const mem = document.getElementById('memNum').value;
+                const acc = document.getElementById('settleAcc').value;
+                const amt = parseFloat(document.getElementById('payAmt').value);
+                if(!mem || !acc || !amt) return this.showToast('Fill all fields', 'error');
+                
+                // Logic: 1234/1234/1234 is compliant
+                const isCompliant = (mem === '1234' && acc === '1234' && amt === 1234);
+                this.data.batch.push({ mem, acc, amt, status: isCompliant ? 'accepted' : 'needs_review' });
+                
+                document.getElementById('memNum').value = ''; 
+                document.getElementById('settleAcc').value = ''; 
+                document.getElementById('payAmt').value = '';
+                
+                document.getElementById('batchCounter').innerText = `${this.data.batch.length} account(s) added.`;
+                this.showToast('Account added', 'success');
+            },
+
+            reviewBatch() {
+                const mem = document.getElementById('memNum').value;
+                const acc = document.getElementById('settleAcc').value;
+                const amt = parseFloat(document.getElementById('payAmt').value);
+
+                // If batch is empty, check if user filled inputs and wants to pay directly
+                if (this.data.batch.length === 0) {
+                    if (mem && acc && amt) {
+                        // Auto-add the single item to batch
+                        const isCompliant = (mem === '1234' && acc === '1234' && amt === 1234);
+                        this.data.batch.push({
+                            mem, acc, amt,
+                            status: isCompliant ? 'accepted' : 'needs_review'
+                        });
+                    } else {
+                        return this.showToast('Please enter account details to pay', 'error');
+                    }
+                }
+
+                if(this.data.batch.length === 0) return this.showToast('No items to review', 'error');
+                
+                let html = '';
+                this.data.batch.forEach((item, idx) => {
+                    const accClass = item.status === 'accepted' ? 'active-accept' : '';
+                    const revClass = item.status === 'needs_review' ? 'active-review' : '';
+                    html += `
+                        <div class="review-item">
+                            <div class="review-details"><b>Mem:</b> ${item.mem} | <b>Acc:</b> ${item.acc} | <b>Amt:</b> ${item.amt}</div>
+                            <div class="review-actions">
+                                <button class="btn-small ${accClass}" onclick="app.setBatchStatus(${idx}, 'accepted')">Accept</button>
+                                <button class="btn-small ${revClass}" onclick="app.setBatchStatus(${idx}, 'needs_review')">Review</button>
+                            </div>
+                        </div>`;
+                });
+                this.updateModalContent('Review List', `<div style="max-height:300px; overflow-y:auto;">${html}</div><button class="btn btn-primary mt-4" onclick="app.processBatch()">Submit Payment</button>`);
+            },
+
+            setBatchStatus(index, status) { this.data.batch[index].status = status; this.reviewBatch(); },
+
+            processBatch() {
+                let compliantCount = this.data.batch.filter(i => i.status === 'accepted').length;
+                if(compliantCount === 0) return this.showToast('No accepted items', 'error');
+                this.updateModalContent('Authorize', `<p>Processing ${compliantCount} payment(s).</p><div class="form-group"><label class="form-label">PIN</label><input type="password" id="batchPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.finalizeBatch()">Confirm</button>`);
+            },
+
+            finalizeBatch() {
+                const pin = document.getElementById('batchPin').value;
+                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
+                let resultsHtml = '';
+                this.data.batch.forEach(item => {
+                    if(item.status === 'accepted') {
+                        if(item.amt > this.data.balance) {
+                            this.addTransaction(item.mem, item.acc, item.amt, 'Failed', 'Insufficient Funds');
+                            resultsHtml += `<div class="result-box error"><h4>Failed: ${item.mem}</h4><div class="result-row"><span>Reason:</span> <span>Insufficient Funds</span></div></div>`;
+                        } else {
+                            this.data.balance -= item.amt;
+                            this.addTransaction(item.mem, item.acc, item.amt, 'Success');
+                            resultsHtml += `<div class="result-box success"><h4>Success: ${item.mem}</h4><div class="result-row"><span>Amount:</span> <span>-$${item.amt}</span></div><div class="result-row"><span>Balance:</span> <span>$${this.data.balance}</span></div></div>`;
+                        }
+                    }
+                });
+                this.updateModalContent('Results', resultsHtml);
+                this.render();
+            },
+
+            flowTransactionForm(type, label) {
+                this.updateModalContent(label, `<div class="form-group"><label class="form-label">Account</label><input type="number" id="tranAcc" class="form-input" placeholder="1234"></div><div class="form-group"><label class="form-label">Amount</label><input type="number" id="tranAmt" class="form-input" placeholder="0.00"></div><div class="form-group"><label class="form-label">PIN</label><input type="password" id="tranPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processSingleTransaction('${type}')">Submit</button>`);
+            },
+
+            processSingleTransaction(type) {
+                const acc = document.getElementById('tranAcc').value;
+                const amt = parseFloat(document.getElementById('tranAmt').value);
+                const pin = document.getElementById('tranPin').value;
+                let error = '';
+                if(acc !== this.data.ACCOUNT_NUM) error = 'Invalid Account';
+                else if(pin !== this.data.PIN) error = 'Wrong PIN';
+                else if(amt > this.data.balance) error = 'Insufficient Balance';
+                
+                if(error) { this.showToast(error, 'error'); this.addTransaction(acc, type, amt, 'Failed', error); this.closeModal(); }
+                else {
+                    this.data.balance -= amt;
+                    this.addTransaction(acc, type, amt, 'Success');
+                    this.showToast('Success', 'success');
+                    this.render();
+                    this.closeModal();
+                }
+            },
+
+            // --- CHANGE PIN FLOWS ---
+            flowForgotPin() {
+                this.updateModalContent('Forgotten PIN', `<p class="text-sm text-muted mb-4">Verify identity.</p><div class="form-group"><label class="form-label">Password</label><input type="password" id="fgPass" class="form-input"></div><div class="form-group"><label class="form-label">ID Number</label><input type="text" id="fgId" class="form-input"></div><div class="form-group"><label class="form-label">New PIN</label><input type="password" id="fgNewPin" class="form-input" maxlength="4"></div><div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="fgConfPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processForgotPin()">Submit</button>`);
+            },
+            processForgotPin() {
+                const pass = document.getElementById('fgPass').value;
+                const id = document.getElementById('fgId').value;
+                const newPin = document.getElementById('fgNewPin').value;
+                const confPin = document.getElementById('fgConfPin').value;
+                if(!pass || !id) return this.showToast('Password and ID required', 'error');
+                if(newPin !== confPin) return this.showToast('Pins do not match', 'error');
+                this.data.PIN = newPin;
+                this.addTransaction('System', 'PIN Reset', 0, 'Success', 'PIN updated via Forgotten flow');
+                this.showToast('PIN Changed', 'success');
+                this.closeModal();
+            },
+            flowNewPin() {
+                this.updateModalContent('Change PIN', `<div class="form-group"><label class="form-label">Current PIN</label><input type="password" id="currPin" class="form-input" maxlength="4"></div><div class="form-group"><label class="form-label">New PIN</label><input type="password" id="newPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processNewPin()">Update</button>`);
+            },
+            processNewPin() {
+                const curr = document.getElementById('currPin').value;
+                const newP = document.getElementById('newPin').value;
+                if(curr !== this.data.PIN) return this.showToast('Incorrect Current PIN', 'error');
+                this.data.PIN = newP;
+                this.addTransaction('System', 'PIN Change', 0, 'Success', 'PIN updated');
+                this.showToast('PIN Updated', 'success');
+                this.closeModal();
+            },
+
+            // --- WITHDRAW FLOWS ---
+            flowWithdrawMpesa() {
+                this.updateModalContent('Withdraw to M-Pesa', `<div class="form-group"><label class="form-label">M-Pesa Number</label><input type="text" class="form-input" value="1234" readonly style="background:#e2e8f0;"></div><div class="form-group"><label class="form-label">Amount</label><input type="number" id="mpesaAmt" class="form-input"></div><div class="form-group"><label class="form-label">PIN</label><input type="password" id="mpesaPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processWithdrawMpesa()">Submit</button>`);
+            },
+            processWithdrawMpesa() {
+                const amt = parseFloat(document.getElementById('mpesaAmt').value);
+                const pin = document.getElementById('mpesaPin').value;
+                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
+                if(amt > this.data.balance) return this.showToast('Insufficient Balance', 'error');
+                this.data.balance -= amt;
+                this.addTransaction('M-Pesa', 'Withdrawal', amt, 'Success', 'To 1234');
+                this.render();
+                this.showResultModal('Withdrawal Success', 'Success', `Withdrew $${amt}`);
+            },
+            flowWithdrawAgent() {
+                this.updateModalContent('Withdraw via Agent', `<div class="form-group"><label class="form-label">Agent Number</label><input type="text" id="agNum" class="form-input"></div><div class="form-group"><label class="form-label">Code</label><input type="text" id="agCode" class="form-input"></div><div class="form-group"><label class="form-label">Amount</label><input type="number" id="agAmt" class="form-input"></div><div class="form-group"><label class="form-label">PIN</label><input type="password" id="agPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processWithdrawAgent()">Submit</button>`);
+            },
+            processWithdrawAgent() {
+                const amt = parseFloat(document.getElementById('agAmt').value);
+                const pin = document.getElementById('agPin').value;
+                const num = document.getElementById('agNum').value;
+                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
+                if(amt > this.data.balance) return this.showToast('Insufficient Balance', 'error');
+                this.data.balance -= amt;
+                this.addTransaction(`Agent ${num}`, 'Withdrawal', amt, 'Success');
+                this.render();
+                this.showResultModal('Withdrawal Success', 'Success', `Withdrew $${amt} via Agent`);
+            },
+
+            // --- BALANCE & STATEMENT ---
+            processCheckBalance() {
+                const pin = document.getElementById('checkPin').value;
+                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
+                this.addTransaction('Self', 'Balance Inquiry', 0, 'Success');
+                this.updateModalContent('Account Balance', `<div class="result-box success"><h4>Current Balance</h4><div class="result-row"><span>Amount:</span> <span style="font-size:1.5rem;">$${this.data.balance.toFixed(2)}</span></div></div>`);
+            },
+            flowMiniStatement() {
+                this.updateModalContent('Mini Statement', `<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="stmtPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processMiniStatement()">View</button>`);
+            },
+            processMiniStatement() {
+                const pin = document.getElementById('stmtPin').value;
+                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
+                const recent = this.data.transactions.slice(-4);
+                let rows = '';
+                recent.forEach(t => {
+                    let withdraw = t.type === 'withdraw' ? `$${t.amt}` : '-';
+                    let received = (t.type === 'deposit' || t.type === 'transfer') ? `$${t.amt}` : '-';
+                    rows += `<tr><td>${t.date}</td><td>${t.acc}</td><td style="color:red">${withdraw}</td><td style="color:green">${received}</td><td>$${t.balance}</td></tr>`;
+                });
+                this.updateModalContent('Mini Statement', `<div style="overflow-x:auto;"><table class="stmt-table"><thead><tr><th>Date</th><th>Account</th><th>Withdrawn</th><th>Received</th><th>Balance</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+                this.addTransaction('System', 'Mini Statement', 0, 'Success', 'Viewed 4 recent transactions');
+                this.showToast('Mini Statement Generated', 'success');
+            },
+            flowFullStatement() {
+                this.updateModalContent('Full Statement Options', `<button class="modal-list-btn" onclick="app.flowFullStatementInput('specified')">Enter Specified Month</button><button class="modal-list-btn" onclick="app.flowFullStatementInput('current')">Current Month</button><button class="modal-list-btn" onclick="app.flowFullStatementInput('3')">Last 3 Months</button><button class="modal-list-btn" onclick="app.flowFullStatementInput('6')">Last 6 Months</button><button class="modal-list-btn" onclick="app.flowFullStatementInput('12')">Last 12 Months</button>`);
+            },
+            flowFullStatementInput(option) {
+                let extra = option === 'specified' ? `<div class="form-group"><label class="form-label">Specified Month</label><input type="text" id="specMonth" class="form-input" placeholder="e.g. January 2023"></div>` : '';
+                this.updateModalContent('Verify Statement', `${extra}<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="fullStmtPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processFullStatement('${option}')">Submit</button>`);
+            },
+            processFullStatement(option) {
+                const pin = document.getElementById('fullStmtPin').value;
+                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
+                let msg = option === 'specified' ? `Statement for ${document.getElementById('specMonth').value}` : `Statement for ${option === 'current' ? 'Current Month' : 'Last ' + option + ' Months'}`;
+                this.updateModalContent('Statement Request', `<div class="result-box success"><h4>Processed</h4><p>${msg} generated.</p><p class="text-sm text-muted mt-4">Sent to message history.</p></div>`);
+                this.addTransaction('System', 'Full Statement', 0, 'Success', msg);
+                this.showToast('Statement Generated', 'success');
+            },
+
+            // --- UTILS ---
+            addTransaction(target, acc, amt, status, reason = null) {
+                this.data.transactions.push({ type: acc==='Deposit'?'deposit':(acc==='Withdrawal'?'withdraw':'transfer'), target, acc, amt, status, reason, date: new Date().toLocaleTimeString(), balance: this.data.balance });
+                if(status === 'Success') { this.data.unread++; this.updateBadge(); }
+            },
+            updateBadge() {
+                const badge = document.getElementById('msgBadge');
+                badge.innerText = this.data.unread;
+                badge.classList.toggle('hidden', this.data.unread === 0);
+            },
+            updateModalContent(title, html) {
+                document.getElementById('modalTitle').innerText = title;
+                document.getElementById('modalBody').innerHTML = html;
+            },
+            showResultModal(mainTitle, status, msg) {
+                this.updateModalContent(mainTitle, `<div class="result-box ${status.toLowerCase()}"><h4>${status}</h4><p>${msg}</p><div class="result-row"><span>Balance:</span> <span>$${this.data.balance.toFixed(2)}</span></div></div>`);
+            },
+            showToast(msg, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `<i class="fa-solid fa-${type==='success'?'check-circle':'triangle-exclamation'}"></i> <span>${msg}</span>`;
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            },
+            switchRole(r) { this.data.role = r; this.render(); },
+            verifyLogin(type) {
+                const id = document.getElementById(`${type}LoginId`).value;
+                if(id === "1234") {
+                    this.showToast('Login Success', 'success');
+                    if(type==='agent') this.data.agentLoggedIn = true;
+                    if(type==='dealer') this.data.dealerLoggedIn = true;
+                    this.render();
+                } else this.showToast('Invalid ID', 'error');
+            },
+            logout() {
+                if(confirm("Logout?")) {
+                    this.data.agentLoggedIn = false; 
+                    this.data.dealerLoggedIn = false;
+                    this.data.role = 'Personal';
+                    this.showToast('Logged out', 'info');
+                    this.render();
+                }
+            },
+            openInbox() {
+                if(this.data.transactions.length === 0) {
+                    this.updateModalContent('Messages', '<p class="text-center text-muted">No messages.</p>');
+                    return;
+                }
+                let html = '';
+                [...this.data.transactions].reverse().forEach(t => {
+                    const color = t.status === 'Success' ? 'success' : 'error';
+                    html += `<div class="result-box ${color}" style="margin-bottom:10px;"><h4>${t.acc} - ${t.status}</h4><div class="result-row"><span>Target:</span> <span>${t.target}</span></div>${t.amt > 0 ? `<div class="result-row"><span>Amount:</span> <span>$${t.amt}</span></div>` : ''}${t.reason ? `<div class="result-row"><span>Note:</span> <span>${t.reason}</span></div>` : ''}<div class="result-row"><span>Time:</span> <span>${t.date}</span></div></div>`;
+                });
+                this.updateModalContent('Message History', html);
+                this.data.unread = 0; 
+                this.updateBadge();
+            }
+        };
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>

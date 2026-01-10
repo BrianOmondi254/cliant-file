@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Dashboard</title>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* === RESET & VARIABLES === */
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --secondary: #64748b;
+      --bg-body: #f3f4f6;
+      --bg-surface: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --radius: 12px;
+    }
+
+    body { 
+      font-family: 'Inter', sans-serif; 
+      margin: 0; 
+      padding: 40px 20px; 
+      background-color: var(--bg-body); 
+      color: var(--text-main);
+      min-height: 100vh;
+    }
+
+    /* === HEADER & NAVIGATION === */
+    .dashboard-header {
+      max-width: 1200px;
+      margin: 0 auto 30px auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    h1 { 
+      color: var(--text-main); 
+      font-size: 2.5rem; 
+      font-weight: 800; 
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    
+    h1 span { color: var(--primary); }
+
+    .nav { 
+      margin-top: 15px; 
+      display: flex; 
+      gap: 10px; 
+      flex-wrap: wrap; 
+      justify-content: center;
+    }
+
+    .nav a { 
+      padding: 10px 20px; 
+      border-radius: 50px; 
+      text-decoration: none; 
+      color: var(--secondary); 
+      background: white;
+      border: 1px solid #e5e7eb;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .nav a:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .nav a.active-link {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    /* === GRID LAYOUT === */
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* === CARD STYLING === */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: var(--radius);
+      padding: 30px;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* Top Accent Colors */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+    }
+    
+    #card-personal::before { background: #3b82f6; } /* Blue */
+    #card-agent::before { background: #8b5cf6; }    /* Purple */
+    #card-dealer::before { background: #f59e0b; }    /* Amber */
+
+    .card:hover { 
+      transform: translateY(-5px); 
+      box-shadow: var(--shadow-hover);
+    }
+
+    .card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    /* Icon Background Colors */
+    #card-personal .card-icon { background: #eff6ff; color: #3b82f6; }
+    #card-agent .card-icon { background: #f5f3ff; color: #8b5cf6; }
+    #card-dealer .card-icon { background: #fffbeb; color: #f59e0b; }
+
+    .card h2 { 
+      margin-top: 0; 
+      margin-bottom: 10px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card p { 
+      color: var(--text-muted); 
+      line-height: 1.6;
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-header">
+    <h1>Welcome, <span><%= user.firstName %></span></h1>
+
+    <div class="nav">
+      <a href="/personal" class="active-link"><i class="fa-solid fa-user"></i> Personal</a>
+      <a href="/agent"><i class="fa-solid fa-user-tie"></i> Agent</a>
+      <a href="/dealer"><i class="fa-solid fa-store"></i> Dealer</a>
+      <a href="/logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    </div>
+  </div>
+
+  <div class="cards-container">
+    <!-- Personal Card -->
+    <div class="card" id="card-personal">
+      <div class="card-icon"><i class="fa-solid fa-user"></i></div>
+      <h2>Personal Account</h2>
+      <p>This section shows your personal account details.</p>
+    </div>
+
+    <!-- Agent Card -->
+    <div class="card" id="card-agent">
+      <div class="card-icon"><i class="fa-solid fa-id-badge"></i></div>
+      <h2>Agent Account</h2>
+      <p>Manage agent-specific tasks and information here.</p>
+    </div>
+
+    <!-- Dealer Card -->
+    <div class="card" id="card-dealer">
+      <div class="card-icon"><i class="fa-solid fa-shop"></i></div>
+      <h2>Dealer Account</h2>
+      <p>Dealer account management and tools go here.</p>
+    </div>
+  </div>
+
+</body>
+</html>

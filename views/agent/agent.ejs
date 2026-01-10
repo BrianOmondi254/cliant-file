@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Agent Portal</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: #f5f7fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .box {
+    background: #ffffff;
+    padding: 35px 40px;
+    width: 100%;
+    max-width: 480px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  h2, h3 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 24px;
+  }
+
+  .agent-name {
+    text-align: center;
+    font-size: 16px;
+    color: #34495e;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+
+  /* Input Groups with Icons */
+  .input-group {
+    position: relative;
+    margin-bottom: 18px;
+  }
+  
+  .input-group i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #95a5a6;
+    font-size: 15px;
+    transition: color 0.3s;
+    pointer-events: none;
+  }
+  
+  input, select {
+    width: 100%;
+    padding: 13px 13px 13px 42px;
+    border-radius: 8px;
+    border: 1.5px solid #dfe6e9;
+    font-size: 14px;
+    font-family: 'Poppins', sans-serif;
+    background: #ffffff;
+    color: #2c3e50;
+    transition: all 0.3s ease;
+  }
+
+  input:focus, select:focus {
+    border-color: #5f9ea0;
+    box-shadow: 0 0 0 3px rgba(95, 158, 160, 0.1);
+    outline: none;
+  }
+
+  input:focus + i, .input-group:focus-within i {
+    color: #5f9ea0;
+  }
+
+  input::placeholder {
+    color: #b2bec3;
+  }
+
+  /* Buttons */
+  button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background: #5f9ea0;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    margin-top: 6px;
+  }
+
+  button:hover {
+    background: #4a7c7e;
+    box-shadow: 0 4px 12px rgba(95, 158, 160, 0.3);
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  button i {
+    margin-left: 6px;
+  }
+
+  /* Headings & Labels */
+  label, .group-heading {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+  }
+
+  .group-heading {
+    text-align: center;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .message {
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .error { 
+    background: #fee; 
+    color: #c0392b;
+    border-left: 4px solid #c0392b;
+  }
+  
+  .success { 
+    background: #d4edda; 
+    color: #27ae60;
+    border-left: 4px solid #27ae60;
+  }
+
+  .hidden { display: none; }
+  
+  /* Link Styling */
+  a {
+    color: #5f9ea0;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+    font-size: 13px;
+  }
+  
+  a:hover { 
+    color: #4a7c7e;
+  }
+
+  a i {
+    margin-right: 4px;
+  }
+
+  /* Form sections */
+  .box-content {
+    margin-bottom: 20px;
+  }
+
+  #selectedGroupDisplay {
+    color: #34495e;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+</style>
+
+<!-- ... existing HTML ... -->
+
+<script>
+  // ... existing functions ...
+
+  function generateFields(label, count, containerId) {
+    const container = document.getElementById(containerId);
+    if (!count || count === 0) return;
+
+    // Stylish Header
+    container.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; margin: 20px 0 10px; color:#0f5132;">
+        <i class="fas fa-users" style="margin-right:8px;"></i>
+        <h4 style="margin:0;">${label}s (${count})</h4>
+      </div>
+    `;
+    
+    for (let i = 1; i <= count; i++) {
+        const div = document.createElement("div");
+        div.className = "input-group";
+
+        // Determine icon based on label
+        let iconClass = "fa-user";
+        if (label === "Trustee") iconClass = "fa-user-shield";
+        if (label === "Official") iconClass = "fa-user-tie";
+        
+        div.innerHTML = `
+            <i class="fas ${iconClass}"></i>
+            <input type="text" name="${label.toLowerCase()}_${i}" placeholder="${label} ${i} Name/Details" required>
+        `;
+        container.appendChild(div);
+    }
+  }
+</script>
+</head>
+
+<body>
+
+<div class="box">
+
+  <!-- MESSAGE -->
+  <% if (message) { %>
+    <div class="message <%= message.type %>">
+      <%= message.text %>
+    </div>
+  <% } %>
+
+  <!-- NOT AN AGENT -->
+  <% if (step === "not-agent") { %>
+    <h3>Access Denied</h3>
+    <p style="text-align:center; color:#555;">
+      Your account is not registered as an agent.
+    </p>
+  <% } %>
+
+  <!-- CREATE PIN -->
+  <% if (step === "create-pin") { %>
+    <h3>Agent Verification</h3>
+    <div class="agent-name">
+      Welcome, <%= agentName %>
+    </div>
+
+    <form method="post" action="/agent/set-pin">
+      <input
+        type="password"
+        name="pin"
+        placeholder="Create PIN"
+        required
+      >
+      <input
+        type="password"
+        name="confirmPin"
+        placeholder="Confirm PIN"
+        required
+      >
+      <button type="submit">Save PIN</button>
+    </form>
+  <% } %>
+
+  <!-- ENTER PIN -->
+  <% if (step === "enter-pin") { %>
+    <h3>Agent Login</h3>
+
+    <form method="post" action="/agent/login">
+      <input
+        type="password"
+        name="pin"
+        placeholder="Enter PIN"
+        required
+      >
+      <button type="submit">Verify PIN</button>
+    </form>
+  <% } %>
+
+  <!-- DASHBOARD -->
+  <% if (step === "dashboard") { %>
+
+    <h3>Create Group Account</h3>
+
+    <!-- VERIFICATION STEP -->
+    <div class="box-content" id="verificationStep">
+      
+      <!-- 1. Group Selection -->
+      <div id="groupSelectContainer">
+        <label class="group-heading">Select Group Name</label>
+        <select id="verifyGroup" onchange="showPhoneInput()">
+          <option value="" disabled selected>-- Select Group --</option>
+          <% groups.forEach(group => { %>
+            <option value="<%= group %>"><%= group %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- 2. Verify Phone (Hidden initially) -->
+      <div id="phoneVerifyContainer" class="hidden" style="margin-top: 20px;">
+        <h3 id="selectedGroupDisplay" style="color: #0f5132; margin-bottom: 20px;"></h3>
+        
+        <label>Enter Chairperson Phone Number</label>
+        <input type="number" id="verifyPhone" placeholder="07XX XXX XXX">
+        
+        <button type="button" onclick="verifyChairperson()">Verify <i class="fas fa-search"></i></button>
+        
+        <div style="text-align: center; margin-top: 15px;">
+           <a href="#" onclick="resetGroupSelection()" style="color: #666; font-size: 14px; text-decoration: none;">
+             <i class="fas fa-arrow-left"></i> Change Group
+           </a>
+        </div>
+      </div>
+      
+      <p id="verifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
+    </div>
+
+    <!-- TOTAL MEMBERS STEP (Hidden until verified) -->
+    <div id="totalMembersStep" class="hidden" style="text-align: center;">
+      <h3 id="displayGroup" style="color: #34495e; margin-bottom: 20px;"></h3>
+      
+      <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #2c3e50;">
+        Enter Total Number of Members
+      </label>
+      
+      <div class="input-group">
+        <i class="fas fa-users"></i>
+        <input type="number" id="totalMembersInput" placeholder="e.g., 15" min="1">
+      </div>
+
+      <button type="button" onclick="validateTotalMembers()" style="margin-top: 10px;">
+        Continue <i class="fas fa-arrow-right"></i>
+      </button>
+
+      <p id="totalMembersMsg" style="margin-top: 15px; font-size: 14px;"></p>
+    </div>
+
+    <!-- PAYMENT CONFIRMATION STEP (NEW) -->
+    <div id="paymentStep" class="hidden" style="text-align: center;">
+      <h3 style="color: #2c3e50; margin-bottom: 15px;">Account Registration</h3>
+      
+      <div style="background: #e0f2f1; padding: 25px; border-radius: 12px; margin-bottom: 25px; border: 1.5px solid #008080;">
+        <h4 style="color: #00695c; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; font-weight: 600;">Total Registration Fee</h4>
+        <h2 id="feeDisplay" style="color: #004d40; margin: 0; font-size: 32px; font-weight: 800;">KES 0.00</h2>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,128,128,0.2);">
+          <p id="feeBreakdown" style="color: #00796b; font-size: 14px; margin: 0; font-weight: 500;"></p>
+          <p style="color: #008080; font-size: 12px; margin-top: 4px; opacity: 0.8;">Standard registration rate applied per member.</p>
+        </div>
+      </div>
+
+      <div class="form-section" style="margin-bottom: 20px; text-align: left;">
+        <label style="font-weight: 600; color: #34495e; display: block; margin-bottom: 10px;">Select Payment Source</label>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <button type="button" class="btn-source" onclick="setPaymentSource('agent')" id="btnAgent" style="flex:1; background:#f5f5f5; color:#555; border:1px solid #ddd; padding:12px; font-size:13px; margin:0; width: auto; font-family:inherit;">
+            <i class="fas fa-user-tie"></i> Agent Account
+          </button>
+          <button type="button" class="btn-source" onclick="setPaymentSource('phone')" id="btnPhone" style="flex:1; background:#f5f5f5; color:#555; border:1px solid #ddd; padding:12px; font-size:13px; margin:0; width: auto; font-family:inherit;">
+            <i class="fas fa-mobile-alt"></i> Phone Number
+          </button>
+        </div>
+
+        <div id="phoneInputContainer" class="hidden">
+          <div class="input-group">
+            <i class="fas fa-phone"></i>
+            <input type="number" id="paymentPhoneNumber" placeholder="Enter M-Pesa Number">
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; text-align: left;">
+        <i class="fas fa-info-circle" style="color: #f57f17; font-size: 18px; margin-right: 12px;"></i>
+        <p style="margin:0; font-size: 12px; color: #7f6000; line-height: 1.4;">
+          <strong>M-Pesa Integration:</strong> A secure push prompt will be sent to the selected source to authorize this transaction.
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 15px;">
+        <button type="button" onclick="backToTotalMembers()" style="flex:1; background: #95a5a6;">
+           <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <button type="button" onclick="approvePayment()" style="flex:2; background: #008080;">
+          OK <i class="fas fa-check"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN FORM (Hidden until total members validated) -->
+    <div id="cAccount" class="hidden">
+      <h3 style="margin-top:20px; border-top:1px solid #ddd; padding-top:20px;">
+        <span id="displayGroup2"></span>
+      </h3>
+
+      <div id="trusteesContainer"></div>
+      <div id="officialsContainer"></div>
+      <div id="membersContainer"></div>
+
+      <button type="button" onclick="submitMembers()" style="margin-top:20px;">
+        Submit Account for Verification <i class="fas fa-search-plus"></i>
+      </button>
+    </div>
+
+    <!-- REVIEW STEP (NEW) -->
+    <div id="reviewStep" class="hidden">
+      <h3 style="border-bottom: 2px solid #5f9ea0; padding-bottom: 10px; margin-bottom: 15px;">Member Review</h3>
+      <p style="text-align:center; color:#666; font-size:13px; margin-bottom:20px;">The following members were verified against our database:</p>
+      
+      <div id="reviewList" style="margin-bottom:25px; max-height: 400px; overflow-y: auto; padding-right: 5px;"></div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button type="button" onclick="cancelReview()" style="flex:1; background:#ef5350; font-size: 14px;">
+          <i class="fas fa-edit"></i> Edit Form
+        </button>
+        <button type="button" onclick="finalizeSubmission()" style="flex:2; background:#2e7d32; font-size: 14px;">
+          Submit Account <i class="fas fa-cloud-upload-alt"></i>
+        </button>
+      </div>
+    </div>
+
+  <% } %>
+
+</div>
+
+<script>
+  // ... showPhoneInput, resetGroupSelection, verifyChairperson ...
+
+  async function submitMembers() {
+    // 1. Collect all inputs and prepare for verification
+    const inputs = document.querySelectorAll('#cAccount input, #cAccount select');
+    const memberData = {};
+    const phoneNumbersForVerification = [];
+
+    // Group fields by index (e.g., trustee_1, trustee_1_id, trustee_1_phone)
+    const grouped = {};
+    inputs.forEach(input => {
+      if (!input.value) return;
+      const nameParts = input.name.split('_');
+      const type = nameParts[0]; // trustee, official, member
+      const index = nameParts[1];
+      const field = nameParts[2] || 'name'; // name, phone, id, title
+      
+      const key = `${type}_${index}`;
+      if (!grouped[key]) grouped[key] = { type, index };
+      grouped[key][field] = input.value;
+    });
+
+    // 2. Validation: Ensure minimum counts are met
+    const requiredTrustees = window.tbankCounts.trustees;
+    const trusteeErrors = [];
+    for (let i = 1; i <= requiredTrustees; i++) {
+        const m = grouped[`trustee_${i}`];
+        if (!m || !m.phone || !m.id) trusteeErrors.push(`Trustee ${i}`);
+    }
+
+    const officialErrors = [];
+    if (!grouped[`official_1`] || !grouped[`official_1`].phone || !grouped[`official_1`].id) {
+        officialErrors.push(`Official 1`);
+    }
+
+    const memberErrors = [];
+    for (let i = 1; i <= 3; i++) {
+        const m = grouped[`member_${i}`];
+        if (!m || !m.phone || !m.id) memberErrors.push(`Member ${i}`);
+    }
+
+    if (trusteeErrors.length > 0 || officialErrors.length > 0 || memberErrors.length > 0) {
+        let errorMsg = "Please fill in all details for the following mandatory fields:\n\n";
+        if (trusteeErrors.length > 0) errorMsg += "• Trustees: " + trusteeErrors.join(", ") + "\n";
+        if (officialErrors.length > 0) errorMsg += "• Officials: " + officialErrors.join(", ") + "\n";
+        if (memberErrors.length > 0) errorMsg += "• Members: " + memberErrors.join(", ") + "\n";
+        alert(errorMsg);
+        return;
+    }
+
+    // 3. Extract phone numbers for verification endpoint
+    Object.values(grouped).forEach(m => {
+      if (m.phone) {
+        phoneNumbersForVerification.push({
+          type: m.type,
+          index: m.index,
+          phone: m.phone,
+          id: m.id,
+          title: m.title || null // Added title
+        });
+      }
+    });
+
+    if (phoneNumbersForVerification.length === 0) {
+      alert("No valid member data found.");
+      return;
+    }
+
+    // 3. Call backend verification
+    try {
+      const res = await fetch("/general/verify-members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumbers: phoneNumbersForVerification })
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        window.finalMemberData = grouped; // Save for final submission
+        displayReviewList(result.results);
+      } else {
+        alert("Verification failed: " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Verification system error.");
+    }
+  }
+
+  function displayReviewList(results) {
+    const listContainer = document.getElementById("reviewList");
+    listContainer.innerHTML = "";
+
+    results.forEach(res => {
+      const card = document.createElement("div");
+      card.style.cssText = "background:#fff; border:1px solid #eee; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; align-items:center; gap:12px; border-left: 4px solid " + (res.verified ? "#27ae60" : "#c0392b");
+      
+      const statusIcon = res.verified ? "fa-check-circle" : "fa-exclamation-circle";
+      const statusColor = res.verified ? "#27ae60" : "#c0392b";
+      const displayName = res.verified ? res.foundName : `Not Found (xxxxx)`;
+
+      card.innerHTML = `
+        <div style="font-size:18px; color:${statusColor};">
+          <i class="fas ${statusIcon}"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:600; color:#2c3e50; font-size:14px;">
+            ${res.type.charAt(0).toUpperCase() + res.type.slice(1)} ${res.index}
+            ${res.title ? `<span style="color:#5f9ea0; font-weight:400; font-size:12px; margin-left:5px;">(${res.title})</span>` : ''}
+          </div>
+          <div style="font-size:13px; color:#555;">${res.phone} &ndash; <strong>${displayName}</strong></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; font-weight:700; background:${statusColor}; color:white; padding:2px 6px; border-radius:4px; text-transform:uppercase;">
+            ${res.verified ? 'Verified' : 'Invalid'}
+          </span>
+          <button type="button" onclick="removeMemberFromReview(this, '${res.type}', '${res.index}')" 
+                  style="width:30px; height:30px; padding:0; background:#f5f5f5; color:#e74c3c; border-radius:50%; border:1px solid #ddd; margin:0; display:flex; align-items:center; justify-content:center;">
+            <i class="fas fa-times" style="margin:0; font-size:12px;"></i>
+          </button>
+        </div>
+      `;
+      listContainer.appendChild(card);
+    });
+
+    // Switch view
+    document.getElementById("cAccount").classList.add("hidden");
+    document.getElementById("reviewStep").classList.remove("hidden");
+  }
+
+  function removeMemberFromReview(btn, type, index) {
+    if (confirm(`Remove ${type} ${index} from this submission?`)) {
+      const key = `${type}_${index}`;
+      delete window.finalMemberData[key];
+      btn.closest('div[style*="border-left"]').remove();
+      
+      // Check if list is empty
+      if (document.getElementById("reviewList").children.length === 0) {
+        cancelReview();
+      }
+    }
+  }
+
+  function cancelReview() {
+    document.getElementById("reviewStep").classList.add("hidden");
+    document.getElementById("cAccount").classList.remove("hidden");
+  }
+
+  async function finalizeSubmission() {
+    const groupName = document.getElementById("displayGroup").innerText;
+    const chairpersonPhone = document.getElementById("verifyPhone").value;
+    
+    const finalPayload = {
+      groupName,
+      chairpersonalphonenumber: chairpersonPhone,
+      membersData: window.finalMemberData
+    };
+
+    try {
+      const res = await fetch("/general/update-members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(finalPayload)
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        alert("✅ Group Account Populated Successfully!");
+        window.location.reload();
+      } else {
+        alert("Submission failed: " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Final submission error.");
+    }
+  }
+
+  function showPhoneInput() {
+    const groupSelect = document.getElementById("verifyGroup");
+    const groupName = groupSelect.value;
+    
+    if (groupName) {
+      // Hide selection, show phone input with heading
+      document.getElementById("groupSelectContainer").classList.add("hidden");
+      document.getElementById("phoneVerifyContainer").classList.remove("hidden");
+      
+      // Set heading text
+      document.getElementById("selectedGroupDisplay").textContent = groupName;
+    }
+  }
+
+  function resetGroupSelection() {
+    // Show selection, hide phone input
+    document.getElementById("groupSelectContainer").classList.remove("hidden");
+    document.getElementById("phoneVerifyContainer").classList.add("hidden");
+    
+    // Reset inputs
+    document.getElementById("verifyGroup").value = "";
+    document.getElementById("verifyPhone").value = "";
+    document.getElementById("verifyMsg").textContent = "";
+  }
+
+  async function verifyChairperson() {
+    const phone = document.getElementById("verifyPhone").value;
+    const group = document.getElementById("verifyGroup").value;
+    const msg = document.getElementById("verifyMsg");
+    
+    if (!phone || !group) {
+      msg.textContent = "Please select a group and enter a phone number.";
+      return;
+    }
+
+    try {
+      const res = await fetch("/general/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          chairpersonalphonenumber: phone,
+          groupName: group
+        })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // Store counts and fees globally
+        window.tbankCounts = data.counts;
+        window.tbankFees = data.fees;
+        
+        // Hide verification, show total members input
+        document.getElementById("verificationStep").classList.add("hidden");
+        document.getElementById("totalMembersStep").classList.remove("hidden");
+        document.getElementById("displayGroup").textContent = group;
+
+      } else {
+        msg.textContent = data.message || "Verification failed.";
+      }
+    } catch (err) {
+      console.error(err);
+      msg.textContent = "Error verifying details.";
+    }
+  }
+
+  function validateTotalMembers() {
+    const totalInput = document.getElementById("totalMembersInput");
+    const total = parseInt(totalInput.value);
+    const msg = document.getElementById("totalMembersMsg");
+    const standardTotal = window.tbankCounts.members;
+    const maxTotal = window.tbankCounts.maxMembers;
+
+    if (!total || total < 1) {
+      msg.textContent = "Please enter a valid number.";
+      msg.style.color = "red";
+      return;
+    }
+
+    // Check Maximum Limit
+    if (total > maxTotal) {
+      msg.textContent = `Maximum allowed members is ${maxTotal}. You entered ${total}.`;
+      msg.style.color = "red";
+      return;
+    }
+
+    if (total < standardTotal) {
+      msg.textContent = `Standard group members total for TBank investment is ${standardTotal}. You entered ${total}.`;
+      msg.style.color = "#e67e22";
+      return;
+    }
+
+    // Calculation step
+    const feePerMember = window.tbankFees.newGroup;
+    const totalFee = total * feePerMember;
+    
+    // Set display values
+    document.getElementById("feeDisplay").textContent = `KES ${totalFee.toLocaleString()}`;
+    document.getElementById("feeBreakdown").textContent = `${total} members × KES ${feePerMember}`;
+    window.calculatedTotalFee = totalFee;
+    window.currentTotalMembers = total;
+
+    // Transition to Payment Step
+    msg.textContent = "";
+    document.getElementById("totalMembersStep").classList.add("hidden");
+    document.getElementById("paymentStep").classList.remove("hidden");
+  }
+
+  function setPaymentSource(source) {
+    const btnAgent = document.getElementById("btnAgent");
+    const btnPhone = document.getElementById("btnPhone");
+    const phoneContainer = document.getElementById("phoneInputContainer");
+    
+    // Reset styles
+    [btnAgent, btnPhone].forEach(b => {
+      b.style.background = "#f5f5f5";
+      b.style.color = "#555";
+      b.style.border = "1px solid #ddd";
+    });
+
+    if (source === 'agent') {
+      btnAgent.style.background = "#e0f2f1";
+      btnAgent.style.color = "#00695c";
+      btnAgent.style.border = "1px solid #00695c";
+      phoneContainer.classList.add("hidden");
+      window.selectedPaymentSource = 'agent';
+    } else {
+      btnPhone.style.background = "#e0f2f1";
+      btnPhone.style.color = "#00695c";
+      btnPhone.style.border = "1px solid #00695c";
+      phoneContainer.classList.remove("hidden");
+      window.selectedPaymentSource = 'phone';
+    }
+  }
+
+  function backToTotalMembers() {
+    document.getElementById("paymentStep").classList.add("hidden");
+    document.getElementById("totalMembersStep").classList.remove("hidden");
+  }
+
+  function approvePayment() {
+    if (!window.selectedPaymentSource) {
+      alert("⚠️ Selection Required: Please click either 'Agent Account' or 'Phone Number' to choose your payment source.");
+      return;
+    }
+    
+    if (window.selectedPaymentSource === 'phone' && !document.getElementById("paymentPhoneNumber").value) {
+      alert("Please enter a valid M-Pesa phone number to receive the payment prompt.");
+      return;
+    }
+
+    // Show final form
+    document.getElementById("paymentStep").classList.add("hidden");
+    document.getElementById("cAccount").classList.remove("hidden");
+    document.getElementById("displayGroup2").textContent = document.getElementById("verifyGroup").value;
+
+    // Generate Fields
+    generateFields("Trustee", window.tbankCounts.trustees, "trusteesContainer");
+    generateFlexibleFields("Official", 1, window.tbankCounts.officials, "officialsContainer");
+    generateFlexibleFields("Member", 3, window.currentTotalMembers, "membersContainer");
+  }
+
+  function generateFields(label, count, containerId) {
+    const container = document.getElementById(containerId);
+    if (!count || count === 0) return;
+
+    // Stylish Header
+    container.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:center; margin: 20px 0 10px; color:#2c3e50;">
+        <i class="fas fa-users" style="margin-right:8px;"></i>
+        <h4 style="margin:0;">${label}s (${count} Required)</h4>
+      </div>
+    `;
+    
+    for (let i = 1; i <= count; i++) {
+        const div = document.createElement("div");
+        div.className = "input-group";
+
+        let placeholderText = `${label} ${i} Full Name`;
+        let iconClass = "fa-user-shield";
+
+        if (label === "Trustee" && i === 1) {
+          placeholderText = "Chairperson (Verified Initially)";
+          iconClass = "fa-user-tie";
+          
+          // Get verified phone number from the verification input
+          const verifiedPhone = document.getElementById("verifyPhone").value;
+          
+          div.innerHTML = `
+            <fieldset style="border:1px solid #e0e0e0; padding:15px; border-radius:8px; margin-bottom:15px;">
+              <legend style="font-weight:600; color:#5f9ea0; padding:0 8px;">${placeholderText}</legend>
+              <input type="hidden" name="${label.toLowerCase()}_${i}_title" value="Chairperson">
+              
+              <div style="display:flex; gap:10px;">
+                <div class="input-group" style="flex:2; margin-bottom:0;">
+                  <i class="fas fa-phone"></i>
+                  <input type="tel" name="${label.toLowerCase()}_${i}_phone" value="${verifiedPhone}" readonly style="background-color:#e9ecef;" required>
+                </div>
+                <div class="input-group" style="flex:1; margin-bottom:0;">
+                  <i class="fas fa-id-card"></i>
+                  <input type="text" name="${label.toLowerCase()}_${i}_id" placeholder="ID Number" required>
+                </div>
+              </div>
+            </fieldset>
+          `;
+        } else if (label === "Trustee") {
+          // Other Trustees get a Title Selection
+          div.innerHTML = `
+            <fieldset style="border:1px solid #e0e0e0; padding:15px; border-radius:8px; margin-bottom:15px;">
+              <legend style="font-weight:600; color:#5f9ea0; padding:0 8px;">${placeholderText}</legend>
+              
+              <div class="input-group" style="margin-bottom:12px;">
+                <select name="${label.toLowerCase()}_${i}_title" class="trustee-title-select" onchange="syncTrusteeTitles()" required style="padding-left:10px;">
+                  <option value="" disabled selected>Select Title</option>
+                  <option value="Trustee">Trustee</option>
+                  <option value="Secretary">Secretary</option>
+                  <option value="Treasurer">Treasurer</option>
+                  <option value="Vice-Chair">Vice-Chair</option>
+                </select>
+              </div>
+
+              <div style="display:flex; gap:10px;">
+                <div class="input-group" style="flex:2; margin-bottom:0;">
+                  <i class="fas fa-phone"></i>
+                  <input type="tel" name="${label.toLowerCase()}_${i}_phone" placeholder="Phone Number" required>
+                </div>
+                <div class="input-group" style="flex:1; margin-bottom:0;">
+                  <i class="fas fa-id-card"></i>
+                  <input type="text" name="${label.toLowerCase()}_${i}_id" placeholder="ID Number" required>
+                </div>
+              </div>
+            </fieldset>
+          `;
+        } else {
+             // Fallback
+             div.innerHTML = `
+                <fieldset style="border:1px solid #e0e0e0; padding:15px; border-radius:8px; margin-bottom:15px;">
+                  <legend style="font-weight:600; color:#5f9ea0; padding:0 8px;">${placeholderText}</legend>
+                  <div style="display:flex; gap:10px;">
+                    <div class="input-group" style="flex:2; margin-bottom:0;">
+                      <i class="fas fa-phone"></i>
+                      <input type="tel" name="${label.toLowerCase()}_${i}_phone" placeholder="Phone Number" required>
+                    </div>
+                    <div class="input-group" style="flex:1; margin-bottom:0;">
+                      <i class="fas fa-id-card"></i>
+                      <input type="text" name="${label.toLowerCase()}_${i}_id" placeholder="ID Number" required>
+                    </div>
+                  </div>
+                </fieldset>
+            `;
+        }
+        container.appendChild(div);
+    }
+  }
+
+  function generateFlexibleFields(label, minCount, maxCount, containerId) {
+    const container = document.getElementById(containerId);
+    
+    let iconClass = label === "Official" ? "fa-user-tie" : "fa-user";
+    
+    container.innerHTML = `
+      <div style="display:flex; align-items:center; margin: 20px 0 15px; color:#2c3e50;">
+        <i class="fas fa-users" style="margin-right:8px;"></i>
+        <h4 style="margin:0;">${label}s (Min: ${minCount}, Max: ${maxCount})</h4>
+      </div>
+      
+      <div id="${containerId}_fields"></div>
+      
+      <div style="margin-top:10px; text-align:center;">
+        <button type="button" onclick="add${label}Field('${containerId}', '${label}', '${iconClass}', ${maxCount})" 
+                style="width:100%; padding:12px; font-size:14px; margin:0; background:#e0f2f1; color:#00695c; border:1px dashed #00695c;">
+          <i class="fas fa-plus"></i> Add ${label}
+        </button>
+      </div>
+    `;
+    
+    // Add initial fields
+    for (let i = 1; i <= minCount; i++) {
+      addFieldToContainer(`${containerId}_fields`, label, i, iconClass);
+    }
+    
+    // Track count
+    window[`${containerId}Count`] = minCount;
+  }
+
+  function addOfficialField(containerId, label, iconClass, maxCount) {
+    addDynamicField(containerId, label, iconClass, maxCount);
+  }
+
+  function addMemberField(containerId, label, iconClass, maxCount) {
+    addDynamicField(containerId, label, iconClass, maxCount);
+  }
+
+  function addDynamicField(containerId, label, iconClass, maxCount) {
+    const countKey = `${containerId}Count`;
+    const currentCount = window[countKey] || 0;
+    
+    if (currentCount >= maxCount) {
+      alert(`Maximum ${maxCount} ${label.toLowerCase()}s allowed.`);
+      return;
+    }
+    
+    const newIndex = currentCount + 1;
+    addFieldToContainer(`${containerId}_fields`, label, newIndex, iconClass);
+    window[countKey] = newIndex;
+  }
+
+  function addFieldToContainer(fieldsContainerId, label, index, iconClass) {
+    const fieldsContainer = document.getElementById(fieldsContainerId);
+    const div = document.createElement("div");
+    div.className = "input-group";
+    
+    // Improved layout with Fieldset, removing Name input
+    div.innerHTML = `
+      <fieldset style="border:1px solid #e0e0e0; padding:15px; border-radius:8px; margin-bottom:15px;">
+        <legend style="font-weight:600; color:#2c3e50; padding:0 8px;">${label} ${index}</legend>
+        <div style="display:flex; gap:10px;">
+          <div class="input-group" style="flex:2; margin-bottom:0;">
+            <i class="fas fa-phone"></i>
+            <input type="tel" name="${label.toLowerCase()}_${index}_phone" placeholder="Phone Number" required>
+          </div>
+          <div class="input-group" style="flex:1; margin-bottom:0;">
+            <i class="fas fa-id-card"></i>
+            <input type="text" name="${label.toLowerCase()}_${index}_id" placeholder="ID Number" required>
+          </div>
+        </div>
+      </fieldset>
+    `;
+    fieldsContainer.appendChild(div);
+  }
+
+  function syncTrusteeTitles() {
+    const selects = document.querySelectorAll('.trustee-title-select');
+    const selectedValues = Array.from(selects).map(s => s.value).filter(v => v !== "" && v !== "Trustee");
+
+    selects.forEach(select => {
+      const currentValue = select.value;
+      const options = select.options;
+
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        if (opt.value === "" || opt.value === "Trustee") {
+          opt.disabled = false;
+          continue;
+        }
+
+        // Disable if this value is selected in another dropdown
+        if (selectedValues.includes(opt.value) && opt.value !== currentValue) {
+          opt.disabled = true;
+          opt.style.color = "#ccc";
+        } else {
+          opt.disabled = false;
+          opt.style.color = "";
+        }
+      }
+    });
+  }
+</script>
+
+</body>
+</html>

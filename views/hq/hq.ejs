@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HQ Dashboard</title>
+  <style>
+    /* === GLOBAL RESET & TYPOGRAPHY === */
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      margin: 0; 
+      background: #f4f6f9; 
+      color: #333;
+    }
+
+    /* === HEADER STYLING === */
+    header { 
+      background: linear-gradient(90deg, #0056b3, #007bff); 
+      color: white; 
+      padding: 15px 30px; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header-title { 
+      margin: 0; 
+      font-size: 24px; 
+      text-align: center; 
+      flex-grow: 1; 
+      font-weight: 700; 
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      min-width: 220px; /* Prevent layout shift */
+      justify-content: flex-end;
+    }
+
+    .header-buttons button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .header-buttons button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    }
+
+    .header-buttons button:active {
+      transform: translateY(1px);
+    }
+
+    .login-btn { background-color: #28a745; }
+    .logout-btn { background-color: #dc3545; }
+    /* Extra class for the span created by JS */
+    .header-buttons span {
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      margin-right: 5px;
+    }
+
+    /* === DASHBOARD GRID & CARDS === */
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 25px;
+      padding: 40px 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .docet {
+      background: white;
+      border-radius: 12px;
+      padding: 40px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      text-align: center;
+      cursor: pointer;
+      border: 1px solid #e1e4e8;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .docet:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      border-color: #007bff;
+    }
+
+    .docet h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #2c3e50;
+      font-weight: 600;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Decorative subtle background for card text */
+    .docet::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 4px;
+      background: #007bff;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .docet:hover::before { opacity: 1; }
+
+    /* === OVERLAY & FORM STYLING === */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .overlay-box {
+      background: white;
+      padding: 35px;
+      border-radius: 12px;
+      width: 340px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+      border-top: 5px solid #007bff;
+    }
+
+    .overlay-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 22px;
+      color: #007bff;
+    }
+
+    .overlay-box p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .overlay-box input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      box-sizing: border-box; /* Ensures padding doesn't affect width */
+      font-size: 15px;
+      transition: border 0.2s;
+    }
+
+    .overlay-box input:focus {
+      border-color: #007bff;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    }
+
+    .overlay-box button {
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .overlay-box button:hover {
+      background: #0056b3;
+    }
+
+    .close-overlay {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      cursor: pointer;
+      font-size: 20px;
+      color: #999;
+      transition: color 0.2s;
+    }
+    
+    .close-overlay:hover { color: #333; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-container">
+    <div class="header-buttons" id="auth-area">
+      <button class="login-btn" id="login-btn">Login</button>
+      <button class="logout-btn" id="register-btn">Register</button>
+    </div>
+
+    <h1 class="header-title">WELCOME TO T-BANK   HQ DASHBOARD</h1>
+    <div style="width:100px;"></div>
+  </div>
+</header>
+
+<div class="dashboard-container">
+  <div class="docet" id="finance"><h2>Finance</h2></div>
+  <div class="docet" id="relations"><h2>Relations</h2></div>
+  <div class="docet" id="it"><h2>IT Department</h2></div>
+  <div class="docet" id="operations"><h2>Operations</h2></div>
+  <div class="docet" id="compliance"><h2>Compliance</h2></div>
+  <div class="docet" id="hr"><h2>Human Resources</h2></div>
+</div>
+
+<!-- REGISTER -->
+<div class="overlay" id="register-overlay">
+  <div class="overlay-box">
+    <span class="close-overlay">&times;</span>
+    <h3 id="register-name"></h3>
+    <p id="register-label">Create PIN for your admin account</p>
+
+    <input type="text" placeholder="Enter Phone Number" id="register-phone">
+    <input type="password" placeholder="Enter PIN" id="register-pin" style="display:none;">
+    <input type="password" placeholder="Confirm PIN" id="register-pin-confirm" style="display:none;">
+    <button id="register-submit">Submit</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="overlay" id="login-overlay">
+  <div class="overlay-box">
+    <span class="close-overlay">&times;</span>
+    <h3 style="display:block;">Login to HQ</h3>
+    <input type="text" placeholder="Enter Phone Number" id="login-phone">
+    <input type="password" placeholder="Enter PIN" id="login-pin">
+    <button id="login-submit">Login</button>
+  </div>
+</div>
+
+<script>
+  /* ================= REGISTER ================= */
+  const registerBtn = document.getElementById("register-btn");
+  const registerOverlay = document.getElementById("register-overlay");
+  const registerSubmit = document.getElementById("register-submit");
+  const registerName = document.getElementById("register-name");
+  const registerLabel = document.getElementById("register-label");
+  const registerPhone = document.getElementById("register-phone");
+  const registerPin = document.getElementById("register-pin");
+  const registerPinConfirm = document.getElementById("register-pin-confirm");
+
+  let step = "PHONE";
+  let currentPhone = "";
+  let isLoggedIn= false
+
+  registerBtn.onclick = () => {
+    resetRegister();
+    registerOverlay.style.display = "flex";
+  };
+
+  registerOverlay.querySelector(".close-overlay").onclick = () => {
+    registerOverlay.style.display = "none";
+  };
+
+  function resetRegister() {
+    step = "PHONE";
+    currentPhone = "";
+    registerPhone.value = "";
+    registerPin.value = "";
+    registerPinConfirm.value = "";
+
+    registerPhone.style.display = "block";
+    registerPin.style.display = "none";
+    registerPinConfirm.style.display = "none";
+    registerName.style.display = "none";
+    registerLabel.style.display = "none";
+  }
+
+  registerSubmit.onclick = async () => {
+    if (step === "PHONE") {
+      const phone = registerPhone.value.trim();
+      if (!phone) return alert("Enter phone number");
+
+      const res = await fetch("/hq/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone })
+      });
+
+      const data = await res.json();
+
+      if (data.status === "NOT_REGISTERED") return alert(data.message);
+      if (data.status === "ALREADY_REGISTERED") return alert("The phone number is already registered as admin.");
+
+      if (data.status === "ALLOW_PIN") {
+        currentPhone = phone;
+        registerName.textContent = data.name;
+        registerName.style.display = "block";
+        registerLabel.style.display = "block";
+        registerPhone.style.display = "none";
+        registerPin.style.display = "block";
+        registerPinConfirm.style.display = "block";
+        step = "PIN";
+      }
+    }
+
+    else if (step === "PIN") {
+      const pin = registerPin.value.trim();
+      const confirm = registerPinConfirm.value.trim();
+      if (!pin || !confirm) return alert("Enter PIN");
+      if (pin !== confirm) return alert("PINs do not match");
+
+      const res = await fetch("/hq/create-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentPhone, pin })
+      });
+
+      const data = await res.json();
+
+      if (data.status === "SUCCESS") {
+        alert("Account created successfully");
+        registerOverlay.style.display = "none";
+        resetRegister();
+      } else {
+        alert(data.message || "Error");
+      }
+    }
+  };
+
+//adjust ment that make button docet buttons clickable
+  const sections = ['finance','relations','it','operations','compliance','hr'];
+
+  sections.forEach(section => {
+    const el = document.getElementById(section);
+    if (el) {
+      el.addEventListener('click', () => {
+        if (!isLoggedIn) {
+          // Show login overlay if not logged in
+          loginOverlay.style.display = "flex";
+          return;
+        }
+        // Navigate if logged in
+        window.location.href = `/hq/${section}`;
+      });
+    }
+  });
+
+  /* ================= LOGIN ================= */
+  const authArea = document.getElementById("auth-area");
+  const loginBtn = document.getElementById("login-btn");
+  const loginOverlay = document.getElementById("login-overlay");
+  const loginSubmit = document.getElementById("login-submit");
+  const loginPhone = document.getElementById("login-phone");
+  const loginPin = document.getElementById("login-pin");
+
+  loginBtn.onclick = () => loginOverlay.style.display = "flex";
+  loginOverlay.querySelector(".close-overlay").onclick = () => loginOverlay.style.display = "none";
+
+  loginSubmit.onclick = async () => {
+    const phone = loginPhone.value.trim();
+    const pin = loginPin.value.trim();
+    if (!phone || !pin) return alert("Enter credentials");
+
+    const res = await fetch("/hq/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, pin })
+    });
+
+    const data = await res.json();
+
+    if (data.status === "SUCCESS") {
+      loginOverlay.style.display = "none";
+      isLoggedIn =true
+      showLoggedIn(data.name);
+    } else {
+      alert(data.message);
+    }
+  };
+
+  function showLoggedIn(name) {
+    authArea.innerHTML = `
+      <span style="font-weight:bold;color:white;">${name}</span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    `;
+
+    document.getElementById("logout-btn").onclick = () => showLoggedOut();
+  }
+
+  function showLoggedOut() {
+    isLoggedIn =false
+    authArea.innerHTML = `
+      <button class="login-btn" id="login-btn">Login</button>
+      <button class="logout-btn" id="register-btn">Register</button>
+    `;
+
+    document.getElementById("login-btn").onclick = () => loginOverlay.style.display = "flex";
+    document.getElementById("register-btn").onclick = () => {
+      resetRegister();
+      registerOverlay.style.display = "flex";
+    };
+  }
+</script>
+
+</body>
+</html>

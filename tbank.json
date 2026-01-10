@@ -1,0 +1,22 @@
+{
+  "compliance": {
+    "registration": {
+      "newGroupFee": "50",
+      "renewalFee": "50",
+      "updatedAt": "2026-01-09T20:56:00.962Z"
+    },
+    "membership": {
+      "trustees": "3",
+      "officials": "4",
+      "members": "15",
+      "maxMembers": "40",
+      "updatedAt": "2026-01-09T20:56:23.482Z"
+    },
+    "periods": {
+      "interval": "Weekly",
+      "season": "Annual",
+      "updatedAt": "2026-01-09T20:56:34.185Z"
+    },
+    "completed": true
+  }
+}

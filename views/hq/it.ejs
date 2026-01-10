@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT System Console</title>
+    <style>
+        :root {
+            --primary-color: #0ea5e9;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --chat-bg: #283648;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* HEADER & NAV STYLES */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .brand-section h1 { margin: 0; color: var(--primary-color); letter-spacing: 1px; }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            transition: 0.3s;
+            cursor: pointer;
+            padding-bottom: 5px;
+            border-bottom: 2px solid transparent;
+        }
+
+        .nav-links a.active-link {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .header-actions { display: flex; align-items: center; }
+        .btn { background-color: var(--primary-color); color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-size: 0.9rem; border: none; cursor: pointer; }
+
+        /* VIEW SECTIONS */
+        .view-section {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- LOGIN & REGISTRATION GRID STYLES --- */
+        .login-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .card h3 { margin: 0; color: var(--primary-color); }
+        .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+
+        .user-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .status-dot {
+            height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 8px;
+        }
+        .bg-green { background-color: var(--success); }
+        .bg-yellow { background-color: var(--warning); }
+
+        /* --- MESSAGE ICON & CHAT WINDOW STYLES --- */
+        .msg-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+            padding: 5px;
+        }
+
+        .msg-icon-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .main-msg-btn { background: none; border: none; cursor: pointer; font-size:1.2rem; color: var(--primary-color); }
+        .msg-badge { background:#ef4444;color:white;border-radius:12px;padding:2px 6px;margin-left:6px;font-size:0.75rem; }
+
+        /* The Chat Window Overlay */
+        .chat-window {
+            display: none; /* Hidden by default */
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 320px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 1000;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: var(--primary-color);
+            padding: 10px 15px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .close-chat {
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .chat-body {
+            height: 250px;
+            padding: 15px;
+            background-color: var(--chat-bg);
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+
+        .chat-msg {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+
+        .msg-in {
+            background-color: rgba(255,255,255,0.1);
+            align-self: flex-start;
+        }
+
+        .msg-out {
+            background-color: var(--primary-color);
+            color: white;
+            margin-left: auto;
+            align-self: flex-end;
+        }
+
+        .chat-footer {
+            padding: 10px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .send-btn {
+            margin-left: 8px;
+            background: var(--primary-color);
+            border: none;
+            color: white;
+            padding: 0 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <header>
+            <div class="brand-section">
+                <h1>IT SYSTEM</h1>
+            </div>
+
+            <nav class="nav-links">
+                <a id="nav-dashboard" onclick="switchView('dashboard-view', this)" class="active-link">Dashboard</a>
+                <a id="nav-logins" onclick="switchView('logins-view', this)">Logins & Registrations</a>
+                <a id="nav-transactions" onclick="switchView('dashboard-view', this)">Transactions</a>
+                <a id="nav-settings" onclick="switchView('dashboard-view', this)">Settings</a>
+            </nav>
+
+            <div class="header-actions">
+                <a href="#" class="btn">+ Add User</a>
+            </div>
+        </header>
+
+
+        <!-- VIEW 1: DASHBOARD (Default Visible) -->
+        <div id="dashboard-view" class="view-section">
+            <h2 style="margin-top:0;">Employee Directory</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Engineer</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Sarah Connor</td>
+                        <td>Senior DevOps</td>
+                        <td><span style="color:var(--success)">● Online</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+
+        <!-- VIEW 2: LOGINS & REGISTRATIONS -->
+        <div id="logins-view" class="view-section" style="display: none;">
+            
+            <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+                <button id="main-messages-btn" class="main-msg-btn" title="Messages" onclick="openMessages()">💬<span id="main-msg-count" class="msg-badge" style="display:none">0</span></button>
+            </div>
+
+            <div class="login-grid">
+                
+                <!-- ACTIVE LOGINS SECTION -->
+                <div class="card">
+                    <div class="section-header">
+                        <h3>Active Logins</h3>
+                        <button class="msg-icon-btn" onclick="openChat('Support')" title="Messages">💬</button>
+                    </div>
+                    <div class="user-row">
+                        <span><span class="status-dot bg-green"></span>Sarah Connor</span>
+                        <small>2m ago</small>
+                    </div>
+                    <div class="user-row">
+                        <span><span class="status-dot bg-green"></span>Mike Ross</span>
+                        <small>15m ago</small>
+                    </div>
+                </div>
+
+                <!-- ACTIVE REGISTRATIONS SECTION (With Message Icons) -->
+                <div class="card">
+                    <div class="section-header">
+                        <h3>Active Registrations</h3>
+                        <button class="msg-icon-btn" onclick="openChat('Registrations')" title="Messages">💬</button>
+                    </div>
+                    
+                    <!-- User 1 -->
+                    <div class="user-row">
+                        <div style="display:flex; align-items:center;">
+                            <span style="margin-right:10px; color:var(--text-muted);">Alice W.</span>
+                        </div>
+                        <button class="msg-icon-btn" onclick="openChat('Alice Wonderland')">💬</button>
+                    </div>
+
+                    <!-- User 2 -->
+                    <div class="user-row">
+                        <div style="display:flex; align-items:center;">
+                            <span style="margin-right:10px; color:var(--text-muted);">Bob Builder</span>
+                        </div>
+                        <button class="msg-icon-btn" onclick="openChat('Bob Builder')">💬</button>
+                    </div>
+
+                    <!-- User 3 -->
+                    <div class="user-row">
+                        <div style="display:flex; align-items:center;">
+                            <span style="margin-right:10px; color:var(--text-muted);">Charlie Brown</span>
+                        </div>
+                        <button class="msg-icon-btn" onclick="openChat('Charlie Brown')">💬</button>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- THE CHAT WINDOW OVERLAY -->
+    <div id="chat-window" class="chat-window">
+        <div class="chat-header">
+            <span id="chat-title">Chat</span>
+            <span class="close-chat" onclick="closeChat()">×</span>
+        </div>
+        <div class="chat-body" id="chat-messages">
+            <!-- Messages will appear here -->
+            <div class="chat-msg msg-in">Hello! I have a question about my registration.</div>
+        </div>
+        <div class="chat-footer">
+            <input type="text" class="chat-input" placeholder="Type a message...">
+            <button class="send-btn">Send</button>
+        </div>
+    </div>
+
+    <!-- MESSAGES OVERLAY -->
+    <div id="messages-overlay" style="display:none; position:fixed; bottom:30px; right:30px; width:420px; max-height:70vh; background:var(--card-bg); border:1px solid var(--border-color); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1200; overflow:auto;">
+        <div style="background:var(--primary-color); color:#fff; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <strong>Messages</strong>
+            <button onclick="closeMessages()" style="background:none;border:none;color:white;font-size:1.2rem;cursor:pointer">×</button>
+        </div>
+        <div id="messages-list" style="padding:12px; color:var(--text-color);"></div>
+    </div>
+
+    
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- View Switching Logic ---
+        function switchView(viewId, linkElement) {
+            const views = document.querySelectorAll('.view-section');
+            views.forEach(view => view.style.display = 'none');
+
+            const activeView = document.getElementById(viewId);
+            if (activeView) activeView.style.display = 'block';
+            // refresh message badge when showing logins/registrations
+            try { if (typeof refreshMainBadge === 'function') refreshMainBadge(); } catch(e){}
+
+            const links = document.querySelectorAll('.nav-links a');
+            links.forEach(link => link.classList.remove('active-link'));
+
+            if (linkElement) linkElement.classList.add('active-link');
+        }
+
+        // --- Chat Logic ---
+        const chatWindow = document.getElementById('chat-window');
+        const chatTitle = document.getElementById('chat-title');
+
+        // --- Messages (localStorage prototype) ---
+        function getHqMessages(){ try { return JSON.parse(localStorage.getItem('hq_messages')||'[]'); } catch(e){ return []; } }
+        function saveHqMessages(list){ localStorage.setItem('hq_messages', JSON.stringify(list)); }
+        function renderMessagesList(){
+            const list = getHqMessages();
+            const container = document.getElementById('messages-list');
+            container.innerHTML = '';
+            if (!list.length) { container.innerHTML = '<div style="color:var(--text-muted)">No messages</div>'; return; }
+            list.forEach(m=>{
+                const wrap = document.createElement('div'); wrap.style.cssText='border-bottom:1px solid rgba(255,255,255,0.04);padding:8px 0;';
+                const meta = document.createElement('div'); meta.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
+                meta.innerHTML = `<div><strong>${m.docketName}</strong> <small style="color:var(--text-muted);">(${m.code})</small></div><div style="font-size:0.85rem;color:var(--text-muted);">${new Date(m.date).toLocaleString()}</div>`;
+                const details = document.createElement('div'); details.style.cssText='color:var(--text-muted);font-size:0.9rem;margin-bottom:8px;';
+                details.textContent = `From: ${m.senderDetails} ${m.processorPhone ? ' / ' + m.processorPhone : ''} — Account: ${m.accountToAdjust} — Option: ${m.optionClicked || ''}`;
+                wrap.appendChild(meta); wrap.appendChild(details);
+                const controls = document.createElement('div');
+                if (m.status === 'pending'){
+                    const a = document.createElement('button'); a.textContent='Accept'; a.style.cssText='background:var(--primary-color);color:white;border:none;padding:6px 10px;border-radius:6px;margin-right:8px;cursor:pointer;';
+                    a.onclick = ()=>{ acceptMessage(m.id); };
+                    const d = document.createElement('button'); d.textContent='Cancel'; d.style.cssText='background:#444;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;';
+                    d.onclick = ()=>{ declineMessage(m.id); };
+                    controls.appendChild(a); controls.appendChild(d);
+                } else {
+                    const state = document.createElement('span'); state.textContent = m.status.toUpperCase(); state.style.cssText='color:var(--text-muted);font-weight:600;'; controls.appendChild(state);
+                }
+                wrap.appendChild(controls);
+                container.appendChild(wrap);
+            });
+        }
+
+        function refreshMainBadge(){ const list = getHqMessages(); const pending = list.filter(m=>m.status==='pending').length; const el = document.getElementById('main-msg-count'); if (!el) return; if (pending>0){ el.style.display='inline-block'; el.textContent = pending; } else el.style.display='none'; }
+
+        function openMessages(){ renderMessagesList(); document.getElementById('messages-overlay').style.display='block'; }
+        function closeMessages(){ document.getElementById('messages-overlay').style.display='none'; }
+
+        function acceptMessage(id){
+            const list = getHqMessages();
+            const m = list.find(x=>x.id===id);
+            if(!m) return;
+            m.status='accepted';
+            m.acceptedAt=new Date().toISOString();
+            saveHqMessages(list);
+            renderMessagesList();
+            refreshMainBadge();
+            // Notify other UI in the same window (Compliance view)
+            try{ if (typeof refreshCompBadge === 'function') refreshCompBadge(); } catch(e){}
+            try{ if (typeof renderCompMessagesList === 'function') renderCompMessagesList(); } catch(e){}
+            try{ if (typeof  handleAcceptedMessage === 'function') handleAcceptedMessage(m); } catch(e){}
+            try{ window.dispatchEvent(new CustomEvent('hq_messages_updated', { detail: m })); } catch(e){}
+            showToast && showToast('Accepted');
+        }
+
+        function declineMessage(id){
+            const list = getHqMessages();
+            const m = list.find(x=>x.id===id);
+            if(!m) return;
+            m.status='cancelled';
+            m.cancelledAt=new Date().toISOString();
+            saveHqMessages(list);
+            renderMessagesList();
+            refreshMainBadge();
+            try{ if (typeof refreshCompBadge === 'function') refreshCompBadge(); } catch(e){}
+            try{ if (typeof renderCompMessagesList === 'function') renderCompMessagesList(); } catch(e){}
+            try{ window.dispatchEvent(new CustomEvent('hq_messages_updated', { detail: m })); } catch(e){}
+            showToast && showToast('Cancelled');
+        }
+
+        function openChat(userName) {
+            // Set the title of the chat window
+            chatTitle.textContent = "Chat with " + userName;
+            
+            // Show the chat window
+            chatWindow.style.display = 'flex';
+        }
+
+        function closeChat() {
+            // Hide the chat window
+            chatWindow.style.display = 'none';
+        }
+        document.addEventListener('DOMContentLoaded', ()=>{ refreshMainBadge(); });
+
+        // Listen for storage changes from other tabs/windows and refresh
+        window.addEventListener('storage', (e)=>{
+            if (e.key === 'hq_messages'){
+                try { refreshMainBadge(); if (document.getElementById('messages-overlay') && document.getElementById('messages-overlay').style.display==='block') renderMessagesList(); } catch(err){}
+            }
+        });
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Operations Dashboard</title>
+  
+  <!-- Icons & Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================
+       VARIABLES & RESET
+    ========================= */
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #e0e7ff;
+      --secondary: #64748b;
+      --success: #10b981;
+      --success-bg: #d1fae5;
+      --success-border: #34d399;
+      --danger: #ef4444;
+      --danger-bg: #fee2e2;
+      --danger-border: #f87171;
+      --bg-body: #f3f4f6;
+      --bg-surface: #ffffff;
+      --text-main: #1f2937;
+      --text-light: #6b7280;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px 20px;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-body);
+      background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 24px 24px;
+      color: var(--text-main);
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+    
+    h1 i { color: var(--primary); margin-right: 10px; }
+
+    /* =========================
+       LAYOUT & CARDS
+    ========================= */
+    .wrap {
+      max-width: 1200px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .sec {
+      background: var(--bg-surface);
+      border-radius: var(--radius);
+      padding: 30px;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+
+    .sec:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-hover);
+      border-color: #e5e7eb;
+    }
+
+    /* =========================
+       HEADERS
+    ========================= */
+    .ttl {
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .ttl i {
+      color: var(--primary);
+      background: var(--primary-light);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    /* Specific Icon Colors per Section */
+    #sec-system .ttl i { color: #3b82f6; background: #dbeafe; }
+    #sec-access .ttl i { color: #8b5cf6; background: #f3e8ff; }
+    #sec-users .ttl i { color: #f59e0b; background: #fef3c7; }
+    #sec-groups .ttl i { color: #10b981; background: #d1fae5; }
+    #sec-docs .ttl i { color: #64748b; background: #f1f5f9; }
+
+    /* =========================
+       BUTTONS
+    ========================= */
+    .btns {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: white;
+      color: var(--text-main);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #f9fafb;
+      transform: translateX(2px);
+    }
+    
+    .btn i { color: #9ca3af; font-size: 12px; transition: color 0.2s; }
+    .btn:hover i { color: var(--primary); }
+
+    /* Primary/Action Buttons (Inside Forms) */
+    .btn-action {
+      width: 100%;
+      justify-content: center;
+      gap: 8px;
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
+    
+    .btn-action:hover { background: var(--primary-hover); color: white; }
+
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn.danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: var(--danger-border);
+      justify-content: center;
+    }
+    .btn.danger:hover { background: var(--danger); color: white; }
+
+    /* =========================
+       FORMS
+    ========================= */
+    .form-card {
+      max-width: 500px;
+      margin: 40px auto;
+      background: white;
+      padding: 40px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      text-align: center;
+      border-top: 4px solid var(--primary);
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      font-size: 15px;
+      margin-bottom: 16px;
+      background: #f9fafb;
+      transition: all 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    /* =========================
+       VERIFIED BOX STYLING
+    ========================= */
+    .verified-box-wrapper {
+      margin-top: 25px;
+      padding: 20px;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius);
+      text-align: center;
+    }
+
+    #verified-admin-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #064e3b;
+      margin: 0 0 15px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #phone-result {
+      min-height: 24px;
+      font-size: 14px;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    /* =========================
+       UTILS
+    ========================= */
+    .hidden { display: none !important; }
+    
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 24px; }
+      .wrap { grid-template-columns: 1fr; }
+      .form-card { padding: 25px; width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1><i class="fa-solid fa-gauge-high"></i> Operational Dashboard</h1>
+
+  <!-- ================= MAIN DASHBOARD ================= -->
+  <div class="wrap" id="main-wrap">
+
+    <section class="sec" id="sec-system">
+      <div class="ttl"><i class="fa-solid fa-server"></i> System Status</div>
+      <div class="btns">
+        <button class="btn"><span>System Online / Offline</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Operational Mode</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Last Restart</span> <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </section>
+
+    <section class="sec" id="sec-access">
+      <div class="ttl"><i class="fa-solid fa-shield-halved"></i> Access & Security</div>
+      <div class="btns">
+        <button class="btn"><span>User Role</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Session Status</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Access Rules</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button id="btn-create-admin" class="btn" style="color: var(--primary); font-weight:600; border-color: var(--primary-light); background: #eef2ff;">
+          <span>Create Admin Account</span> <i class="fa-solid fa-plus"></i>
+        </button>
+      </div>
+    </section>
+
+    <section class="sec" id="sec-users">
+      <div class="ttl"><i class="fa-solid fa-users"></i> User Management</div>
+      <div class="btns">
+        <button class="btn"><span>Total Users</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Active Users</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Role Assignment</span> <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </section>
+
+    <section class="sec" id="sec-groups">
+      <div class="ttl"><i class="fa-solid fa-users-gear"></i> Group Settings</div>
+      <div class="btns">
+        <button class="btn"><span>Total Groups</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Member Limit</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Group Registration</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Approval Required</span> <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </section>
+
+    <section class="sec" id="sec-docs">
+      <div class="ttl"><i class="fa-solid fa-file-contract"></i> Documents</div>
+      <div class="btns">
+        <button class="btn"><span>Total Files</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Public Files</span> <i class="fa-solid fa-chevron-right"></i></button>
+        <button class="btn"><span>Restricted Files</span> <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ================= CREATE ADMIN ACTIONS ================= -->
+  <div id="create-admin-form" class="form-card hidden">
+    <h2 class="ttl" style="justify-content: center; border: none;"><i class="fa-solid fa-user-shield"></i> Admin Actions</h2>
+    <div class="btns">
+      <button id="btn-activate-admin" class="btn btn-action"><i class="fa-solid fa-check-circle"></i> Activate Admin</button>
+      <button id="btn-register-admin" class="btn btn-action"><i class="fa-solid fa-user-plus"></i> Register Admin</button>
+      <button class="btn btn-action" style="background: #fee2e2; color: #b91c1c;"><i class="fa-solid fa-ban"></i> Block Admin</button>
+    </div>
+    <br>
+    <button id="back-dashboard-create" class="btn danger">Back to Dashboard</button>
+  </div>
+
+  <!-- ================= PHONE VERIFICATION & REGISTRATION ================= -->
+  <div id="pending-activation" class="form-card hidden">
+    <h2 class="ttl" style="justify-content: center; border: none;"><i class="fa-solid fa-mobile-screen"></i> Verify & Register Admin</h2>
+
+    <!-- Step 1: Phone Check -->
+    <form id="phone-check-form">
+      <label>Phone Number</label>
+      <input type="text" id="phone-input" placeholder="e.g. 0711155510">
+      <button type="submit" class="btn btn-action">Verify</button>
+    </form>
+
+    <div id="phone-result"></div>
+
+    <!-- Step 2: Verified Actions (Includes Geo-Location Dropdowns) -->
+    <div id="verified-actions" class="verified-box-wrapper hidden">
+      <h3 id="verified-admin-name">
+        <i class="fa-solid fa-circle-check" style="font-size: 20px;"></i>
+        <span id="name-text"></span>
+      </h3>
+
+      <form id="verified-register-form">
+        
+        <!-- GEO LOCATION SECTION START -->
+        <label style="color: var(--primary); border-top: 1px solid #a7f3d0; padding-top:10px; margin-top:10px;">Region Assignment</label>
+        
+        <select id="reg-county">
+          <option value="">Select County</option>
+        </select>
+
+        <select id="reg-constituency" disabled>
+          <option value="">Select Constituency</option>
+        </select>
+
+        <select id="reg-ward" disabled>
+          <option value="">Select Ward</option>
+        </select>
+        <!-- GEO LOCATION SECTION END -->
+
+        <label>Department</label>
+        <select id="verified-docet">
+          <option value="">-- Select Department --</option>
+          <option>IT</option>
+          <option>Operation</option>
+          <option>Finance</option>
+          <option>Human Resource</option>
+          <option>Relation</option>
+          <option>Compliance</option>
+        </select>
+
+        <button type="submit" class="btn btn-action" style="background: var(--success); margin-top:10px;">Complete Registration</button>
+      </form>
+    </div>
+
+    <button id="back-dashboard-pending" class="btn danger">Back</button>
+  </div>
+
+  <!-- ================= REGISTER ADMIN (LEGACY) ================= -->
+  <div id="register" class="form-card hidden">
+    <h2 class="ttl" style="justify-content: center; border: none;"><i class="fa-solid fa-file-pen"></i> Register Admin</h2>
+
+    <form>
+      <label>Phone Number</label>
+      <input type="text" placeholder="e.g. 0711155510">
+
+      <label>Department</label>
+      <select>
+        <option value="">-- Select Department --</option>
+        <option>IT</option>
+        <option>Operation</option>
+        <option>Finance</option>
+        <option>Human Resource</option>
+        <option>Relation</option>
+        <option>Compliance</option>
+      </select>
+
+      <button class="btn btn-action">Register</button>
+    </form>
+
+    <button id="back-dashboard-register" class="btn danger">Back</button>
+  </div>
+
+<script>
+/* =========================
+   DATA: KENYA GEO DATA
+   (Corrected JSON)
+========================= */
+const kenyaGeoData = {
+  "Mombasa": {
+    "Changamwe": ["Airport", "Changamwe", "Chaani", "Kipevu", "Miritini"],
+    "Jomvu": ["Jomvu Kuu", "Mikindani"],
+    "Kisauni": ["Mjambere", "Junda", "Bamburi", "Mwakirunge", "Mtopanga", "Magogoni", "Shanzu"],
+    "Nyali": ["Frere Town", "Ziwa La Ng'ombe", "Mkomani", "Kongowea", "Kadzandani"],
+    "Likoni": ["Mtongwe", "Shika Adabu", "Bofu", "Likoni", "Timbwani"],
+    "Mvita": ["Mji wa Kale/Makadara", "Tudor", "Tononoka", "Shimanzi/Ganjoni", "Majengo"]
+  },
+  "Kwale": {
+    "Msambweni": ["Gombato Bongwe", "Ukunda", "Kinondo", "Ramisi"],
+    "Lunga Lunga": ["Pongwe/Kikoneni", "Dzombo", "Mwereni", "Vanga"],
+    "Matuga": ["Tsimba Golini", "Waa", "Tiwi", "Kubo South", "Mkongani"],
+    "Kinango": ["Ndavaya", "Puma", "Kinango", "Mackinnon Road", "Chengoni", "Mwavumbo", "Kasemeni"]
+  },
+  "Kilifi": {
+    "Kilifi North": ["Tezo", "Sokoni", "Kibarani", "Dabaso", "Matsangoni", "Watamu", "Mnarani"],
+    "Kilifi South": ["Junju", "Mwarakaya", "Shimo la Tewa", "Chasimba", "Mtepeni"],
+    "Kaloleni": ["Mariakani", "Kayafungo", "Kaloleni", "Mwanamwinga"],
+    "Rabai": ["Mwawesa", "Ruruma", "Kambe/Ribe", "Rabai/Kisurutini"],
+    "Ganze": ["Ganze", "Bamba", "Jaribuni", "Sokoke"],
+    "Malindi": ["Jilore", "Kakuyuni", "Ganda", "Malindi Town", "Shella"],
+    "Magarini": ["Marafa", "Magarini", "Gongoni", "Adu", "Garashi", "Sabaki"]
+  },
+  "Tana River": {
+    "Garsen": ["Kipini East", "Garsen Central", "Kipini West", "Garsen South", "Garsen North", "Garsen West"],
+    "Galole": ["Kinakomba", "Mikinduni", "Chewani", "Wayu"],
+    "Bura": ["Chewele", "Hirimani", "Bangale", "Sala", "Madogo"]
+  },
+  "Lamu": {
+    "Lamu East": ["Faza", "Kiunga", "Basuba"],
+    "Lamu West": ["Shella", "Mkomani", "Hindi", "Mkunumbi", "Hongwe", "Witu", "Bahari"]
+  },
+  "Taita Taveta": {
+    "Taveta": ["Chala", "Mahoo", "Bomani", "Mboghoni", "Mata"],
+    "Wundanyi": ["Wundanyi/Mbale", "Werugha", "Wumingu/Kishushe", "Mwanda/Mgange"],
+    "Mwatate": ["Rong'e", "Mwatate", "Bura", "Chawia", "Wusi/Kishamba"],
+    "Voi": ["Mbololo", "Sagalla", "Kaloleni", "Marungu", "Kasigau", "Ngolia"]
+  },
+  "Nairobi": {
+    "Westlands": ["Kitisuru", "Parklands/Highridge", "Karura", "Kangemi", "Mountain View"],
+    "Dagoretti North": ["Kilimani", "Kawangware", "Gatina", "Kileleshwa", "Kabiro"],
+    "Dagoretti South": ["Mutu-ini", "Ngand'o", "Riruta", "Uthiru/Ruthimitu", "Waithaka"],
+    "Langata": ["Karen", "Nairobi West", "Mugumo-ini", "South C", "Nyayo Highrise"],
+    "Kibra": ["Laini Saba", "Lindi", "Makina", "Woodley/Kenyatta Golf Course", "Sarang'ombe"],
+    "Roysambu": ["Githurai", "Kahawa West", "Zimmerman", "Roysambu", "Kahawa"],
+    "Kasarani": ["Clay City", "Mwiki", "Kasarani", "Njiru", "Ruai", "Kamulu"],
+    "Ruaraka": ["Babadogo", "Utalii", "Mathare North", "Lucky Summer", "Korogocho"],
+    "Embakasi South": ["Imara Daima", "Kwa Njenga", "Kwa Reuben", "Pipeline", "Kware"],
+    "Embakasi North": ["Kariobangi North", "Dandora Area I", "Dandora Area II", "Dandora Area III", "Dandora Area IV"],
+    "Embakasi Central": ["Kayole North", "Kayole North Central", "Kayole South", "Komarock", "Matopeni/Spring Valley"],
+    "Embakasi East": ["Upper Savanna", "Lower Savanna", "Embakasi", "Utawala", "Mihang'o"],
+    "Embakasi West": ["Umoja I", "Umoja II", "Mowlem", "Kariobangi South"],
+    "Makadara": ["Maringo/Hamza", "Viwandani", "Harambee", "Makongeni", "Mbotela"],
+    "Kamukunji": ["Pumwani", "Eastleigh North", "Eastleigh South", "Airbase", "California"],
+    "Starehe": ["Nairobi Central", "Ngara", "Pangani", "Ziwani/Kariokor", "Landi Mawe"],
+    "Mathare": ["Hospital", "Mabatini", "Huruma", "Ngei", "Mlango Kubwa", "Kiamaiko"]
+  },
+  "Garissa": {
+    "Garissa Township": ["Biashara", "Galbet", "Iftin", "Winn", "Nurse", "Soko Mjinga"],
+    "Balambala": ["Balambala", "Danyere", "Jarajara", "Saka", "Modogashe"],
+    "Lagdera": ["Modogashe", "Benane", "Goreale", "Maalamin", "Sabena"],
+    "Dadaab": ["Dadaab", "Labasigale", "Damajale", "Liboi", "Abakaile"],
+    "Fafi": ["Bura", "Dekaharia", "Jarajilla", "Nanighi", "Hulugho"],
+    "Ijara": ["Ijara", "Hulugho", "Sangailu", "Masalani", "Korisa"]
+  },
+  "Wajir": {
+    "Wajir North": ["Gurar", "Bute", "Korondile", "Malkagufu", "Batalu"],
+    "Wajir East": ["Wagalla", "Township", "Barwaqo", "Khorof-Harar", "Digir"],
+    "Tarbaj": ["Tarbaj", "Sarman", "Elben", "Wargadud", "Khorof-Harar"],
+    "Wajir West": ["Arbajahan", "Hadado", "Ademasajide", "Ganyure", "Lagboghol"],
+    "Eldas": ["Eldas", "Dela", "Lakoley South", "Elnur", "Lake"],
+    "Wajir South": ["Benane", "Burder", "Dadajabulla", "Habaswein", "Basis"]
+  },
+  "Mandera": {
+    "Mandera West": ["Takaba", "Takaba South", "Lagsure", "Dandu", "Gither"],
+    "Banissa": ["Banissa", "Derkhale", "Guba", "Malkamari", "Kiliwehiri"],
+    "Mandera North": ["Ashabito", "Guticha", "Morothile", "Rhamu", "Rhamu Dimtu"],
+    "Mandera South": ["Elwak North", "Elwak South", "Shimbir Fatuma", "Kutulo", "Arabia"],
+    "Mandera East": ["Arabia", "Bullu", "Khalalio", "Neboi", "Wargadud"],
+    "Lafey": ["Lafey", "Alungo Gof", "Warankara", "Fino", "Gurar"]
+  },
+  "Marsabit": {
+    "Moyale": ["Moyale Township", "Uran", "Obbu", "Heillu", "Butiye"],
+    "North Horr": ["North Horr", "Maikona", "Dukana", "Illeret", "Kalacha"],
+    "Saku": ["Sagante", "Karare", "Marsabit Central", "Jaldessa", "Korbesa"],
+    "Laisamis": ["Loiyangalani", "Kargi", "Korr", "Logologo", "Ngurunit"]
+  },
+  "Isiolo": {
+    "Isiolo North": ["Wabera", "Bulla Pesa", "Chari", "Cherab", "Kina"],
+    "Isiolo South": ["Garba Tulla", "Kina", "Sericho", "Merti", "Oldonyiro"]
+  },
+  "Meru": {
+    "Igembe South": ["Maua", "Kiegoi", "Athiru Gaiti", "Akachiu", "Kanuni"],
+    "Igembe Central": ["Akirang'ondu", "Athiru Ruujine", "Njia", "Kangeta"],
+    "Igembe North": ["Antuambui", "Ntunene", "Antubetwe Kiongo", "Naathu", "Amwathi"],
+    "Tigania West": ["Athwana", "Akithi", "Nkomo", "Mbeu"],
+    "Tigania East": ["Thangatha", "Mikinduri", "Karama", "Kiguchwa", "Muthara"],
+    "North Imenti": ["Municipality", "Ntima East", "Ntima West", "Katheri", "Gakoromone"],
+    "Buuri": ["Timau", "Kisima", "Kiirua", "Ruiri", "Kibirichia"],
+    "Central Imenti": ["Mwanganthia", "Abothuguchi Central", "Kiagu"],
+    "South Imenti": ["Mitunguu", "Igoji East", "Igoji West", "Kianjai", "Kanyakine"]
+  },
+  "Tharaka Nithi": {
+    "Maara": ["Mitheru", "Muthambi", "Mwimbi", "Kiegoi", "Gatue"],
+    "Chuka/Igambang'ombe": ["Mariani", "Karingani", "Magumoni", "Mugwe", "Chogoria"],
+    "Tharaka": ["Gatunga", "Mukothima", "Nkondi", "Chiakariga", "Marimanti"]
+  },
+  "Embu": {
+    "Manyatta": ["Nginda", "Kirimari", "Gaturi South", "Kianjokoma", "Kithimu"],
+    "Runyenjes": ["Gaturi North", "Kagaari South", "Central Ward", "Kiang'ombe", "Kanyuambora"],
+    "Mbeere North": ["Nthawa", "Muminji", "Evurore", "Gachoka", "Cianjuru"],
+    "Mbeere South": ["Mwea", "Makima", "Mbeti South", "Kithungururu", "Kiamuringa"]
+  },
+  "Kitui": {
+    "Mwingi North": ["Ngomeni", "Kyuso", "Mumoni", "Tseikuru", "Tharaka"],
+    "Mwingi West": ["Kyome Thaana", "Nguutani", "Migwani", "Kiomo", "Mbitini"],
+    "Mwingi Central": ["Kivou", "Nguni", "Mwingi Central", "Mui", "Waita"],
+    "Kitui West": ["Mutonguni", "Kauwi", "Matinyani", "Kwa Vonza", "Endau"],
+    "Kitui Rural": ["Kisasi", "Mbitini", "Yatta", "Kanyangi", "Miambani"],
+    "Kitui Central": ["Miambani", "Township", "Kyangwithya West", "Kyangwithya East", "Mulango"],
+    "Kitui East": ["Zombe/Mwitika", "Mutitu/Kaliku", "Endau/Malalani", "Ikanga", "Mutha"],
+    "Kitui South": ["Ikutha", "Mutomo", "Kaniko/Ikana", "Athi", "Kanziko"]
+  },
+  "Machakos": {
+    "Masinga": ["Kivaa", "Masinga Central", "Ekalakala", "Muthesya", "Ndithini"],
+    "Yatta": ["Ikombe", "Katangi", "Matuu", "Kithimani", "Kisasi"],
+    "Kangundo": ["Kangundo North", "Kangundo Central", "Kangundo East", "Kangundo West", "Tala"],
+    "Matungulu": ["Matungulu North", "Matungulu East", "Matungulu West", "Tala", "Kyeleni"],
+    "Kathiani": ["Mitaboni", "Kathiani Central", "Upper Kaewa", "Lower Kaewa", "Iveti"],
+    "Mavoko": ["Athi River", "Syokimau", "Mlolongo", "Kinanie", "Katani"],
+    "Machakos Town": ["Kalama", "Muputi", "Machakos Central", "Mumbuni", "Mua"],
+    "Mwala": ["Mbiuni", "Makutano", "Mwala", "Masii", "Muthetheni"]
+  },
+  "Makueni": {
+    "Mbooni": ["Tulimani", "Mbooni", "Kithungo", "Kiteta", "Kisau"],
+    "Kilome": ["Kiima Kiu/Kalanzoni", "Mukaa", "Kasikeu", "Kee", "Kilungu"],
+    "Kaiti": ["Ukia", "Kee", "Kilala", "Ilima", "Wote"],
+    "Makueni": ["Wote", "Muvau", "Kathonzweni", "Nguu", "Mbitini"],
+    "Kibwezi West": ["Makindu", "Nguu/Masumba", "Emali/Mulala", "Masongaleni", "Mtito Andei"],
+    "Kibwezi East": ["Masongaleni", "Mtito Andei", "Thange", "Kibwezi", "Kikumbulyu"]
+  },
+  "Nyandarua": {
+    "Kinangop": ["Engineer", "Magumu", "Njabini", "Nyakio", "Githabai"],
+    "Kipipiri": ["Wanjohi", "Kipipiri", "Geta", "Githioro", "South Kinangop"],
+    "Ol Kalou": ["Karau", "Kanjuiri Ridge", "Kaimbaga", "Murungaru", "Ol Kalou Central"],
+    "Ol Jorok": ["Gathanji", "Gatimu", "Weru", "Shamata", "Ndaragwa"],
+    "Ndaragwa": ["Leshau/Pondo", "Kiriita", "Central", "Mairo Inya", "Rurii"]
+  },
+  "Nyeri": {
+    "Tetu": ["Dedan Kimathi", "Wamagana", "Aguthi", "Iriaini", "Gatitu"],
+    "Kieni": ["Mweiga", "Naromoru", "Mwiyogo", "Gatarakwa", "Thegu River"],
+    "Mathira": ["Ruguru", "Magutu", "Iria-ini", "Konyu", "Kirimukuyu"],
+    "Othaya": ["Mahiga", "Iria-ini", "Chinga", "Karima", "Gikondi"],
+    "Mukurweini": ["Gikondi", "Ruruguti", "Mukurwe-ini Central", "Mugunda", "Gikoe"],
+    "Nyeri Town": ["Kiganjo/Mathari", "Rware", "Gatitu", "Kamakwa", "Nyeri Central"]
+  },
+  "Kirinyaga": {
+    "Mwea": ["Mutithi", "Kanyekini", "Thiba", "Kangai", "Muringa"],
+    "Gichugu": ["Kabare", "Baragwi", "Njukiini", "Gichugu", "Nthawa"],
+    "Ndia": ["Mukure", "Kiine", "Kariti", "Mutira", "Kanyekine"],
+    "Kirinyaga Central": ["Mutira", "Kanyekine", "Inoi", "Kiamutugu", "Ngariama"]
+  },
+  "Murang'a": {
+    "Kangema": ["Kanyenyaini", "Muguru", "Rwathia", "Gatanga", "Kiru"],
+    "Mathioya": ["Gitugi", "Kiru", "Kamacharia", "Kihoya", "Muguru"],
+    "Kiharu": ["Wangu", "Mugoiri", "Township", "Mbiri", "Mukurwe"],
+    "Kigumo": ["Kahumbu", "Muthithi", "Kinyona", "Kangari", "Kinyona"],
+    "Maragua": ["Kimorori", "Makuyu", "Kambiti", "Muguru", "Kangema"],
+    "Kandara": ["Ng'araria", "Muruka", "Gaichanjiru", "Ithiru", "Ruchu"],
+    "Gatanga": ["Ithiru", "Jugini", "Kariara", "Kagunduini", "Kihumbuini"]
+  },
+  "Kiambu": {
+    "Gatundu South": ["Kiamwangi", "Kiganjo", "Ndudaru", "Gituamba", "Gatundu"],
+    "Gatundu North": ["Gituamba", "Githobokoni", "Chania", "Mang'u", "Ikinu"],
+    "Juja": ["Kalimoni", "Juja", "Witeithie", "Murera", "Theta"],
+    "Thika Town": ["Township", "Kamenu", "Hospital", "Makongeni", "Gatuanyaga"],
+    "Ruiru": ["Biashara", "Gitothua", "Kahawa Wendani", "Kahawa Sukari", "Mwiki"],
+    "Githunguri": ["Githunguri", "Ikinu", "Ngemwa", "Komothai", "Kiamwangi"],
+    "Kiambu": ["Ting'ang'a", "Ndumberi", "Riabai", "Township", "Cianda"],
+    "Kiambaa": ["Cianda", "Karuri", "Ndenderu", "Muchatha", "Kihara"],
+    "Kabete": ["Gitaru", "Muguga", "Nyadhuna", "Kinoo", "Kikuyu"],
+    "Kikuyu": ["Karai", "Nachu", "Kikuyu", "Ngecha", "Gitaru"],
+    "Limuru": ["Bibirioni", "Limuru Central", "Ndeiya", "Kinale", "Kijabe"],
+    "Lari": ["Kijabe", "Nyanduma", "Kinale", "Kirenga", "Lari"]
+  },
+  "Turkana": {
+    "Turkana North": ["Kaeris", "Lake Zone", "Lapur", "Kakuma", "Kalokol"],
+    "Turkana West": ["Lopur", "Nanaam", "Songot", "Kalobeyei"],
+    "Turkana Central": ["Lodwar South", "Lodwar North", "Lodwar Central", "Kanamkemer", "Kalokol"],
+    "Loima": ["Loima", "Lobei/Epuu", "Turkwel", "Lokiriama", "Kalapata"],
+    "Turkana South": ["Kaputir", "Katilu", "Lobokat", "Kalapata", "Lokichar"],
+    "Turkana East": ["Kapedo/Napeitom", "Katir", "Lokori/Kochodin", "Koros", "Kainuk"]
+  },
+  "West Pokot": {
+    "Kapenguria": ["Riwo", "Kapenguria", "Mnagei", "Chepareria", "Sook"],
+    "Sigor": ["Wei Wei", "Lomut", "Masol", "Kodich", "Suam"],
+    "Kacheliba": ["Suam", "Kodich", "Kasei", "Kiwawa", "Alale"],
+    "Pokot South": ["Lelan", "Tapach", "Batei", "Kapchok", "Kipkomo"]
+  },
+  "Samburu": {
+    "Samburu West": ["Lodokejek", "Suguta Marmar", "Maralal", "Wamba", "Baragoi"],
+    "Samburu North": ["El-Barta", "Nachola", "Ndoto", "Baawa", "Waso"],
+    "Samburu East": ["Wamba West", "Wamba East", "Wamba North", "Waso", "Archer's Post"]
+  },
+  "Trans Nzoia": {
+    "Kwanza": ["Kapomboi", "Kwanza", "Keiyo", "Endebess", "Matumbei"],
+    "Endebess": ["Endebess", "Matumbei", "Chepchoina", "Kwanza", "Saboti"],
+    "Saboti": ["Kinyoro", "Matisi", "Saboti", "Machewa", "Kiminini"],
+    "Kiminini": ["Kiminini", "Waitaluk", "Sirende", "Hospital", "Bidii"],
+    "Cherangany": ["Sinyerere", "Makutano", "Kaplamai", "Chepsiro", "Kinyoro"]
+  },
+  "Uasin Gishu": {
+    "Soy": ["Mois Bridge", "Kapkures", "Ziwa", "Kuinet", "Kapsaos"],
+    "Turbo": ["Ngenyilel", "Tapsagoi", "Kamagut", "Huruma", "Kapsaos"],
+    "Moiben": ["Tembelio", "Sergoit", "Karuna/Meibeki", "Kapsowar", "Kabyego"],
+    "Ainabkoi": ["Kapsoya", "Kaptagat", "Ainabkoi/Olare", "Kapsowar", "Kabyego"],
+    "Kapseret": ["Simat/Kapseret", "Kipkenyo", "Megun", "Tembelio", "Langas"],
+    "Kesses": ["Racecourse", "Cheptiret/Kipchamo", "Tulwet/Chuiyat", "Chepkorio", "Kapsaret"]
+  },
+  "Elgeyo Marakwet": {
+    "Marakwet East": ["Kapyego", "Sambirir", "Embobut", "Kapsowar", "Kabyego"],
+    "Marakwet West": ["Lelan", "Sengwer", "Cherang'any/Chebororwa", "Kapcherop", "Kapsowar"],
+    "Keiyo North": ["Emsoo", "Kamariny", "Kapchemutwa", "Chepkorio", "Kapsowar"],
+    "Keiyo South": ["Kaptarakwa", "Metkei", "Kabiemit", "Chepkorio", "Kapsowar"]
+  },
+  "Nandi": {
+    "Tinderet": ["Songhor/Soba", "Tindiret", "Kapsimotwo", "Chemelil", "Koru"],
+    "Aldai": ["Kabwareng", "Terik", "Kemeloi-Maraba", "Kapsabet", "Chepkunyuk"],
+    "Nandi Hills": ["Nandi Hills", "Chepkunyuk", "Ol'Lessos", "Kapsabet", "Kabiyet"],
+    "Chesumei": ["Chemundu/Kapngetuny", "Kosirai", "Lelmokwo/Ngechek", "Kapsimotwo", "Kapsabet"],
+    "Emgwen": ["Kapkangani", "Kapsabet", "Kilibwoni", "Kapsimotwo", "Kabiyet"],
+    "Mosop": ["Kipkaren", "Kurgung/Surungai", "Kabiyet", "Kapsabet", "Nandi Hills"]
+  },
+  "Baringo": {
+    "Tiaty": ["Tirioko", "Kolowa", "Ribkwo", "Churo", "Amaya"],
+    "Baringo North": ["Barwessa", "Saimo/Kipsaraman", "Saimo/Soi", "Kabartonjo", "Bartabwa"],
+    "Baringo Central": ["Kabarnet", "Sacho", "Tenges", "Emining", "Mogotio"],
+    "Baringo South": ["Marigat", "Ilgwesi", "Mochongoi", "Mukutani", "Emining"],
+    "Mogotio": ["Mogotio", "Emining", "Kishan", "Mumberes"],
+    "Eldama Ravine": ["Lembus", "Ravine", "Mumberes/Maji Mazuri", "Koibatek", "Emining"]
+  },
+  "Laikipia": {
+    "Laikipia West": ["Ol-Moran", "Rumuruti Township", "Githiga", "Marmanet", "Sipili"],
+    "Laikipia East": ["Nanyuki", "Umande", "Tigithi", "Timau", "Mukogondo"],
+    "Laikipia North": ["Sosian", "Segera", "Mugogodo East", "Mukogondo West", "Rumuruti"]
+  },
+  "Nakuru": {
+    "Molo": ["Mariashoni", "Molo", "Turi", "Elburgon", "Mau Summit"],
+    "Njoro": ["Mau Narok", "Njoro", "Lare", "Mauche", "Kihingo"],
+    "Naivasha": ["Biashara", "Hells Gate", "Lake View", "Maai Mahiu", "Karai"],
+    "Gilgil": ["Gilgil", "Elementaita", "Mbaruk/Eburu", "Malewa West", "Mbaruk"],
+    "Kuresoi South": ["Amalo", "Keringet", "Kiptororo", "Tinet", "Kiptagich"],
+    "Kuresoi North": ["Kiptororo", "Nyota", "Sirikwa", "Tinet", "Kiptagich"],
+    "Subukia": ["Subukia", "Waseges", "Kabazi", "Solai", "Mbaruk"],
+    "Rongai": ["Menengai West", "Soin", "Visoi", "Mosop"],
+    "Bahati": ["Bahati", "Kiamaina", "Lanet/Umoja", "Kabatini", "Kiptororo"],
+    "Nakuru Town West": ["Barut", "London", "Kaptembwa", "Kapkures", "Milimani"],
+    "Nakuru Town East": ["Biashara", "Kivumbini", "Flamingo", "Menengai", "Rhoda"]
+  },
+  "Narok": {
+    "Kilgoris": ["Kilgoris Central", "Keyian", "Angata Barikoi", "Mogondo", "Ilkerin"],
+    "Emurua Dikirr": ["Ilkerin", "Ololmasani", "Mogondo", "Keekonyokie", "Nkararo"],
+    "Narok North": ["Olokurto", "Narok Town", "Nkareta", "Olorropil", "Melili"],
+    "Narok East": ["Mosiro", "Ildamat", "Keekonyokie", "Ntulele", "Majimoto"],
+    "Narok South": ["Majimoto/Naroosura", "Ololulung'a", "Melelo", "Oltukai", "Mosiro"],
+    "Narok West": ["Ilmotiok", "Mara", "Siana", "Lemek", "Maji Moto"]
+  },
+  "Kajiado": {
+    "Kajiado North": ["Olkeri", "Ongata Rongai", "Nkaimurunya", "Oloolua", "Ngong"],
+    "Kajiado Central": ["Purko", "Ildamat", "Dalalekutuk", "Oloosirkon", "Sholinke"],
+    "Kajiado East": ["Kaputiei North", "Kitengela", "Oloosirkon/Sholinke", "Ilbisil", "Entonet"],
+    "Kajiado West": ["Keekonyokie", "Magadi", "Ewuaso Kedong", "Olkeri", "Iloodokilani"],
+    "Kajiado South": ["Entonet/Lenkisim", "Mbirikani/Eselekei", "Kuku", "Rombo", "Kimana"]
+  },
+  "Kericho": {
+    "Kipkelion East": ["Londiani", "Kedowa/Kipkelion", "Chepseon", "Kunyak", "Kapsaos"],
+    "Kipkelion West": ["Kipkelion", "Chilchila", "Soin", "Tendeno", "Kapkatet"],
+    "Ainamoi": ["Kapsoit", "Ainamoi", "Kapkugerwet", "Kapsaos", "Kapsuser"],
+    "Bureti": ["Kisiara", "Tebesonik", "Cheboin", "Kapkatet", "Kapsuser"],
+    "Belgut": ["Waldai", "Kabianga", "Cheptororiet", "Kapsuser", "Kapkatet"],
+    "Sigowet/Soin": ["Sigowet", "Soin", "Soliat", "Kapkatet", "Kapsaos"]
+  },
+  "Bomet": {
+    "Sotik": ["Ndanai/Abosi", "Kipsonoi", "Kapletundo", "Chemaner", "Kembu"],
+    "Chepalungu": ["Kong'asis", "Nyangores", "Sigor", "Chebunyo", "Siongiroi"],
+    "Bomet East": ["Merigi", "Kembu", "Longisa", "Chemaner", "Kapletundo"],
+    "Bomet Central": ["Siloibwet", "Singorwet", "Ndaraweta", "Chebunyo", "Siongiroi"],
+    "Konoin": ["Kimulot", "Mogogosiek", "Boito", "Chebunyo", "Siongiroi"]
+  },
+  "Kakamega": {
+    "Lugari": ["Mautuma", "Lugari", "Lumakanda", "Chekalini", "Lwandeti"],
+    "Likuyani": ["Likuyani", "Sango", "Kongoni", "Sinoko", "Nzoia"],
+    "Malava": ["West Kabras", "East Kabras", "South Kabras", "North Kabras", "Butali"],
+    "Lurambi": ["Butsotso South", "Butsotso Central", "Sheywe", "East Butsotso", "West Butsotso"],
+    "Navakholo": ["Ingotse-Matiha", "Shinoyi-Shikomari-Esumeyia", "Bunyala West", "Bunyala East", "Bunyala Central"],
+    "Mumias West": ["Mumias Central", "Mumias North", "Etenje", "Musanda", "Lubinu"],
+    "Mumias East": ["Lusheya/Lubinu", "Maluha/Isongo/Makunga", "East Wanga", "West Wanga", "Kholera"],
+    "Matungu": ["Koyonzo", "Mayoni", "Namamali", "Khalaba", "Mukhonje"],
+    "Butere": ["Marama Central", "Marama South", "Marama North", "West Marama", "East Marama"],
+    "Khwisero": ["Kisa North", "Kisa West", "Kisa Central", "Kisa East", "Kisa South"],
+    "Shinyalu": ["Isukha North", "Isukha Central", "Isukha South", "Isukha East", "Isukha West"],
+    "Ikolomani": ["Idakho South", "Idakho East", "Idakho Central", "Idakho North", "Idakho West"]
+  },
+  "Vihiga": {
+    "Vihiga": ["Lugaga-Wamuluma", "Central Maragoli", "South Maragoli", "Wodanga", "Busali"],
+    "Sabatia": ["Lyaduywa/Izava", "West Sabatia", "Chavakali", "North Maragoli", "South Maragoli"],
+    "Hamisi": ["Shiru", "Muhudu", "Shamakhokho", "Tambua", "Jepkoyai"],
+    "Luanda": ["Luanda Township", "Wemilabi", "Mwibona", "Emabungo", "North East Bunyore"],
+    "Emuhaya": ["North Bunyore", "Central Bunyore", "South Bunyore", "West Bunyore", "East Bunyore"]
+  },
+  "Bungoma": {
+    "Mt. Elgon": ["Chepyuk", "Kapkateny", "Kaptama", "Kapsokwony", "Kopsiro"],
+    "Sirisia": ["Namwela", "Sirisia", "Lwandanyi", "Kabuchai", "Chwele"],
+    "Kabuchai": ["Kabuchai/Chwele", "West Nalondo", "Bwake/Luuya", "Nalondo", "Luuya"],
+    "Bumula": ["Bumula", "Khasoko", "Kabula", "Kimaeti", "Siboti"],
+    "Kanduyi": ["Bukembe West", "Township", "Khalaba", "Sitabicha", "Bukembe East"],
+    "Webuye East": ["Mihuu", "Ndivisi", "Maraka", "Bokoli", "Misikhu"],
+    "Webuye West": ["Sitikho", "Matulo", "Bokoli", "Misikhu", "Ndivisi"],
+    "Kimilili": ["Kibingei", "Kimilili", "Maeni", "Ndalu", "Tabani"],
+    "Tongaren": ["Mbakalo", "Naitiri/Kabuyefwe", "Tongaren", "Soysambu", "Mitua"]
+  },
+  "Busia": {
+    "Teso North": ["Malaba Central", "Malaba North", "Ang'urai South", "Amukura", "Chakol"],
+    "Teso South": ["Ang'orom", "Chakol South", "Amukura West", "Amukura East", "Ang'urai North"],
+    "Nambale": ["Nambale Township", "Bukhayo North/Waltsi", "Bukhayo East", "Bukhayo West", "Bukhayo Central"],
+    "Matayos": ["Bukhayo West", "Mayenje", "Matayos South", "Matayos North", "Budalangi"],
+    "Butula": ["Marachi West", "Marachi Central", "Marachi East", "Marachi North", "Marachi South"],
+    "Funyula": ["Namboboto Nambuku", "Nangina", "Ageng'a Nanguba"],
+    "Budalangi": ["Bunyala Central", "Bunyala North", "Bunyala West", "Bunyala East", "Bunyala South"]
+  },
+  "Siaya": {
+    "Ugenya": ["West Ugenya", "North Ugenya", "East Ugenya", "South Ugenya"],
+    "Ugunja": ["Sidindi", "Sigomere", "Ugunja", "Ukwala", "West Ugenya"],
+    "Alego Usonga": ["Usonga", "West Alego", "Central Alego", "Siaya Township", "North Alego"],
+    "Gem": ["North Gem", "West Gem", "Central Gem", "Yala Township", "Kombewa"],
+    "Bondo": ["West Sakwa", "Central Sakwa", "South Sakwa", "East Sakwa", "North Sakwa"],
+    "Rarieda": ["North Uyoma", "South Uyoma", "West Uyoma", "East Uyoma", "Central Uyoma"]
+  },
+  "Kisumu": {
+    "Kisumu East": ["Kajulu", "Kolwa East", "Manyatta B", "Nyalenda", "Kanyakwar"],
+    "Kisumu West": ["South West Kisumu", "Central Kisumu", "North West Kisumu", "East Kisumu", "West Kisumu"],
+    "Kisumu Central": ["Railways", "Shaurimoyo Kaloleni", "Kondele", "Manyatta A", "Kibuye"],
+    "Seme": ["West Seme", "Central Seme", "East Seme", "North Seme", "South Seme"],
+    "Nyando": ["East Kano/Wawidhi", "Awasi/Onjiko", "Kobura", "Ahero", "Kabonyo"],
+    "Muhoroni": ["Miwani", "Ombeyi", "Muhoroni Koru", "Chemelil", "Muhoroni Town"],
+    "Nyakach": ["South West Nyakach", "North Nyakach", "Central Nyakach", "Pap Onditi", "East Nyakach"]
+  },
+  "Homa Bay": {
+    "Kasipul": ["West Kasipul", "South Kasipul", "Central Kasipul", "East Kasipul", "North Kasipul"],
+    "Kabondo Kasipul": ["Kabondo East", "Kabondo West", "Kokwanyo/Kakelo", "Kabondo Central", "Kabondo North"],
+    "Karachuonyo": ["West Karachuonyo", "North Karachuonyo", "Central Karachuonyo", "East Karachuonyo", "South Karachuonyo"],
+    "Rangwe": ["West Rangwe", "Kagan", "Kochia", "East Rangwe", "Central Rangwe"],
+    "Homa Bay Town": ["Homa Bay Central", "Homa Bay West", "Homa Bay East", "Homa Bay North", "Homa Bay South"],
+    "Ndhiwa": ["North Kabuoch", "South Kabuoch", "Kanyadoto", "East Kabuoch", "West Kabuoch"],
+    "Suba North": ["Kasgunga", "Rusinga Island", "Mbita", "Lambwe", "Gwassi"],
+    "Suba South": ["Gwassi South", "Gwassi North", "Kaksingri West", "Kaksingri East", "Mfangano"]
+  },
+  "Migori": {
+    "Rongo": ["North Kamagambo", "Central Kamagambo", "East Kamagambo", "South Kamagambo", "West Kamagambo"],
+    "Awendo": ["North Sakwa", "South Sakwa", "West Sakwa", "East Sakwa", "Central Sakwa"],
+    "Suna East": ["God Jope", "Suna Central", "Kanyamkago", "Wasimbete", "Wiga"],
+    "Suna West": ["Wiga", "Wasimbete", "Ragana-Oruba", "Kanyamkago", "God Jope"],
+    "Uriri": ["West Kanyamkago", "North Kanyamkago", "Central Kanyamkago", "East Kanyamkago", "South Kanyamkago"],
+    "Nyatike": ["Kachien'g", "Kanyasa", "North Kadem", "South Kadem", "Central Kadem"],
+    "Kuria West": ["Bukira East", "Bukira Central", "Isibania", "Nyabasi East", "Nyabasi West"],
+    "Kuria East": ["Goke-Haraka", "Ntimaru West", "Ntimaru East", "Kegonga", "Getongoroma"]
+  },
+  "Kisii": {
+    "Bonchari": ["Bomariba", "Bogiakumu", "Riana", "Kegogi"],
+    "South Mugirango": ["Bogetenga", "Borabu", "Moticho", "Boikanga"],
+    "Bomachoge Borabu": ["Bombaba Borabu", "Boochi Borabu", "Bokimonge"],
+    "Bobasi": ["Masige West", "Masige East", "Bassie Central", "Boikanga"],
+    "Bomachoge Chache": ["Majoge Bassi", "Boochi Tendere", "Bosoti/Sengera"],
+    "Nyaribari Masaba": ["Ichuni", "Nyamasibi", "Masasabi"],
+    "Nyaribari Chache": ["Birongo", "Keumbu", "Kiogoro"],
+    "Kitutu Chache North": ["Monyerero", "Sensi", "Marani"],
+    "Kitutu Chache South": ["Bogusero", "Bogeka", "Nyatieko"]
+  },
+  "Nyamira": {
+    "Kitutu Masaba": ["Rigoma", "Gachuba", "Magombo", "Bomwagamo", "Bokeira"],
+    "West Mugirango": ["Nyamaiya", "Township", "Bogichora", "Bomwagamo", "Bokeira"],
+    "North Mugirango": ["Itibo", "Bomwagamo", "Bokeira", "Esise", "Mekenene"],
+    "Borabu": ["Esise", "Mekenene", "Kiabonyoru", "Nyansiongo", "Ekerenyo"]
+  }
+};
+
+/* =========================
+   VIEW REFERENCES
+========================= */
+const views = {
+  dashboard: document.getElementById("main-wrap"),
+  createAdmin: document.getElementById("create-admin-form"),
+  verifyAdmin: document.getElementById("pending-activation"),
+  registerAdmin: document.getElementById("register") 
+};
+
+/* =========================
+   BUTTON REFERENCES
+========================= */
+const btnCreateAdmin = document.getElementById("btn-create-admin");
+const btnActivateAdmin = document.getElementById("btn-activate-admin");
+const btnRegisterAdmin = document.getElementById("btn-register-admin");
+
+const btnBackCreate = document.getElementById("back-dashboard-create");
+const btnBackVerify = document.getElementById("back-dashboard-pending");
+const btnBackRegister = document.getElementById("back-dashboard-register");
+
+/* =========================
+   PHONE VERIFICATION ELEMENTS
+========================= */
+const phoneForm = document.getElementById("phone-check-form");
+const phoneInput = document.getElementById("phone-input");
+const phoneResult = document.getElementById("phone-result");
+
+/* VERIFIED ACTIONS */
+const verifiedBox = document.getElementById("verified-actions");
+const verifiedName = document.getElementById("verified-admin-name");
+const nameText = document.getElementById("name-text"); 
+const verifiedForm = document.getElementById("verified-register-form");
+const verifiedDocet = document.getElementById("verified-docet");
+
+/* GEO DROPDOWNS */
+const countySelect = document.getElementById("reg-county");
+const constituencySelect = document.getElementById("reg-constituency");
+const wardSelect = document.getElementById("reg-ward");
+
+
+/* =========================
+   VIEW CONTROLLER
+========================= */
+function hideAllViews() {
+  Object.values(views).forEach(v => v && v.classList.add("hidden"));
+}
+
+function showView(name) {
+  hideAllViews();
+  views[name].classList.remove("hidden");
+  views[name].scrollIntoView({ behavior: "smooth" });
+}
+
+/* =========================
+   GEO DROPDOWN LOGIC
+========================= */
+// Populate Counties
+Object.keys(kenyaGeoData).sort().forEach(county => {
+  const option = document.createElement("option");
+  option.value = county;
+  option.textContent = county;
+  countySelect.appendChild(option);
+});
+
+// County Change Event
+countySelect.addEventListener("change", () => {
+  const selectedCounty = countySelect.value;
+  
+  // Reset Constituency and Ward
+  constituencySelect.innerHTML = '<option value="">Select Constituency</option>';
+  wardSelect.innerHTML = '<option value="">Select Ward</option>';
+  
+  if (selectedCounty && kenyaGeoData[selectedCounty]) {
+    constituencySelect.disabled = false;
+    const constituencies = Object.keys(kenyaGeoData[selectedCounty]).sort();
+    
+    constituencies.forEach(constituency => {
+      const option = document.createElement("option");
+      option.value = constituency;
+      option.textContent = constituency;
+      constituencySelect.appendChild(option);
+    });
+  } else {
+    constituencySelect.disabled = true;
+    wardSelect.disabled = true;
+  }
+});
+
+// Constituency Change Event
+constituencySelect.addEventListener("change", () => {
+  const selectedCounty = countySelect.value;
+  const selectedConstituency = constituencySelect.value;
+  
+  // Reset Ward
+  wardSelect.innerHTML = '<option value="">Select Ward</option>';
+  
+  if (selectedCounty && selectedConstituency && kenyaGeoData[selectedCounty][selectedConstituency]) {
+    wardSelect.disabled = false;
+    const wards = kenyaGeoData[selectedCounty][selectedConstituency].sort();
+    
+    wards.forEach(ward => {
+      const option = document.createElement("option");
+      option.value = ward;
+      option.textContent = ward;
+      wardSelect.appendChild(option);
+    });
+  } else {
+    wardSelect.disabled = true;
+  }
+});
+
+
+/* =========================
+   RESET VERIFICATION STATE
+========================= */
+function resetVerification() {
+  phoneInput.value = "";
+  phoneResult.innerHTML = "";
+
+  if (verifiedBox) verifiedBox.classList.add("hidden");
+  if (nameText) nameText.textContent = "";
+  if (verifiedDocet) verifiedDocet.value = "";
+  
+  // Reset Geo Selects
+  countySelect.value = "";
+  constituencySelect.innerHTML = '<option value="">Select Constituency</option>';
+  constituencySelect.disabled = true;
+  wardSelect.innerHTML = '<option value="">Select Ward</option>';
+  wardSelect.disabled = true;
+
+  // show phone input again
+  if (phoneForm) phoneForm.classList.remove("hidden");
+}
+
+/* =========================
+   NAVIGATION EVENTS
+========================= */
+btnCreateAdmin.onclick = () => showView("createAdmin");
+
+btnActivateAdmin.onclick = () => {
+  resetVerification();
+  showView("verifyAdmin");
+};
+
+btnRegisterAdmin.onclick = () => showView("registerAdmin");
+
+btnBackCreate.onclick =
+btnBackVerify.onclick =
+btnBackRegister.onclick = () => {
+  resetVerification();
+  showView("dashboard");
+};
+
+/* =========================
+   PHONE VERIFICATION LOGIC
+========================= */
+if (phoneForm) {
+  phoneForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const phone = phoneInput.value.trim();
+    if (!phone) {
+      phoneResult.textContent = "Please enter phone number";
+      phoneResult.style.color = "var(--danger)";
+      return;
+    }
+
+    phoneResult.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+    phoneResult.style.color = "var(--secondary)";
+
+    try {
+      const res = await fetch(`/hq/check-admin/${phone}`);
+      if (!res.ok) throw new Error();
+
+      const admin = await res.json();
+
+      /* SUCCESS: SHOW NAME + DISPLAY VERIFIED REGISTER FORM */
+      phoneForm.classList.add("hidden"); 
+      phoneResult.innerHTML = "";        
+
+      nameText.textContent = admin.name;
+      verifiedBox.classList.remove("hidden"); 
+
+    } catch {
+      phoneResult.textContent = "Admin not found";
+      phoneResult.style.color = "var(--danger)";
+    }
+  });
+}
+
+/* =========================
+   REGISTER VERIFIED ADMIN
+========================= */
+if (verifiedForm) {
+  verifiedForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const docet = verifiedDocet.value;
+    const name = nameText.textContent;
+    
+    // Get Geo Data
+    const county = countySelect.value;
+    const constituency = constituencySelect.value;
+    const ward = wardSelect.value;
+
+    if (!docet) {
+      alert("Please select a department");
+      return;
+    }
+    
+    if (!county || !constituency || !ward) {
+      alert("Please select a County, Constituency, and Ward");
+      return;
+    }
+
+    try {
+     const res = await fetch("/hq/register-verified-admin", {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ name, docet, county, constituency, ward })
+     });
+
+     const data = await res.json();
+
+     if (!res.ok) {
+       alert(data.message || "Failed to register admin");
+       return;
+     }
+
+     alert(data.message); 
+     resetVerification();
+     showView("dashboard");
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to register admin");
+    }
+  });
+}
+
+/* =========================
+   INITIAL STATE
+========================= */
+showView("dashboard");
+</script>
+
+</body>
+</html>

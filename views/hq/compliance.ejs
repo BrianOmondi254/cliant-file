@@ -1,0 +1,2936 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Client Accounts Dashboard</title>
+    <!-- Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* =========================
+   1. RESET & VARIABLES
+========================= */
+      :root {
+        /* Brand Colors */
+        --primary: #4f46e5;
+        --primary-light: #818cf8;
+        --primary-faint: #e0e7ff;
+
+        --secondary: #64748b;
+        --secondary-light: #cbd5e1;
+
+        --danger: #ef4444;
+        --danger-faint: #fee2e2;
+
+        --success: #10b981;
+        --success-faint: #d1fae5;
+
+        /* Deep Colors for Text */
+        --text-dark: #0f172a;
+        --text-gray: #475569;
+
+        /* Backgrounds */
+        --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+        /* UI Elements - Advanced Boxing */
+        --radius-card: 20px;
+        --radius-box: 12px;
+
+        /* Complex Shadows */
+        --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.05),
+          0 4px 10px -2px rgba(0, 0, 0, 0.02),
+          0 0 0 1px rgba(255, 255, 255, 0.5) inset; /* Inner glow */
+
+        --shadow-hover: 0 20px 40px -5px rgba(50, 50, 93, 0.15),
+          0 10px 20px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+        outline: none;
+      }
+
+      body {
+        margin: 0;
+        padding: 50px 20px;
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background: #f1f5f9;
+        background-image: radial-gradient(
+            at 0% 0%,
+            rgba(79, 70, 229, 0.1) 0px,
+            transparent 50%
+          ),
+          radial-gradient(
+            at 100% 0%,
+            rgba(16, 185, 129, 0.1) 0px,
+            transparent 50%
+          ),
+          radial-gradient(
+            at 100% 100%,
+            rgba(245, 158, 11, 0.1) 0px,
+            transparent 50%
+          );
+        background-attachment: fixed;
+        color: var(--text-dark);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+      /* =========================
+   DARK MODE TOGGLE STYLES
+========================= */
+.theme-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: none;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--primary);
+    transition: all 0.3s ease;
+}
+
+.theme-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+/* Dark Mode Variable Overrides */
+body.dark-mode {
+    background: #0f172a; /* Deep Navy/Black */
+    background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+                      radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+    color: #f1f5f9;
+}
+
+body.dark-mode h1, 
+body.dark-mode h3 {
+    color: #f8fafc;
+}
+
+body.dark-mode .account-card {
+    background: rgba(30, 41, 59, 0.8); /* Slate-800 */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .reg-menu-btn,
+body.dark-mode .btn-secondary,
+body.dark-mode .btn-flat,
+body.dark-mode .view-header,
+body.dark-mode .form-section {
+    background: #1e293b; /* Slate-700 */
+    border-color: #334155;
+    color: #cbd5e1;
+}
+
+body.dark-mode .btn-flat:hover,
+body.dark-mode .reg-menu-btn:hover {
+    background: #334155;
+}
+
+body.dark-mode input, 
+body.dark-mode select {
+    background: #0f172a;
+    color: white;
+    border-color: #334155;
+}
+
+body.dark-mode .radio-card label {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+body.dark-mode .panel-header {
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .toast {
+    background: #1e293b;
+    color: white;
+    border: 1px solid #334155;
+}
+
+
+      /* Typography */
+      h1 {
+        text-align: center;
+        margin-bottom: 60px;
+        font-weight: 800;
+        font-size: 2.5rem;
+        letter-spacing: -1px;
+        color: var(--text-dark);
+        position: relative;
+        display: inline-block;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      h1 i {
+        background: -webkit-linear-gradient(
+          45deg,
+          var(--primary),
+          var(--primary-light)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-right: 15px;
+        font-size: 0.9em;
+      }
+      h1::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: var(--primary);
+        border-radius: 2px;
+      }
+
+      /* =========================
+   2. LAYOUT & CARDS
+========================= */
+      .container {
+        max-width: 1250px;
+        margin: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        gap: 30px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .account-card {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(12px);
+        border-radius: var(--radius-card);
+        padding: 35px;
+        box-shadow: var(--shadow-card);
+        position: relative;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .account-card:hover {
+        transform: translateY(-10px);
+        box-shadow: var(--shadow-hover);
+        border-color: var(--primary-light);
+      }
+
+      /* Top Accent Strips */
+      #aa {
+        border-top: 8px solid #6366f1;
+      }
+      #aa::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(99, 102, 241, 0.03),
+          transparent
+        );
+        pointer-events: none;
+      }
+
+      #da {
+        border-top: 8px solid #f59e0b;
+      }
+      #da::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(245, 158, 11, 0.03),
+          transparent
+        );
+        pointer-events: none;
+      }
+
+      #gc {
+        border-top: 8px solid #10b981;
+      }
+      #gc::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(16, 185, 129, 0.03),
+          transparent
+        );
+        pointer-events: none;
+      }
+
+      .card-header-icon {
+        position: absolute;
+        top: -25px;
+        right: -25px;
+        font-size: 150px;
+        opacity: 0.03;
+        pointer-events: none;
+        transition: 0.5s;
+      }
+      .account-card:hover .card-header-icon {
+        transform: rotate(-15deg) scale(1.2);
+        opacity: 0.06;
+      }
+
+      /* Typography inside cards */
+      h3 {
+        margin: 0 0 28px 0;
+        font-size: 1.45rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        letter-spacing: -0.5px;
+      }
+      .text-agent {
+        color: #4338ca;
+      }
+      .text-dealer {
+        color: #b45309;
+      }
+      .text-general {
+        color: #047857;
+      }
+
+      /* =========================
+   3. BUTTONS & INPUTS
+========================= */
+      .account-btns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: auto;
+      }
+
+      .btn {
+        border: 1px solid transparent;
+        color: white;
+        padding: 14px 20px;
+        border-radius: var(--radius-box);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 0.95rem;
+        letter-spacing: 0.2px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn-primary {
+        background: linear-gradient(
+          135deg,
+          var(--primary) 0%,
+          var(--primary) 100%
+        );
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      }
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(79, 70, 229, 0.4);
+      }
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      .btn-danger {
+        background: white;
+        color: var(--danger);
+        border: 2px solid #fee2e2;
+      }
+      .btn-danger:hover {
+        background: var(--danger);
+        color: white;
+        border-color: var(--danger);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+      }
+
+      .btn-secondary {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        color: var(--text-gray);
+      }
+      .btn-secondary:hover {
+        background: white;
+        border-color: var(--primary-light);
+        color: var(--primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+
+      .btn-flat {
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: var(--text-dark);
+        justify-content: space-between;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+      }
+      .btn-flat:hover {
+        border-color: var(--primary-light);
+        background: var(--primary-faint);
+        transform: translateX(4px);
+        color: var(--primary);
+      }
+      .btn-flat i {
+        color: #cbd5e1;
+        transition: 0.3s;
+      }
+      .btn-flat:hover i {
+        color: var(--primary);
+      }
+
+      /* Card options dropdown */
+      .card-options {
+        position: absolute;
+        top: 48px;
+        right: 16px;
+        width: 220px;
+        background: #fff;
+        border: 1px solid #e6edf3;
+        box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+        border-radius: 8px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 60;
+      }
+      .card-options.hidden { display: none; }
+
+      .btn-sm {
+        width: auto;
+        padding: 10px 18px;
+        font-size: 0.85rem;
+      }
+
+      /* =========================
+   4. PANELS & VIEWS
+========================= */
+      .single-view {
+        max-width: 950px;
+        margin: 0 auto;
+        display: none;
+        animation: slideUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+      }
+      .view-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 35px;
+        background: white;
+        padding: 15px 25px;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        border: 1px solid #f1f5f9;
+      }
+
+      .reg-menu-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 22px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-box);
+        font-weight: 600;
+        cursor: pointer;
+        margin-bottom: 16px;
+        transition: 0.3s;
+        text-align: left;
+        position: relative;
+        overflow: hidden;
+      }
+      .reg-menu-btn::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: transparent;
+        transition: 0.3s;
+      }
+      .reg-menu-btn:hover {
+        border-color: var(--primary);
+        background: #fafbff;
+        padding-left: 28px;
+        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.08);
+      }
+      .reg-menu-btn:hover::before {
+        background: var(--primary);
+      }
+      .reg-menu-btn i {
+        color: #cbd5e1;
+        transition: 0.3s;
+      }
+      .reg-menu-btn:hover i {
+        color: var(--primary);
+        transform: translateX(4px);
+      }
+      .status-badge {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.75rem;
+        padding: 6px 8px;
+        border-radius: 999px;
+        font-weight: 700;
+        color: white;
+        display: inline-block;
+      }
+      .status-badge.unupdated { background: var(--danger); }
+      .status-badge.updated { background: var(--success); }
+
+      .hidden-panel {
+        display: none;
+        background: #fff;
+        border-radius: var(--radius-card);
+        animation: fadeIn 0.4s ease;
+        padding: 5px;
+      }
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        margin: 25px;
+        margin-bottom: 20px;
+        border-bottom: 2px dashed #e2e8f0;
+        padding-bottom: 20px;
+      }
+      .panel-header h4 {
+        color: var(--primary);
+        margin: 0;
+        font-weight: 800;
+        font-size: 1.3rem;
+        letter-spacing: -0.5px;
+      }
+
+      .form-section {
+        margin-bottom: 24px;
+        background: #f8fafc;
+        padding: 24px;
+        border-radius: var(--radius-box);
+        border: 2px dashed #e2e8f0;
+        position: relative;
+      }
+      .form-section:hover {
+        border-color: var(--secondary-light);
+        background: white;
+      }
+      .form-section h4 {
+        margin: 0 0 18px 0;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--secondary);
+        letter-spacing: 0.1em;
+        font-weight: 700;
+        display: inline-block;
+        background: #e2e8f0;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .radio-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 14px;
+      }
+      .radio-card {
+        position: relative;
+      }
+      .radio-card input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .radio-card label {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: var(--radius-box);
+        padding: 18px;
+        cursor: pointer;
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        color: var(--text-gray);
+        font-weight: 600;
+        text-align: center;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        position: relative;
+        overflow: hidden;
+      }
+      .radio-card label:hover {
+        border-color: var(--primary-light);
+        background: #fafbff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      }
+      .radio-card input:checked + label {
+        border-color: var(--primary);
+        background: var(--primary-faint);
+        color: var(--primary);
+        font-weight: 800;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+      }
+      .radio-card input:checked + label::after {
+        content: "\f00c";
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 10px;
+        color: var(--primary);
+        background: white;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes popIn {
+        from {
+          transform: scale(0);
+        }
+        to {
+          transform: scale(1);
+        }
+      }
+
+      #toast-container {
+        position: fixed;
+        left: 50%;
+        bottom: 30px;
+        transform: translateX(-50%);
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+      }
+      .toast {
+        min-width: 320px;
+        background: white;
+        color: #1e293b;
+        text-align: center;
+        border-radius: 12px;
+        padding: 16px 24px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15),
+          0 5px 15px rgba(0, 0, 0, 0.05);
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 1px solid #f1f5f9;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .toast.success {
+        border-left: 5px solid var(--success);
+      }
+      .toast.success i {
+        color: var(--success);
+      }
+      .toast.error {
+        border-left: 5px solid var(--danger);
+      }
+      .toast.error i {
+        color: var(--danger);
+      }
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+      }
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <button id="theme-toggle" class="theme-btn" title="Toggle Dark/Light Mode">
+  <i class="fa-solid fa-moon"></i>
+</button>
+
+    <h1><i class="fa-solid fa-chart-line"></i> Compliance Dashboard</h1>
+
+    <div class="container fade-in" id="mainDashboard">
+      <div class="account-card" id="aa">
+        <i class="fa-solid fa-user-tie card-header-icon"></i>
+        <h3 class="text-agent">
+          <i class="fa-solid fa-user-tie"></i> Agent Account
+        </h3>
+        <div class="account-btns">
+          <button
+            class="btn btn-primary"
+            onclick="triggerAction('Agent Account Activated')"
+          >
+            Activate
+          </button>
+          <button
+            class="btn btn-danger"
+            onclick="triggerAction('Agent Account Blocked', true)"
+          >
+            Block
+          </button>
+          <button class="btn btn-secondary">Settings</button>
+          <button class="btn btn-secondary">Reports</button>
+          <button
+            class="btn btn-secondary"
+            style="grid-column: span 2"
+            onclick="openSubAccount('agentManagement')"
+          >
+            <i class="fa-solid fa-users-gear"></i> Review Agent Account
+          </button>
+        </div>
+      </div>
+
+      <div class="account-card" id="da">
+        <i class="fa-solid fa-store card-header-icon"></i>
+        <h3 class="text-dealer">
+          <i class="fa-solid fa-store"></i> Dealer Account
+        </h3>
+        <div class="account-btns">
+          <button
+            class="btn btn-primary"
+            onclick="triggerAction('Dealer Account Activated')"
+          >
+            Activate
+          </button>
+          <button
+            class="btn btn-danger"
+            onclick="triggerAction('Dealer Account Blocked', true)"
+          >
+            Block
+          </button>
+          <button class="btn btn-secondary">Settings</button>
+          <button class="btn btn-secondary">Reports</button>
+          <button
+            class="btn btn-secondary"
+            style="grid-column: span 2"
+            onclick="openSubAccount('dealerManagement')"
+          >
+            <i class="fa-solid fa-store"></i> Review Dealer Account
+          </button>
+        </div>
+      </div>
+
+      <div class="account-card" id="gc" onclick="toggleGcOptions(event)" style="position:relative; cursor:pointer;">
+        <i class="fa-solid fa-users card-header-icon"></i>
+        <div>
+          <h3 class="text-general">
+            <i class="fa-solid fa-users"></i> Clients Account
+        <!-- COMPLIANCE MESSAGES OVERLAY -->
+        <div id="comp-messages-overlay" style="display:none; position:fixed; bottom:30px; right:30px; width:420px; max-height:70vh; background:var(--panel-bg, #fff); border:1px solid rgba(0,0,0,0.06); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:1200; overflow:auto;">
+          <div style="background:var(--primary); color:#fff; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <strong>Messages</strong>
+            <button onclick="closeComplianceMessages()" style="background:none;border:none;color:white;font-size:1.2rem;cursor:pointer">×</button>
+          </div>
+          <div id="comp-messages-list" style="padding:12px; color:var(--text-color);"></div>
+        </div>
+          </h3>
+          <div class="account-btns">
+            <button class="btn btn-flat" onclick="event.stopPropagation(); openSubAccount('pa')">
+              <span style="cursor:pointer;">Personal Accounts</span>
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button class="btn btn-flat" onclick="event.stopPropagation(); openSubAccount('ga')">
+              <span style="cursor:pointer;">Groups Accounts</span>
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <div id="gcOptions" class="card-options hidden" onclick="event.stopPropagation();">
+              <button class="btn btn-flat" onclick="openSubAccount('pa'); hideGcOptions();">Personal Accounts</button>
+              <button class="btn btn-flat" onclick="openSubAccount('ga'); hideGcOptions();">Group Accounts</button>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+
+    <!-- AGENT MANAGEMENT VIEW -->
+    <div id="agentManagement" class="single-view">
+      <div class="view-header">
+        <button class="btn btn-secondary btn-sm" onclick="backToDashboard()">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+        <h3 style="margin: 0">Agent Management</h3>
+      </div>
+      <div
+        class="account-card"
+        style="border-top: 8px solid #6366f1; min-height: 450px"
+      >
+        <h3><i class="fa-solid fa-user-tie"></i> Agent Operations</h3>
+
+        <div id="agentMainView" class="fade-in">
+          <div style="padding-top: 10px">
+            <div
+              style="
+                margin-bottom: 20px;
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: var(--secondary);
+                letter-spacing: 0.1em;
+                padding-left: 4px;
+              "
+            >
+              <i class="fa-solid fa-sliders"></i> Agent Administration
+            </div>
+
+            <button
+              class="reg-menu-btn"
+              onclick="openAgentPanel('panel-create-agent')"
+            >
+              <span>1. Create Agent Account</span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+
+            <button
+              class="reg-menu-btn"
+              onclick="triggerAction('Agent Performance View Coming Soon')"
+            >
+              <span>2. View Agent Performance</span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+
+            <div
+              class="registry-section"
+              style="
+                margin-top: 30px;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 20px;
+              "
+            >
+              <h4
+                style="
+                  margin-bottom: 15px;
+                  font-size: 0.9rem;
+                  color: var(--secondary);
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <span
+                  ><i class="fa-solid fa-clock-rotate-left"></i> Recent
+                  Activity</span
+                >
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="fetchRecentEvents('agent')"
+                  style="font-size: 0.7rem; padding: 4px 8px"
+                >
+                  Refresh
+                </button>
+              </h4>
+              <div
+                id="agentEventsList"
+                class="events-list"
+                style="max-height: 200px; overflow-y: auto"
+              >
+                <p
+                  style="
+                    text-align: center;
+                    color: var(--secondary);
+                    font-size: 0.8rem;
+                    padding: 20px;
+                  "
+                >
+                  Click refresh to load events...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visible messages button placed below the Group Account Dashboard -->
+        <div style="display:flex; justify-content:flex-end; margin:12px 0 20px 0;">
+          <button id="comp-messages-btn-below" onclick="openComplianceMessages()" title="Messages" style="background:#0ea5e9;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:0.95rem;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-envelope-open-text" style="font-size:1rem"></i>
+            <span>Messages</span>
+            <span id="comp-msg-count-below" style="background:#ef4444;color:white;border-radius:12px;padding:2px 6px;margin-left:8px;font-size:0.75rem;display:none">0</span>
+          </button>
+        </div>
+
+        <div style="margin-top:20px">
+          <h4 style="margin-bottom:8px">Groups</h4>
+          <div id="gaListAgent" style="background:white;border:1px solid #e8eef6;padding:12px;border-radius:8px;max-height:260px;overflow:auto">
+            <p style="color:var(--secondary);text-align:center;margin:18px 0">No groups loaded.</p>
+          </div>
+        </div>
+
+        <!-- PANEL: CREATE AGENT -->
+        <div id="panel-create-agent" class="hidden-panel fade-in">
+          <div class="panel-header">
+            <h4>Create Agent Account</h4>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="closeAgentPanel('panel-create-agent')"
+            >
+              Close
+            </button>
+          </div>
+
+          <form id="agentForm" onsubmit="handleAgentSubmit(event)">
+            <div class="form-section">
+              <h4>Personnel Details</h4>
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px"
+              >
+                <div class="input-group">
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >Agent Phone Number</label
+                  >
+                  <input
+                    type="text"
+                    name="agentPhone"
+                    id="agentPhone"
+                    placeholder="07xxxxxxxx"
+                    style="
+                      width: 100%;
+                      padding: 12px;
+                      border: 1px solid #e2e8f0;
+                      border-radius: 8px;
+                    "
+                  />
+                </div>
+                <div class="input-group">
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >Dealer Phone Number</label
+                  >
+                  <input
+                    type="text"
+                    name="dealerPhone"
+                    id="dealerPhone"
+                    placeholder="07xxxxxxxx"
+                    style="
+                      width: 100%;
+                      padding: 12px;
+                      border: 1px solid #e2e8f0;
+                      border-radius: 8px;
+                    "
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                style="margin-top: 15px; width: auto"
+                onclick="verifyRelations()"
+              >
+                <i class="fa-solid fa-shield-check"></i> Verify Relations
+              </button>
+              <div
+                id="relationStatus"
+                style="margin-top: 10px; font-size: 0.85rem"
+              ></div>
+            </div>
+
+            <div
+              id="locationSection"
+              class="form-section"
+              style="opacity: 0.5; pointer-events: none"
+            >
+              <h4>Operating Region</h4>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 15px;
+                  margin-bottom: 15px;
+                "
+              >
+                <div>
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >County</label
+                  >
+                  <div class="input-group" style="position: relative">
+                    <i
+                      class="fa-solid fa-globe-africa"
+                      style="
+                        position: absolute;
+                        left: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #aaa;
+                      "
+                    ></i>
+                    <select
+                      name="county"
+                      id="agentCounty"
+                      onchange="loadAgentConstituencies()"
+                      style="
+                        width: 100%;
+                        padding: 12px 12px 12px 35px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                      "
+                    >
+                      <option value="">-- Select County --</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >Constituency</label
+                  >
+                  <div class="input-group" style="position: relative">
+                    <i
+                      class="fa-solid fa-map-pin"
+                      style="
+                        position: absolute;
+                        left: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #aaa;
+                      "
+                    ></i>
+                    <select
+                      name="constituency"
+                      id="agentConstituency"
+                      onchange="loadAgentWards()"
+                      style="
+                        width: 100%;
+                        padding: 12px 12px 12px 35px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                      "
+                    >
+                      <option value="">-- Select Constituency --</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style="
+                    font-size: 0.7rem;
+                    color: var(--secondary);
+                    margin-bottom: 5px;
+                    display: block;
+                  "
+                  >Ward</label
+                >
+                <div class="input-group" style="position: relative">
+                  <i
+                    class="fa-solid fa-map-marker-alt"
+                    style="
+                      position: absolute;
+                      left: 10px;
+                      top: 50%;
+                      transform: translateY(-50%);
+                      color: #aaa;
+                    "
+                  ></i>
+                  <select
+                    name="ward"
+                    id="agentWard"
+                    style="
+                      width: 100%;
+                      padding: 12px 12px 12px 35px;
+                      border: 1px solid #e2e8f0;
+                      border-radius: 8px;
+                    "
+                  >
+                    <option value="">-- Select Ward --</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="account-btns">
+              <button
+                type="submit"
+                id="saveAgentBtn"
+                class="btn btn-primary"
+                disabled
+              >
+                <i class="fa-solid fa-save"></i> Save Agent Account
+              </button>
+            </div>
+          </form>
+        </div>
+        <div style="margin-top:20px">
+          <h4 style="margin-bottom:8px">Personal Clients</h4>
+          <div id="paList" style="background:white;border:1px solid #e8eef6;padding:12px;border-radius:8px;max-height:360px;overflow:auto">
+            <p style="color:var(--secondary);text-align:center;margin:18px 0">No clients loaded.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEALER MANAGEMENT VIEW -->
+    <div id="dealerManagement" class="single-view">
+      <div class="view-header">
+        <button class="btn btn-secondary btn-sm" onclick="backToDashboard()">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+        <h3 style="margin: 0">Dealer Management</h3>
+      </div>
+      <div
+        class="account-card"
+        style="border-top: 8px solid #10b981; min-height: 450px"
+      >
+        <h3><i class="fa-solid fa-store"></i> Dealer Operations</h3>
+
+        <div id="dealerMainView" class="fade-in">
+          <div style="padding-top: 10px">
+            <div
+              style="
+                margin-bottom: 20px;
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: var(--secondary);
+                letter-spacing: 0.1em;
+                padding-left: 4px;
+              "
+            >
+              <i class="fa-solid fa-sliders"></i> Dealer Administration
+            </div>
+
+            <button
+              class="reg-menu-btn"
+              onclick="openDealerPanel('panel-create-dealer')"
+            >
+              <span>1. Create Dealer Account</span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+
+            <button
+              class="reg-menu-btn"
+              onclick="triggerAction('Dealer Reports Coming Soon')"
+            >
+              <span>2. View Dealer Reports</span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+
+            <div
+              class="registry-section"
+              style="
+                margin-top: 30px;
+                border-top: 1px solid #e2e8f0;
+                padding-top: 20px;
+              "
+            >
+              <h4
+                style="
+                  margin-bottom: 15px;
+                  font-size: 0.9rem;
+                  color: var(--secondary);
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <span
+                  ><i class="fa-solid fa-clock-rotate-left"></i> Recent
+                  Activity</span
+                >
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="fetchRecentEvents('dealer')"
+                  style="font-size: 0.7rem; padding: 4px 8px"
+                >
+                  Refresh
+                </button>
+              </h4>
+              <div
+                id="dealerEventsList"
+                class="events-list"
+                style="max-height: 200px; overflow-y: auto"
+              >
+                <p
+                  style="
+                    text-align: center;
+                    color: var(--secondary);
+                    font-size: 0.8rem;
+                    padding: 20px;
+                  "
+                >
+                  Click refresh to load events...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL: CREATE DEALER -->
+        <div id="panel-create-dealer" class="hidden-panel fade-in">
+          <div class="panel-header">
+            <h4>Create Dealer Account</h4>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="closeDealerPanel('panel-create-dealer')"
+            >
+              Close
+            </button>
+          </div>
+
+          <form id="dealerForm" onsubmit="handleDealerSubmit(event)">
+            <div class="form-section">
+              <h4>Personnel Details</h4>
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px"
+              >
+                <div class="input-group">
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >Dealer Phone Number</label
+                  >
+                  <input
+                    type="text"
+                    name="dealerPhone"
+                    id="dealerPhoneInput"
+                    placeholder="07xxxxxxxx"
+                    style="
+                      width: 100%;
+                      padding: 12px;
+                      border: 1px solid #e2e8f0;
+                      border-radius: 8px;
+                    "
+                  />
+                </div>
+                <div class="input-group">
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >Processor Phone Number</label
+                  >
+                  <input
+                    type="text"
+                    name="hqPhone"
+                    id="hqPhoneInput"
+                    value="<%= (typeof hqUser !== 'undefined' && hqUser) ? hqUser.phoneNumber : '0740415992' %>"
+                    readonly
+                    style="
+                      width: 100%;
+                      padding: 12px;
+                      border: 1px solid #e2e8f0;
+                      border-radius: 8px;
+                      background: #f1f5f9;
+                      color: #64748b;
+                      cursor: not-allowed;
+                      font-weight: 500;
+                    "
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                style="margin-top: 15px; width: auto"
+                onclick="verifyDealerRelations()"
+              >
+                <i class="fa-solid fa-shield-check"></i> Verify Relations
+              </button>
+              <div
+                id="dealerRelationStatus"
+                style="margin-top: 10px; font-size: 0.85rem"
+              ></div>
+            </div>
+
+            <div
+              id="dealerLocationSection"
+              class="form-section"
+              style="opacity: 0.5; pointer-events: none"
+            >
+              <h4>Operating Region</h4>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 15px;
+                  margin-bottom: 15px;
+                "
+              >
+                <div>
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >County</label
+                  >
+                  <div class="input-group" style="position: relative">
+                    <i
+                      class="fa-solid fa-globe-africa"
+                      style="
+                        position: absolute;
+                        left: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #aaa;
+                      "
+                    ></i>
+                    <select
+                      name="county"
+                      id="dealerCounty"
+                      onchange="loadDealerConstituencies()"
+                      style="
+                        width: 100%;
+                        padding: 12px 12px 12px 35px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                      "
+                    >
+                      <option value="">-- Select County --</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label
+                    style="
+                      font-size: 0.7rem;
+                      color: var(--secondary);
+                      margin-bottom: 5px;
+                      display: block;
+                    "
+                    >Constituency</label
+                  >
+                  <div class="input-group" style="position: relative">
+                    <i
+                      class="fa-solid fa-map-pin"
+                      style="
+                        position: absolute;
+                        left: 10px;
+                        top: 50%;
+                        transform: translateY(-50%);
+                        color: #aaa;
+                      "
+                    ></i>
+                    <select
+                      name="constituency"
+                      id="dealerConstituency"
+                      onchange="loadDealerWards()"
+                      style="
+                        width: 100%;
+                        padding: 12px 12px 12px 35px;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                      "
+                    >
+                      <option value="">-- Select Constituency --</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style="
+                    font-size: 0.7rem;
+                    color: var(--secondary);
+                    margin-bottom: 5px;
+                    display: block;
+                  "
+                  >Ward</label
+                >
+                <div class="input-group" style="position: relative">
+                  <i
+                    class="fa-solid fa-map-marker-alt"
+                    style="
+                      position: absolute;
+                      left: 10px;
+                      top: 50%;
+                      transform: translateY(-50%);
+                      color: #aaa;
+                    "
+                  ></i>
+                  <select
+                    name="ward"
+                    id="dealerWard"
+                    style="
+                      width: 100%;
+                      padding: 12px 12px 12px 35px;
+                      border: 1px solid #e2e8f0;
+                      border-radius: 8px;
+                    "
+                  >
+                    <option value="">-- Select Ward --</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="account-btns">
+              <button
+                type="submit"
+                id="saveDealerBtn"
+                class="btn btn-primary"
+                disabled
+              >
+                <i class="fa-solid fa-save"></i> Save Dealer Account
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="pa" class="single-view">
+      <div class="view-header">
+        <button class="btn btn-secondary btn-sm" onclick="backToDashboard()">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+        <h3 style="margin: 0">Personal Management</h3>
+      </div>
+      <div class="account-card" style="border-top: 8px solid #10b981">
+        <h3><i class="fa-solid fa-user"></i> Personal Account</h3>
+        <p
+          style="
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 8px;
+          "
+        >
+          Manage individual client compliance settings.
+        </p>
+        <div class="account-btns">
+          <button
+            class="btn btn-primary"
+            onclick="triggerAction('Personal Account Activated'); sendUpdateMessage('pa','Personal Account','Personal Account Update','Activate')"
+          >
+            Activate
+          </button>
+          <button
+            class="btn btn-danger"
+            onclick="triggerAction('Personal Account Blocked', true); sendUpdateMessage('pa','Personal Account','Personal Account Update','Block')"
+          >
+            Block
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="ga" class="single-view">
+      <div class="view-header">
+        <button class="btn btn-secondary btn-sm" onclick="backToDashboard()">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </button>
+        <h3 style="margin: 0">Group Management</h3>
+      </div>
+
+      <div
+        class="account-card"
+        style="border-top: 8px solid #10b981; min-height: 450px"
+      >
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <h3>
+          <i class="fa-solid fa-users-rectangle"></i> Group Account Dashboard
+        </h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="comp-messages-btn" onclick="openComplianceMessages()" title="Messages" style="background:var(--primary);color:white;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:0.95rem;">
+            <i class="fa-regular fa-message"></i> <span style="margin-left:6px">Messages</span>
+            <span id="comp-msg-count" style="background:#ef4444;color:white;border-radius:12px;padding:2px 6px;margin-left:8px;font-size:0.75rem;display:none">0</span>
+          </button>
+        </div>
+        </div>
+
+        <div id="groupMainView" class="fade-in">
+          <div class="account-btns" style="margin-bottom: 35px">
+            <button
+              class="btn btn-primary"
+                onclick="triggerAction('Group Status Activated'); sendUpdateMessage('ga','Group Account','Group Status Update','Activate Group')"
+            >
+              <i class="fa-solid fa-check"></i> Activate Group
+            </button>
+            <button
+              class="btn btn-danger"
+                onclick="triggerAction('Group Blocked', true); sendUpdateMessage('ga','Group Account','Group Status Update','Block Group')"
+            >
+              <i class="fa-solid fa-ban"></i> Block Group
+            </button>
+          </div>
+
+          <div style="padding-top: 10px">
+            <div
+              style="
+                margin-bottom: 20px;
+                text-transform: uppercase;
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: var(--secondary);
+                letter-spacing: 0.1em;
+                padding-left: 4px;
+              "
+            >
+              <i class="fa-solid fa-sliders"></i> Groups Regulation Adjustment
+            </div>
+
+            <button
+              id="btn-reg-standards"
+              class="reg-menu-btn"
+              onclick="openPanel('panel-reg-standards')"
+            >
+              <span>1. Registration Standards</span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+
+            <button
+              id="btn-mem-standards"
+              class="reg-menu-btn"
+              onclick="sendUpdateMessage('ga','Group Account','Membership Standards Click','Open Membership'); openPanel('panel-mem-standards')"
+            >
+              <span>2. Membership Standards</span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+
+            <button id="btn-periods" class="reg-menu-btn" onclick="sendUpdateMessage('ga','Group Account','Periods Click','Open Periods'); openPanel('panel-periods')">
+              <span>3. Group Dedicated Periods </span>
+              <i class="fa-solid fa-chevron-right text-secondary"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Groups list intentionally removed: only dashboard + regulation adjustment remain -->
+
+        <!-- PANEL 1: REGISTRATION -->
+        <div id="panel-reg-standards" class="hidden-panel fade-in">
+          <div class="panel-header">
+            <h4>Registration Standards</h4>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="closePanel('panel-reg-standards')"
+            >
+              Close
+            </button>
+          </div>
+          <div id="regDynamicArea" style="margin: 10px 25px 0 25px"></div>
+          <form id="regForm">
+            <div class="form-section">
+              <h4>New Group Registration Fee</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="nf1" name="nf" value="50" <%=
+                  (registration.newGroupFee === '50') ? 'checked' : '' %>>
+                  <label for="nf1"><span>50</span> <small>KES</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="nf2" name="nf" value="100" <%=
+                  (registration.newGroupFee === '100') ? 'checked' : '' %>>
+                  <label for="nf2"><span>100</span> <small>KES</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="nf3" name="nf" value="150" <%=
+                  (registration.newGroupFee === '150') ? 'checked' : '' %>>
+                  <label for="nf3"><span>150</span> <small>KES</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="nf4" name="nf" value="200" <%=
+                  (registration.newGroupFee === '200') ? 'checked' : '' %>>
+                  <label for="nf4"><span>200</span> <small>KES</small></label>
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h4>Renewal Fee</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="rf1" name="rf" value="50" <%=
+                  (registration.renewalFee === '50') ? 'checked' : '' %>>
+                  <label for="rf1"
+                    ><span>50</span> <small>/member</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="rf2" name="rf" value="100" <%=
+                  (registration.renewalFee === '100') ? 'checked' : '' %>>
+                  <label for="rf2"
+                    ><span>100</span> <small>/member</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="rf3" name="rf" value="150" <%=
+                  (registration.renewalFee === '150') ? 'checked' : '' %>>
+                  <label for="rf3"
+                    ><span>150</span> <small>/member</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="rf4" name="rf" value="200" <%=
+                  (registration.renewalFee === '200') ? 'checked' : '' %>>
+                  <label for="rf4"
+                    ><span>200</span> <small>/member</small></label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="account-btns">
+              <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i> Save Standards
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- PANEL 2: MEMBERSHIP -->
+        <div id="panel-mem-standards" class="hidden-panel fade-in">
+          <div class="panel-header">
+            <h4>Membership Standards</h4>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="closePanel('panel-mem-standards')"
+            >
+              Close
+            </button>
+          </div>
+          <div id="memDynamicArea" style="margin: 10px 25px 0 25px"></div>
+          <form id="memForm">
+            <div class="form-section">
+              <h4>Required Group Officials (Trustees)</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="trust3" name="trustees" value="3" <%=
+                  (membership.trustees === '3') ? 'checked' : '' %>>
+                  <label for="trust3"
+                    ><span>3</span> <small>Trustees</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="trust4" name="trustees" value="4" <%=
+                  (membership.trustees === '4') ? 'checked' : '' %>>
+                  <label for="trust4"
+                    ><span>4</span> <small>Trustees</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="trust5" name="trustees" value="5" <%=
+                  (membership.trustees === '5') ? 'checked' : '' %>>
+                  <label for="trust5"
+                    ><span>5</span> <small>Trustees</small></label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h4>Other Group Officials</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="off3" name="officials" value="3" <%=
+                  (membership.officials === '3') ? 'checked' : '' %>>
+                  <label for="off3"
+                    ><span>3</span> <small>Officials</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="off4" name="officials" value="4" <%=
+                  (membership.officials === '4') ? 'checked' : '' %>>
+                  <label for="off4"
+                    ><span>4</span> <small>Officials</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="off5" name="officials" value="5" <%=
+                  (membership.officials === '5') ? 'checked' : '' %>>
+                  <label for="off5"
+                    ><span>5</span> <small>Officials</small></label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h4>Total Group Members Required</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="m15" name="members" value="15" <%=
+                  (membership.members === '15') ? 'checked' : '' %>>
+                  <label for="m15"
+                    ><span>15</span> <small>Members</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="m20" name="members" value="20" <%=
+                  (membership.members === '20') ? 'checked' : '' %>>
+                  <label for="m20"
+                    ><span>20</span> <small>Members</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="m30" name="members" value="30" <%=
+                  (membership.members === '30') ? 'checked' : '' %>>
+                  <label for="m30"
+                    ><span>30</span> <small>Members</small></label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="m40" name="members" value="40" <%=
+                  (membership.members === '40') ? 'checked' : '' %>>
+                  <label for="m40"
+                    ><span>40</span> <small>Members</small></label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h4>Maximum Group Members Required</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="max15" name="maxMembers" value="15"
+                  <%= (membership.maxMembers === '15') ? 'checked' : '' %>>
+                  <label for="max15"><span>15</span> <small>Max</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="max20" name="maxMembers" value="20"
+                  <%= (membership.maxMembers === '20') ? 'checked' : '' %>>
+                  <label for="max20"><span>20</span> <small>Max</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="max30" name="maxMembers" value="30"
+                  <%= (membership.maxMembers === '30') ? 'checked' : '' %>>
+                  <label for="max30"><span>30</span> <small>Max</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="max40" name="maxMembers" value="40"
+                  <%= (membership.maxMembers === '40') ? 'checked' : '' %>>
+                  <label for="max40"><span>40</span> <small>Max</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="max60" name="maxMembers" value="60"
+                  <%= (membership.maxMembers === '60') ? 'checked' : '' %>>
+                  <label for="max60"><span>60</span> <small>Max</small></label>
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="max100" name="maxMembers" value="100"
+                  <%= (membership.maxMembers === '100') ? 'checked' : '' %>>
+                  <label for="max100"
+                    ><span>100</span> <small>Max</small></label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="account-btns">
+              <div style="display:flex;gap:12px;align-items:center;width:100%">
+                <label style="display:flex;align-items:center;gap:8px;margin:0 0 0 auto;color:var(--secondary);font-size:0.95rem;">
+                  <input type="checkbox" name="sendUpdateMessage" id="mem-send-msg" />
+                  <span>Send update message to IT</span>
+                </label>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-save"></i> Save Membership Rules
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- PANEL 3: PERIODS -->
+        <div id="panel-periods" class="hidden-panel fade-in">
+          <div class="panel-header">
+            <h4>Periods Configuration</h4>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="closePanel('panel-periods')"
+            >
+              Close
+            </button>
+          </div>
+          <div id="periodsDynamicArea" style="margin: 10px 25px 0 25px"></div>
+          <form id="periodForm">
+            <div class="form-section">
+              <h4>Contributions Period Interval</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="p_week" name="interval" value="Weekly"
+                  <%= (periods.interval === 'Weekly') ? 'checked' : '' %>>
+                  <label for="p_week"
+                    ><i class="fa-regular fa-calendar"></i> Weekly</label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="p_month" name="interval"
+                  value="Monthly" <%= (periods.interval === 'Monthly') ?
+                  'checked' : '' %>>
+                  <label for="p_month"
+                    ><i class="fa-solid fa-calendar-days"></i> Monthly</label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="p_qua" name="interval"
+                  value="Quarterly" <%= (periods.interval === 'Quarterly') ?
+                  'checked' : '' %>>
+                  <label for="p_qua"
+                    ><i class="fa-solid fa-calendar-check"></i> Quarterly</label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="p_sem" name="interval"
+                  value="Semi-Annual" <%= (periods.interval === 'Semi-Annual') ?
+                  'checked' : '' %>>
+                  <label for="p_sem"
+                    ><i class="fa-solid fa-calendar-week"></i>
+                    Semi-Annual</label
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Season Periods Limits</h4>
+              <div class="radio-group">
+                <div class="radio-card">
+                  <input type="radio" id="s_ann" name="season" value="Annual"
+                  <%= (periods.season === 'Annual') ? 'checked' : '' %>>
+                  <label for="s_ann"
+                    ><i class="fa-solid fa-infinity"></i> Annual</label
+                  >
+                </div>
+                <div class="radio-card">
+                  <input type="radio" id="s_oth" name="season" value="Custom"
+                  <%= (periods.season === 'Custom') ? 'checked' : '' %>>
+                  <label for="s_oth"
+                    ><i class="fa-solid fa-sliders"></i> Custom</label
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="account-btns">
+              <div style="display:flex;gap:12px;align-items:center;width:100%">
+                <label style="display:flex;align-items:center;gap:8px;margin:0 0 0 auto;color:var(--secondary);font-size:0.95rem;">
+                  <input type="checkbox" name="sendUpdateMessage" id="period-send-msg" />
+                  <span>Send update message to IT</span>
+                </label>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-save"></i> Save Periods
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+      // UI Navigation
+      function openSubAccount(id) {
+        document.getElementById('mainDashboard').style.display = 'none';
+        document.querySelectorAll('.single-view').forEach(v => v.style.display = 'none');
+        const view = document.getElementById(id);
+        view.style.display = 'block';
+        view.style.animation = 'none';
+        void view.offsetHeight;
+        view.style.animation = 'slideUp 0.4s ease-out';
+        if (id === 'pa') loadPersonalClients();
+      }
+
+      function backToDashboard() {
+        document.querySelectorAll('.single-view').forEach(v => v.style.display = 'none');
+        document.getElementById('mainDashboard').style.display = 'grid';
+      }
+
+      function openPanel(panelId) {
+        const main = document.getElementById('groupMainView');
+        const panel = document.getElementById(panelId);
+        if (main && panel) {
+          main.style.display = 'none';
+          panel.style.display = 'block';
+          // When opening registration standards, check tbank.json status
+          if (panelId === 'panel-reg-standards' || panelId === 'panel-mem-standards' || panelId === 'panel-periods') {
+            checkComplianceSection(panelId);
+          }
+        }
+      }
+
+      function closePanel(panelId) {
+        const main = document.getElementById('groupMainView');
+        const panel = document.getElementById(panelId);
+        if (main && panel) {
+          panel.style.display = 'none';
+          main.style.display = 'block';
+        }
+      }
+
+      function triggerAction(msg, isError = false) {
+        showToast(msg, isError);
+      }
+
+      function showToast(msg, isError = false) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${isError ? 'error' : 'success'}`;
+        const icon = isError ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-circle-check"></i>';
+        toast.innerHTML = `${icon} <span>${msg}</span>`;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 400);
+        }, 3000);
+      }
+
+      // ----- Client-side message helpers (localStorage prototype) -----
+      function getHqMessages() { try { return JSON.parse(localStorage.getItem('hq_messages')||'[]'); } catch(e){ return []; } }
+      function saveHqMessages(list) { localStorage.setItem('hq_messages', JSON.stringify(list)); }
+      function addHqMessage(m){ const list = getHqMessages(); list.unshift(m); saveHqMessages(list); }
+
+      // Compliance view message UI (badge + overlay)
+      function renderCompMessagesList(){
+        const list = getHqMessages();
+        const container = document.getElementById('comp-messages-list');
+        if(!container) return;
+        container.innerHTML = '';
+        if(!list.length){ container.innerHTML = '<div style="color:var(--secondary);padding:10px">No messages</div>'; return; }
+        list.forEach(m=>{
+          const wrap = document.createElement('div'); wrap.style.cssText='border-bottom:1px solid rgba(0,0,0,0.06);padding:10px;';
+          const meta = document.createElement('div'); meta.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:700;';
+          meta.innerHTML = `<div>${m.docketName} <small style="color:var(--secondary);">(${m.code})</small></div><div style="font-size:0.8rem;color:var(--secondary);">${new Date(m.date).toLocaleString()}</div>`;
+          const details = document.createElement('div'); details.style.cssText='color:var(--text-muted);font-size:0.9rem;margin-bottom:8px;';
+          details.textContent = `From: ${m.senderDetails}${m.processorPhone? ' / ' + m.processorPhone: ''} — Account: ${m.accountToAdjust} — Option: ${m.optionClicked || ''}`;
+          wrap.appendChild(meta); wrap.appendChild(details);
+          const controls = document.createElement('div');
+          if(m.status === 'pending'){
+            const a = document.createElement('button'); a.textContent='Accept'; a.style.cssText='background:var(--primary);color:white;border:none;padding:6px 10px;border-radius:6px;margin-right:8px;cursor:pointer;';
+            a.onclick = ()=>{ acceptCompMessage(m.id); };
+            const d = document.createElement('button'); d.textContent='Cancel'; d.style.cssText='background:#444;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;';
+            d.onclick = ()=>{ declineCompMessage(m.id); };
+            controls.appendChild(a); controls.appendChild(d);
+          } else {
+            const state = document.createElement('span'); state.textContent = m.status.toUpperCase(); state.style.cssText='color:var(--secondary);font-weight:600;'; controls.appendChild(state);
+          }
+          wrap.appendChild(controls);
+          container.appendChild(wrap);
+        });
+      }
+
+      function refreshCompBadge(){ const list = getHqMessages(); const pending = list.filter(m=>m.status==='pending').length; const el = document.getElementById('comp-msg-count'); const el2 = document.getElementById('comp-msg-count-below'); if (el){ if (pending>0){ el.style.display='inline-block'; el.textContent = pending; } else el.style.display='none'; } if (el2){ if (pending>0){ el2.style.display='inline-block'; el2.textContent = pending; } else el2.style.display='none'; } }
+
+      function openComplianceMessages(){ renderCompMessagesList(); document.getElementById('comp-messages-overlay').style.display='block'; }
+      function closeComplianceMessages(){ document.getElementById('comp-messages-overlay').style.display='none'; }
+
+      function acceptCompMessage(id){ const list = getHqMessages(); const m = list.find(x=>x.id===id); if(!m) return; m.status='accepted'; m.acceptedAt=new Date().toISOString(); saveHqMessages(list); renderCompMessagesList(); refreshCompBadge(); showToast && showToast('Accepted'); }
+      function declineCompMessage(id){ const list = getHqMessages(); const m = list.find(x=>x.id===id); if(!m) return; m.status='cancelled'; m.cancelledAt=new Date().toISOString(); saveHqMessages(list); renderCompMessagesList(); refreshCompBadge(); showToast && showToast('Cancelled'); }
+
+      function sendUpdateMessage(targetId, accountLabel, docketName, optionClicked){
+        const code = Math.floor(10000 + Math.random()*90000).toString();
+        const processorName = '<%= (typeof user !== "undefined" && user && user.name) ? user.name : "Processor" %>';
+        const processorPhone = '<%= (typeof user !== "undefined" && user && user.phone) ? user.phone : "" %>';
+        const msg = {
+          id: Date.now() + '-' + Math.random().toString(36).slice(2,8),
+          code,
+          docketName: docketName || 'Update',
+          senderDetails: processorName,
+          processorPhone: processorPhone,
+          processorLogin: processorName,
+          accountToAdjust: accountLabel || '',
+          targetId: targetId || '',
+          optionClicked: optionClicked || '',
+          date: new Date().toISOString(),
+          status: 'pending'
+        };
+        addHqMessage(msg);
+        console.log('sendUpdateMessage ->', msg);
+        showToast('Message created (code: ' + code + ')');
+      }
+
+      // When compliance page loads, disable accepted message targets
+      function applyAcceptedMessagesOnLoad(){
+        const msgs = getHqMessages();
+        msgs.forEach(m=>{
+          // Pending messages block editing until processed
+          if (m.status === 'pending' && m.targetId){
+            const el = document.getElementById(m.targetId);
+            if (el){
+              const inputs = el.querySelectorAll('input, select, textarea, button');
+              inputs.forEach(i=>{ i.disabled = true; i.classList && i.classList.add('disabled-by-message'); });
+            }
+          }
+          // Accepted messages should open the panel and enable editing
+          if (m.status === 'accepted'){
+            handleAcceptedMessage(m);
+          }
+        });
+      }
+
+      // Fetch compliance data as JSON so forms can be populated
+      async function fetchComplianceData(){
+        try{
+          const res = await fetch('/hq/compliance/data');
+          if (!res.ok) return {};
+          const json = await res.json();
+          return json.data || {};
+        } catch(e){ console.error('fetchComplianceData', e); return {}; }
+      }
+
+      function enableFormForEditing(formId){
+        const form = document.getElementById(formId);
+        if (!form) return;
+        const inputs = form.querySelectorAll('input, select, textarea, button');
+        inputs.forEach(i=>{ i.disabled = false; i.classList && i.classList.remove('disabled-by-message'); });
+      }
+
+      function populateMembershipForm(mem){
+        const form = document.getElementById('memForm');
+        if (!form) return;
+        // Radio groups: trustees, officials, members, maxMembers
+        ['trustees','officials','members','maxMembers'].forEach(name=>{
+          const val = mem[name];
+          if (!val) return;
+          const input = form.querySelector(`input[name="${name}"][value="${val}"]`);
+          if (input) input.checked = true;
+        });
+      }
+
+      function populatePeriodsForm(period){
+        const form = document.getElementById('periodForm');
+        if (!form) return;
+        ['interval','season'].forEach(name=>{
+          const val = period[name];
+          if (!val) return;
+          const input = form.querySelector(`input[name="${name}"][value="${val}"]`);
+          if (input) input.checked = true;
+        });
+      }
+
+      // Handle a single accepted message: open panel, populate and enable form for editing
+      async function handleAcceptedMessage(m){
+        try{
+          const opt = (m.optionClicked || '').toLowerCase();
+          const docket = (m.docketName || '').toLowerCase();
+          if (opt.includes('membership') || docket.includes('membership')){
+            openPanel('panel-mem-standards');
+            const data = await fetchComplianceData();
+            populateMembershipForm(data.membership || {});
+            enableFormForEditing('memForm');
+          } else if (opt.includes('period') || docket.includes('period')){
+            openPanel('panel-periods');
+            const data = await fetchComplianceData();
+            populatePeriodsForm(data.periods || {});
+            enableFormForEditing('periodForm');
+          } else {
+            // Fallback: try to open main group view or focus target element
+            if (m.targetId) {
+              const el = document.getElementById(m.targetId);
+              if (el) {
+                el.classList && el.classList.remove('disabled-by-message');
+              }
+            }
+          }
+        } catch(e){ console.error('handleAcceptedMessage', e); }
+      }
+
+      // Listen for cross-tab changes to messages and act on accepted ones
+      window.addEventListener('storage', function(e){
+        if (e.key !== 'hq_messages') return;
+        try{
+          const newList = JSON.parse(e.newValue || '[]');
+          // Refresh compliance badge
+          refreshCompBadge();
+          newList.forEach(m=>{
+            if (m && m.status === 'accepted'){
+              handleAcceptedMessage(m);
+            }
+          });
+          // If overlay is open, refresh its contents
+          if (document.getElementById('comp-messages-overlay') && document.getElementById('comp-messages-overlay').style.display === 'block') renderCompMessagesList();
+        } catch(err){ console.error('storage parse', err); }
+      });
+
+      // Initialize compliance badge on load
+      document.addEventListener('DOMContentLoaded', ()=>{ try{ refreshCompBadge(); } catch(e){} });
+
+      // AJAX Form Handler
+      function setupForm(formId, endpoint, successMsg) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btn = form.querySelector('button[type="submit"]');
+          const original = btn.innerHTML;
+
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+
+          try {
+            const res = await fetch(`/hq/compliance/${endpoint}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+            });
+            const result = await res.json();
+
+            if (result.success) {
+              showToast(successMsg);
+              // Refresh compliance status badges after a successful save
+              updateComplianceStatus();
+              if (endpoint === 'registration') { closePanel('panel-reg-standards'); }
+              else if (endpoint === 'membership') {
+                closePanel('panel-mem-standards');
+                // send message only if the 'Send update message to IT' checkbox is checked
+                const memForm = document.getElementById('memForm');
+                if (memForm && memForm.querySelector('input[name="sendUpdateMessage"]') && memForm.querySelector('input[name="sendUpdateMessage"]').checked) {
+                  sendUpdateMessage('ga','Group Account', successMsg, 'Save Membership');
+                }
+              }
+              else if (endpoint === 'periods') {
+                closePanel('panel-periods');
+                const periodForm = document.getElementById('periodForm');
+                if (periodForm && periodForm.querySelector('input[name="sendUpdateMessage"]') && periodForm.querySelector('input[name="sendUpdateMessage"]').checked) {
+                  sendUpdateMessage('ga','Group Account', successMsg, 'Save Periods');
+                }
+              }
+            } else {
+              showToast(result.message || 'Save failed', true);
+            }
+          } catch (err) {
+            showToast('Network error', true);
+            console.error(err);
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+          }
+        });
+      }
+
+      // Initialize Agent Panels
+      function openAgentPanel(id) {
+        document.getElementById('agentMainView').style.display = 'none';
+        document.getElementById(id).style.display = 'block';
+      }
+
+      function closeAgentPanel(id) {
+        document.getElementById(id).style.display = 'none';
+        document.getElementById('agentMainView').style.display = 'block';
+      }
+
+      // Agent/Dealer regional loaders use API endpoints (locations.json served by /api/locations)
+
+      function initAgentCounties() {
+        const countySelect = document.getElementById("agentCounty");
+        if (!countySelect) return;
+        countySelect.innerHTML = '<option value="">-- Select County --</option>';
+        fetch('/api/locations/counties')
+          .then(r => r.json())
+          .then(list => list.forEach(county => {
+            const option = document.createElement('option');
+            option.value = county;
+            option.textContent = county;
+            countySelect.appendChild(option);
+          })).catch(err => console.error('Failed to load agent counties', err));
+      }
+
+      function loadAgentConstituencies() {
+        const countySelect = document.getElementById("agentCounty");
+        const constituencySelect = document.getElementById("agentConstituency");
+        const wardSelect = document.getElementById("agentWard");
+        const selectedCounty = countySelect.value;
+
+        constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!selectedCounty) return;
+        return fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/constituencies`)
+          .then(r => r.json())
+          .then(list => list.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            constituencySelect.appendChild(opt);
+          })).catch(err => {
+            console.error('Failed to load agent constituencies', err);
+            return [];
+          });
+      }
+
+      function loadAgentWards() {
+        const countySelect = document.getElementById("agentCounty");
+        const constituencySelect = document.getElementById("agentConstituency");
+        const wardSelect = document.getElementById("agentWard");
+        const selectedCounty = countySelect.value;
+        const selectedConstituency = constituencySelect.value;
+
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!selectedCounty || !selectedConstituency) return;
+        return fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/${encodeURIComponent(selectedConstituency)}/wards`)
+          .then(r => r.json())
+          .then(list => {
+            if (!Array.isArray(list) || list.length === 0) {
+              const option = document.createElement('option');
+              option.value = '';
+              option.textContent = '(No Wards Listed)';
+              option.disabled = true;
+              wardSelect.appendChild(option);
+              return [];
+            }
+            list.sort().forEach(w => {
+              const opt = document.createElement('option');
+              opt.value = w;
+              opt.textContent = w;
+              wardSelect.appendChild(opt);
+            });
+            return list;
+          }).catch(err => {
+            console.error('Failed to load agent wards', err);
+            return [];
+          });
+      }
+
+      // Manual ward entry removed — no-op placeholder removed
+
+      let verifiedData = null;
+
+      async function verifyRelations() {
+        const agentPhone = document.getElementById('agentPhone').value;
+        const dealerPhone = document.getElementById('dealerPhone').value;
+        const statusDiv = document.getElementById('relationStatus');
+        const locationSection = document.getElementById('locationSection');
+        const saveBtn = document.getElementById('saveAgentBtn');
+
+        if (!agentPhone || !dealerPhone) {
+          showToast('Both phone numbers are required', true);
+          return;
+        }
+
+        statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+        statusDiv.style.color = 'var(--secondary)';
+
+        try {
+          const res = await fetch('/hq/compliance/verify-relations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentPhone, dealerPhone })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            verifiedData = result.data;
+            statusDiv.innerHTML = `
+              <div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; margin-top: 5px;">
+                <div style="color: var(--success); font-weight: 600; margin-bottom: 4px;">
+                  <i class="fa-solid fa-circle-check"></i> Relations Verified
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary);">
+                  <strong>Agent:</strong> ${result.data.agentName}<br>
+                  <strong>Dealer:</strong> ${result.data.dealerName}<br>
+                  <strong>Region:</strong> ${result.data.county}, ${result.data.constituency}
+                </div>
+              </div>
+            `;
+
+            // Enable location section
+            locationSection.style.opacity = '1';
+            locationSection.style.pointerEvents = 'auto';
+
+            // Auto-select County and Constituency if they match verified data
+            const countySelect = document.getElementById('agentCounty');
+            countySelect.value = result.data.county;
+            await loadAgentConstituencies();
+
+            const constituencySelect = document.getElementById('agentConstituency');
+            constituencySelect.value = result.data.county ? result.data.constituency : ""; // Safety check
+            await loadAgentWards();
+
+            // Auto-select Ward — wait for wards to load then ensure the verified ward is present
+            if (result.data.ward) {
+              const wardSelect = document.getElementById('agentWard');
+              await loadAgentWards();
+              let found = false;
+              for (let i = 0; i < wardSelect.options.length; i++) {
+                if (wardSelect.options[i].value === result.data.ward) {
+                  wardSelect.value = result.data.ward;
+                  found = true;
+                  break;
+                }
+              }
+              if (!found && result.data.ward) {
+                const opt = document.createElement('option');
+                opt.value = result.data.ward;
+                opt.textContent = result.data.ward + ' (Verified)';
+                wardSelect.appendChild(opt);
+                wardSelect.value = result.data.ward;
+              }
+            }
+
+            saveBtn.disabled = false;
+          } else {
+            verifiedData = null;
+            statusDiv.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${result.message}`;
+            statusDiv.style.color = 'var(--danger)';
+            locationSection.style.opacity = '0.5';
+            locationSection.style.pointerEvents = 'none';
+            saveBtn.disabled = true;
+          }
+        } catch (err) {
+          statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Verification failed';
+          statusDiv.style.color = 'var(--danger)';
+        }
+      }
+
+      // Dealer Management Logic
+      function openDealerPanel(id) {
+        document.getElementById('dealerMainView').style.display = 'none';
+        document.getElementById(id).style.display = 'block';
+      }
+
+      function closeDealerPanel(id) {
+        document.getElementById(id).style.display = 'none';
+        document.getElementById('dealerMainView').style.display = 'block';
+      }
+
+      // Clients Account options toggle
+      function toggleGcOptions(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        const el = document.getElementById('gcOptions');
+        if (!el) return;
+        el.classList.toggle('hidden');
+      }
+
+      function hideGcOptions() {
+        const el = document.getElementById('gcOptions');
+        if (!el) return;
+        el.classList.add('hidden');
+      }
+
+      // Hide when clicking outside
+      document.addEventListener('click', () => hideGcOptions());
+
+      function initDealerCounties() {
+        const countySelect = document.getElementById("dealerCounty");
+        if (!countySelect) return;
+        countySelect.innerHTML = '<option value="">-- Select County --</option>';
+        fetch('/api/locations/counties')
+          .then(r => r.json())
+          .then(list => list.forEach(county => {
+            const option = document.createElement('option');
+            option.value = county;
+            option.textContent = county;
+            countySelect.appendChild(option);
+          })).catch(err => console.error('Failed to load dealer counties', err));
+      }
+
+      function loadDealerConstituencies() {
+        const countySelect = document.getElementById("dealerCounty");
+        const constituencySelect = document.getElementById("dealerConstituency");
+        const wardSelect = document.getElementById("dealerWard");
+        const selectedCounty = countySelect.value;
+
+        constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+
+        if (!selectedCounty) return;
+        fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/constituencies`)
+          .then(r => r.json())
+          .then(list => list.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            constituencySelect.appendChild(opt);
+          })).catch(err => console.error('Failed to load dealer constituencies', err));
+      }
+
+      function loadDealerWards() {
+        const countySelect = document.getElementById("dealerCounty");
+        const constituencySelect = document.getElementById("dealerConstituency");
+        const wardSelect = document.getElementById("dealerWard");
+        const selectedCounty = countySelect.value;
+        const selectedConstituency = constituencySelect.value;
+
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!selectedCounty || !selectedConstituency) return;
+        fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/${encodeURIComponent(selectedConstituency)}/wards`)
+          .then(r => r.json())
+          .then(list => {
+            if (!Array.isArray(list) || list.length === 0) {
+              const option = document.createElement('option');
+              option.value = '';
+              option.textContent = '(No Wards Listed)';
+              option.disabled = true;
+              wardSelect.appendChild(option);
+              return;
+            }
+            list.sort().forEach(w => {
+              const opt = document.createElement('option');
+              opt.value = w;
+              opt.textContent = w;
+              wardSelect.appendChild(opt);
+            });
+          }).catch(err => console.error('Failed to load dealer wards', err));
+      }
+
+      // Load Personal Clients list from server
+      async function loadPersonalClients() {
+        const container = document.getElementById('paList');
+        if (!container) return;
+        container.innerHTML = '<p style="text-align:center;color:var(--secondary)"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>';
+        try {
+          const res = await fetch('/general/users');
+          const list = await res.json();
+          if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:var(--secondary)">No personal clients found.</p>';
+            return;
+          }
+          container.innerHTML = '';
+          list.slice(0,100).forEach(u => {
+            const div = document.createElement('div');
+            div.style.padding = '8px 6px';
+            div.style.borderBottom = '1px solid #f1f5f9';
+            div.innerHTML = `<strong>${(u.FirstName||'Unknown')} ${(u.LastName||'')}</strong> <span style="float:right;color:var(--secondary)">${u.phoneNumber||''}</span><div style="font-size:0.85rem;color:var(--secondary)">${u.county||''} • ${u.gender||''}</div>`;
+            container.appendChild(div);
+          });
+        } catch (err) {
+          console.error('Failed loading personal clients', err);
+          container.innerHTML = '<p style="text-align:center;color:var(--danger)">Failed to load clients.</p>';
+        }
+      }
+
+      // Load Groups list from server
+      async function loadGroups() {
+        const container = document.getElementById('gaList');
+        if (!container) return;
+        container.innerHTML = '<p style="text-align:center;color:var(--secondary)"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</p>';
+        try {
+          const res = await fetch('/general/groups');
+          const list = await res.json();
+          if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:var(--secondary)">No groups found.</p>';
+            return;
+          }
+          container.innerHTML = '';
+          list.slice(0,100).forEach(g => {
+            const div = document.createElement('div');
+            div.style.padding = '8px 6px';
+            div.style.borderBottom = '1px solid #f1f5f9';
+            div.innerHTML = `<strong>${g.groupName||g.group || 'Unnamed Group'}</strong> <span style="float:right;color:var(--secondary)">${g.phone||''}</span><div style="font-size:0.85rem;color:var(--secondary)">${g.county||''} ${g.constituency?('• '+g.constituency):''}</div>`;
+            container.appendChild(div);
+          });
+        } catch (err) {
+          console.error('Failed loading groups', err);
+          container.innerHTML = '<p style="text-align:center;color:var(--danger)">Failed to load groups.</p>';
+        }
+      }
+
+      // Generalized check for a compliance subsection (registration, membership, periods)
+      async function checkComplianceSection(panelId) {
+        const map = {
+          'panel-reg-standards': { key: 'registration', areaId: 'regDynamicArea', formId: 'regForm', title: 'Registration Standards' },
+          'panel-mem-standards': { key: 'membership', areaId: 'memDynamicArea', formId: 'memForm', title: 'Membership Standards' },
+          'panel-periods': { key: 'periods', areaId: 'periodsDynamicArea', formId: 'periodForm', title: 'Periods Configuration' }
+        };
+
+        const info = map[panelId];
+        if (!info) return;
+
+        const area = document.getElementById(info.areaId);
+        const form = document.getElementById(info.formId);
+        if (!area || !form) return;
+
+        area.innerHTML = `<p style="color:var(--secondary)"><i class="fa-solid fa-spinner fa-spin"></i> Checking ${info.title} status...</p>`;
+
+        try {
+          const res = await fetch('/tbank-summary');
+          const data = await res.json();
+          const comp = data.compliance || {};
+
+          const section = comp[info.key] || {};
+          const hasSection = Boolean(section && Object.keys(section).length);
+
+          if (!hasSection) {
+            area.innerHTML = `
+              <h4 style="margin:0 0 8px 0">tbank.json - ${info.title} Data</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid #e8eef6;color:var(--secondary)">
+                <pre style="margin:0;white-space:pre-wrap;word-break:break-word">${JSON.stringify(section, null, 2)}</pre>
+              </div>
+              <p style="color:var(--secondary);margin-top:8px">${info.title} are not fully updated in tbank. You can update them using the form below.</p>
+            `;
+            form.style.display = 'block';
+            return;
+          }
+
+          // If present, show review + PIN input and hide editable form
+          form.style.display = 'none';
+
+          // Render section-specific fields
+          if (info.key === 'registration') {
+            area.innerHTML = `
+              <h4 style="margin:0 0 8px 0">Review Registration Standards</h4>
+              <div style="background:#f8fafc;padding:12px;border-radius:8px;border:2px dashed #e2e8f0;color:var(--text-gray)">
+                <div style="font-weight:700;color:var(--primary);margin-bottom:6px">Current Values</div>
+                <div>New Group Fee: <strong>${section.newGroupFee || '—'}</strong></div>
+                <div>Renewal Fee: <strong>${section.renewalFee || '—'}</strong></div>
+                <div style="font-size:0.8rem;color:var(--secondary);margin-top:8px">Last updated: ${section.updatedAt || 'Unknown'}</div>
+              </div>
+              <div style="margin-top:12px">
+                <label style="display:block;margin-bottom:6px;font-weight:700">Enter PIN to confirm review</label>
+                <input id="regPinInput" type="password" placeholder="Enter PIN" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0" />
+                <div style="font-size:0.85rem;color:var(--secondary);margin-top:8px">Note: Ask Human Resources in charge for the PIN.</div>
+              </div>
+            `;
+          } else if (info.key === 'membership') {
+            area.innerHTML = `
+              <h4 style="margin:0 0 8px 0">Review Membership Standards</h4>
+              <div style="background:#f8fafc;padding:12px;border-radius:8px;border:2px dashed #e2e8f0;color:var(--text-gray)">
+                <div style="font-weight:700;color:var(--primary);margin-bottom:6px">Current Values</div>
+                <div>Trustees: <strong>${section.trustees || '—'}</strong></div>
+                <div>Officials: <strong>${section.officials || '—'}</strong></div>
+                <div>Members Required: <strong>${section.members || '—'}</strong></div>
+                <div>Max Members: <strong>${section.maxMembers || '—'}</strong></div>
+                <div style="font-size:0.8rem;color:var(--secondary);margin-top:8px">Last updated: ${section.updatedAt || 'Unknown'}</div>
+              </div>
+              <div style="margin-top:12px">
+                <label style="display:block;margin-bottom:6px;font-weight:700">Enter PIN to confirm review</label>
+                <input id="memPinInput" type="password" placeholder="Enter PIN" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0" />
+                <div style="font-size:0.85rem;color:var(--secondary);margin-top:8px">Note: Ask Human Resources in charge for the PIN.</div>
+              </div>
+            `;
+          } else if (info.key === 'periods') {
+            area.innerHTML = `
+              <h4 style="margin:0 0 8px 0">Review Period Configuration</h4>
+              <div style="background:#f8fafc;padding:12px;border-radius:8px;border:2px dashed #e2e8f0;color:var(--text-gray)">
+                <div style="font-weight:700;color:var(--primary);margin-bottom:6px">Current Values</div>
+                <div>Interval: <strong>${section.interval || '—'}</strong></div>
+                <div>Season: <strong>${section.season || '—'}</strong></div>
+                <div style="font-size:0.8rem;color:var(--secondary);margin-top:8px">Last updated: ${section.updatedAt || 'Unknown'}</div>
+              </div>
+              <div style="margin-top:12px">
+                <label style="display:block;margin-bottom:6px;font-weight:700">Enter PIN to confirm review</label>
+                <input id="periodsPinInput" type="password" placeholder="Enter PIN" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e2e8f0" />
+                <div style="font-size:0.85rem;color:var(--secondary);margin-top:8px">Note: Ask Human Resources in charge for the PIN.</div>
+              </div>
+            `;
+          }
+        } catch (err) {
+          area.innerHTML = '<p style="color:var(--danger)">Failed to load tbank data.</p>';
+          console.error('Failed to fetch tbank-summary', err);
+        }
+      }
+
+      // Update status badges for registration/membership/periods based on tbank.json
+      async function updateComplianceStatus() {
+        try {
+          const res = await fetch('/tbank-summary');
+          const data = await res.json();
+          const comp = data.compliance || {};
+
+          const regs = {
+            registration: !!comp.registration,
+            membership: !!comp.membership,
+            periods: !!comp.periods
+          };
+
+          const map = [
+            { id: 'btn-reg-standards', ok: regs.registration },
+            { id: 'btn-mem-standards', ok: regs.membership },
+            { id: 'btn-periods', ok: regs.periods }
+          ];
+
+          map.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (!el) return;
+            // remove existing badge
+            const existing = el.querySelector('.status-badge');
+            if (existing) existing.remove();
+            const span = document.createElement('span');
+            span.className = 'status-badge ' + (item.ok ? 'updated' : 'unupdated');
+            span.textContent = item.ok ? 'Updated' : 'Unupdated';
+            // append so it appears on the far right of the button
+            el.appendChild(span);
+          });
+        } catch (err) {
+          console.error('Failed to update compliance status', err);
+        }
+      }
+
+      let verifiedDealerData = null;
+
+      async function verifyDealerRelations() {
+        const dealerPhone = document.getElementById('dealerPhoneInput').value;
+        const hqPhone = document.getElementById('hqPhoneInput').value;
+        const statusDiv = document.getElementById('dealerRelationStatus');
+        const locationSection = document.getElementById('dealerLocationSection');
+        const saveBtn = document.getElementById('saveDealerBtn');
+
+        if (!dealerPhone || !hqPhone) {
+          showToast('Both Dealer and HQ phone numbers are required', true);
+          return;
+        }
+
+        statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+        statusDiv.style.color = 'var(--secondary)';
+
+        try {
+          const res = await fetch('/hq/compliance/verify-dealer-relations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dealerPhone, hqPhone })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            verifiedDealerData = result.data;
+            statusDiv.innerHTML = `
+              <div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; margin-top: 5px;">
+                <div style="color: var(--success); font-weight: 600; margin-bottom: 4px;">
+                  <i class="fa-solid fa-circle-check"></i> Relations Verified
+                </div>
+                <div style="font-size: 0.8rem; color: var(--secondary);">
+                  <strong>Dealer:</strong> ${result.data.dealerName}<br>
+                  <strong>HQ Processor:</strong> ${result.data.hqName}<br>
+                  <strong>Region:</strong> ${result.data.county}, ${result.data.constituency}
+                </div>
+              </div>
+            `;
+
+            // Enable location section
+            locationSection.style.opacity = '1';
+            locationSection.style.pointerEvents = 'auto';
+
+            // Auto-select County and Constituency
+            const countySelect = document.getElementById('dealerCounty');
+            countySelect.value = result.data.county;
+            loadDealerConstituencies();
+
+            const constituencySelect = document.getElementById('dealerConstituency');
+            constituencySelect.value = result.data.constituency;
+            loadDealerWards();
+
+            // Auto-select Ward
+            if (result.data.ward) {
+              const wardSelect = document.getElementById('dealerWard');
+              let found = false;
+              for (let i = 0; i < wardSelect.options.length; i++) {
+                if (wardSelect.options[i].value === result.data.ward) {
+                  wardSelect.value = result.data.ward;
+                  found = true;
+                  break;
+                }
+              }
+              if (!found && result.data.ward) {
+                // Ward not in list — append and select it (no manual-entry flow)
+                const opt = document.createElement('option');
+                opt.value = result.data.ward;
+                opt.textContent = result.data.ward;
+                wardSelect.appendChild(opt);
+                wardSelect.value = result.data.ward;
+              }
+            }
+
+            saveBtn.disabled = false;
+          } else {
+            verifiedDealerData = null;
+            statusDiv.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> ${result.message}`;
+            statusDiv.style.color = 'var(--danger)';
+            locationSection.style.opacity = '0.5';
+            locationSection.style.pointerEvents = 'none';
+            saveBtn.disabled = true;
+          }
+        } catch (err) {
+          statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Verification failed';
+          statusDiv.style.color = 'var(--danger)';
+        }
+      }
+
+      async function handleDealerSubmit(e) {
+        e.preventDefault();
+        if (!verifiedDealerData) return;
+
+        const form = document.getElementById('dealerForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        // Manual ward entry removed; wards must be selected or appended from verified data
+
+        if (data.county !== verifiedDealerData.county || data.constituency !== verifiedDealerData.constituency) {
+          showToast('Selected location must match verified registration details', true);
+          return;
+        }
+
+        if (!data.ward) {
+          showToast('Please select a ward', true);
+          return;
+        }
+
+        const btn = document.getElementById('saveDealerBtn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+        try {
+          const res = await fetch('/hq/compliance/save-dealer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            showToast('Dealer Account Successfully Created');
+            closeDealerPanel('panel-create-dealer');
+            form.reset();
+            document.getElementById('dealerRelationStatus').innerHTML = '';
+            document.getElementById('dealerLocationSection').style.opacity = '0.5';
+            document.getElementById('dealerLocationSection').style.pointerEvents = 'none';
+            btn.disabled = true;
+          } else {
+            showToast(result.message || 'Save failed', true);
+          }
+        } catch (err) {
+          showToast('Network error', true);
+        } finally {
+          btn.innerHTML = original;
+        }
+      }
+
+      async function handleAgentSubmit(e) {
+        e.preventDefault();
+        if (!verifiedData) return;
+
+        const form = document.getElementById('agentForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        // Manual ward entry removed; wards must be selected or appended from verified data
+
+        // Final validation: Ensure selected location matches verified data
+        if (data.county !== verifiedData.county || data.constituency !== verifiedData.constituency) {
+          showToast('Selected location must match verified registration details', true);
+          return;
+        }
+
+        if (!data.ward) {
+          showToast('Please select a ward', true);
+          return;
+        }
+
+        const btn = document.getElementById('saveAgentBtn');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+        try {
+          const res = await fetch('/hq/compliance/save-agent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            showToast('Agent Account Successfully Created');
+            closeAgentPanel('panel-create-agent');
+            form.reset();
+            document.getElementById('relationStatus').innerHTML = '';
+            document.getElementById('locationSection').style.opacity = '0.5';
+            document.getElementById('locationSection').style.pointerEvents = 'none';
+            btn.disabled = true;
+          } else {
+            showToast(result.message || 'Save failed', true);
+          }
+        } catch (err) {
+          showToast('Network error', true);
+        } finally {
+          btn.innerHTML = original;
+        }
+      }
+
+      async function fetchRecentEvents(type) {
+        const listId = `${type}EventsList`;
+        const listElement = document.getElementById(listId);
+        listElement.innerHTML = '<p style="text-align: center; color: var(--secondary); font-size: 0.8rem; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading events...</p>';
+
+        try {
+          const res = await fetch('/hq/compliance/get-events');
+          const data = await res.json();
+
+          const filteredEvents = data.events.filter(e => {
+            if (type === 'agent') return e.agentPhone;
+            if (type === 'dealer') return e.dealerPhone && !e.agentPhone;
+            return false;
+          });
+
+          if (filteredEvents.length === 0) {
+            listElement.innerHTML = '<p style="text-align: center; color: var(--secondary); font-size: 0.8rem; padding: 20px;">No recent activity found.</p>';
+            return;
+          }
+
+          listElement.innerHTML = filteredEvents.map(e => `
+            <div class="event-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.8rem;">
+              <div>
+                <div style="font-weight: 600; color: var(--primary);">
+                  ${type === 'agent' ? 'Agent Created' : 'Dealer Created'}
+                </div>
+                <div style="color: var(--secondary); margin-top: 2px;">
+                  ${type === 'agent' ? `A: ${e.agentPhone} | D: ${e.dealerPhone}` : `D: ${e.dealerPhone} | HQ: ${e.hqPhone}`}
+                </div>
+                <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 2px;">
+                  ${new Date(e.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="blockNumber('${type === 'agent' ? e.agentPhone : e.dealerPhone}')" style="font-size: 0.65rem; padding: 4px 8px;">
+                <i class="fa-solid fa-ban"></i> Block
+              </button>
+            </div>
+          `).join('');
+
+        } catch (err) {
+          listElement.innerHTML = '<p style="text-align: center; color: var(--danger); font-size: 0.8rem; padding: 20px;">Failed to load events.</p>';
+        }
+      }
+
+      async function blockNumber(phone) {
+        if (!confirm(`Are you sure you want to block ${phone}? This will restrict their account access.`)) return;
+
+        try {
+          const res = await fetch('/hq/compliance/block-number', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phoneNumber: phone, reason: 'Dashboard Blocking' })
+          });
+          const result = await res.json();
+          if (result.success) {
+            showToast(result.message);
+          } else {
+            showToast(result.message, true);
+          }
+        } catch (err) {
+          showToast('Blocking failed', true);
+        }
+      }
+
+      // Set-up
+      document.addEventListener('DOMContentLoaded', () => {
+        initAgentCounties();
+        initDealerCounties();
+        setupForm('regForm', 'registration', 'Registration Standards Saved');
+        setupForm('memForm', 'membership', 'Membership Rules Saved');
+        setupForm('periodForm', 'periods', 'Period Configuration Saved');
+
+        // Initial load of events
+        fetchRecentEvents('agent');
+        fetchRecentEvents('dealer');
+        // Update compliance status badges on load
+        updateComplianceStatus();
+        // Apply any accepted messages (disable edited accounts)
+        applyAcceptedMessagesOnLoad();
+      });
+
+      // Open compliance messages (default messages route)
+      function openComplianceMessages() {
+        window.location.href = '/hq/messages';
+      }
+    </script>
+  </body>
+</html>

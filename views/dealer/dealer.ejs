@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Agent - Modern Interface</title>
+  <!-- Importing a clean font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Importing Remix Icon for beautiful icons -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-color: #4F46E5; /* Indigo */
+      --primary-hover: #4338ca;
+      --success-color: #10B981; /* Emerald */
+      --bg-color: #F3F4F6;
+      --card-bg: #ffffff;
+      --text-main: #1F2937;
+      --text-muted: #6B7280;
+      --border-color: #E5E7EB;
+      --danger-color: #EF4444;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-color);
+      background-image: radial-gradient(#E5E7EB 1px, transparent 1px);
+      background-size: 20px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text-main);
+    }
+
+    /* Card Container */
+    .card {
+      background: var(--card-bg);
+      padding: 40px;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+
+    /* Header Area */
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h3 {
+      margin: 10px 0 5px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .icon-circle {
+      width: 50px;
+      height: 50px;
+      background: #EEF2FF;
+      color: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px;
+      font-size: 24px;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 12px 12px 42px; /* Left padding for icon */
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    input.error {
+      border-color: var(--danger-color);
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      margin-top: 10px;
+    }
+
+    .btn-secondary:hover {
+      background: #F9FAFB;
+      color: var(--text-main);
+    }
+
+    /* Preview Section */
+    .preview-card {
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .preview-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .preview-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .preview-item:first-child {
+      padding-top: 0;
+    }
+
+    .preview-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .preview-value {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* Success State */
+    .success-state {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .success-icon {
+      font-size: 64px;
+      color: var(--success-color);
+      margin-bottom: 20px;
+      display: block;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .success-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .success-msg {
+      color: var(--text-muted);
+      margin-bottom: 30px;
+    }
+
+    /* Utility Classes */
+    .hidden {
+      display: none !important;
+    }
+
+    .error-msg {
+      color: var(--danger-color);
+      font-size: 13px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .card {
+        margin: 20px;
+        padding: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    
+    <!-- STEP 1: INPUT FORM -->
+    <div id="step-input" class="<%= preview ? 'hidden' : '' %>">
+      <div class="header">
+        <div class="icon-circle">
+          <i class="ri-user-add-line"></i>
+        </div>
+        <h3>Create Agent</h3>
+        <p>Enter phone number to verify details</p>
+      </div>
+
+      <% if (error) { %>
+        <div class="error-msg" style="justify-content: center; margin-bottom: 15px;">
+          <i class="ri-error-warning-line"></i> <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <form id="checkForm" action="/dealer/preview" method="POST">
+        <div class="form-group">
+          <label for="phoneNumber">Phone Number</label>
+          <div class="input-wrapper">
+            <i class="ri-phone-line"></i>
+            <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="e.g. 0700 123 456" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" id="checkBtn">
+          <span>Check Account</span>
+          <i class="ri-arrow-right-line"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- STEP 2: PREVIEW DETAILS -->
+    <div id="step-preview" class="<%= preview ? '' : 'hidden' %>">
+      <div class="header">
+        <div class="icon-circle">
+          <i class="ri-user-search-line"></i>
+        </div>
+        <h3>Confirm Details</h3>
+        <p>Review agent information below</p>
+      </div>
+
+      <% if (preview) { %>
+      <div class="preview-card">
+        <div class="preview-item">
+          <span class="preview-label">
+            <i class="ri-user-line"></i> Full Name
+          </span>
+          <span class="preview-value"><%= preview.name %></span>
+        </div>
+        <div class="preview-item">
+          <span class="preview-label">
+            <i class="ri-map-pin-line"></i> County
+          </span>
+          <span class="preview-value"><%= preview.county %></span>
+        </div>
+        <div class="preview-item">
+          <span class="preview-label">
+            <i class="ri-map-pin-2-line"></i> Constituency
+          </span>
+          <span class="preview-value"><%= preview.constituency %></span>
+        </div>
+        <div class="preview-item">
+          <span class="preview-label">
+            <i class="ri-map-pin-range-line"></i> Ward
+          </span>
+          <span class="preview-value"><%= preview.ward %></span>
+        </div>
+        <div class="preview-item">
+          <span class="preview-label">
+            <i class="ri-smartphone-line"></i> Phone
+          </span>
+          <span class="preview-value"><%= preview.phoneNumber %></span>
+        </div>
+      </div>
+
+      <form id="createForm" action="/dealer" method="POST">
+        <input type="hidden" name="phoneNumber" value="<%= preview.phoneNumber %>">
+        <button type="submit" class="btn btn-primary" id="createBtn">
+          <i class="ri-check-line"></i> Confirm & Create
+        </button>
+      </form>
+      <% } %>
+      <button class="btn btn-secondary" onclick="resetApp()">
+        <i class="ri-arrow-left-line"></i> Cancel / Back
+      </button>
+    </div>
+
+    <!-- STEP 3: SUCCESS -->
+    <div id="step-success" class="<%= success ? '' : 'hidden' %>">
+      <div class="success-state">
+        <i class="ri-checkbox-circle-fill success-icon"></i>
+        <div class="success-title">Agent Created!</div>
+        <p class="success-msg"><%= success %></p>
+        
+        <button class="btn btn-primary" onclick="resetApp()">
+          <i class="ri-add-line"></i> Create Another
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='/personal/myaccount'">
+          <i class="ri-dashboard-line"></i> Go to Dashboard
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 3. Reset Function (Back / Create Another)
+    function resetApp() {
+      window.location.href = '/dealer';
+    }
+
+  </script>
+</body>
+</html>

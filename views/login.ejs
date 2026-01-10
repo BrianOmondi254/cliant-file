@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  
+  <!-- Fonts and Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #28a745;
+      --primary-dark: #218838;
+      --text-dark: #1f2937;
+      --text-light: #6b7280;
+      --bg-gradient: linear-gradient(135deg, #e0f2f1 0%, #f1f8e9 100%);
+    }
+
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background: var(--bg-gradient); 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 100vh; 
+      margin: 0;
+    }
+
+    .login-container { 
+      background: #ffffff; 
+      padding: 36px 28px; 
+      border-radius: 14px; 
+      box-shadow: 0 12px 30px rgba(2,6,23,0.08); 
+      width: 380px; 
+      max-width: calc(100% - 40px);
+      text-align: center;
+      border: 1px solid rgba(15,23,42,0.03);
+      animation: slideUp 0.45s cubic-bezier(.2,.9,.3,1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Typography */
+    .login-container h1 { 
+      color: var(--primary); 
+      margin: 0 0 6px 0; 
+      font-size: 24px; 
+      font-weight: 700; 
+      letter-spacing: -0.2px;
+    }
+
+    .login-container h2 { 
+      margin: 0 0 22px 0; 
+      font-size: 13px; 
+      color: var(--text-light); 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      letter-spacing: 1px;
+    }
+
+    /* Input Groups with Icons */
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .input-group i.icon-left {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .input-group i.toggle-password {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .input-group i.toggle-password:hover { color: var(--primary); }
+
+    input { 
+      width: 100%; 
+      padding: 12px 40px; /* Space for icons */
+      margin: 0; 
+      border-radius: 8px; 
+      border: 1px solid #e5e7eb;
+      font-size: 15px;
+      box-sizing: border-box;
+      transition: all 0.3s;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+
+    /* Button */
+    button { 
+      width: 100%; 
+      padding: 14px; 
+      border: none; 
+      border-radius: 8px; 
+      background: var(--primary); 
+      color: #fff; 
+      font-weight: 600; 
+      font-size: 16px;
+      cursor: pointer; 
+      margin-top: 10px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2);
+    }
+    
+    button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    /* Links & Messages */
+    .message { 
+      color: #842029; 
+      margin-bottom: 18px; 
+      text-align: center; 
+      font-size: 14px; 
+      background: #fff1f2;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(184,28,28,0.08);
+      display: none; /* will be toggled when server provides an alert */
+    }
+    
+    .link-row {
+      display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:18px;
+    }
+    .secondary-btn {
+      display:inline-block; padding:10px 14px; border-radius:10px; border:1px solid rgba(2,6,23,0.06);
+      background: transparent; color: var(--primary); font-weight:600; text-decoration:none; font-size:14px;
+    }
+    .secondary-btn:hover { background: rgba(79,70,229,0.03); }
+
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1><i class="fa-solid fa-building-columns"></i> Tbank Investment</h1>
+    <h2>Login</h2>
+
+    <!-- Display message if any -->
+    <div class="message" id="msgBox" style="<%= alert ? 'display:block' : 'display:none' %>"><%= alert || '' %></div>
+
+    <form action="/login" method="POST">
+      
+      <div class="input-group">
+        <i class="fa-solid fa-phone icon-left"></i>
+        <input type="text" name="phoneNumber" placeholder="Phone Number" required>
+      </div>
+
+      <div class="input-group">
+        <i class="fa-solid fa-lock icon-left"></i>
+        <input type="password" id="loginPassword" name="password" placeholder="Password" required>
+        <i class="fa-solid fa-eye-slash toggle-password" id="toggleBtn" onclick="togglePasswordVisibility()"></i>
+      </div>
+
+      <button type="submit">Login <i class="fa-solid fa-arrow-right"></i></button>
+    </form>
+
+    <div class="link-row">
+      <div style="font-size:13px;color:var(--text-light);">Don't have an account?</div>
+      <a href="/register" class="secondary-btn">Register</a>
+    </div>
+  </div>
+
+  <script>
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById("loginPassword");
+      const toggleBtn = document.getElementById("toggleBtn");
+
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        toggleBtn.classList.remove("fa-eye-slash");
+        toggleBtn.classList.add("fa-eye");
+      } else {
+        passwordInput.type = "password";
+        toggleBtn.classList.remove("fa-eye");
+        toggleBtn.classList.add("fa-eye-slash");
+      }
+    }
+  </script>
+</body>
+</html>
