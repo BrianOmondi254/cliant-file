@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+identified identi<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -208,7 +208,7 @@
                                 <% } %>
 
                                 <% if (typeof showDealer !== 'undefined' ? showDealer : true) { %>
-                                    <div class="tag" onclick="app.switchRole('Dealer')">Dealer</div>
+                                    <div class="tag" id="dealerTag" onclick="app.switchRole('Dealer')">Dealer</div>
                                 <% } %>
 
                                 <% /* General: always display, but if user is not part of general group clicking goes to create page */ %>
@@ -258,7 +258,9 @@
                 batch: [],
                 PIN: "1234",
                 AGENT_ID: "1234",
-                ACCOUNT_NUM: "1234"
+                ACCOUNT_NUM: "1234",
+                activeDealerId: null, // Stores the ID of the logged-in dealer
+                dealerStatus: { hasPin: false, isVerified: false, dealerData: null }
             },
 
             init() {
@@ -289,6 +291,27 @@
                     tag.classList.remove('active');
                     if(tag.innerText.includes(role)) tag.classList.add('active');
                 });
+
+                // Update dealer tag based on dealer status
+                const dealerTag = document.getElementById('dealerTag');
+                if (dealerTag && this.data.activeDealerId) {
+                    const currentDealerStatus = this.data.dealerStatus;
+                    if (currentDealerStatus && currentDealerStatus.hasPin !== undefined) {
+                        if (!currentDealerStatus.hasPin) {
+                            dealerTag.innerText = 'Create PIN';
+                            dealerTag.onclick = () => this.openDealerPinManagement('create');
+                        } else if (!currentDealerStatus.isVerified) {
+                            dealerTag.innerText = 'Enter PIN';
+                            dealerTag.onclick = () => this.openDealerPinManagement('verify');
+                        } else {
+                            dealerTag.innerText = 'Dealer Dashboard';
+                            dealerTag.onclick = () => this.switchRole('Dealer');
+                        }
+                    }
+                } else if (dealerTag) {
+                    dealerTag.innerText = 'Dealer';
+                    dealerTag.onclick = () => this.switchRole('Dealer');
+                }
             },
 
             renderPersonalView(container) {
@@ -313,8 +336,36 @@
             },
 
             renderDealerView(container) {
-                container.innerHTML = `<h1>Dealer Dashboard</h1><div class="box-wrapper"><p>Dealer content is under construction.</p></div>`;
+                const currentDealerStatus = this.data.dealerStatus;
+
+                if (currentDealerStatus && currentDealerStatus.isVerified) {
+                    container.innerHTML = `
+                        <h1>Dealer Dashboard</h1>
+                        <div class="menu-list">
+                            <button class="block-btn" onclick="app.openDealerPinManagement('change')">Change PIN</button>
+                            <!-- Other dealer specific options would go here -->
+                            <div class="box-wrapper"><p>Welcome, ${currentDealerStatus.dealerData ? currentDealerStatus.dealerData.name : 'Dealer'}! Your dashboard is ready.</p></div>
+                        </div>
+                    `;
+                } else if (currentDealerStatus && currentDealerStatus.hasPin) {
+                    container.innerHTML = `
+                        <h1>Dealer Dashboard</h1>
+                        <div class="box-wrapper">
+                            <p style="color:var(--text-muted)">Please enter your PIN to access the dashboard.</p>
+                            <button class="btn btn-primary mt-4" onclick="app.openDealerPinManagement('verify')">Enter PIN</button>
+                        </div>
+                    `;
+                } else {
+                     container.innerHTML = `
+                        <h1>Dealer Dashboard</h1>
+                        <div class="box-wrapper">
+                            <p style="color:var(--text-muted)">Opening PIN creation...</p>
+                        </div>
+                    `;
+                    this.openDealerPinManagement('create');
+                }
             },
+
 
             openModal(action) {
                 const modal = document.getElementById('modalOverlay');
@@ -352,6 +403,142 @@
 
             closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
 
+            // --- DEALER PIN FLOWS ---
+            openDealerPinManagement(actionType) {
+                console.log("openDealerPinManagement called with actionType:", actionType);
+                console.log("Current activeDealerId:", this.data.activeDealerId);
+                let dealerId = this.data.activeDealerId;
+
+                if (actionType !== 'create' && !dealerId) {
+                    return this.showToast('No active dealer found. Please login first.', 'error');
+                }
+
+                let title = '';
+                let bodyHtml = '';
+
+                if (actionType === 'create') {
+                    title = 'Create Dealer PIN';
+                    bodyHtml = `
+                        <div class="form-group"><label class="form-label">New PIN</label><input type="password" id="dealerNewPin" class="form-input" maxlength="4"></div>
+                        <div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="dealerConfPin" class="form-input" maxlength="4"></div>
+                        <button class="btn btn-primary" onclick="app.processDealerPinAction('create')">Create PIN</button>
+                    `;
+                } else if (actionType === 'verify') {
+                    title = 'Enter Dealer PIN';
+                    bodyHtml = `
+                        <div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="dealerVerifyPin" class="form-input" maxlength="4"></div>
+                        <button class="btn btn-primary" onclick="app.processDealerPinAction('verify')">Verify PIN</button>
+                    `;
+                } else if (actionType === 'change') { // Allow changing PIN from a future dashboard option
+                    title = 'Change Dealer PIN';
+                    bodyHtml = `
+                        <div class="form-group"><label class="form-label">Current PIN</label><input type="password" id="dealerCurrPin" class="form-input" maxlength="4"></div>
+                        <div class="form-group"><label class="form-label">New PIN</label><input type="password" id="dealerNewPin" class="form-input" maxlength="4"></div>
+                        <div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="dealerConfPin" class="form-input" maxlength="4"></div>
+                        <button class="btn btn-primary" onclick="app.processDealerPinAction('change')">Change PIN</button>
+                    `;
+                }
+
+                this.updateModalContent(title, bodyHtml);
+                document.getElementById('modalOverlay').classList.add('open'); // Directly open modal
+            },
+
+            processDealerPinAction(actionType) {
+                const dealerId = this.data.activeDealerId;
+                if (!dealerId) {
+                    this.showToast('No active dealer found.', 'error');
+                    return;
+                }
+
+                let endpoint = '';
+                let body = {};
+                let validationError = '';
+
+                if (actionType === 'create' || actionType === 'change') {
+                    const newPin = document.getElementById('dealerNewPin').value;
+                    const confPin = document.getElementById('dealerConfPin').value;
+
+                    if (newPin.length !== 4 || confPin.length !== 4) {
+                        validationError = 'PIN must be 4 digits';
+                    } else if (newPin !== confPin) {
+                        validationError = 'New PINs do not match';
+                    }
+
+                    if (actionType === 'change') {
+                        const currentPinInput = document.getElementById('dealerCurrPin').value;
+                        // For 'change' we need to first verify current PIN
+                        // This would typically be a separate server call or integrated into one.
+                        // For simplicity, let's assume the /create-pin endpoint handles it if it's a change and not just creation
+                        // Or, better, we can verify current PIN here client-side against the server's session status if provided
+                        // For now, I'll rely on the server to handle the currentPin verification if needed in create-pin
+                        body.currentPin = currentPinInput; // Pass currentPin if action is change
+                    }
+
+                    endpoint = '/dealer/create-pin'; // Server endpoint handles both create and change
+                    body.pin = newPin;
+                    body.confirmPin = confPin;
+
+                } else if (actionType === 'verify') {
+                    const verifyPin = document.getElementById('dealerVerifyPin').value;
+                    if (verifyPin.length !== 4) {
+                        validationError = 'PIN must be 4 digits';
+                    }
+                    endpoint = '/dealer/login'; // Server endpoint for PIN verification
+                    body.pin = verifyPin;
+                }
+
+                if (validationError) {
+                    this.showToast(validationError, 'error');
+                    return;
+                }
+
+                // Make the fetch call to the server
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body),
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        this.showToast(data.message, 'success');
+                        this.closeModal();
+                        // Re-fetch dealer status to update UI based on server's new state
+                        fetch('/dealer')
+                            .then(res => {
+                                if (!res.ok) {
+                                    throw new Error(`HTTP error! status: ${res.status}`);
+                                }
+                                return res.json();
+                            })
+                            .then(statusData => {
+                                if (statusData.success) {
+                                    this.data.dealerStatus = {
+                                        hasPin: statusData.hasPin,
+                                        isVerified: statusData.isVerified,
+                                        dealerData: statusData.dealerData
+                                    };
+                                } else {
+                                    this.showToast(statusData.error || 'Failed to update dealer status from server', 'error');
+                                }
+                                this.render(); // Render to update main view and header tag
+                            })
+                            .catch(error => {
+                                console.error('Error re-fetching dealer status:', error);
+                                this.showToast('Network error re-fetching dealer status', 'error');
+                                this.render(); // Still render to attempt UI update
+                            });
+                    } else {
+                        this.showToast(data.error || 'Action failed', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Network error during PIN action:', error);
+                    this.showToast('Network error, please try again.', 'error');
+                });
+            },
             // --- SEND MONEY FLOW ---
 
             flowSendGeneral() {
@@ -627,21 +814,91 @@
                 document.getElementById('toast-container').appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
             },
-            switchRole(r) { this.data.role = r; this.render(); },
+            switchRole(r) {
+                this.data.role = r;
+                this.render(); // Render the main content for the selected role
+
+                // Dynamic update of Dealer tag in header
+                const dealerTag = document.getElementById('dealerTag');
+                if (dealerTag && r === 'Dealer' && this.data.activeDealerId) {
+                    // Use fetched dealerStatus
+                    const currentDealerStatus = this.data.dealerStatus;
+
+                    if (currentDealerStatus && currentDealerStatus.hasPin !== undefined) { // Check if status is available
+                        if (!currentDealerStatus.hasPin) {
+                            dealerTag.innerText = 'Create PIN';
+                            dealerTag.onclick = () => this.openDealerPinManagement('create');
+                        } else if (!currentDealerStatus.isVerified) { // Has PIN but not verified
+                            dealerTag.innerText = 'Enter PIN';
+                            dealerTag.onclick = () => this.openDealerPinManagement('verify');
+                        } else { // Has PIN and is verified
+                            dealerTag.innerText = 'Dealer Dashboard'; // Or just "Dealer"
+                            dealerTag.onclick = () => this.switchRole('Dealer'); // Keep current behavior, just indicate dashboard is ready
+                        }
+                    }
+                } else if (dealerTag) { // Always reset if not dealer role, or if no active dealer ID
+                    dealerTag.innerText = 'Dealer';
+                    dealerTag.onclick = () => this.switchRole('Dealer');
+                }
+            },
             verifyLogin(type) {
                 const id = document.getElementById(`${type}LoginId`).value;
-                if(id === "1234") {
+                // Note: ID "1234" is hardcoded for demo. In real app, authentication would be against a backend.
+                if(id === "1234") { 
                     this.showToast('Login Success', 'success');
-                    if(type==='agent') this.data.agentLoggedIn = true;
-                    if(type==='dealer') this.data.dealerLoggedIn = true;
-                    this.render();
+                    if(type==='agent') {
+                        this.data.agentLoggedIn = true;
+                        this.render(); // Render immediately for agent
+                    }
+                    if(type==='dealer') {
+                        this.data.dealerLoggedIn = true;
+                        this.data.activeDealerId = id; 
+                        // Fetch dealer status from server
+                        fetch('/dealer')
+                            .then(res => {
+                                if (!res.ok) {
+                                    throw new Error(`HTTP error! status: ${res.status}`);
+                                }
+                                return res.json();
+                            })
+                            .then(data => {
+                                if (data.success) {
+                                    this.data.dealerStatus = {
+                                        hasPin: data.hasPin,
+                                        isVerified: data.isVerified,
+                                        dealerData: data.dealerData
+                                    };
+                                } else {
+                                    this.showToast(data.error || 'Failed to fetch dealer status', 'error');
+                                    this.data.dealerLoggedIn = false; 
+                                    this.data.activeDealerId = null;
+                                }
+                                this.render(); // Render after status is fetched
+                            })
+                            .catch(error => {
+                                console.error('Error fetching dealer status:', error);
+                                this.showToast('Network error fetching dealer status', 'error');
+                                this.data.dealerLoggedIn = false; 
+                                this.data.activeDealerId = null;
+                                this.render(); // Render even on error to update UI
+                            });
+                    }
                 } else this.showToast('Invalid ID', 'error');
             },
             logout() {
                 if(confirm("Logout?")) {
                     this.data.agentLoggedIn = false; 
                     this.data.dealerLoggedIn = false;
+                    this.data.activeDealerId = null; // Reset active dealer ID
                     this.data.role = 'Personal';
+                    
+                    // Reset dealer tag in header
+                    const dealerTag = document.getElementById('dealerTag');
+                    if (dealerTag) {
+                        dealerTag.innerText = 'Dealer';
+                        dealerTag.onclick = () => this.switchRole('Dealer');
+                    }
+
                     this.showToast('Logged out', 'info');
                     this.render();
                 }
