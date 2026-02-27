@@ -1,49 +1,86 @@
 [
   {
-    "phoneNumber": "0740415992",
-    "name": "brian  omondi okeyo",
-    "county": "Mombasa",
-    "createdAt": "2025-12-27T13:01:41.451Z",
-    "pin": "$2b$10$K4E/8aqhawe8oNNqBQalN.WF3auTy1q2RodEOl61Tswx393qIQgKq"
+    "name": "brian siaya agent",
+    "phoneNumber": "0740001141",
+    "dealerPhone": "0740000141",
+    "county": "Siaya",
+    "constituency": "Ugenya",
+    "ward": "East Ugenya",
+    "isBlocked": false,
+    "pin": "$2b$10$Z76aY1vW5zZOBkM314F.LeeXOUPC4AV6E6fW/dUe7iXrviKENYqL2",
+    "passkey": "2234",
+    "createdAt": "2026-01-15T23:26:18.462Z",
+    "groupsTotal": [],
+    "totalMembers": 0,
+    "members": {
+      "trustire": "",
+      "otherOfficial": ""
+    },
+    "group": {
+      "groupaccount": {
+        "groupName": "",
+        "createdAt": "2026-01-15T23:26:18.462Z",
+        "members": 0,
+        "isBlocked": false,
+        "groupStarters": {}
+      }
+    }
   },
   {
-    "name": "Unknown Agent",
-    "county": "Mombasa",
-    "phoneNumber": "0740415992",
-    "createdAt": "2025-12-27T13:09:53.327Z"
+    "name": "brian migori agent",
+    "phoneNumber": "0740001143",
+    "dealerPhone": "0740000143",
+    "county": "Migori",
+    "constituency": "Awendo",
+    "ward": "East Sakwa",
+    "isBlocked": false,
+    "pin": "$2b$10$gLTYrMKapp2e0/Nt21bPMOjyJu2OF98h8.Ef69D0Nufu7yavWJqBi",
+    "passkey": "5678",
+    "createdAt": "2026-01-16T20:13:16.980Z",
+    "groupsTotal": [],
+    "totalMembers": 0,
+    "members": {
+      "trustire": "",
+      "otherOfficial": ""
+    },
+    "group": {
+      "groupaccount": {
+        "groupName": "",
+        "createdAt": "2026-01-16T20:13:16.980Z",
+        "members": 0,
+        "isBlocked": false,
+        "groupStarters": {}
+      }
+    }
   },
   {
-    "name": "duglus onyango okeyo",
-    "county": "Mombasa",
-    "phoneNumber": "0741415992",
-    "createdAt": "2025-12-27T13:36:29.495Z"
+    "name": "brian kisumu agent",
+    "phoneNumber": "0740001142",
+    "county": "Kisumu",
+    "constituency": "Kisumu East",
+    "ward": "Kajulu",
+    "dealerPhone": "0740000142",
+    "createdAt": "2026-02-08T06:55:25.150Z",
+    "pin": "$2b$10$JGpbS8R/em7Gjh4wcLGnY.k.XR45Jjr3Y0YphvAhHoiBtRPrjqXlO"
   },
   {
-    "name": "brian kisera kisera",
-    "county": "Mombasa",
-    "phoneNumber": "0711051102",
-    "createdAt": "2025-12-28T05:00:02.498Z",
-    "pin": "$2b$10$sVRDB.QHLXZPVGJkmunDXeZ2DQveaHn3gmTUTsAvVNTx9.3nnjrYa"
+    "name": "brian kisii agent two",
+    "phoneNumber": "0740123457",
+    "county": "Kisii",
+    "constituency": "Bonchari",
+    "ward": "bomariba",
+    "dealerPhone": "0740123456",
+    "createdAt": "2026-02-09T19:35:58.083Z",
+    "pin": "$2b$10$9OJl7G2aZjKSfm2zZuPOqOo6ianUpQqGYVdVTrG6EvSl16Hfqu3QO"
   },
   {
-    "name": "Janet odongo odongo",
-    "county": "Mombasa",
-    "phoneNumber": "0711155510",
-    "createdAt": "2025-12-28T07:42:33.754Z",
-    "pin": "$2b$10$JHfb52meclYxyWton5eY3.IKbCeqimePxtaJtpqw4q2uM1VMSqCTG"
-  },
-  {
-    "name": "brian omondi brian",
-    "county": "Mombasa",
-    "phoneNumber": "0700051102",
-    "createdAt": "2026-01-01T17:55:50.795Z"
-  },
-  {
-    "name": "brian omondi okeyo",
-    "county": "Mombasa",
-    "constituency": "",
-    "ward": "",
-    "phoneNumber": "0741119679",
-    "createdAt": "2026-01-07T20:11:25.632Z"
+    "name": "kisi agent",
+    "phoneNumber": "0740123458",
+    "county": "Kisii",
+    "constituency": "Bonchari",
+    "ward": "Bogiakumu",
+    "dealerPhone": "0740123456",
+    "createdAt": "2026-02-09T19:37:30.192Z",
+    "pin": "$2b$10$psHzGkYs8Bmp/UrunqYU3ulsobg040UTD5P8wosTyCZ3yCPN81sC6"
   }
 ]

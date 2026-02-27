@@ -8,7 +8,7 @@
     "membership": {
       "trustees": "3",
       "officials": "4",
-      "members": "15",
+      "members": "10",
       "maxMembers": "40",
       "updatedAt": "2026-01-09T20:56:23.482Z"
     },
@@ -17,6 +17,12 @@
       "season": "Annual",
       "updatedAt": "2026-01-09T20:56:34.185Z"
     },
-    "completed": true
+    "completed": true,
+    "personal_account_registration": {
+      "amount": "50",
+      "paymentMethod": "mpesa",
+      "passkey": "70946",
+      "updatedAt": "2026-02-09T19:12:36.804Z"
+    }
   }
 }

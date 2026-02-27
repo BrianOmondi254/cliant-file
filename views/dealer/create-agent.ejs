@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Agent Account</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        .preview-box { background: #f8f9fa; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <% if (locals.success) { %>
+            <div class="alert success"><%= success %></div>
+        <% } %>
+        
+        <% if (locals.error) { %>
+            <div class="alert error"><%= error %></div>
+        <% } %>
+
+        <h2>Create Agent Account</h2>
+        <p>Enter the phone number to verify and create an agent account.</p>
+        
+        <form action="/dealer/create-agent" method="POST">
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number</label>
+                <input type="text" id="phoneNumber" name="phoneNumber" required placeholder="Enter phone number">
+            </div>
+            <button type="submit">Verify</button>
+        </form>
+
+        <% if (locals.verified) { %>
+            <div class="preview-box">
+                <h3>Verified User</h3>
+                <p><strong>Name:</strong> <%= verified.name %></p>
+                <p><strong>County:</strong> <%= verified.county %></p>
+                <p><strong>Constituency:</strong> <%= verified.constituency %></p>
+                <p><strong>Ward:</strong> <%= verified.ward %></p>
+                <p><strong>Phone Number:</strong> <%= verified.phoneNumber %></p>
+                
+                <form action="/dealer/approve-agent" method="POST" style="margin-top: 15px;">
+                    <input type="hidden" name="phoneNumber" value="<%= verified.phoneNumber %>">
+                    <button type="submit" style="background-color: #28a745;">Approve and Create Agent</button>
+                </form>
+            </div>
+        <% } %>
+
+        <a href="/dealer" style="display: inline-block; margin-top: 20px;">Back to Dashboard</a>
+    </div>
+</body>
+</html>

@@ -1,92 +1,237 @@
-[
-  {
-    "groupName": "ONE SACCO ",
-    "phone": "0700051102",
-    "firstName": "brian",
-    "secondName": "omondi",
-    "lastName": "okeyo",
-    "county": "Kajiado",
-    "processorPhone": "0740415992",
-    "createdAt": "2025-12-27T12:22:32.515Z",
-    "trustee_1": {
-      "type": "trustee",
-      "index": "1",
-      "title": "Chairperson",
-      "phone": "0700051102",
-      "id": "35951448"
-    },
-    "trustee_2": {
-      "type": "trustee",
-      "index": "2",
-      "title": "Trustee",
-      "phone": "0741415992",
-      "id": "35954447"
-    },
-    "trustee_3": {
-      "type": "trustee",
-      "index": "3",
-      "title": "Trustee",
-      "phone": "0742425992",
-      "id": "35951447"
-    },
-    "official_1": {
-      "type": "official",
-      "index": "1",
-      "phone": "0710051102",
-      "id": "35951446"
-    },
-    "member_1": {
-      "type": "member",
-      "index": "1",
-      "phone": "0751426962",
-      "id": "35951444"
-    },
-    "member_2": {
-      "type": "member",
-      "index": "2",
-      "phone": "0734458676",
-      "id": "35951445"
-    },
-    "member_3": {
-      "type": "member",
-      "index": "3",
-      "phone": "0721813406",
-      "id": "35951446"
-    },
-    "membersPopulatedAt": "2026-01-06T22:41:44.120Z",
-    "agentProcessed": "0740415992"
+{
+  "Homa Bay": {
+    "Kasipul": {
+      "East Ugenya": [
+        {
+          "groupName": "kinda eteko",
+          "phone": "0700051102",
+          "firstName": "brian ",
+          "secondName": "oluach",
+          "lastName": "jimbo",
+          "county": "Homa Bay",
+          "constituency": "Kasipul",
+          "ward": "East Ugenya",
+          "processorPhone": "0740001141",
+          "createdAt": "2026-01-24T22:14:14.595Z",
+          "membersPopulatedAt": "2026-01-31T23:04:18.810Z",
+          "agentProcessed": "0740001141",
+          "phase": 3,
+          "totalProposedMembers": 15,
+          "constitutionStartKey": "5907",
+          "constitutionKeyGeneratedAt": "2026-02-08T20:07:42.359Z",
+          "constitutionKeySetByAgentAt": "2026-02-22T19:48:05.417Z",
+          "principles": {
+            "otherContributions": [
+              {
+                "accountNumber": "001",
+                "accountName": "Saving",
+                "expectedAmount": "100"
+              },
+              {
+                "accountNumber": "002",
+                "accountName": "Registration",
+                "expectedAmount": "100"
+              },
+              {
+                "accountNumber": "003",
+                "accountName": "latenes",
+                "expectedAmount": "100"
+              },
+              {
+                "accountNumber": "004",
+                "accountName": "welfare",
+                "expectedAmount": "100"
+              }
+            ],
+            "distribution": {
+              "model": "performance",
+              "officialPct": 0,
+              "performancePct": "70",
+              "targetAccountName": "Benefit from Loan, Registration, latenes, welfare",
+              "targetAccountNumber": "006"
+            },
+            "deductions": {
+              "primarySource": "savings"
+            },
+            "intervals": {
+              "frequency": "weekly",
+              "period": "wednesday",
+              "endSavingPeriod": "1-year"
+            },
+            "governance": {
+              "fastNotificationThreshold": "60",
+              "editAccountThreshold": "75",
+              "memberRemovalThreshold": "75",
+              "requireResponseNote": false
+            },
+            "balancing": {
+              "benefitAccounts": [
+                "Loan",
+                "Registration",
+                "latenes",
+                "welfare"
+              ]
+            },
+            "loans": {
+              "qualificationType": "duration",
+              "duration": {
+                "days": "30"
+              },
+              "savingTarget": "",
+              "repayment": {
+                "durationDays": "30",
+                "alignment": "complete",
+                "rolloverMethod": "fixed",
+                "maxRollovers": "3"
+              },
+              "interestAndLimits": {
+                "interestRate": "3",
+                "maxActiveLoans": "1",
+                "limitBasis": "total",
+                "limitMultiplier": "3"
+              },
+              "type": {
+                "category": "long",
+                "guaranteeMethod": "group_savings"
+              },
+              "longTerm": {
+                "paymentPeriod": "12",
+                "paymentMethod": "installment",
+                "installment": {
+                  "scheduleType": "set_rounds",
+                  "customRounds": "12"
+                }
+              }
+            },
+            "contributionCloser": {
+              "saving": {
+                "duration": "9",
+                "intervalBuffer": "1"
+              },
+              "loan": {
+                "duration": "1",
+                "intervalBuffer": "1"
+              }
+            }
+          },
+          "principlesSetAt": "2026-02-22T19:54:17.316Z",
+          "accountNumber": "2540442621424001",
+          "pin": "5907",
+          "trustee_1": {
+            "type": "trustee",
+            "index": "1",
+            "title": "Chairperson",
+            "phone": "0700051102",
+            "id": "35951444"
+          },
+          "trustee_2": {
+            "type": "trustee",
+            "index": "2",
+            "title": "Treasurer",
+            "phone": "0741001141",
+            "id": "35951449"
+          },
+          "trustee_3": {
+            "type": "trustee",
+            "index": "3",
+            "title": "Secretary",
+            "phone": "0742001141",
+            "id": "35951450"
+          },
+          "official_1": {
+            "type": "official",
+            "index": "4",
+            "phone": "0743001141",
+            "id": "35951451"
+          },
+          "member_1": {
+            "type": "member",
+            "index": "5",
+            "phone": "0744001141",
+            "id": "35951452"
+          },
+          "member_2": {
+            "type": "member",
+            "index": "6",
+            "phone": "0745001141",
+            "id": "35951453"
+          },
+          "member_3": {
+            "type": "member",
+            "index": "7",
+            "phone": "0746001141",
+            "id": "35951454"
+          },
+          "member_4": {
+            "type": "member",
+            "index": "8",
+            "phone": "0747001141",
+            "id": "35951455"
+          },
+          "member_5": {
+            "type": "member",
+            "index": "9",
+            "phone": "0748001141",
+            "id": "35951456"
+          },
+          "member_6": {
+            "type": "member",
+            "index": "10",
+            "phone": "0749001141",
+            "id": "35951457"
+          }
+        }
+      ]
+    }
   },
-  {
-    "groupName": "aliance plus group",
-    "phone": "0700000000",
-    "firstName": "brian",
-    "secondName": "omondi",
-    "lastName": "okeyo",
-    "county": "Embu",
-    "processorPhone": "0700051102",
-    "createdAt": "2025-12-27T12:25:44.915Z"
+  "Siaya": {
+    "Ugenya": {
+      "East Ugenya": [
+        {
+          "groupName": "ONE SACCO ",
+          "phone": "0740415992",
+          "firstName": "broan",
+          "secondName": "olueny",
+          "lastName": "olue",
+          "county": "Siaya",
+          "constituency": "Ugenya",
+          "ward": "East Ugenya",
+          "processorPhone": "0741001141",
+          "createdAt": "2026-02-08T17:21:23.460Z"
+        }
+      ]
+    }
   },
-  {
-    "groupName": "joyfull women group",
-    "phone": "0740050010",
-    "firstName": "duncan",
-    "secondName": "ochieng",
-    "lastName": "otieno",
-    "county": "Mombasa",
-    "constituency": "Kisauni",
-    "processorPhone": "0700051102",
-    "createdAt": "2026-01-06T10:40:12.140Z"
-  },
-  {
-    "groupName": "luo dayaspora group",
-    "phone": "0740415992",
-    "firstName": "ojuang ",
-    "secondName": "junia",
-    "lastName": "owuor",
-    "county": "Mombasa",
-    "constituency": "Changamwe",
-    "ward": "Airport",
-    "processorPhone": "0740415992",
-    "createdAt": "2026-01-06T18:21:10.402Z"
+  "Kisii": {
+    "Bonchari": {
+      "Bomariba": [
+        {
+          "groupName": "kissi wote",
+          "phone": "0740415992",
+          "firstName": "brian",
+          "secondName": "omondi",
+          "lastName": "okeyo",
+          "county": "Kisii",
+          "constituency": "Bonchari",
+          "ward": "Bomariba",
+          "processorPhone": "0740123460",
+          "createdAt": "2026-02-09T19:52:31.341Z"
+        }
+      ],
+      "Bogiakumu": [
+        {
+          "groupName": "kiwswa grops",
+          "phone": "0740415992",
+          "firstName": "brian",
+          "secondName": "omondi",
+          "lastName": "okeyo",
+          "county": "Kisii",
+          "constituency": "Bonchari",
+          "ward": "Bogiakumu",
+          "processorPhone": "0740123460",
+          "createdAt": "2026-02-09T19:54:22.961Z"
+        }
+      ]
+    }
   }
-]
+}

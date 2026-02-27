@@ -28,12 +28,12 @@
       margin: 0;
     }
 
-    .login-container { 
-      background: #ffffff; 
-      padding: 36px 28px; 
-      border-radius: 14px; 
-      box-shadow: 0 12px 30px rgba(2,6,23,0.08); 
-      width: 380px; 
+    .login-container {
+      background: #ffffff;
+      padding: 36px 28px;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(2,6,23,0.08);
+      width: 380px;
       max-width: calc(100% - 40px);
       text-align: center;
       border: 1px solid rgba(15,23,42,0.03);
@@ -147,6 +147,89 @@
     }
     .secondary-btn:hover { background: rgba(79,70,229,0.03); }
 
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 300px;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 24px 20px;
+        border-radius: 10px;
+        box-shadow: 0 8px 20px rgba(2,6,23,0.1);
+        width: calc(100% - 20px);
+      }
+
+      .login-container h1 {
+        font-size: 20px;
+      }
+
+      .login-container h2 {
+        font-size: 12px;
+        margin-bottom: 18px;
+      }
+
+      input {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 14px 40px;
+      }
+
+      button {
+        padding: 16px;
+        font-size: 16px;
+      }
+
+      .input-group {
+        margin-bottom: 16px;
+      }
+
+      .link-row {
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .secondary-btn {
+        width: 100%;
+        text-align: center;
+        padding: 12px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -176,8 +259,19 @@
     <div class="link-row">
       <div style="font-size:13px;color:var(--text-light);">Don't have an account?</div>
       <a href="/register" class="secondary-btn">Register</a>
+      <a href="#" id="adminBtn" class="secondary-btn">Admin</a>
     </div>
   </div>
+
+  <!-- The Modal -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Demo Code</h2>
+            <input type="text" id="demoCode" placeholder="Enter code">
+            <button id="submitCode">Submit</button>
+        </div>
+    </div>
 
   <script>
     function togglePasswordVisibility() {
@@ -193,6 +287,34 @@
         toggleBtn.classList.remove("fa-eye");
         toggleBtn.classList.add("fa-eye-slash");
       }
+    }
+
+    // Modal script
+    var modal = document.getElementById("adminModal");
+    var btn = document.getElementById("adminBtn");
+    var span = document.getElementsByClassName("close")[0];
+
+    btn.onclick = function() {
+      modal.style.display = "block";
+    }
+
+    span.onclick = function() {
+      modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+
+    document.getElementById("submitCode").onclick = function() {
+        var code = document.getElementById("demoCode").value;
+        if (code === "35951444") {
+            window.location.href = "/hq";
+        } else {
+            alert("Invalid code");
+        }
     }
   </script>
 </body>

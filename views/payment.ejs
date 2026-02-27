@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tbank Investment - Registration Payment</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #007bff;
+            --primary-dark: #0056b3;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --input-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg-gradient);
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0;
+            color: var(--text-color);
+            padding: 20px;
+        }
+        .payment-box { 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 20px; 
+            width: 100%;
+            max-width: 450px; 
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        h1 { 
+            margin: 0 0 20px 0; 
+            font-size: 26px; 
+            color: var(--primary); 
+        }
+        p {
+            font-size: 1.1em;
+            color: var(--secondary);
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button { 
+            width: 100%; 
+            padding: 15px; 
+            background: var(--primary); 
+            color: #fff; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            font-weight: 600;
+        }
+        button:hover { 
+            background: var(--primary-dark); 
+        }
+        #mpesa-message {
+            margin-top: 20px;
+        }
+        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 420px; text-align: center; }
+        .btn { background: #4f46e5; color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: 0.2s; }
+        .btn:hover { background: #4338ca; }
+        .input-group { margin-bottom: 1.5rem; text-align: left; }
+        label { display: block; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; font-weight: 600; }
+        input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.2s; }
+        input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .amount-badge { background: #ecfdf5; color: #047857; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="payment-box">
+        <h1>Complete Your Registration</h1>
+    <div class="card">
+        <h2 style="margin-top: 0; color: #0f172a;">Complete Registration</h2>
+        <p style="color: #64748b; margin-bottom: 2rem; line-height: 1.5;">
+            To activate your account, a fee of <span class="amount-badge">KES <%= amount %></span> is required.
+        </p>
+        
+        <form action="/complete-registration" method="POST">
+            <input type="hidden" name="registrationData" value='<%= registrationData %>'>
+            
+            <div class="input-group" id="passkeyGroup" style="<%= paymentMethod === 'mpesa' ? 'display:none;' : '' %>">
+                <label for="passkey">
+                    <% if (paymentMethod === 'mpesa') { %>
+                        M-Pesa Transaction Code
+                    <% } else { %>
+                        Enter Passkey
+                    <% } %>
+                </label>
+                <input type="text" id="passkeyInput" name="passkey" required autocomplete="off"
+                       value="<%= (typeof passkey !== 'undefined' && passkey) ? passkey : '' %>">
+                <% if (paymentMethod === 'mpesa') { %>
+                    <small style="color: #64748b; display: block; margin-top: 6px; font-size: 0.8rem;">
+                        <i class="fa-solid fa-circle-info"></i> Check your phone for the STK push.
+                    </small>
+                <% } %>
+            </div>
+
+            <% if (paymentMethod === 'mpesa') { %>
+                <h2>Pay with Mpesa</h2>
+                <p>Registration Fee: <%= amount %> KSH</p>
+                <button type="button" id="initMpesaBtn" onclick="initiateMpesa()" style="<%= hasPasskey ? 'display:none;' : '' %>">Complete Registration</button>
+                
+                <div id="passkey-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:30px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.2); z-index:1000; text-align:center; min-width: 300px; border: 1px solid #e2e8f0;">
+                    <h3 style="margin-top:0; color:#0f172a;">M-Pesa Code</h3>
+                    <div id="prompt-value" style="font-size:2rem; font-weight:bold; margin:20px 0; letter-spacing:2px; color:#4f46e5;"><%= (typeof passkey !== 'undefined' && passkey) ? passkey : '' %></div>
+                    <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">Use this code to complete registration.</p>
+                    <button type="button" onclick="dismissPrompt()" style="background:#64748b; width:auto; padding:10px 30px;">OK</button>
+                </div>
+
+                <script>
+                    let promptTimeout;
+                    let currentPasskey = "<%= (typeof passkey !== 'undefined' && passkey) ? passkey : '' %>";
+
+                    function initiateMpesa() {
+                        const group = document.getElementById('passkeyGroup');
+                        if(group) group.style.display = 'block';
+
+                        generateNewPasskey();
+                    }
+
+                    function generateNewPasskey() {
+                        // Generate new 5-digit passkey
+                        currentPasskey = Math.floor(10000 + Math.random() * 90000).toString();
+                        
+                        // Update Input
+                        const input = document.getElementById('passkeyInput');
+                        if(input) input.value = currentPasskey;
+                        
+                        // Update Prompt Display
+                        const promptVal = document.getElementById('prompt-value');
+                        if(promptVal) promptVal.innerText = currentPasskey;
+                        
+                        showPrompt();
+                    }
+
+                    function showPrompt() {
+                        
+                        const prompt = document.getElementById('passkey-prompt');
+                        if(prompt) {
+                            prompt.style.display = 'block';
+                            if(promptTimeout) clearTimeout(promptTimeout);
+                            promptTimeout = setTimeout(() => {
+                                prompt.style.display = 'none';
+                            }, 3000);
+                        }
+                    }
+                    
+                    function dismissPrompt() {
+                        const prompt = document.getElementById('passkey-prompt');
+                        if(prompt) {
+                            prompt.style.display = 'none';
+                            if(promptTimeout) clearTimeout(promptTimeout);
+                        }
+                    }
+                </script>
+            <% } else if (paymentMethod === 'passkey') { %>
+                <h2>Pay with Passkey</h2>
+                <p>Registration Fee: <%= amount %> KSH</p>
+            <% } %>
+            <button type="submit" id="submitBtn" class="btn" style="<%= (paymentMethod === 'mpesa' && !hasPasskey) ? 'display:none;' : '' %>">Verify & Login</button>
+        </form>
+    </div>
+
+</body>
+</html>

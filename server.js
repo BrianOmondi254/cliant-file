@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+const FileStore = require("session-file-store")(session);
 
 /* ================= ROUTE IMPORTS ================= */
 const authRoutes = require("./routes/auth");
@@ -31,12 +32,20 @@ const PORT = 3000;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+/* 🛡️ Disable Caching to ensure Logout prevents 'Back' button access */
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  next();
+});
+
 /* 🛡️ Session middleware (required for login-protected routes) */
 app.use(
   session({
+    store: new FileStore({ path: "./sessions", ttl: 86400 }),
     secret: "generalAccountSecret",
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // Session expires after 24 hours
   })
 );
 

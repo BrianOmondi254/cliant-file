@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Details</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 0.75rem;
+        }
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 1rem;
+        }
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+        .actions-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .action-button {
+            display: block;
+            padding: 1rem; 
+            text-align: center;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .action-button:hover {
+            background-color: var(--primary-hover);
+        }
+        .no-groups {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <% if (group) { %>
+            <h1>My Account</h1>
+            <div class="actions-card">
+                <div class="actions-grid">
+                    <a href="/personal/myaccount" class="action-button">My Account</a>
+                    <a href="#" class="action-button">Group Account</a>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="no-groups">
+                <p>Group not found.</p>
+            </div>
+        <% } %>
+    </main>
+</body>
+</html>

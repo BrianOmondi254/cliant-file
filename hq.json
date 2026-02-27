@@ -1,0 +1,92 @@
+[
+  {
+    "dealerPhone": "0740000141",
+    "hqPhone": "0740000041",
+    "county": "Siaya",
+    "constituency": "Ugenya",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-01-15T20:39:09.088Z"
+  },
+  {
+    "dealerPhone": "0740000143",
+    "hqPhone": "0740000043",
+    "county": "Migori",
+    "constituency": "Suna East",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-01-16T19:40:15.681Z"
+  },
+  {
+    "dealerPhone": "0740000142",
+    "hqPhone": "0740000042",
+    "county": "Kisumu",
+    "constituency": "Kisumu East",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-01-17T19:19:58.323Z"
+  },
+  {
+    "dealerPhone": "0740000142",
+    "hqPhone": "0740000042",
+    "county": "Kisumu",
+    "constituency": "Kisumu East",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-01-17T19:20:37.861Z"
+  },
+  {
+    "dealerPhone": "0740000142",
+    "hqPhone": "0740000042",
+    "county": "Kisumu",
+    "constituency": "Kisumu East",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-01-17T19:21:10.671Z"
+  },
+  {
+    "dealerPhone": "0740000142",
+    "hqPhone": "0740000042",
+    "county": "Kisumu",
+    "constituency": "Kisumu East",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-02-07T20:26:00.390Z"
+  },
+  {
+    "dealerPhone": "0740001142",
+    "hqPhone": "0740000042",
+    "county": "Kisumu",
+    "constituency": "Kisumu East",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-02-07T20:30:12.975Z"
+  },
+  {
+    "dealerPhone": "0740000141",
+    "hqPhone": "0740000041",
+    "county": "Siaya",
+    "constituency": "Ugenya",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-02-07T20:36:58.158Z"
+  },
+  {
+    "dealerPhone": "0740123456",
+    "hqPhone": "0740123470",
+    "county": "Kisii",
+    "constituency": "Bonchari",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-02-09T19:17:53.914Z"
+  },
+  {
+    "dealerPhone": "0740123456",
+    "hqPhone": "0740123470",
+    "county": "Kisii",
+    "constituency": "Bonchari",
+    "ward": "",
+    "type": "dealer_creation",
+    "createdAt": "2026-02-09T19:31:45.892Z"
+  }
+]

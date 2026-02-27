@@ -2557,8 +2557,8 @@
     "Ugenya": {
       "wards": [
         "West Ugenya",
-        "North Ugenya",
         "East Ugenya",
+        "North Ugenya",
         "South Ugenya"
       ],
       "county": "Siaya"
@@ -2567,49 +2567,47 @@
       "wards": [
         "Sidindi",
         "Sigomere",
-        "Ugunja",
-        "Ukwala",
-        "West Ugenya"
+        "Ugunja"
       ],
       "county": "Siaya"
     },
     "Alego Usonga": {
       "wards": [
-        "Usonga",
         "West Alego",
         "Central Alego",
-        "Siaya Township",
-        "North Alego"
+        "East Alego",
+        "North Alego",
+        "South East Alego",
+        "Usonga"
       ],
       "county": "Siaya"
     },
     "Gem": {
       "wards": [
         "North Gem",
+        "South Gem",
+        "East Gem",
         "West Gem",
-        "Central Gem",
-        "Yala Township",
-        "Kombewa"
+        "Yala Township"
       ],
       "county": "Siaya"
     },
     "Bondo": {
       "wards": [
-        "West Sakwa",
+        "West Yimbo",
         "Central Sakwa",
         "South Sakwa",
-        "East Sakwa",
-        "North Sakwa"
+        "North Sakwa",
+        "Yimbo East"
       ],
       "county": "Siaya"
     },
     "Rarieda": {
       "wards": [
+        "East Asembo",
+        "West Asembo",
         "North Uyoma",
-        "South Uyoma",
-        "West Uyoma",
-        "East Uyoma",
-        "Central Uyoma"
+        "South Uyoma"
       ],
       "county": "Siaya"
     }

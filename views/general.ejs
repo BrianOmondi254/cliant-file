@@ -149,140 +149,184 @@ button:active {
 
 <body>
 
-<form action="/general" method="POST" class="form-wrapper" onsubmit="return handleGeneralSubmit(event)">
+<div class="form-wrapper">
+  
+  <div class="view-selector" style="display: flex; gap: 10px; margin-bottom: 20px;">
+    <a href="/general?view=my_groups" style="flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: <%= locals.view === 'my_groups' ? 'var(--primary)' : '#fff' %>; color: <%= locals.view === 'my_groups' ? '#fff' : 'var(--primary)' %>; border: 1px solid var(--primary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+      <i class="fas fa-user-circle"></i> My Groups Account
+    </a>
+    <a href="/general" style="flex: 1; text-align: center; padding: 12px; border-radius: 8px; background: <%= !locals.view ? 'var(--primary)' : '#fff' %>; color: <%= !locals.view ? '#fff' : 'var(--primary)' %>; border: 1px solid var(--primary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+      <i class="fas fa-plus-circle"></i> Create Group Account
+    </a>
+  </div>
 
-  <!-- STEP 0: VERIFICATION (Only if NOT creating directly) -->
-  <% if (!locals.isCreation) { %>
-  <div class="step-box" id="verificationStep">
-    <h3><i class="fas fa-user-check"></i> Agent Verification</h3>
-    
-    <label>Select Group Name</label>
-    <div class="input-group">
-      <i class="fas fa-users"></i>
-      <select id="verifyGroup" onchange="showPhoneInput()">
-        <option value="" disabled selected>-- Select Group --</option>
-        <% if (locals.groups && groups.length > 0) { %>
+  <% if (locals.view === 'my_groups') { %>
+    <div class="step-box" id="myGroupsView">
+      <h3><i class="fas fa-users"></i> My Created Groups</h3>
+      <% if (groups && groups.length > 0) { %>
+        <ul style="list-style-type: none; padding: 0; margin-top: 20px;">
           <% groups.forEach(function(group) { %>
-            <option value="<%= group.groupName %>"><%= group.groupName %></option>
+            <li style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--primary); display: flex; align-items: center;">
+              <i class="fas fa-users" style="color: var(--primary); margin-right: 15px;"></i>
+              <strong style="font-size: 1.1rem; color: var(--text);"><%= group.groupName %></strong>
+            </li>
           <% }); %>
-        <% } else { %>
-          <option value="" disabled>No groups found. Debug: <%= locals.debugMsg %></option>
-        <% } %>
-      </select>
+        </ul>
+      <% } else { %>
+        <p style="text-align: center; color: var(--text-muted); padding: 20px 0;">You have not created any groups yet.</p>
+      <% } %>
     </div>
+  <% } else { %>
+    <form action="/general" method="POST" onsubmit="return handleGeneralSubmit(event)">
+      <!-- STEP 0: VERIFICATION (Only if NOT creating directly) -->
+      <% if (!locals.isCreation) { %>
+      <div class="step-box" id="verificationStep">
+        <h3><i class="fas fa-user-check"></i> Agent Verification</h3>
+        
+        <label>Select Group Name</label>
+        <div class="input-group">
+          <i class="fas fa-users"></i>
+          <select id="verifyGroup" onchange="showPhoneInput()">
+            <option value="" disabled selected>-- Select Group --</option>
+            <% if (locals.groups && groups.length > 0) { %>
+              <% groups.forEach(function(group) { %>
+                <option value="<%= group.groupName %>"><%= group.groupName %></option>
+              <% }); %>
+            <% } else { %>
+              <option value="" disabled>No groups found. Debug: <%= locals.debugMsg %></option>
+            <% } %>
+          </select>
+        </div>
 
-    <div id="phoneVerifyContainer" class="hidden">
-      <label>Enter Chairperson Phone Number</label>
-      <div class="input-group">
-        <i class="fas fa-phone"></i>
-        <input type="number" id="verifyPhone" placeholder="07XX XXX XXX">
+        <div id="phoneVerifyContainer" class="hidden">
+          <label>Enter Chairperson Phone Number</label>
+          <div class="input-group">
+            <i class="fas fa-phone"></i>
+            <input type="number" id="verifyPhone" placeholder="07XX XXX XXX">
+          </div>
+          <button type="button" onclick="verifyChairperson()">Verify <i class="fas fa-search"></i></button>
+        </div>
+        
+        <p id="verifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
       </div>
-      <button type="button" onclick="verifyChairperson()">Verify <i class="fas fa-search"></i></button>
-    </div>
-    
-    <p id="verifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
-  </div>
+      <% } %>
+
+      <!-- STEP 1 (Shown directly if isCreation is true) -->
+      <div class="step-box <%= locals.isCreation ? '' : 'hidden' %>" id="cAccount">
+        <h3><i class="fas fa-users-cog"></i>Create Group Account</h3>
+
+        <label>Group Name</label>
+        <div class="input-group" style="margin-bottom: 15px;">
+          <i class="fas fa-users"></i>
+          <% if (locals.isCreation) { %>
+            <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
+          <% } else { %>
+            <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" readonly required style="background:#e9ecef;">
+          <% } %>
+        </div>
+
+        <div style="border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 10px; background: #f8f9fa;">
+            <h4 style="margin-top: 0; color: var(--primary); font-size: 1.1rem; margin-bottom: 20px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; font-weight: 700;">
+                <i class="fas fa-user-tie"></i> Group Chairperson
+            </h4>
+
+            <label style="margin-top: 0;">Chairperson Phone</label>
+            <div class="input-group">
+            <i class="fas fa-phone"></i>
+            <% if (locals.isCreation) { %>
+                <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number" required>
+            <% } else { %>
+                <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" readonly required style="background:#e9ecef;">
+            <% } %>
+            </div>
+
+            <label>Chairperson Name (Enter First, Middle & Last Name)</label>
+            <div class="input-group">
+            <i class="fas fa-user"></i>
+            <input type="text" id="fullNameInput" placeholder="First Middle Last" required oninput="parseFullName()">
+            </div>
+            <small style="color:red; font-size:0.8rem; display:none;" id="nameError">Please enter at least 3 names separated by spaces.</small>
+            
+            <!-- Hidden fields for backend compatibility -->
+            <input type="hidden" name="firstName" id="firstName">
+            <input type="hidden" name="secondName" id="secondName">
+            <input type="hidden" name="lastName" id="lastName">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button type="button" onclick="goBackFromStep1()" style="flex: 1; background: #e2e8f0; color: #333; border: 1px solid #cbd5e1; justify-content: center; padding: 8px; font-size: 0.85rem;">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button type="button" onclick="nextStep()" style="flex: 1; background: var(--primary); color: white; justify-content: center; padding: 8px; font-size: 0.85rem;">
+                Next <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step-box hidden" id="Regions">
+        <h3><i class="fas fa-map-marked-alt"></i>Update Group Location</h3>
+
+        <label>County</label>
+        <div class="input-group">
+          <i class="fas fa-globe-africa"></i>
+          <select name="county" id="countySelect" onchange="loadConstituencies()" required>
+            <option value="">-- Select County --</option>
+          </select>
+        </div>
+
+        <label>Constituency</label>
+        <div class="input-group">
+          <i class="fas fa-map-pin"></i>
+          <select name="constituency" id="constituencySelect" onchange="loadWards()" required>
+            <option value="">-- Select Constituency --</option>
+          </select>
+        </div>
+
+        <label>Ward</label>
+        <div class="input-group">
+          <i class="fas fa-map-marker-alt"></i>
+          <select name="ward" id="wardSelect" onchange="checkManualWard()" required>
+            <option value="">-- Select Ward --</option>
+          </select>
+        </div>
+
+        <!-- Manual Ward Input -->
+        <div id="manualWardContainer" class="hidden" style="margin-top: 10px;">
+          <label>Enter Ward Name Manually</label>
+          <div class="input-group">
+            <i class="fas fa-edit"></i>
+            <input type="text" id="manualWardInput" placeholder="Type Ward Name">
+          </div>
+        </div>
+
+        <button type="button" onclick="showMembership()">Next <i class="fas fa-arrow-right"></i></button>
+      </div>
+
+      <!-- STEP 3: MEMBERSHIP (Dynamic) -->
+      <div class="step-box hidden" id="Membership">
+        <h3><i class="fas fa-users"></i> Membership Details</h3>
+        
+        <div id="trusteesContainer"></div>
+        <div id="officialsContainer"></div>
+        <div id="membersContainer"></div>
+
+        <div id="inlineSummary" style="margin-top: 25px; margin-bottom: 20px;"></div>
+
+        <div style="display: flex; gap: 10px;">
+            <button type="button" onclick="goToStep1()" style="flex: 1; background: #e2e8f0; color: #333; border: 1px solid #cbd5e1; justify-content: center; padding: 12px; font-size: 1rem; border-radius: 8px;">
+                <i class="fas fa-edit"></i> Edit
+            </button>
+            <button type="submit" style="flex: 1; background: var(--primary); color: white; justify-content: center; padding: 12px; font-size: 1rem; border-radius: 8px;">
+                Submit <i class="fas fa-check-circle"></i>
+            </button>
+        </div>
+      </div>
+    </form>
   <% } %>
-
-  <!-- STEP 1 (Shown directly if isCreation is true) -->
-  <div class="step-box <%= locals.isCreation ? '' : 'hidden' %>" id="cAccount">
-    <h3><i class="fas fa-users-cog"></i>Create Group Account</h3>
-
-    <label>Group Name</label>
-    <div class="input-group">
-      <i class="fas fa-users"></i>
-      <% if (locals.isCreation) { %>
-        <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
-      <% } else { %>
-        <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" readonly required style="background:#e9ecef;">
-      <% } %>
-    </div>
-
-    <label>Chairperson Phone</label>
-    <div class="input-group">
-      <i class="fas fa-phone"></i>
-      <% if (locals.isCreation) { %>
-        <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number" required>
-      <% } else { %>
-        <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" readonly required style="background:#e9ecef;">
-      <% } %>
-    </div>
-
-    <label>First Name</label>
-    <div class="input-group">
-      <i class="fas fa-user"></i>
-      <input type="text" name="firstName" placeholder="First name" required>
-    </div>
-
-    <label>Second Name</label>
-    <div class="input-group">
-      <i class="fas fa-user-tag"></i>
-      <input type="text" name="secondName" placeholder="Second name">
-    </div>
-
-    <label>Last Name</label>
-    <div class="input-group">
-      <i class="fas fa-user"></i>
-      <input type="text" name="lastName" placeholder="Last name" required>
-    </div>
-
-    <button type="button" onclick="nextStep()">Next <i class="fas fa-arrow-right"></i></button>
-  </div>
-
-  <!-- STEP 2 -->
-  <div class="step-box hidden" id="Regions">
-    <h3><i class="fas fa-map-marked-alt"></i>Select Location</h3>
-
-    <label>County</label>
-    <div class="input-group">
-      <i class="fas fa-globe-africa"></i>
-      <select name="county" id="countySelect" onchange="loadConstituencies()" required>
-        <option value="">-- Select County --</option>
-      </select>
-    </div>
-
-    <label>Constituency</label>
-    <div class="input-group">
-      <i class="fas fa-map-pin"></i>
-      <select name="constituency" id="constituencySelect" onchange="loadWards()" required>
-        <option value="">-- Select Constituency --</option>
-      </select>
-    </div>
-
-    <label>Ward</label>
-    <div class="input-group">
-      <i class="fas fa-map-marker-alt"></i>
-      <select name="ward" id="wardSelect" onchange="checkManualWard()" required>
-        <option value="">-- Select Ward --</option>
-      </select>
-    </div>
-
-    <!-- Manual Ward Input -->
-    <div id="manualWardContainer" class="hidden" style="margin-top: 10px;">
-      <label>Enter Ward Name Manually</label>
-      <div class="input-group">
-        <i class="fas fa-edit"></i>
-        <input type="text" id="manualWardInput" placeholder="Type Ward Name">
-      </div>
-    </div>
-
-    <button type="button" onclick="showMembership()">Next <i class="fas fa-arrow-right"></i></button>
-  </div>
-
-  <!-- STEP 3: MEMBERSHIP (Dynamic) -->
-  <div class="step-box hidden" id="Membership">
-    <h3><i class="fas fa-users"></i> Membership Details</h3>
-    
-    <div id="trusteesContainer"></div>
-    <div id="officialsContainer"></div>
-    <div id="membersContainer"></div>
-
-    <button type="submit">Submit Account <i class="fas fa-check-circle"></i></button>
-  </div>
-
-</form>
-
+</div>
 <script>
+// The entire original script tag content remains unchanged.
 function showPhoneInput() {
   const group = document.getElementById("verifyGroup").value;
   const phoneContainer = document.getElementById("phoneVerifyContainer");
@@ -354,7 +398,52 @@ function generateFields(label, count, containerId) {
   }
 }
 
+function goBackFromStep1() {
+  const verifyStep = document.getElementById("verificationStep");
+  if (verifyStep) {
+    document.getElementById("cAccount").classList.add("hidden");
+    verifyStep.classList.remove("hidden");
+  } else {
+    window.location.href = '/personal'; // Or window.history.back()
+  }
+}
+
+function parseFullName() {
+  const full = document.getElementById('fullNameInput').value.trim();
+  const parts = full.split(/\s+/);
+  
+  const f = document.getElementById('firstName');
+  const s = document.getElementById('secondName');
+  const l = document.getElementById('lastName');
+  const input = document.getElementById('fullNameInput');
+  const err = document.getElementById('nameError');
+
+  if (parts.length >= 1) f.value = parts[0]; else f.value = '';
+  if (parts.length >= 2) s.value = parts[1]; else s.value = '';
+  if (parts.length >= 3) {
+      l.value = parts.slice(2).join(' '); // Remaining parts go to last name
+      input.setCustomValidity("");
+      err.style.display = 'none';
+  } else {
+      l.value = '';
+      input.setCustomValidity("Please enter at least three names.");
+      if (full.length > 0) err.style.display = 'block';
+  }
+}
+
 function nextStep() {
+  // Validate Step 1 (cAccount) inputs
+  const stepBox = document.getElementById("cAccount");
+  const inputs = stepBox.querySelectorAll("input[required], select[required]");
+  let valid = true;
+  inputs.forEach(input => {
+      if (!input.checkValidity()) {
+          input.reportValidity();
+          valid = false;
+      }
+  });
+  if (!valid) return;
+
   document.getElementById("cAccount").classList.add("hidden");
   document.getElementById("Regions").classList.remove("hidden");
 }
@@ -362,6 +451,39 @@ function nextStep() {
 function showMembership() {
   document.getElementById("Regions").classList.add("hidden");
   document.getElementById("Membership").classList.remove("hidden");
+
+  // Populate Inline Summary
+  let summary = '<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #eee;">';
+  
+  summary += '<h4 style="margin:0 0 10px; color:var(--primary); font-size:0.95rem; border-bottom:1px solid #ddd; padding-bottom:5px;">Application Summary</h4>';
+  
+  // Group Info
+  summary += '<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">';
+  summary += '<span style="color:#555;">Group Name:</span> <b>' + (document.getElementById('confirmedGroup').value || '-') + '</b>';
+  summary += '</div>';
+  
+  summary += '<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">';
+  summary += '<span style="color:#555;">Chairperson:</span> <b>' + (document.getElementById('fullNameInput').value || '-') + '</b>';
+  summary += '</div>';
+
+  summary += '<div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">';
+  summary += '<span style="color:#555;">Phone:</span> <b>' + (document.getElementById('confirmedPhone').value || '-') + '</b>';
+  summary += '</div>';
+
+  // Location
+  const loc = document.getElementById('countySelect').value + ' / ' + document.getElementById('constituencySelect').value + ' / ' + document.getElementById('wardSelect').value;
+  summary += '<div style="margin-top:10px; padding-top:10px; border-top:1px dashed #ddd; font-size:0.9rem;">';
+  summary += '<span style="color:#555; display:block; margin-bottom:4px;">Location:</span>';
+  summary += '<b>' + loc + '</b>';
+  summary += '</div>';
+
+  summary += '</div>';
+  document.getElementById('inlineSummary').innerHTML = summary;
+}
+
+function goToStep1() {
+  document.getElementById("Membership").classList.add("hidden");
+  document.getElementById("cAccount").classList.remove("hidden");
 }
 
 function handleGeneralSubmit(event) {
@@ -451,7 +573,62 @@ function loadWards() {
 document.addEventListener("DOMContentLoaded", () => {
   initCounties();
 });
-</script>
 
+function reviewDetails() {
+    const step3 = document.getElementById('Membership');
+    // Simple validation for Step 3
+    const inputs = step3.querySelectorAll("input[required]");
+    let valid = true;
+    inputs.forEach(input => {
+        if (!input.checkValidity()) {
+            input.reportValidity();
+            valid = false;
+        }
+    });
+    if (!valid) return;
+
+    // Build Summary
+    let summary = '<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #eee;">';
+    
+    // Group Info
+    summary += '<h4 style="margin:0 0 5px; color:var(--primary); font-size:0.95rem; border-bottom:1px solid #ddd; padding-bottom:5px;">Group Info</h4>';
+    summary += '<div style="margin-bottom:10px;">';
+    summary += '<div><b>Name:</b> ' + (document.getElementById('confirmedGroup').value || 'N/A') + '</div>';
+    summary += '<div><b>Chairperson:</b> ' + (document.getElementById('fullNameInput').value || 'N/A') + '</div>';
+    summary += '<div><b>Phone:</b> ' + (document.getElementById('confirmedPhone').value || 'N/A') + '</div>';
+    summary += '</div>';
+
+    // Location
+    summary += '<h4 style="margin:0 0 5px; color:var(--primary); font-size:0.95rem; border-bottom:1px solid #ddd; padding-bottom:5px;">Location</h4>';
+    summary += '<div style="margin-bottom:10px;">';
+    summary += '<div><b>Region:</b> ' + document.getElementById('countySelect').value + ' / ' + document.getElementById('constituencySelect').value + '</div>';
+    summary += '<div><b>Ward:</b> ' + document.getElementById('wardSelect').value + '</div>';
+    summary += '</div>';
+
+    // Membership details removed from summary as requested
+    /*
+    const getValues = (prefix) => {
+        const els = document.querySelectorAll(`input[name^="${prefix}"]`);
+        if(els.length === 0) return 'None';
+        return Array.from(els).map(i => i.value).filter(v=>v).join(', ');
+    };
+    summary += '<h4 style="margin:0 0 5px; color:var(--primary); font-size:0.95rem; border-bottom:1px solid #ddd; padding-bottom:5px;">Membership</h4>';
+    summary += '<div style="margin-bottom:5px;"><b>Trustees:</b> <span style="color:#555;">' + getValues('trustee') + '</span></div>';
+    summary += '<div style="margin-bottom:5px;"><b>Officials:</b> <span style="color:#555;">' + getValues('official') + '</span></div>';
+    summary += '<div><b>Members:</b> <span style="color:#555;">' + getValues('member') + '</span></div>';
+    */
+    
+    summary += '</div>';
+
+    document.getElementById('confirmSummary').innerHTML = summary;
+    document.getElementById('Membership').classList.add('hidden');
+    document.getElementById('Confirmation').classList.remove('hidden');
+}
+
+function editDetails() {
+    document.getElementById('Confirmation').classList.add('hidden');
+    document.getElementById('Membership').classList.remove('hidden');
+}
+</script>
 </body>
 </html>

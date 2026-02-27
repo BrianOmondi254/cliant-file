@@ -99,7 +99,7 @@
       position: relative;
     }
 
-    .input-wrapper i {
+    .input-wrapper i:not(.toggle-pin) {
       position: absolute;
       left: 12px;
       top: 50%;
@@ -110,7 +110,7 @@
 
     input {
       width: 100%;
-      padding: 12px 12px 12px 42px; /* Left padding for icon */
+      padding: 12px 42px 12px 42px; /* Symmetrical padding for icons on both sides */
       border: 2px solid var(--border-color);
       border-radius: 8px;
       font-size: 16px;
@@ -282,23 +282,14 @@
 </head>
 <body>
 
-  <div class="card">
+<div class="container">
+    <% if (locals.success) { %>
+        <div class="alert success"><%= success %></div>
+    <% } %>
     
-    <!-- STEP 1: INPUT FORM -->
-    <div id="step-input" class="<%= preview ? 'hidden' : '' %>">
-      <div class="header">
-        <div class="icon-circle">
-          <i class="ri-user-add-line"></i>
-        </div>
-        <h3>Create Agent</h3>
-        <p>Enter phone number to verify details</p>
-      </div>
-
-      <% if (error) { %>
-        <div class="error-msg" style="justify-content: center; margin-bottom: 15px;">
-          <i class="ri-error-warning-line"></i> <span><%= error %></span>
-        </div>
-      <% } %>
+    <% if (locals.error) { %>
+        <div class="alert error"><%= error %></div>
+    <% } %>
 
       <form id="checkForm" action="/dealer/preview" method="POST">
         <div class="form-group">
@@ -359,12 +350,35 @@
         </div>
       </div>
 
-      <form id="createForm" action="/dealer" method="POST">
+      <form id="createForm" action="/dealer/create-pin" method="POST">
         <input type="hidden" name="phoneNumber" value="<%= preview.phoneNumber %>">
+        <div class="form-group">
+          <label for="pin">Create PIN (4 digits)</label>
+          <div class="input-wrapper">
+            <i class="ri-lock-line"></i>
+            <input type="password" id="pin" name="pin" placeholder="Enter 4‑digit PIN" required minlength="4" maxlength="4" pattern="\d{4}" />
+            <i class="ri-eye-line toggle-pin" onclick="toggleDealerPin()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted);"></i>
+          </div>
+        </div>
         <button type="submit" class="btn btn-primary" id="createBtn">
-          <i class="ri-check-line"></i> Confirm & Create
+          <i class="ri-check-line"></i> Save PIN
         </button>
       </form>
+      <script>
+        function toggleDealerPin() {
+          const pinInput = document.getElementById('pin');
+          const icon = document.querySelector('.toggle-pin');
+          if (pinInput.type === 'password') {
+            pinInput.type = 'text';
+            icon.classList.remove('ri-eye-line');
+            icon.classList.add('ri-eye-off-line');
+          } else {
+            pinInput.type = 'password';
+            icon.classList.remove('ri-eye-off-line');
+            icon.classList.add('ri-eye-line');
+          }
+        }
+      </script>
       <% } %>
       <button class="btn btn-secondary" onclick="resetApp()">
         <i class="ri-arrow-left-line"></i> Cancel / Back

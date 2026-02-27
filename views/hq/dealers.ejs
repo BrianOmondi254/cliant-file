@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HQ - Dealer Management</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      margin: 0; 
+      background: #f4f6f9; 
+      color: #333;
+    }
+    header { 
+      background: linear-gradient(90deg, #0056b3, #007bff); 
+      color: white; 
+      padding: 15px 30px; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-title { 
+      margin: 0; 
+      font-size: 24px; 
+      font-weight: 700; 
+    }
+    .header-link {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+    .header-link:hover {
+        background: rgba(255,255,255,0.15);
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    h1 {
+      border-bottom: 1px solid #e1e4e8;
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+    }
+    .dealer-list {
+      list-style: none;
+      padding: 0;
+    }
+    .dealer-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 1px solid #e1e4e8;
+    }
+    .dealer-item:last-child {
+      border-bottom: none;
+    }
+    .dealer-info {
+      font-size: 16px;
+    }
+    .dealer-info .name {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .dealer-info .phone {
+      font-size: 14px;
+      color: #666;
+      margin-left: 10px;
+    }
+    .impersonate-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      background-color: #28a745;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    .impersonate-btn:hover {
+      background-color: #218838;
+    }
+    .no-dealers {
+        text-align: center;
+        padding: 40px;
+        color: #777;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 class="header-title">Dealer Management</h1>
+  <a href="/hq/compliance" class="header-link">Back to Compliance</a>
+</header>
+
+<div class="container">
+  <h1>All Dealers</h1>
+  <% if (dealers && dealers.length > 0) { %>
+    <ul class="dealer-list">
+      <% dealers.forEach(dealer => { %>
+        <li class="dealer-item">
+          <div class="dealer-info">
+            <span class="name"><%= dealer.name || 'N/A' %></span>
+            <span class="phone"><%= dealer.phoneNumber %></span>
+            <span class="phone">| <%= dealer.county || 'N/A' %></span>
+          </div>
+          <a href="/dealer/impersonate/<%= dealer.phoneNumber %>" class="impersonate-btn" target="_blank">Login As</a>
+        </li>
+      <% }) %>
+    </ul>
+  <% } else { %>
+    <p class="no-dealers">No dealers found in the system.</p>
+  <% } %>
+</div>
+
+</body>
+</html>

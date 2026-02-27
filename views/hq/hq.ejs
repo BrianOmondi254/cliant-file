@@ -235,11 +235,29 @@
 </header>
 
 <div class="dashboard-container">
+  <div class="stats-container" style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 25px;">
+    <div class="docet" style="background-color: #e9f5ff;">
+      <h2>Total Registrations</h2>
+      <p style="font-size: 36px; font-weight: bold; margin: 10px 0;"><%= stats ? stats.totalRegistrations : 0 %></p>
+    </div>
+    <div class="docet" style="background-color: #e8f8f5;">
+      <h2>M-Pesa Payments</h2>
+      <p style="font-size: 36px; font-weight: bold; margin: 10px 0;"><%= stats ? stats.mpesaPayments : 0 %></p>
+    </div>
+    <div class="docet" style="background-color: #fff9e6;">
+      <h2>Passkey Payments</h2>
+      <p style="font-size: 36px; font-weight: bold; margin: 10px 0;"><%= stats ? stats.passkeyPayments : 0 %></p>
+    </div>
+     <div class="docet" style="background-color: #fce4ec;">
+      <h2>Total Dealers Created</h2>
+      <p style="font-size: 36px; font-weight: bold; margin: 10px 0;"><%= stats ? stats.totalDealerCreated : 0 %></p>
+    </div>
+  </div>
   <div class="docet" id="finance"><h2>Finance</h2></div>
   <div class="docet" id="relations"><h2>Relations</h2></div>
   <div class="docet" id="it"><h2>IT Department</h2></div>
   <div class="docet" id="operations"><h2>Operations</h2></div>
-  <div class="docet" id="compliance"><h2>Compliance</h2></div>
+  <div class="docet" id="compliance"><h2>Regions </h2></div>
   <div class="docet" id="hr"><h2>Human Resources</h2></div>
 </div>
 
@@ -412,10 +430,9 @@
   function showLoggedIn(name) {
     authArea.innerHTML = `
       <span style="font-weight:bold;color:white;">${name}</span>
-      <button class="logout-btn" id="logout-btn">Logout</button>
+      <button class="logout-btn" id="logout-btn" onclick="window.location.href='/logout'">Logout</button>
     `;
-
-    document.getElementById("logout-btn").onclick = () => showLoggedOut();
+    // No need to bind onclick via JS since we added it to HTML directly above
   }
 
   function showLoggedOut() {

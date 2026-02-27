@@ -8,24 +8,30 @@ const router = express.Router();
 /* ================= FILE PATHS ================= */
 const dataFile = path.join(__dirname, "../data.json");
 const officialFile = path.join(__dirname, "../official.json");
+const statsFile = path.join(__dirname, "../personal_stats.json");
 
 /* ================= HELPERS ================= */
-const readJSON = (file) => {
-  if (!fs.existsSync(file)) return [];
-  return JSON.parse(fs.readFileSync(file, "utf8"));
+const readJSON = (file, fallback = []) => {
+  if (!fs.existsSync(file)) return fallback;
+  try {
+    const raw = fs.readFileSync(file, "utf8").trim();
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.error(`Error parsing JSON from ${file}:`, e);
+    return fallback;
+  }
 };
 
 const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
 
+const norm = (p) => (p ? String(p).trim() : "");
+
 /* ================= GET HQ DASHBOARD ================= */
 router.get("/", (req, res) => {
-  res.render("hq/hq");
-});
-// Dashboard (main HQ page)
-router.get("/", (req, res) => {
-  res.render("hq/hq"); // renders views/hq/hq.ejs
+  const stats = readJSON(statsFile);
+  res.render("hq/hq", { stats });
 });
 
 // Dynamic section route
@@ -43,15 +49,18 @@ router.get("/:section", (req, res) => {
 
 /* ================= REGISTER: VERIFY PHONE ================= */
 router.post("/register", (req, res) => {
-  const { phone } = req.body;
+  let { phone } = req.body;
   if (!phone) {
     return res.json({ status: "ERROR", message: "Phone number required." });
   }
+  phone = phone.trim();
 
   const dataUsers = readJSON(dataFile);
   const officialUsers = readJSON(officialFile);
 
-  const user = dataUsers.find(u => u.phoneNumber === phone);
+  const user = dataUsers.find(u => {
+    return norm(u.phoneNumber) === norm(phone);
+  });
   if (!user) {
     return res.json({
       status: "NOT_REGISTERED",
@@ -59,7 +68,7 @@ router.post("/register", (req, res) => {
     });
   }
 
-  const already = officialUsers.find(u => u.phoneNumber === phone);
+  const already = officialUsers.find(u => norm(u.phoneNumber) === norm(phone));
   if (already) {
     return res.json({
       status: "ALREADY_REGISTERED",
@@ -83,12 +92,12 @@ router.post("/create-pin", async (req, res) => {
   const dataUsers = readJSON(dataFile);
   const officialUsers = readJSON(officialFile);
 
-  const user = dataUsers.find(u => u.phoneNumber === phone);
+  const user = dataUsers.find(u => norm(u.phoneNumber) === norm(phone));
   if (!user) {
     return res.json({ status: "ERROR", message: "User not found." });
   }
 
-  if (officialUsers.find(u => u.phoneNumber === phone)) {
+  if (officialUsers.find(u => norm(u.phoneNumber) === norm(phone))) {
     return res.json({ status: "ALREADY_REGISTERED" });
   }
 
@@ -119,8 +128,8 @@ router.post("/login", async (req, res) => {
   const dataUsers = readJSON(dataFile);
   const officialUsers = readJSON(officialFile);
 
-  const inData = dataUsers.find(u => u.phoneNumber === phone);
-  const inOfficial = officialUsers.find(u => u.phoneNumber === phone);
+  const inData = dataUsers.find(u => norm(u.phoneNumber) === norm(phone));
+  const inOfficial = officialUsers.find(u => norm(u.phoneNumber) === norm(phone));
 
   // ❌ Must exist in BOTH files
   if (!inData || !inOfficial) {
