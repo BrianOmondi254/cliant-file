@@ -3,681 +3,443 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinCore Dashboard</title>
+    <title>Personal Wallet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --secondary: #64748b;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --bg-body: #f1f5f9;
-            --bg-card: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --radius: 0.75rem;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; flex-direction: column; line-height: 1.5; }
-        .hidden { display: none !important; }
-        .flex { display: flex; }
-        .text-center { text-align: center; }
-        .w-full { width: 100%; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mt-4 { margin-top: 1rem; }
-        .text-sm { font-size: 0.85rem; }
-        .text-muted { color: var(--text-muted); }
-        header { background-color: var(--bg-card); padding: 0.5rem 1rem; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border); }
-        .header-content { max-width: 1000px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 0.5rem; overflow-x: auto; white-space: nowrap; position: relative; padding: 0.25rem 0.5rem; }
-        .header-content::-webkit-scrollbar { display: none; }
-        .tag { padding: 0.4rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; color: var(--text-muted); background: transparent; transition: color 0.3s ease; text-decoration: none; display: flex; align-items: center; position: relative; z-index: 2; }
-        .tag:hover { color: var(--text-main); }
-        .tag.active { color: white; }
-        .glider { position: absolute; height: calc(100% - 1rem); background-color: var(--primary); border-radius: 9999px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); pointer-events: none; }
-        .header-actions { display: flex; align-items: center; gap: 0.5rem; z-index: 2; }
-        .action-icon { color: var(--text-main); font-size: 1.1rem; cursor: pointer; position: relative; padding: 0.4rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: #f8fafc; }
-        .action-icon:hover { color: var(--primary); background-color: #f1f5f9; border-color: var(--primary); }
-        #msgBadge { position: absolute; top: -4px; right: -4px; background-color: var(--danger); color: white; font-size: 0.6rem; font-weight: 800; min-width: 14px; height: 14px; border-radius: 9999px; display: flex; justify-content: center; align-items: center; padding: 0 3px; border: 1.5px solid white; pointer-events: none; }
-        .btn-logout { padding: 0.35rem 0.75rem; border: 1px solid #fee2e2; color: var(--danger); background: #fff1f2; border-radius: 9999px; cursor: pointer; font-weight: 700; font-size: 0.75rem; transition: all 0.2s; display: flex; align-items: center; gap: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .btn-logout:hover { background-color: var(--danger); color: white; border-color: var(--danger); }
-        main { flex: 1; padding: 2rem 1rem; max-width: 700px; margin: 0 auto; width: 100%; }
-        h1 { text-align: center; margin-bottom: 2rem; color: var(--text-main); font-weight: 700; font-size: 1.5rem; }
-        .menu-list { width: 100%; background: var(--bg-card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--border); }
-        .block-btn { display: flex; align-items: center; justify-content: flex-start; width: 100%; padding: 1.25rem; background-color: var(--bg-card); color: var(--text-main); border: none; border-bottom: 1px solid var(--border); font-size: 1rem; cursor: pointer; transition: background 0.2s; text-align: left; font-weight: 500; }
-        .block-btn:last-child { border-bottom: none; }
-        .block-btn:hover { background-color: #f8fafc; padding-left: 1.5rem; color: var(--primary); }
-        .box-wrapper { background: var(--bg-card); padding: 2.5rem; border-radius: var(--radius); box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border); max-width: 450px; margin: 0 auto; }
-        .form-group { margin-bottom: 1rem; text-align: left; }
-        .form-label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
-        .form-input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; font-size: 1rem; transition: border-color 0.2s; background: #fff; }
-        .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .btn { display: inline-flex; justify-content: center; align-items: center; padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; width: 100%; gap: 0.5rem; }
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-secondary { background-color: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
-        .btn-secondary:hover { background-color: #e2e8f0; }
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
-        .modal-overlay.open { opacity: 1; visibility: visible; }
-        .modal-content { background: white; padding: 2rem; border-radius: var(--radius); width: 90%; max-width: 450px; text-align: center; box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.3s ease; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
-        .modal-overlay.open .modal-content { transform: translateY(0); }
-        .modal-close-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 5px; line-height: 1; transition: color 0.2s; z-index: 10; }
-        .modal-close-btn:hover { color: var(--danger); }
-        .modal-header { margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 700; color: var(--text-main); padding-right: 30px; }
-        .modal-body { flex: 1; overflow-y: auto; margin-bottom: 0; text-align: left; padding-bottom: 10px; }
-        .modal-list-btn { display: block; width: 100%; padding: 1rem; margin-bottom: 0.75rem; background-color: #f8fafc; border: 1px solid var(--border); border-radius: 0.5rem; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: all 0.2s; text-align: left; }
-        .modal-list-btn:hover { background-color: #eff6ff; border-color: var(--primary); color: var(--primary); }
-        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: #334155; color: white; padding: 12px 24px; border-radius: 50px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 0.9rem; animation: slideUp 0.3s ease forwards; display: flex; align-items: center; gap: 10px; }
-        .toast.success { background: var(--success); }
-        .toast.error { background: var(--danger); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        :root{--primary:#5b5df0;--secondary:#7c3aed;--danger:#dc2626;--light:#f3f6ff;--text-dark:#1f2937;--text-light:#6b7280;}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+        body{min-height:100vh;background:linear-gradient(160deg,#1e293b,#0f172a);display:flex;justify-content:center;align-items:center;padding:15px;}
+        .app-container{width:100%;max-width:390px;background:rgba(255,255,255,0.95);border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,0.25);overflow:hidden;}
+        header{padding:14px 15px;border-bottom:1px solid rgba(0,0,0,0.05);}
+        .nav-wrapper{display:flex;justify-content:space-between;align-items:center;gap:8px;white-space:nowrap;}
+        .nav-left,.nav-right{display:flex;gap:6px;}
+        .nav-left button{border:none;padding:6px 10px;border-radius:18px;font-size:12px;font-weight:500;background:transparent;color:var(--text-light);cursor:pointer;transition:0.3s;}
+        .nav-left button.active{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;}
+        .nav-right button{border:none;padding:6px 10px;border-radius:16px;font-size:11px;font-weight:500;cursor:pointer;transition:0.3s;}
+        .message-btn{background:white;border:1px solid #e5e7eb;}
+        .logout-btn{background:#fee2e2;color:var(--danger);}
+        main{padding:30px 20px;text-align:center;}
+        main h1{font-size:22px;color:var(--text-dark);}
+        .menu{padding-bottom:15px;}
+        .menu-item{padding:18px 25px;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:500;cursor:pointer;position:relative;transition:0.25s;}
+        .menu-item::after{content:"";position:absolute;left:25px;right:25px;bottom:0;height:1px;background:rgba(0,0,0,0.05);}
+        .menu-item:last-child::after{display:none;}
+        .menu-item:hover{background:rgba(91,93,240,0.08);padding-left:32px;}
+        .menu-item span{font-size:18px;color:#9ca3af;}
+        .menu-item:active{transform:scale(0.98);}
+        .hidden{display:none !important;}
+        .form-group{margin-bottom:1rem;text-align:left;}
+        .form-label{display:block;margin-bottom:0.5rem;font-size:0.85rem;font-weight:600;color:var(--text-main);}
+        .form-input{width:100%;padding:0.75rem;border:1px solid #e2e8f0;border-radius:0.5rem;font-size:1rem;transition:border-color 0.2s;background:#fff;}
+        .form-input:focus{outline:none;border-color:var(--primary);}
+        .btn{display:inline-flex;justify-content:center;align-items:center;padding:0.75rem 1.5rem;border:none;border-radius:0.5rem;cursor:pointer;font-weight:600;font-size:0.95rem;transition:all 0.2s;width:100%;gap:0.5rem;}
+        .btn-primary{background-color:var(--primary);color:white;}
+        .btn-primary:hover{background-color:#4f46e5;}
+        .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;justify-content:center;align-items:center;z-index:1000;opacity:0;visibility:hidden;transition:all 0.3s ease;}
+        .modal-overlay.open{opacity:1;visibility:visible;}
+        .modal-content{background:white;padding:2rem;border-radius:0.75rem;width:90%;max-width:450px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);transform:translateY(20px);transition:transform 0.3s ease;max-height:90vh;display:flex;flex-direction:column;position:relative;}
+        .modal-overlay.open .modal-content{transform:translateY(0);}
+        .modal-close-btn{position:absolute;top:15px;right:15px;background:transparent;border:none;color:#64748b;font-size:1.5rem;cursor:pointer;z-index:10;}
+        .modal-close-btn:hover{color:#ef4444;}
+        .modal-header{margin-bottom:1.5rem;font-size:1.25rem;font-weight:700;color:#1e293b;padding-right:30px;}
+        .modal-body{flex:1;overflow-y:auto;margin-bottom:0;text-align:left;padding-bottom:10px;}
+        .modal-list-btn{display:block;width:100%;padding:1rem;margin-bottom:0.75rem;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;cursor:pointer;font-size:0.95rem;font-weight:500;transition:all 0.2s;text-align:left;}
+        .modal-list-btn:hover{background-color:#eff6ff;border-color:var(--primary);color:var(--primary);}
+        #toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:10px;}
+        .toast{background:#334155;color:white;padding:12px 24px;border-radius:50px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.9rem;animation:slideUp 0.3s ease forwards;display:flex;align-items:center;gap:10px;}
+        .toast.success{background:#10b981;}
+        .toast.error{background:#ef4444;}
+        @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
     </style>
 </head>
 <body>
+<div class="app-container">
     <header>
-        <div class="header-content" id="navHeader">
-            <div class="glider" id="headerGlider"></div>
-            <% if (typeof showAgent !== 'undefined' ? showAgent : true) { %>
-                <a href="/agent" class="tag" id="agentTag" onclick="event.preventDefault(); app.switchRole('Agent')">Agent</a>
-            <% } %>
-            <% if (typeof showDealer !== 'undefined' ? showDealer : true) { %>
-                <div class="tag" id="dealerTag" onclick="app.handleDealerClick()">Dealer</div>
-            <% } %>
-            <div class="tag" id="generalTag" onclick="app.handleGeneralClick()">General</div>
-            <div class="tag active" id="personalTag" onclick="app.switchRole('Personal')">Personal</div>
-            <div class="header-actions">
-                <div class="action-icon" onclick="app.openInbox()" title="View Messages">
-                    <i class="fa-regular fa-envelope"></i>
-                    <span id="msgBadge" class="hidden">0</span>
-                </div>
-                <button class="btn-logout" onclick="window.location.replace('/logout?t=' + Date.now())">
-                    <span>Out</span> <i class="fa-solid fa-power-off"></i>
-                </button>
+        <div class="nav-wrapper">
+            <div class="nav-left">
+                <% if (showAgent) { %><button onclick="app.switchRole('Agent')">Agent</button><% } %>
+                <% if (showDealer) { %><button onclick="app.handleDealerClick()">Dealer</button><% } %>
+                <button onclick="app.handleGeneralClick()">General</button>
+                <button id="personalButton" class="active" onclick="app.switchRole('Personal')">Personal</button>
+            </div>
+            <div class="nav-right">
+                <button class="message-btn" onclick="app.openInbox()">Message <span id="msgBadge" class="hidden" style="display:inline-block;background:red;color:white;border-radius:50%;padding:2px 5px;font-size:10px;margin-left:4px;">0</span></button>
+                <button class="logout-btn" onclick="window.location.replace('/logout?t=' + Date.now())">OUT</button>
             </div>
         </div>
     </header>
-    <main id="mainContainer"></main>
+    <div id="mainContainer"></div>
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal-content">
-            <button class="modal-close-btn" onclick="app.closeModal()" title="Close">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <button class="modal-close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
             <div class="modal-header" id="modalTitle">Title</div>
             <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
     <div id="toast-container"></div>
-    <script>
-        const app = {
-            data: {
-                user: <%- JSON.stringify(user) %>,
-                userGroups: <%- JSON.stringify(typeof userGroups !== 'undefined' ? userGroups : []) %>,
-                constitutionKeys: <%- JSON.stringify(typeof constitutionKeys !== 'undefined' ? constitutionKeys : []) %>,
-                isAgent: <%- JSON.stringify(showAgent) %>,
-                hasAgentPin: <%- JSON.stringify(hasAgentPin) %>,
-                hasPersonalPin: <%- JSON.stringify(typeof hasPersonalPin !== 'undefined' ? hasPersonalPin : false) %>,
-                isDealer: <%- JSON.stringify(showDealer) %>,
-                hasDealerPin: <%- JSON.stringify(hasDealerPin) %>,
-                generalExists: <%- JSON.stringify(generalExists) %>, 
-                isTrustee: <%- JSON.stringify(isTrustee) %>,
-                isOfficial: <%- JSON.stringify(isOfficial) %>,
-                isMember: <%- JSON.stringify(isMember) %>,
-                agentIsVerified: <%- JSON.stringify(agentIsVerified) %>, 
-                dealerIsVerified: <%- JSON.stringify(dealerIsVerified) %>, 
-                personalIsVerified: <%- JSON.stringify(typeof personalIsVerified !== 'undefined' ? personalIsVerified : false) %>, 
-                role: 'Personal',
-                balance: 1500.00,
-                transactions: [],
-                unread: 0,
-                batch: [],
-                PIN: "1234",
-                AGENT_ID: "1234",
-                ACCOUNT_NUM: "1234",
-                lastGroupName: '',
-                lastGroupIndex: null,
-                selectedTranAcc: '',
-                selectedTranAccName: ''
-            },
-            init() {
-                if (window.location.protocol === 'file:') {
-                    alert("You are opening this file directly! Redirecting to http://localhost:3000/personal...");
-                    window.location.href = "http://localhost:3000/personal";
-                    return;
-                }
-                this.seedHistory();
-                this.render();
-                window.addEventListener('resize', () => this.moveGlider());
-                setTimeout(() => this.moveGlider(), 100);
-                this.updateBadge();
-            },
-            updateBadge() {
-                const badge = document.getElementById('msgBadge');
-                if (!badge) return;
-                const keyCount = (this.data.constitutionKeys && Array.isArray(this.data.constitutionKeys)) ? this.data.constitutionKeys.length : 0;
-                const total = (this.data.unread || 0) + keyCount;
-                badge.textContent = total;
-                badge.classList.toggle('hidden', total === 0);
-            },
-            openInbox() {
-                const keys = this.data.constitutionKeys || [];
-                const txs = this.data.transactions || [];
-                if (keys.length === 0 && txs.length === 0) {
-                    alert("No new messages.");
-                    return;
-                }
-                let html = '<div style="text-align:left;">';
-                if (keys.length > 0) {
-                    html += '<h5 style="margin-bottom:10px; font-size:12px; color:var(--primary); text-transform:uppercase; letter-spacing:1px;">Constitution Keys</h5>';
-                    keys.forEach(k => {
-                        html += '<div style="background:#f8fafc; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid #e2e8f0; border-left:4px solid var(--primary);"><h4 style="color:#475569; margin-bottom:5px; font-size:14px; font-weight:600;"><i class="fa-solid fa-users-rectangle" style="color:#4f46e5; margin-right:5px;"></i> ' + k.groupName + '</h4><p style="font-size:12px; color:#64748b; margin-bottom:5px;">Constitution Start Key:</p><div style="background:#fff; padding:10px; border:1px dashed #cbd5e1; border-radius:6px; font-family:monospace; font-weight:700; color:#0f172a; text-align:center; letter-spacing:1px; user-select:all;">' + k.key + '</div><button class="btn btn-primary mt-4" style="font-size: 13px; padding: 10px;" onclick="app.startGroupSetup(\'' + k.groupName + '\', \'' + k.key + '\')"><i class="fa-solid fa-gears"></i> Initialize Principle Config</button></div>';
-                    });
-                }
-                if (txs.length > 0) {
-                    html += '<h5 style="margin-top:20px; margin-bottom:10px; font-size:12px; color:var(--secondary); text-transform:uppercase; letter-spacing:1px;">History</h5>';
-                    [...txs].reverse().slice(0, 10).forEach(t => {
-                        const color = t.status === 'Success' ? 'success' : 'error';
-                        html += '<div class="result-box ' + color + '" style="margin-bottom:10px; padding:10px; font-size:12px;"><div style="display:flex; justify-content:space-between; font-weight:600; margin-bottom:4px;"><span>' + t.acc + '</span><span>' + (t.amt > 0 ? '$'+t.amt : '') + '</span></div><div style="color:var(--text-muted); font-size:11px;">' + t.target + ' | ' + t.date + '</div></div>';
-                    });
-                }
+</div>
+<script>
+const app = {
+    data: {
+        user: <%- JSON.stringify(user) %>,
+        userGroups: <%- JSON.stringify(typeof userGroups !== 'undefined' ? userGroups : []) %>,
+        constitutionKeys: <%- JSON.stringify(typeof constitutionKeys !== 'undefined' ? constitutionKeys : []) %>,
+        isAgent: <%- JSON.stringify(showAgent) %>,
+        hasAgentPin: <%- JSON.stringify(hasAgentPin) %>,
+        hasPersonalPin: <%- JSON.stringify(typeof hasPersonalPin !== 'undefined' ? hasPersonalPin : false) %>,
+        isDealer: <%- JSON.stringify(showDealer) %>,
+        hasDealerPin: <%- JSON.stringify(hasDealerPin) %>,
+        generalExists: <%- JSON.stringify(generalExists) %>, 
+        isTrustee: <%- JSON.stringify(isTrustee) %>,
+        isOfficial: <%- JSON.stringify(isOfficial) %>,
+        isMember: <%- JSON.stringify(isMember) %>,
+        agentIsVerified: <%- JSON.stringify(agentIsVerified) %>, 
+        dealerIsVerified: <%- JSON.stringify(dealerIsVerified) %>, 
+        personalIsVerified: <%- JSON.stringify(typeof personalIsVerified !== 'undefined' ? personalIsVerified : false) %>, 
+        role: 'Personal',
+        balance: 1500.00,
+        transactions: [],
+        unread: 0,
+        batch: [],
+        PIN: "1234",
+        AGENT_ID: "1234",
+        ACCOUNT_NUM: "1234",
+        lastGroupName: '',
+        lastGroupIndex: null,
+        selectedTranAcc: '',
+        selectedTranAccName: '',
+        errorMessage: ''
+    },
+    init() {
+        if (window.location.protocol === 'file:') {
+            alert("Redirecting to http://localhost:3000/personal...");
+            window.location.href = "http://localhost:3000/personal";
+            return;
+        }
+        this.seedHistory();
+        this.render();
+        this.updateBadge();
+    },
+    updateBadge() {
+        const badge = document.getElementById('msgBadge');
+        if (!badge) return;
+        const keyCount = (this.data.constitutionKeys && Array.isArray(this.data.constitutionKeys)) ? this.data.constitutionKeys.length : 0;
+        const total = (this.data.unread || 0) + keyCount;
+        badge.textContent = total;
+        badge.classList.toggle('hidden', total === 0);
+    },
+    openInbox() {
+        const keys = this.data.constitutionKeys || [];
+        const txs = this.data.transactions || [];
+        if (keys.length === 0 && txs.length === 0) { alert("No new messages."); return; }
+        let html = '<div style="text-align:left;">';
+        if (keys.length > 0) {
+            html += '<h5 style="margin-bottom:10px;font-size:12px;color:var(--primary);text-transform:uppercase;letter-spacing:1px;">Constitution Keys</h5>';
+            keys.forEach(k => {
+                html += '<div style="background:#f8fafc;padding:15px;border-radius:8px;margin-bottom:15px;border:1px solid #e2e8f0;border-left:4px solid var(--primary);"><h4 style="color:#475569;margin-bottom:5px;font-size:14px;font-weight:600;"><i class="fa-solid fa-users-rectangle" style="color:#4f46e5;margin-right:5px;"></i> ' + k.groupName + '</h4><p style="font-size:12px;color:#64748b;margin-bottom:5px;">Constitution Start Key:</p><div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:6px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:1px;user-select:all;">' + k.key + '</div><button class="btn btn-primary mt-4" style="font-size:13px;padding:10px;" onclick="app.startGroupSetup(\'' + k.groupName + '\', \'' + k.key + '\')"><i class="fa-solid fa-gears"></i> Initialize Principle Config</button></div>';
+            });
+        }
+        if (txs.length > 0) {
+            html += '<h5 style="margin-top:20px;margin-bottom:10px;font-size:12px;color:var(--secondary);text-transform:uppercase;letter-spacing:1px;">History</h5>';
+            [...txs].reverse().slice(0, 10).forEach(t => {
+                const color = t.status === 'Success' ? 'success' : 'error';
+                html += '<div class="result-box ' + color + '" style="margin-bottom:10px;padding:10px;font-size:12px;"><div style="display:flex;justify-content:space-between;font-weight:600;margin-bottom:4px;"><span>' + t.acc + '</span><span>' + (t.amt > 0 ? '$'+t.amt : '') + '</span></div><div style="color:#6b7280;font-size:11px;">' + t.target + ' | ' + t.date + '</div></div>';
+            });
+        }
+        html += '</div>';
+        this.updateModalContent("Messages", html);
+        this.openModal();
+        this.updateBadge();
+    },
+    openModal(title, html) {
+        if (title) document.getElementById('modalTitle').textContent = title;
+        if (html !== undefined) document.getElementById('modalBody').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('open');
+    },
+    closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
+    seedHistory() {
+        const dummy = [{ type: 'deposit', acc: 'M-Pesa Deposit', amt: 500, date: '10:00 AM', balance: 1500 },{ type: 'withdraw', acc: 'Agent Withdrawal', amt: 200, date: '09:30 AM', balance: 1000 }];
+        this.data.transactions = dummy;
+    },
+    render() {
+        const container = document.getElementById('mainContainer');
+        const role = this.data.role;
+        if (role === 'Personal') this.renderPersonalView(container);
+        else if (role === 'General') this.renderGeneralView(container);
+        else if (role === 'Dealer') this.renderDealerView(container);
+        document.querySelectorAll(".nav-left button").forEach(btn => {
+            btn.classList.remove("active");
+            if (btn.textContent === this.data.role) btn.classList.add("active");
+        });
+        this.updateBadge();
+    },
+    renderPersonalView(container) {
+        if (!this.data.hasPersonalPin) {
+            this.renderCreatePinView(container);
+        } else {
+            container.innerHTML = `<main><h1>Personal Wallet</h1></main><section class="menu"><div class="menu-item" onclick="app.openModal('Send Money')">Send Money <span>›</span></div><div class="menu-item" onclick="app.openModal('Withdraw')">Withdraw Money <span>›</span></div><div class="menu-item" onclick="app.showPersonalFile()">My Personal File <span>›</span></div><div class="menu-item" onclick="app.openModal('Change PIN')">Change PIN <span>›</span></div><div class="menu-item" onclick="app.openModal('Statement')">Account Statement <span>›</span></div></section>`;
+        }
+    },
+    renderCreatePinView(container) {
+        container.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;"><h2 style="margin-bottom:1rem;">Set Personal PIN</h2><p style="color:#6b7280;margin-bottom:1rem;">You need to set a 4-digit PIN to access your personal wallet.</p><div class="form-group"><label class="form-label">New PIN</label><input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div><div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div><button class="btn btn-primary" onclick="app.createPersonalPin()">Create PIN</button></div>`;
+    },
+    async createPersonalPin() {
+        const pin = document.getElementById('newPersonalPin').value;
+        const confirm = document.getElementById('confirmPersonalPin').value;
+        if (!pin || pin.length < 4) { this.showToast("PIN must be 4 digits", "error"); return; }
+        if (pin !== confirm) { this.showToast("PINs do not match", "error"); return; }
+        try {
+            const res = await fetch('/personal/set-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+            const result = await res.json();
+            if (result.success) { this.showToast("PIN set successfully!", "success"); this.data.hasPersonalPin = true; this.render(); }
+            else { this.showToast(result.message || "Failed to set PIN", "error"); }
+        } catch (e) { console.error(e); this.showToast("Server error occurred", "error"); }
+    },
+    showPersonalFile() {
+        const u = this.data.user;
+        this.updateModalContent('My Personal File', '<div style="text-align:center;"><h4 style="margin-bottom:1rem;">Member Information</h4><p><b>Name:</b> ' + u.firstName + ' ' + u.lastName + '</p><p><b>Phone:</b> ' + u.phoneNumber + '</p></div>');
+        this.openModal('My Personal File');
+    },
+    handleGeneralClick() { window.location.href = '/personal/general?mode=create'; },
+    renderGeneralView(container) {
+        container.innerHTML = '<div style="text-align:center;padding:2rem;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:#5b5df0;"></i><p style="margin-top:1rem;">Loading Group Account...</p></div>';
+        setTimeout(function(){ window.location.href = '/personal/general?mode=create'; }, 500);
+    },
+    renderDealerView(container) {
+        if (this.data.dealerIsVerified) container.innerHTML = '<h1>Dealer Dashboard</h1><div style="background:#fff;padding:2rem;border-radius:12px;max-width:450px;margin:0 auto;"><p>Dealer Dashboard Loading...</p></div>';
+        else { container.innerHTML = '<h1>Dealer Dashboard</h1><div style="background:#fff;padding:2rem;border-radius:12px;max-width:450px;margin:0 auto;"><p style="color:#6b7280;">Please verify your PIN.</p></div>'; this.showToast('Authentication required for Dealer role.', 'error'); }
+    },
+    handleDealerClick() { if (!this.data.isDealer) { this.showToast('You are not registered as a dealer.', 'error'); return; } this.switchRole('Dealer'); },
+    openModal(action) {
+        const modal = document.getElementById('modalOverlay');
+        modal.classList.add('open');
+        const title = document.getElementById('modalTitle');
+        const body = document.getElementById('modalBody');
+        if (action === 'Send Money') { 
+            title.innerText = 'Select Group'; 
+            const groups = this.data.userGroups || [];
+            if (groups.length === 0) body.innerHTML = '<p style="text-align:center;color:#6b7280;margin-bottom:1rem;">No group account is linked to your phone number.</p><button class="modal-list-btn" onclick="app.closeModal()">Close</button>';
+            else {
+                let html = '<div style="text-align:left;margin-bottom:1rem;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Select a group account to send money:</p>';
+                groups.forEach((group, index) => { html += '<button class="modal-list-btn" onclick="app.selectGroupForSend(\'' + encodeURIComponent(group.groupName) + '\')"><i class="fa-solid fa-users" style="color:var(--primary);margin-right:8px;"></i> ' + (group.groupName || 'Unnamed Group') + '</button>'; });
                 html += '</div>';
-                this.updateModalContent("Messages", html);
-                this.openModal();
-                this.updateBadge();
-            },
-            openModal(title, html) {
-                if (title) document.getElementById('modalTitle').textContent = title;
-                if (html !== undefined) document.getElementById('modalBody').innerHTML = html;
-                document.getElementById('modalOverlay').classList.add('open');
-            },
-            closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
-            seedHistory() {
-                const dummy = [
-                    { type: 'deposit', acc: 'M-Pesa Deposit', amt: 500, date: '10:00 AM', balance: 1500 },
-                    { type: 'withdraw', acc: 'Agent Withdrawal', amt: 200, date: '09:30 AM', balance: 1000 }
-                ];
-                this.data.transactions = dummy;
-            },
-            render() {
-                const container = document.getElementById('mainContainer');
-                const role = this.data.role;
-                if (role === 'Personal') this.renderPersonalView(container);
-                else if (role === 'General') this.renderGeneralView(container);
-                else if (role === 'Dealer') this.renderDealerView(container);
-                document.querySelectorAll('.tag').forEach(tag => {
-                    tag.classList.remove('active');
-                    if(tag.innerText.includes(role)) tag.classList.add('active');
-                });
-                this.moveGlider();
-                this.updateBadge();
-            },
-            moveGlider() {
-                const activeTag = document.querySelector('.tag.active');
-                const glider = document.getElementById('headerGlider');
-                if (activeTag && glider) {
-                    glider.style.width = activeTag.offsetWidth + 'px';
-                    glider.style.left = activeTag.offsetLeft + 'px';
-                    glider.style.top = activeTag.offsetTop + 'px';
-                    glider.style.height = activeTag.offsetHeight + 'px';
-                    glider.style.opacity = '1';
-                } else if (glider) { glider.style.opacity = '0'; }
-            },
-            renderPersonalView(container) {
-                if (!this.data.hasPersonalPin) {
-                    this.renderCreatePinView(container);
-                } else {
-                    container.innerHTML = `
-                        <h1>Personal Wallet</h1>
-                        <div class="menu-list">
-                            <button class="block-btn" onclick="app.openModal('Send Money')">Send Money</button>
-                            <button class="block-btn" onclick="app.openModal('Withdraw')">Withdraw Money</button>
-                            <button class="block-btn" onclick="app.openModal('Balance')">Account Balance</button>
-                            <button class="block-btn" onclick="app.showPersonalFile()">My Personal File</button>
-                            <button class="block-btn" onclick="app.openModal('Change PIN')">Change PIN</button>
-                            <button class="block-btn" onclick="app.openModal('Statement')">Account Statement</button>
-                        </div>
-                    `;
-                }
-            },
-            renderCreatePinView(container) {
-                container.innerHTML = `
-                    <div class="box-wrapper">
-                        <h2 style="margin-bottom:1rem;">Set Personal PIN</h2>
-                        <p class="text-muted mb-4">You need to set a 4-digit PIN to access your personal wallet.</p>
-                        
-                        <div class="form-group">
-                            <label class="form-label">New PIN</label>
-                            <input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Confirm PIN</label>
-                            <input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
-                        </div>
-                        
-                        <button class="btn btn-primary mt-4" onclick="app.createPersonalPin()">
-                            Create PIN
-                        </button>
-                    </div>
-                `;
-            },
-            async createPersonalPin() {
-                const pin = document.getElementById('newPersonalPin').value;
-                const confirm = document.getElementById('confirmPersonalPin').value;
-                
-                if (!pin || pin.length < 4) {
-                    this.showToast("PIN must be 4 digits", "error");
-                    return;
-                }
-                
-                if (pin !== confirm) {
-                    this.showToast("PINs do not match", "error");
-                    return;
-                }
-                
-                try {
-                    const res = await fetch('/personal/set-pin', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ pin })
-                    });
-                    
-                    const result = await res.json();
-                    if (result.success) {
-                        this.showToast("PIN set successfully!", "success");
-                        this.data.hasPersonalPin = true;
-                        this.render();
-                    } else {
-                        this.showToast(result.message || "Failed to set PIN", "error");
-                    }
-                } catch (e) {
-                    console.error(e);
-                    this.showToast("Server error occurred", "error");
-                }
-            },
-            showPersonalFile() {
-                const u = this.data.user;
-                this.updateModalContent('My Personal File', '<div style="text-align:center;"><h4 style="margin-bottom:1rem;">Member Information</h4><p><b>Name:</b> ' + u.firstName + ' ' + u.lastName + '</p><p><b>Phone:</b> ' + u.phoneNumber + '</p></div>');
-                this.openModal('My Personal File');
-            },
-            handleGeneralClick() { this.switchRole('General'); },
-            handleSavingAccountClick() {
-                const container = document.getElementById('mainContainer');
-                if (this.data.userGroups && this.data.userGroups.length > 0) {
-                    let groupsHtml = '';
-                    this.data.userGroups.forEach((group, index) => {
-                        groupsHtml += '<button class="block-btn" onclick="app.handleGroupClick(\'' + group.groupName + '\')" style="display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.5rem;"><div style="display:flex; align-items:center; gap:12px;"><div style="background:var(--primary); color:white; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem;">' + (index + 1) + '</div><div style="text-align:left;"><div style="font-weight:600; font-size:1rem; color:var(--text-main);">' + group.groupName + '</div></div></div><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.85rem;"></i></button>';
-                    });
-                    container.innerHTML = '<h1>My Saving Account</h1><p style="text-align:center; color:var(--text-muted); margin-bottom:1.5rem; font-size:0.9rem;">Select a group to view details</p><div class="menu-list" style="border-radius:12px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">' + groupsHtml + '</div><button class="btn btn-secondary mt-4" onclick="app.switchRole(\'General\')" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button>';
-                } else {
-                    container.innerHTML = '<h1>My Saving Account</h1><div class="box-wrapper" style="text-align:center;"><p style="color:var(--text-muted);">No Group account is linked to your phone number.</p><button class="btn btn-secondary mt-4" onclick="app.switchRole(\'General\')"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-                }
-            },
-            handleGroupClick(groupName) {
-                const group = this.data.userGroups.find(g => g.groupName === groupName);
-                if (!group) { this.showToast("Group not found", "error"); return; }
-                this.data.lastGroupName = groupName;
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1 style="margin-bottom:0.5rem;">My Account</h1><p style="text-align:center; color:var(--text-muted); margin-bottom:1.5rem; font-size:0.9rem;">Group: ' + group.groupName + '</p><div class="menu-list"><button class="block-btn" onclick="app.showContributionForm()"><i class="fa-solid fa-piggy-bank" style="margin-right:10px;"></i> Contribution</button><button class="block-btn" onclick="app.showLoanForm()"><i class="fa-solid fa-hand-holding-dollar" style="margin-right:10px;"></i> Loan</button><button class="block-btn" onclick="app.showMembershipForm()"><i class="fa-solid fa-users" style="margin-right:10px;"></i> Membership</button><button class="block-btn" onclick="app.showAccountDetailsForm()"><i class="fa-solid fa-file-invoice" style="margin-right:10px;"></i> A/C Details</button><button class="block-btn" onclick="app.showAccountStatementForm()"><i class="fa-solid fa-receipt" style="margin-right:10px;"></i> Account Statements</button><button class="block-btn btn-secondary" onclick="app.handleSavingAccountClick()" style="justify-content:center; border-top:1px solid var(--border);"><i class="fa-solid fa-arrow-left" style="margin-right:10px;"></i> Back</button></div>';
-            },
-            showContributionForm() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Contribution</h1><div class="menu-list"><button class="block-btn" onclick="app.showIntervalContributions()"><i class="fa-solid fa-calendar-alt" style="margin-right:10px;"></i> Interval Contributions</button><button class="block-btn" onclick="app.showTotalContribution()"><i class="fa-solid fa-layer-group" style="margin-right:10px;"></i> Total Contribution</button><button class="block-btn btn-secondary" onclick="app.handleGroupClick(app.data.lastGroupName)" style="justify-content:center; border-top:1px solid var(--border);"><i class="fa-solid fa-arrow-left" style="margin-right:10px;"></i> Back</button></div>';
-            },
-            showTotalContribution() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Total Contribution</h1><div class="menu-list"><button class="block-btn" onclick="app.showSavingsContribution()"><i class="fa-solid fa-piggy-bank" style="margin-right:10px;"></i> Savings Contribution</button><button class="block-btn" onclick="app.showLoanContribution()"><i class="fa-solid fa-hand-holding-dollar" style="margin-right:10px;"></i> Loan Contribution</button><button class="block-btn" onclick="app.showOtherAccountContribution()"><i class="fa-solid fa-wallet" style="margin-right:10px;"></i> Other Account Contribution</button><button class="block-btn" onclick="app.showWholeContribution()"><i class="fa-solid fa-layer-group" style="margin-right:10px;"></i> Whole Contribution</button><button class="block-btn btn-secondary" onclick="app.showContributionForm()" style="justify-content:center; border-top:1px solid var(--border);"><i class="fa-solid fa-arrow-left" style="margin-right:10px;"></i> Back</button></div>';
-            },
-            showIntervalContributions() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Interval Contributions</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-calendar-alt" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Interval contributions coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.showContributionForm()" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showSavingsContribution() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Savings Contribution</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-piggy-bank" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Savings contribution form coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.showTotalContribution()" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showLoanContribution() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Loan Contribution</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-hand-holding-dollar" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Loan contribution form coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.showTotalContribution()" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showOtherAccountContribution() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Other Account Contribution</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-wallet" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Other account contribution form coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.showTotalContribution()" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showWholeContribution() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Whole Contribution</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-layer-group" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Whole contribution form coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.showTotalContribution()" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showLoanForm() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Loan</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-hand-holding-dollar" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Loan form coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.handleGroupClick(app.data.lastGroupName)" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showMembershipForm() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Membership</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-users" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Membership details coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.handleGroupClick(app.data.lastGroupName)" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showAccountDetailsForm() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>A/C Details</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-file-invoice" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Account details coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.handleGroupClick(app.data.lastGroupName)" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            showAccountStatementForm() {
-                const container = document.getElementById('mainContainer');
-                container.innerHTML = '<h1>Account Statements</h1><div class="box-wrapper" style="text-align:center;"><i class="fa-solid fa-receipt" style="font-size:3rem; color:var(--primary); margin-bottom:1.5rem;"></i><p class="text-muted">Account statements coming soon.</p><button class="btn btn-secondary mt-4" onclick="app.handleGroupClick(app.data.lastGroupName)" style="max-width:200px; margin:1.5rem auto 0;"><i class="fa-solid fa-arrow-left"></i> Back</button></div>';
-            },
-            renderGeneralView(container) {
-                let body = '<h1>General Account</h1><div class="menu-list">';
-                body += '<button class="block-btn" onclick="app.handleSavingAccountClick()">My Saving Account</button>';
-                body += '<button class="block-btn" onclick="window.location=\'/personal/general?mode=create\'">Create Group Account</button>';
-                body += '</div>';
-                container.innerHTML = body;
-            },
-            renderDealerView(container) {
-                if (this.data.dealerIsVerified) {
-                    container.innerHTML = '<h1>Dealer Dashboard</h1><div class="box-wrapper"><p>Dealer Dashboard Loading...</p></div>';
-                } else {
-                    container.innerHTML = '<h1>Dealer Dashboard</h1><div class="box-wrapper"><p class="text-muted">Please verify your PIN.</p></div>';
-                    this.showToast('Authentication required for Dealer role.', 'error');
-                }
-            },
-            handleDealerClick() {
-                if (!this.data.isDealer) { this.showToast('You are not registered as a dealer.', 'error'); return; }
-                this.switchRole('Dealer');
-            },
-            openModal(action) {
-                const modal = document.getElementById('modalOverlay');
-                modal.classList.add('open');
-                const title = document.getElementById('modalTitle');
-                const body = document.getElementById('modalBody');
-                if (action === 'Send Money') { title.innerText = 'My Account'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowMyAccount()">My Account</button><button class="modal-list-btn" onclick="app.flowOtherAccount()">Other Account</button>'; }
-                else if (action === 'Withdraw') { title.innerText = 'Withdraw Money'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowWithdrawMpesa()">To M-Pesa</button>'; }
-                else if (action === 'Balance') { title.innerText = 'Account Balance'; body.innerHTML = '<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="checkPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processCheckBalance()">Check Balance</button>'; }
-                else if (action === 'Change PIN') { title.innerText = 'Change PIN'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowNewPin()">New PIN</button>'; }
-                else if (action === 'Statement') { title.innerText = 'Account Statement'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowMiniStatement()">Mini Statement</button>'; }
-            },
-            flowMyAccount() {
-                if (this.data.userGroups && this.data.userGroups.length > 0) {
-                    let groupsHtml = '<p style="text-align:center; color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">Select a group linked to your number</p>';
-                    this.data.userGroups.forEach((group, index) => {
-                        groupsHtml += '<button class="modal-list-btn" onclick="app.selectGroupForSendMoney(' + index + ')" style="display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:600;">' + (group.groupName || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span><i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:0.85rem;"></i></button>';
-                    });
-                    groupsHtml += '<button class="modal-list-btn btn-secondary" onclick="app.openModal(\'Send Money\')" style="margin-top:0.5rem; border:1px solid var(--border);">Back</button>';
-                    this.updateModalContent('My Account', groupsHtml);
-                } else {
-                    this.updateModalContent('My Account', '<p style="text-align:center; color:var(--text-muted); margin-bottom:1rem;">No group account is linked to your phone number.</p><button class="modal-list-btn" onclick="app.openModal(\'Send Money\')">Back</button>');
-                }
-            },
-            selectGroupForSendMoney(index) {
-                const group = this.data.userGroups && this.data.userGroups[index];
-                if (!group) { this.showToast("Group not found", "error"); return; }
-                this.data.lastGroupName = group.groupName;
-                this.data.lastGroupIndex = index;
-                this.data.sendMoneyAccounts = [];
-                this.showAccountChoiceForSendMoney();
-            },
-            getGroupAccountsFromPrinciples(group) {
-                const list = [];
-                if (!group || !group.principles) return list;
-                const p = group.principles;
-                if (p.otherContributions && Array.isArray(p.otherContributions)) {
-                    p.otherContributions.forEach(function(c) {
-                        if (c.accountNumber != null || c.accountName) list.push({ num: String(c.accountNumber || ''), name: String(c.accountName || '') });
-                    });
-                }
-                if (p.distribution && p.distribution.targetAccountNumber) {
-                    list.push({ num: String(p.distribution.targetAccountNumber), name: String(p.distribution.targetAccountName || '') });
-                }
-                return list;
-            },
-            showAccountChoiceForSendMoney() {
-                let html = '<p style="text-align:center; color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">Select an option</p>';
-                html += '<button class="modal-list-btn" onclick="app.showSelectAccountList()">Select account</button>';
-                html += '<button class="modal-list-btn" onclick="app.showEnterAccountForm()">Enter account number</button>';
-                html += '<button class="modal-list-btn btn-secondary" onclick="app.flowMyAccount()" style="margin-top:0.5rem; border:1px solid var(--border);">Back</button>';
-                this.updateModalContent('Select Option', html);
-            },
-            showSelectAccountList() {
-                const group = this.data.userGroups && this.data.userGroups[this.data.lastGroupIndex];
-                if (!group) { this.showToast("Group not found", "error"); return; }
-                const accounts = this.getGroupAccountsFromPrinciples(group);
-                if (accounts.length > 0) {
-                    this.data.groupAccountsList = accounts;
-                    this.data.currentAccIndex = 0;
-                    this.data.sendMoneyAccounts = [];
-                    this.loadAccountFormForIndex();
-                } else {
-                    let html = '<p style="text-align:center; color:var(--text-muted); margin-bottom:1rem;">No accounts found.</p>';
-                    html += '<button class="modal-list-btn btn-secondary" onclick="app.showAccountChoiceForSendMoney()" style="margin-top:0.5rem; border:1px solid var(--border);">Back</button>';
-                    this.updateModalContent('Transaction Details', html);
-                }
-            },
-            loadAccountFormForIndex() {
-                const a = this.data.groupAccountsList[this.data.currentAccIndex];
-                this.data.currentSendAcc = {acc: a.num, name: a.name, amt: ''};
-                this.showGroupAccountsTransactionForm();
-            },
-            showEnterAccountForm() {
-                let html = '<div class="form-group"><label class="form-label">Enter account number</label><input type="text" id="enterAccNum" class="form-input" placeholder="e.g. 002"></div><button class="btn btn-primary" onclick="app.verifyEnteredAccountNum()" style="margin-bottom:0.5rem; width:100%;">Verify</button>';
-                html += '<button class="modal-list-btn btn-secondary" onclick="app.showAccountChoiceForSendMoney()" style="margin-top:0.5rem; border:1px solid var(--border);">Back</button>';
-                this.updateModalContent('Enter account number', html);
-            },
-            selectAccountForSendMoney(accNum, accName) {
-                if (!this.data.sendMoneyAccounts) this.data.sendMoneyAccounts = [];
-                // Find if exists to pre-fill amount, otherwise create new
-                let existing = this.data.sendMoneyAccounts.find(a => a.acc === accNum);
-                this.data.currentSendAcc = existing ? {...existing} : {acc: accNum, name: accName, amt: ''};
-                
-                // For entered accounts, we won't show 'Add Account' to cycle since they aren't part of groupAccountsList iteration.
-                // We fake the index to be the end to hide 'Add Account'
-                this.data.currentAccIndex = 999;
-                
-                this.showGroupAccountsTransactionForm();
-            },
-            verifyEnteredAccountNum() {
-                const entered = (document.getElementById('enterAccNum') && document.getElementById('enterAccNum').value) ? document.getElementById('enterAccNum').value.trim() : '';
-                if (!entered) { this.showToast('Enter account number', 'error'); return; }
-                const group = this.data.userGroups && this.data.userGroups[this.data.lastGroupIndex];
-                const accounts = this.getGroupAccountsFromPrinciples(group || {});
-                const found = accounts.find(function(a) { return a.num === entered; });
-                if (found) {
-                    this.selectAccountForSendMoney(found.num, found.name);
-                } else {
-                    this.selectAccountForSendMoney(entered, 'Unknown Account');
-                }
-            },
-            showGroupAccountsTransactionForm() {
-                const item = this.data.currentSendAcc;
-                let html = '<div style="display:flex; gap:8px; margin-bottom:1rem; align-items:center; background:#f8fafc; padding:8px; border-radius:8px; border:1px solid var(--border);">';
-                html += '<div style="flex:1;"><div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">Account</div><input type="text" class="form-input" value="' + item.acc + '" readonly style="background:#e2e8f0; padding:0.5rem; font-size:0.85rem;"></div>';
-                html += '<div style="flex:1.5;"><div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">Name</div><input type="text" class="form-input" value="' + item.name + '" readonly style="background:#e2e8f0; padding:0.5rem; font-size:0.85rem;"></div>';
-                html += '<div style="flex:1;"><div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">Amount</div><input type="number" id="currentSendAmt" class="form-input" placeholder="0.00" value="' + item.amt + '" min="0" step="0.01" style="padding:0.5rem; font-size:0.85rem;"></div>';
+                body.innerHTML = html;
+            }
+        }
+        else if (action === 'Withdraw') { title.innerText = 'Withdraw Money'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowWithdrawMpesa()">To M-Pesa</button>'; }
+        else if (action === 'Balance') { title.innerText = 'Account Balance'; body.innerHTML = '<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="checkPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processCheckBalance()">Check Balance</button>'; }
+        else if (action === 'Change PIN') { title.innerText = 'Change PIN'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowNewPin()">New PIN</button>'; }
+        else if (action === 'Statement') { title.innerText = 'Account Statement'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowMiniStatement()">Mini Statement</button>'; }
+    },
+    selectGroupForSend(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        this.data.errorMessage = '';
+        this.updateModalContent('Send Money - ' + decodedGroupName, '<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Choose where to send money:</p><button class="modal-list-btn" onclick="app.sendToMyAccount(\'' + encodeURIComponent(decodedGroupName) + '\')"><i class="fa-solid fa-building-columns" style="color:var(--primary);margin-right:8px;"></i> My Account</button><button class="modal-list-btn" onclick="app.sendToOtherMember(\'' + encodeURIComponent(decodedGroupName) + '\')"><i class="fa-solid fa-user-group" style="color:var(--secondary);margin-right:8px;"></i> Other Member A/C</button></div><button class="modal-list-btn" onclick="app.openModal(\'Send Money\')" style="margin-top:15px;">Back</button>');
+    },
+    sendToMyAccount(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const group = this.data.userGroups.find(g => g.groupName === decodedGroupName);
+        if (!group || !group.principles || !group.principles.otherContributions) {
+            this.updateModalContent('Send to My Account', '<div style="text-align:center;padding:20px;"><p style="color:#6b7280;">No accounts found for this group.</p><button class="modal-list-btn" onclick="app.selectGroupForSend(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:15px;">Back</button></div>');
+            return;
+        }
+        const accounts = group.principles.otherContributions;
+        if (!this.data.groupAccounts) this.data.groupAccounts = accounts;
+        if (!this.data.addedAccounts) this.data.addedAccounts = [];
+        this.data.errorMessage = '';
+        this.renderAccountForm(decodedGroupName);
+    },
+    renderAccountForm(groupName) {
+        const accounts = this.data.groupAccounts || [];
+        const decodedGroupName = decodeURIComponent(groupName);
+        const addedAccounts = this.data.addedAccounts || [];
+        const errorMsg = this.data.errorMessage || '';
+        
+        let html = '<div style="text-align:left;">';
+        
+        // SOURCE: Dropdown for all accounts - inline display
+        html += '<div style="margin-bottom:10px;">';
+        html += '<p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">SOURCE: Select Account</p>';
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+        html += '<select id="sourceAccount" class="form-input" onchange="app.onSourceChange(\'' + encodeURIComponent(decodedGroupName) + '\')" style="flex:1;min-width:150px;padding:10px;font-size:13px;">';
+        html += '<option value="">-- Select --</option>';
+        accounts.forEach((acc, index) => {
+            html += '<option value="' + index + '">' + acc.accountNumber + ' - ' + acc.accountName + '</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Error message display below source box
+        if (errorMsg) {
+            html += '<div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px;margin-bottom:15px;">';
+            html += '<p style="color:#dc2626;font-size:13px;margin:0;">' + errorMsg + '</p>';
+            html += '</div>';
+        }
+        
+        // ADDED ACCOUNTS - inline display: account number | name | amount with X button
+        if (addedAccounts.length > 0) {
+            html += '<div style="margin-bottom:15px;">';
+            html += '<p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">ADDED ACCOUNTS:</p>';
+            addedAccounts.forEach((acc, index) => {
+                html += '<div style="display:flex;align-items:center;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;gap:8px;">';
+                html += '<button onclick="app.removeAccount(' + index + ',\'' + encodeURIComponent(decodedGroupName) + '\')" style="background:#ef4444;color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;flex-shrink:0;">×</button>';
+                html += '<span style="font-weight:600;color:#1e293b;font-size:12px;flex:1;">' + acc.accountNumber + '</span>';
+                html += '<span style="color:#64748b;font-size:11px;flex:1;">' + acc.accountName + '</span>';
+                html += '<span style="color:var(--primary);font-weight:600;font-size:12px;flex:1;text-align:right;">KSh ' + acc.inputAmount + '</span>';
                 html += '</div>';
-                
-                html += '<div style="display:flex; gap:10px; margin-bottom:1rem;">';
-                
-                // Only show Add Account if there's a next account in the list to iterate to
-                if (this.data.groupAccountsList && this.data.currentAccIndex < this.data.groupAccountsList.length - 1) {
-                    html += '<button class="btn btn-secondary" onclick="app.addCurrentAndGoNext()" style="flex:1; border:1px dashed var(--primary); color:var(--primary); background:#eff6ff;"><i class="fa-solid fa-plus"></i> Add Account</button>';
-                }
-                
-                html += '<button class="btn btn-primary" onclick="app.addCurrentAndReview()" style="flex:1;">Submit</button>';
-                html += '</div>';
-                
-                html += '<button class="modal-list-btn btn-secondary" onclick="app.showAccountChoiceForSendMoney()" style="margin-top:0.5rem; border:1px solid var(--border);">Back</button>';
-                this.updateModalContent('Transaction Details', html);
-            },
-            addCurrent() {
-                const amtInput = document.getElementById('currentSendAmt').value;
-                this.data.currentSendAcc.amt = amtInput || 0;
-                if (!this.data.sendMoneyAccounts) this.data.sendMoneyAccounts = [];
-                const existing = this.data.sendMoneyAccounts.find(a => a.acc === this.data.currentSendAcc.acc);
-                if (existing) {
-                    existing.amt = this.data.currentSendAcc.amt;
-                } else {
-                    this.data.sendMoneyAccounts.push({...this.data.currentSendAcc});
-                }
-            },
-            addCurrentAndGoNext() {
-                this.addCurrent();
-                this.data.currentAccIndex++;
-                this.loadAccountFormForIndex();
-            },
-            addCurrentAndReview() {
-                this.addCurrent();
-                this.showSendMoneyConfirmation();
-            },
-            showSendMoneyConfirmation() {
-                let html = '<div style="max-height: 250px; overflow-y: auto; margin-bottom: 1rem; padding-right: 5px;">';
-                let totalAmt = 0;
-                if (this.data.sendMoneyAccounts && this.data.sendMoneyAccounts.length > 0) {
-                    this.data.sendMoneyAccounts.forEach((item, i) => {
-                        const amt = parseFloat(item.amt) || 0;
-                        totalAmt += amt;
-                        html += '<div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid var(--border); margin-bottom:0.5rem;">';
-                        html += '<div><div style="font-weight:600; font-size:0.9rem;">' + item.name + '</div><div style="font-size:0.75rem; color:var(--text-muted);">' + item.acc + '</div></div>';
-                        html += '<div style="font-weight:700;">Ksh ' + amt.toFixed(2) + '</div>';
-                        html += '</div>';
-                    });
-                }
-                html += '</div>';
-                
-                html += '<div style="text-align:right; font-size:1.1rem; font-weight:700; margin-bottom:1rem; padding-top:1rem; border-top:1px solid var(--border);">';
-                html += 'Total: Ksh ' + totalAmt.toFixed(2);
-                html += '</div>';
-                
-                html += '<button class="btn btn-primary" onclick="app.showPaymentOptions()" style="margin-bottom:0.5rem;"><i class="fa-solid fa-paper-plane"></i> Send</button>';
-                html += '<button class="modal-list-btn btn-secondary" onclick="app.showGroupAccountsTransactionForm()" style="margin-top:0.5rem; border:1px solid var(--border);">Back</button>';
-                
-                this.updateModalContent('Confirm Transfer', html);
-            },
-            processMultiGroupTransaction() {
-                let totalAmt = 0;
-                let validAccounts = [];
-                for (let i = 0; i < this.data.sendMoneyAccounts.length; i++) {
-                    const item = this.data.sendMoneyAccounts[i];
-                    const amt = parseFloat(item.amt) || 0;
-                    if (amt < 0) return this.showToast('Invalid amount', 'error');
-                    totalAmt += amt;
-                    if (amt > 0 || this.data.sendMoneyAccounts.length === 1) { // Include if amount>0 or it's the only one
-                        validAccounts.push({acc: item.acc, name: item.name, amt: amt});
-                    }
-                }
-
-                if(totalAmt > this.data.balance) return this.showToast('Insufficient Balance', 'error');
-                
-                this.data.balance -= totalAmt;
-                validAccounts.forEach(item => {
-                    this.addTransaction(item.acc + ' (' + item.name + ')', 'Group Transfer', item.amt, 'Success'); 
-                });
-                
-                this.showToast('Transfer(s) Successful', 'success'); 
-                this.data.sendMoneyAccounts = [];
-                this.render(); 
-                this.closeModal(); 
-            },
-            showPaymentOptions() {
-                let html = '<button class="modal-list-btn" onclick="app.confirmTbankPayment()">tbank</button><button class="modal-list-btn" onclick="app.showMpesaOptions()">mpesa</button>';
-                this.updateModalContent('Select Payment Method', html);
-            },
-            confirmTbankPayment() {
-                let totalAmt = 0;
-                if (this.data.sendMoneyAccounts && this.data.sendMoneyAccounts.length > 0) {
-                    this.data.sendMoneyAccounts.forEach((item, i) => {
-                        const amt = parseFloat(item.amt) || 0;
-                        totalAmt += amt;
-                    });
-                }
-                const group = this.data.userGroups[this.data.lastGroupIndex];
-                const groupName = group ? group.groupName : 'N/A';
-                const groupNumber = group ? group.accountNumber : 'N/A';
-
-                let html = '<div style="text-align:left; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid var(--border);">';
-                html += '<p style="font-weight: 600; font-size: 1rem; color: var(--text-main);">Group Name: ' + groupName + '</p>';
-                html += '<p style="font-weight: 600; font-size: 1rem; color: var(--text-main);">Group Number: ' + groupNumber + '</p>';
-                html += '</div>';
-
-                html += '<div style="text-align:right; font-size:1.1rem; font-weight:700; margin-bottom:1rem;">';
-                html += 'Total: Ksh ' + totalAmt.toFixed(2);
-                html += '</div>';
-                html += '<div class="form-group"><label class="form-label">Enter PIN to Confirm</label><input type="password" id="tranPin" class="form-input" maxlength="4" placeholder="****"></div>';
-                html += '<button class="btn btn-primary" onclick="app.showUnderConstruction()" style="margin-bottom:0.5rem;"><i class="fa-solid fa-paper-plane"></i> Submit</button>';
-                this.updateModalContent('Confirm Tbank Payment', html);
-            },
-            showUnderConstruction() {
-                this.updateModalContent('Under Construction', '<p>This feature is under construction.</p>');
-            },
-            flowOtherAccount() { this.flowTransactionForm('Other', 'Other Account'); },
-            flowTransactionForm(type, label) {
-                this.updateModalContent(label, '<div class="form-group"><label class="form-label">Account</label><input type="number" id="tranAcc" class="form-input" placeholder="1234"></div><div class="form-group"><label class="form-label">Amount</label><input type="number" id="tranAmt" class="form-input" placeholder="0.00"></div><div class="form-group"><label class="form-label">PIN</label><input type="password" id="tranPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processSingleTransaction(\''+type+'\')">Submit</button>');
-            },
-            processSingleTransaction(type) {
-                const acc = document.getElementById('tranAcc').value;
-                const amt = parseFloat(document.getElementById('tranAmt').value);
-                const pin = document.getElementById('tranPin').value;
-                let error = '';
-                if(acc !== this.data.ACCOUNT_NUM) error = 'Invalid Account';
-                else if(pin !== this.data.PIN) error = 'Wrong PIN';
-                else if(amt > this.data.balance) error = 'Insufficient Balance';
-                if(error) { this.showToast(error, 'error'); this.addTransaction(acc, type, amt, 'Failed', error); this.closeModal(); }
-                else { this.data.balance -= amt; this.addTransaction(acc, type, amt, 'Success'); this.showToast('Success', 'success'); this.render(); this.closeModal(); }
-            },
-            flowNewPin() { this.updateModalContent('Change PIN', '<div class="form-group"><label class="form-label">Current PIN</label><input type="password" id="currPin" class="form-input" maxlength="4"></div><div class="form-group"><label class="form-label">New PIN</label><input type="password" id="newPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processNewPin()">Update</button>'); },
-            processNewPin() {
-                const curr = document.getElementById('currPin').value;
-                const newP = document.getElementById('newPin').value;
-                if(curr !== this.data.PIN) return this.showToast('Incorrect Current PIN', 'error');
-                this.data.PIN = newP;
-                this.addTransaction('System', 'PIN Change', 0, 'Success', 'PIN updated');
-                this.showToast('PIN Updated', 'success');
-                this.closeModal();
-            },
-            flowWithdrawMpesa() { this.updateModalContent('Withdraw to M-Pesa', '<div class="form-group"><label class="form-label">M-Pesa Number</label><input type="text" class="form-input" value="1234" readonly style="background:#e2e8f0;"></div><div class="form-group"><label class="form-label">Amount</label><input type="number" id="mpesaAmt" class="form-input"></div><div class="form-group"><label class="form-label">PIN</label><input type="password" id="mpesaPin" class="form-input" maxlength="4"></div><button class="btn btn-primary" onclick="app.processWithdrawMpesa()">Submit</button>'); },
-            processWithdrawMpesa() {
-                const amt = parseFloat(document.getElementById('mpesaAmt').value);
-                const pin = document.getElementById('mpesaPin').value;
-                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
-                if(amt > this.data.balance) return this.showToast('Insufficient Balance', 'error');
-                this.data.balance -= amt;
-                this.addTransaction('M-Pesa', 'Withdrawal', amt, 'Success', 'To 1234');
-                this.render();
-                this.showResultModal('Withdrawal Success', 'Success', 'Withdrew Ksh ' + amt);
-            },
-            processCheckBalance() {
-                const pin = document.getElementById('checkPin').value;
-                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
-                this.addTransaction('Self', 'Balance Inquiry', 0, 'Success');
-                this.updateModalContent('Account Balance', '<div style="text-align:center;"><h4>Current Balance</h4><p style="font-size:1.5rem; font-weight:700; color:var(--success); margin-top:1rem;">Ksh ' + this.data.balance.toFixed(2) + '</p></div>');
-            },
-            flowMiniStatement() { this.updateModalContent('Mini Statement', '<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="stmtPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processMiniStatement()">View</button>'); },
-            processMiniStatement() {
-                const pin = document.getElementById('stmtPin').value;
-                if(pin !== this.data.PIN) return this.showToast('Wrong PIN', 'error');
-                const recent = this.data.transactions.slice(-4);
-                let rows = '';
-                recent.forEach(t => { rows += '<tr><td>' + t.date + '</td><td>' + t.acc + '</td><td>Ksh ' + (t.amt || 0) + '</td><td>Ksh ' + t.balance + '</td></tr>'; });
-                this.updateModalContent('Mini Statement', '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.85rem;"><thead><tr style="background:#f1f5f9;"><th style="text-align:left; padding:8px;">Date</th><th style="text-align:left; padding:8px;">Account</th><th style="text-align:left; padding:8px;">Amount</th><th style="text-align:left; padding:8px;">Balance</th></tr></thead><tbody>' + rows + '</tbody></table></div>');
-                this.showToast('Mini Statement Generated', 'success');
-            },
-            addTransaction(target, acc, amt, status, reason = null) {
-                this.data.transactions.push({ type: acc==='Deposit'?'deposit':(acc==='Withdrawal'?'withdraw':'transfer'), target, acc, amt, status, reason, date: new Date().toLocaleTimeString(), balance: this.data.balance });
-                if(status === 'Success') { this.data.unread++; this.updateBadge(); }
-            },
-            updateModalContent(title, html) { document.getElementById('modalTitle').innerText = title; document.getElementById('modalBody').innerHTML = html; },
-            showResultModal(mainTitle, status, msg) { this.updateModalContent(mainTitle, '<div style="padding:1rem; border-radius:0.5rem; margin-bottom:1rem; text-align:left; border:1px solid ' + (status === 'Success' ? '#86efac' : '#fca5a5') + '; background:' + (status === 'Success' ? '#f0fdf4' : '#fef2f2') + ';"><h4 style="color:' + (status === 'Success' ? '#15803d' : '#b91c1c') + '; margin-bottom:0.5rem;">' + status + '</h4><p>' + msg + '</p><div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:0.5rem; color:var(--text-muted);"><span>Balance:</span> <span style="font-weight:600;">Ksh ' + this.data.balance.toFixed(2) + '</span></div></div>'); },
-            showToast(msg, type) {
-                const toast = document.createElement('div');
-                toast.className = 'toast ' + type;
-                toast.innerHTML = '<i class="fa-solid fa-' + (type==='success'?'check-circle':'triangle-exclamation') + '"></i> <span>' + msg + '</span>';
-                document.getElementById('toast-container').appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
-            },
-            switchRole(r) { this.data.role = r; this.render(); if (r === 'Agent') { setTimeout(() => { window.location.href = '/agent'; }, 400); } }
-        };
-        document.addEventListener('DOMContentLoaded', () => app.init());
-    </script>
+            });
+            html += '</div>';
+        }
+        
+        // Selected account info - inline display
+        if (this.data.searchedAccount) {
+            const acc = this.data.searchedAccount;
+            html += '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:12px;border-radius:8px;margin-bottom:12px;color:white;">';
+            html += '<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">';
+            html += '<div style="flex:1;min-width:80px;"><span style="font-size:10px;opacity:0.6;display:block;">ACCOUNT</span><span style="font-weight:600;font-size:13px;">' + acc.accountNumber + '</span></div>';
+            html += '<div style="flex:1;min-width:80px;"><span style="font-size:10px;opacity:0.6;display:block;">NAME</span><span style="font-weight:600;font-size:13px;">' + acc.accountName + '</span></div>';
+            html += '<div style="flex:1;min-width:80px;text-align:right;"><span style="font-size:10px;opacity:0.6;display:block;">EXPECTED</span><span style="color:#fbbf24;font-weight:600;font-size:13px;">KSh ' + acc.expectedAmount + '</span></div>';
+            html += '</div>';
+            html += '<div style="display:flex;gap:8px;align-items:center;">';
+            html += '<span style="font-size:11px;opacity:0.7;white-space:nowrap;">AMOUNT:</span>';
+            html += '<input type="number" id="accountAmount" class="form-input" placeholder="Enter amount" inputmode="numeric" style="flex:1;padding:8px;font-size:13px;">';
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        // Buttons inline: Add Account | Confirm
+        html += '<div style="display:flex;gap:10px;margin-top:15px;">';
+        html += '<button class="btn btn-primary" onclick="app.addNextAccount(\'' + encodeURIComponent(decodedGroupName) + '\')" style="flex:1;padding:12px;"><i class="fa-solid fa-plus"></i> Add</button>';
+        html += '<button class="btn btn-primary" onclick="app.confirmPayment(\'' + encodeURIComponent(decodedGroupName) + '\')" style="flex:1;padding:12px;background-color:var(--secondary);"><i class="fa-solid fa-check"></i> Confirm</button>';
+        html += '</div>';
+        html += '<button class="modal-list-btn" onclick="app.openModal(\'Send Money\')" style="margin-top:10px;">Cancel</button></div>';
+        
+        this.updateModalContent('Send to My Account - ' + decodedGroupName, html);
+    },
+    onSourceChange(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const select = document.getElementById('sourceAccount');
+        const index = select ? select.value : '';
+        
+        if (index !== '') {
+            const accounts = this.data.groupAccounts || [];
+            const acc = accounts[parseInt(index)];
+            if (acc) {
+                this.data.searchedAccount = acc;
+                this.data.errorMessage = '';
+            }
+        } else {
+            this.data.searchedAccount = null;
+        }
+        this.renderAccountForm(decodedGroupName);
+    },
+    addNextAccount(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const searchedAccount = this.data.searchedAccount;
+        
+        if (!searchedAccount) {
+            this.data.errorMessage = 'Please select an account first';
+            this.renderAccountForm(decodedGroupName);
+            return;
+        }
+        
+        if (!this.data.addedAccounts) this.data.addedAccounts = [];
+        
+        const amountInput = document.getElementById('accountAmount');
+        const amount = amountInput ? amountInput.value : '0';
+        
+        this.data.addedAccounts.push({
+            accountName: searchedAccount.accountName,
+            accountNumber: searchedAccount.accountNumber,
+            inputAmount: amount
+        });
+        
+        this.data.searchedAccount = null;
+        this.data.errorMessage = '';
+        this.renderAccountForm(decodedGroupName);
+    },
+    removeAccount(index, groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        if (this.data.addedAccounts && this.data.addedAccounts[index]) {
+            this.data.addedAccounts.splice(index, 1);
+        }
+        this.renderAccountForm(decodedGroupName);
+    },
+    confirmPayment(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const addedAccounts = this.data.addedAccounts || [];
+        
+        if (addedAccounts.length === 0) {
+            this.data.errorMessage = 'Please add at least one account';
+            this.renderAccountForm(decodedGroupName);
+            return;
+        }
+        
+        // Calculate total
+        let total = 0;
+        addedAccounts.forEach(acc => {
+            total += parseFloat(acc.inputAmount) || 0;
+        });
+        
+        let html = '<div style="text-align:left;">';
+        
+        // Payment details - inline display
+        html += '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:15px;border-radius:12px;margin-bottom:15px;color:white;">';
+        html += '<h3 style="margin:0 0 12px 0;color:white;font-size:14px;text-align:center;">PAYMENT DETAILS</h3>';
+        
+        // Show all added accounts - inline: number | name | amount
+        addedAccounts.forEach(acc => {
+            html += '<div style="display:flex;align-items:center;padding:8px;background:rgba(255,255,255,0.1);border-radius:6px;margin-bottom:6px;gap:8px;">';
+            html += '<span style="font-weight:600;font-size:12px;flex:1;">' + acc.accountNumber + '</span>';
+            html += '<span style="font-size:11px;opacity:0.8;flex:1;">' + acc.accountName + '</span>';
+            html += '<span style="color:#fbbf24;font-weight:600;font-size:12px;flex:1;text-align:right;">KSh ' + acc.inputAmount + '</span>';
+            html += '</div>';
+        });
+        
+        // Total inline
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(251,191,36,0.2);border-radius:6px;margin-top:10px;">';
+        html += '<span style="font-weight:600;font-size:14px;">TOTAL</span>';
+        html += '<span style="color:#fbbf24;font-weight:700;font-size:18px;">KSh ' + total.toLocaleString() + '</span>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Payment buttons inline: tBank | M-Pesa
+        html += '<div style="display:flex;gap:10px;margin-top:15px;">';
+        html += '<button class="btn btn-primary" onclick="app.processPayment(\'tbank\')" style="flex:1;padding:12px;background-color:#10b981;"><i class="fa-solid fa-university"></i> tBank</button>';
+        html += '<button class="btn btn-primary" onclick="app.processPayment(\'mpesa\')" style="flex:1;padding:12px;background-color:#22c55e;"><i class="fa-solid fa-mobile"></i> M-Pesa</button>';
+        html += '</div>';
+        html += '<button class="modal-list-btn" onclick="app.renderAccountForm(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:10px;">Back</button></div>';
+        
+        this.updateModalContent('Confirm Payment - ' + decodedGroupName, html);
+    },
+    processPayment(method) {
+        const methodName = method === 'tbank' ? 'tBank' : 'M-Pesa';
+        this.updateModalContent('Under Construction',
+            '<div style="text-align:center;padding:40px 20px;">' +
+            '<i class="fa-solid fa-hard-hat" style="font-size:48px;color:var(--primary);margin-bottom:20px;"></i>' +
+            '<h3 style="color:#1e293b;margin-bottom:10px;">Under Construction</h3>' +
+            '<p style="color:#6b7280;">Payment via ' + methodName + ' is currently being developed.</p>' +
+            '<button class="modal-list-btn" onclick="app.closeModal()" style="margin-top:20px;">Close</button>' +
+            '</div>'
+        );
+    },
+    sendToOtherMember(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        this.updateModalContent('Send to Other Member', '<div style="text-align:center;padding:40px 20px;"><i class="fa-solid fa-hard-hat" style="font-size:48px;color:var(--primary);margin-bottom:20px;"></i><h3 style="color:#1e293b;margin-bottom:10px;">Under Construction</h3><p style="color:#6b7280;">Sending to other members is currently being developed.</p><button class="modal-list-btn" onclick="app.selectGroupForSend(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:20px;">Back</button></div>');
+    },
+    showToast(msg, type) {
+        const toast = document.createElement('div');
+        toast.className = 'toast ' + type;
+        toast.innerHTML = '<i class="fa-solid fa-' + (type==='success'?'check-circle':'triangle-exclamation') + '"></i> <span>' + msg + '</span>';
+        document.getElementById('toast-container').appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    },
+    switchRole(r) { this.data.role = r; this.render(); if (r === 'Agent') { setTimeout(() => { window.location.href = '/agent'; }, 400); } },
+    updateModalContent(title, html) { document.getElementById('modalTitle').innerText = title; document.getElementById('modalBody').innerHTML = html; }
+};
+document.addEventListener('DOMContentLoaded', () => app.init());
+</script>
 </body>
 </html>

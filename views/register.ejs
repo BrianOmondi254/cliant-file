@@ -1,753 +1,503 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tbank Investment - Registration</title>
-    <!-- Font Awesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --primary: #007bff;
-        --primary-dark: #0056b3;
-        --secondary: #6c757d;
-        --success: #28a745;
-        --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        --card-bg: #ffffff;
-        --text-color: #333;
-        --input-bg: #f8f9fa;
-        --border-color: #dee2e6;
-        --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      }
-
-      body {
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: var(--bg-gradient);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-        color: var(--text-color);
-        padding: 20px;
-      }
-
-      .reg-box {
-        background: var(--card-bg);
-        padding: 40px;
-        border-radius: 20px;
-        width: 100%;
-        max-width: 450px;
-        box-shadow: var(--shadow);
-        position: relative;
-        overflow: visible;
-        animation: slideUp 0.6s ease-out;
-      }
-
-      .back-btn {
-        position: absolute;
-        right: 18px;
-        top: 18px;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 8px;
-        background: transparent;
-        border: 1px solid rgba(2, 6, 23, 0.04);
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 13px;
-      }
-      .back-btn:hover {
-        background: rgba(0, 0, 0, 0.02);
-      }
-
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(30px);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+            padding: 20px;
         }
-      }
 
-      .reg-box h1 {
-        text-align: center;
-        margin: 0 0 10px 0;
-        font-size: 26px;
-        color: var(--primary);
-        font-weight: 700;
-        letter-spacing: 0.5px;
-      }
-
-      .reg-box h1 i {
-        margin-right: 10px;
-      }
-
-      .reg-box h2 {
-        text-align: center;
-        margin: 0 0 30px 0;
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--secondary);
-      }
-
-      /* Progress Indicator */
-      .progress-bar {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 25px;
-        gap: 10px;
-      }
-      .dot {
-        width: 10px;
-        height: 10px;
-        background: #e0e0e0;
-        border-radius: 50%;
-        transition: background 0.3s;
-      }
-      .dot.active {
-        background: var(--primary);
-      }
-
-      /* Input Styling */
-      .input-group {
-        position: relative;
-        margin-bottom: 20px;
-      }
-
-      .input-group i.icon {
-        position: absolute;
-        left: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #aaa;
-        font-size: 16px;
-        transition: color 0.3s;
-      }
-
-      .input-group i.toggle-password {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #aaa;
-        cursor: pointer;
-        z-index: 10;
-        transition: color 0.3s;
-      }
-      .input-group i.toggle-password:hover {
-        color: var(--primary);
-      }
-
-      input,
-      select {
-        width: 100%;
-        padding: 14px 14px 14px 45px;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        box-sizing: border-box;
-        font-size: 15px;
-        background-color: var(--input-bg);
-        color: var(--text-color);
-        transition: all 0.3s;
-        -webkit-appearance: none; /* make select rendering consistent */
-        -moz-appearance: none;
-        appearance: none;
-      }
-
-      /* Make select options clearly visible */
-      select {
-        background-color: #ffffff;
-        color: #0f172a;
-        z-index: 9999;
-      }
-      .input-group select {
-        position: relative;
-        z-index: 9999;
-      }
-      option {
-        color: #0f172a;
-        background: #ffffff;
-      }
-
-      input:focus,
-      select:focus {
-        border-color: var(--primary);
-        outline: none;
-        background-color: #fff;
-        box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
-      }
-
-      input:focus + .icon,
-      select:focus + .icon,
-      .input-group:focus-within .icon {
-        color: var(--primary);
-      }
-
-      /* Buttons */
-      button {
-        width: 100%;
-        padding: 15px;
-        background: var(--primary);
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        cursor: pointer;
-        margin-top: 15px;
-        font-weight: 600;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        transition: all 0.3s;
-      }
-      button:hover {
-        background: var(--primary-dark);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
-      }
-      button:active {
-        transform: translateY(0);
-      }
-
-      /* Radio Buttons */
-      .radio-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 5px;
-      }
-
-      .radio-option {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 14px;
-        background: var(--input-bg);
-      }
-
-      .radio-option:hover {
-        background-color: #eaeaea;
-      }
-
-      .radio-option input {
-        display: none; /* Hide default radio */
-      }
-
-      .radio-option.selected {
-        border-color: var(--primary);
-        background-color: rgba(0, 123, 255, 0.1);
-        color: var(--primary);
-        font-weight: 600;
-      }
-
-      /* Helper Classes */
-      .hidden {
-        display: none;
-      }
-      .fade-in {
-        animation: fadeIn 0.5s ease-in-out;
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
+        .container {
+            width: 100%;
+            max-width: 450px;
         }
-        to {
-          opacity: 1;
-          transform: translateY(0);
+
+        .card {
+            background: #ffffff;
+            border-radius: 22px;
+            padding: 35px 25px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+            position: relative;
         }
-      }
 
-      p {
-        text-align: center;
-        margin-top: 25px;
-        font-size: 0.9em;
-        color: #666;
-      }
-      a {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 600;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
 
-      label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 0.9rem;
-        color: #555;
-        font-weight: 600;
-        margin-top: 15px;
-      }
-      label:first-of-type {
-        margin-top: 0;
-      }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .field {
+            position: relative;
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 6px;
+            margin-left: 4px;
+        }
+
+        .field input, .field select {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border-radius: 12px;
+            border: 1.5px solid #e2e8f0;
+            font-size: 14px;
+            outline: none;
+            transition: 0.3s ease;
+            background: #fff;
+        }
+
+        .field select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
+        }
+
+        .field input:focus, .field select:focus {
+            border-color: #0f9d58;
+            box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.15);
+        }
+
+        .icon {
+            position: absolute;
+            top: calc(50% + 10px); /* Adjusted for labels */
+            transform: translateY(-50%);
+            left: 15px;
+            width: 18px;
+            height: 18px;
+            fill: #94a3b8;
+            z-index: 1;
+        }
+        
+        /* For fields without labels */
+        .field.no-label .icon {
+            top: 50%;
+        }
+
+        .toggle {
+            position: absolute;
+            right: 15px;
+            top: calc(50% + 10px);
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #0f9d58, #34d399);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn.secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .footer a {
+            text-decoration: none;
+            font-size: 13px;
+            color: #0f9d58;
+            font-weight: 500;
+        }
+
+        .alert-box {
+            background: #fff7ed;
+            border: 1px solid #ffedd5;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: #9a3412;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 35px;
+            left: 20px;
+            text-decoration: none;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Radio Grid */
+        .radio-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .radio-item {
+            position: relative;
+        }
+
+        .radio-item input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .radio-label {
+            display: block;
+            padding: 12px;
+            text-align: center;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #64748b;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .radio-item input:checked + .radio-label {
+            border-color: #0f9d58;
+            background: rgba(15, 157, 88, 0.05);
+            color: #0f9d58;
+            font-weight: 600;
+        }
+
+        .step-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e2e8f0;
+        }
+
+        .dot.active {
+            background: #0f9d58;
+            width: 20px;
+            border-radius: 4px;
+        }
     </style>
-  </head>
-  <body>
-    <div class="reg-box">
-      <a href="/login" class="back-btn"
-        ><i class="fa-solid fa-arrow-left"></i> Back</a
-      >
-      <h1><i class="fa-solid fa-building-columns"></i> Tbank Investment</h1>
-      <h2>Create your account</h2>
+</head>
+<body>
 
-      <% if (typeof message !== 'undefined' && message) { %>
-      <div
-        style="
-          background: #fff7ed;
-          border: 1px solid rgba(245, 166, 35, 0.12);
-          padding: 10px;
-          border-radius: 8px;
-          margin-bottom: 14px;
-          color: #92400e;
-          font-weight: 600;
-          text-align: center;
-        "
-      >
-        <%= message %>
-      </div>
-      <% } %>
+<div class="container">
+    <div class="card">
+        <a href="/login" class="back-link">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </a>
 
-      <form
-        id="registerForm"
-        action="/register"
-        method="POST"
-        onsubmit="return handleRegisterSubmit(event)"
-      >
-        <!-- Hidden fields for backend splitting -->
-        <input type="hidden" name="FirstName" id="extFirstName" />
-        <input type="hidden" name="MiddleName" id="extMiddleName" />
-        <input type="hidden" name="LastName" id="extLastName" />
-
-        <!-- Step 1 -->
-        <div id="step1" class="form-step">
-          <div class="input-group">
-            <input
-              type="text"
-              id="fullNameInput"
-              placeholder="Full Name (First, Middle, Last)"
-              required
-            />
-            <i class="fa-solid fa-user icon"></i>
-          </div>
-
-          <div class="input-group">
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              required
-            />
-            <i class="fa-solid fa-envelope icon"></i>
-          </div>
-
-          <div class="input-group">
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="Password"
-              required
-            />
-            <i class="fa-solid fa-lock icon"></i>
-            <i
-              class="fa-solid fa-eye-slash toggle-password"
-              onclick="togglePassword('password', this)"
-            ></i>
-          </div>
-
-          <div class="input-group">
-            <input
-              type="password"
-              id="confirmPassword"
-              placeholder="Confirm Password"
-              required
-            />
-            <i class="fa-solid fa-lock icon"></i>
-            <i
-              class="fa-solid fa-eye-slash toggle-password"
-              onclick="togglePassword('confirmPassword', this)"
-            ></i>
-          </div>
-
-          <div class="input-group">
-            <input type="text" name="phoneNumber" placeholder="Phone Number"
-            required value="<%= (form && form.phoneNumber) ? form.phoneNumber :
-            '' %>" <%= (form && form.phoneNumber) ? 'readonly' : '' %> />
-            <i class="fa-solid fa-phone icon"></i>
-          </div>
-
-          <div class="input-group">
-            <input type="text" name="idNumber" placeholder="ID Number" />
-            <i class="fa-solid fa-id-card icon"></i>
-          </div>
-
-          <div class="input-group">
-            <select name="gender" id="genderSelect" required>
-              <option value="" disabled selected>Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-            <i class="fa-solid fa-venus-mars icon"></i>
-          </div>
-
-          <div
-            style="
-              display: flex;
-              gap: 10px;
-              justify-content: flex-end;
-              margin-top: 8px;
-            "
-          >
-            <button type="button" id="nextBtn" class="" onclick="goToStep(2)">
-              Next
-            </button>
-          </div>
+        <div class="header">
+            <h1>Tbank Investment</h1>
+            <p>Create your secure account</p>
         </div>
 
-        <!-- Step 2 -->
-        <div id="step2" class="form-step hidden">
-          <div>
-            <label>County</label>
-            <div class="input-group">
-              <i class="fa-solid fa-globe-africa icon"></i>
-              <select
-                name="county"
-                id="countySelect"
-                onchange="loadConstituencies(true)"
-                onfocus="initCounties()"
-                onclick="initCounties()"
-                required
-              >
-                <option value="" disabled selected>-- Select County --</option>
-                <!-- Populated by JS -->
-              </select>
-            </div>
-          </div>
+        <% if (typeof message !== 'undefined' && message) { %>
+            <div class="alert-box"><%= message %></div>
+        <% } %>
 
-          <div>
-            <label>Constituency</label>
-            <div class="input-group">
-              <i class="fa-solid fa-map-pin icon"></i>
-              <select
-                name="constituency"
-                id="constituencySelect"
-                onchange="loadWards(true)"
-                onfocus="loadConstituencies()"
-                onclick="loadConstituencies()"
-                required
-              >
-                <option value="" disabled selected>
-                  -- Select Constituency --
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label>Ward</label>
-            <div class="input-group">
-              <i class="fa-solid fa-map-marker-alt icon"></i>
-              <select
-                name="ward"
-                id="wardSelect"
-                onfocus="loadWards()"
-                onclick="loadWards()"
-                required
-              >
-                <option value="" disabled selected>-- Select Ward --</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label>Age Bracket</label>
-            <div class="radio-container">
-              <label class="radio-option">
-                <input
-                  type="radio"
-                  name="ageBracket"
-                  value="18-25"
-                  required
-                  onclick="highlightRadio(this)"
-                />
-                <span>18 – 25</span>
-              </label>
-              <label class="radio-option">
-                <input
-                  type="radio"
-                  name="ageBracket"
-                  value="26-35"
-                  onclick="highlightRadio(this)"
-                />
-                <span>26 – 35</span>
-              </label>
-              <label class="radio-option">
-                <input
-                  type="radio"
-                  name="ageBracket"
-                  value="36-45"
-                  onclick="highlightRadio(this)"
-                />
-                <span>36 – 45</span>
-              </label>
-              <label class="radio-option">
-                <input
-                  type="radio"
-                  name="ageBracket"
-                  value="46+"
-                  onclick="highlightRadio(this)"
-                />
-                <span>46+</span>
-              </label>
-            </div>
-          </div>
-
-          <div
-            style="
-              display: flex;
-              gap: 10px;
-              justify-content: space-between;
-              margin-top: 12px;
-            "
-          >
-            <button type="button" onclick="goToStep(1)" class="secondary-btn">
-              Previous
-            </button>
-            <button type="submit">
-              Complete Registration <i class="fa-solid fa-check-circle"></i>
-            </button>
-          </div>
+        <div class="step-dots">
+            <div class="dot active" id="dot1"></div>
+            <div class="dot" id="dot2"></div>
         </div>
-      </form>
 
-      <p>Already have an account? <a href="/login">Login</a></p>
+        <form id="registerForm" action="/register" method="POST">
+            <!-- Hidden fields for backend splitting -->
+            <input type="hidden" name="FirstName" id="extFirstName">
+            <input type="hidden" name="MiddleName" id="extMiddleName">
+            <input type="hidden" name="LastName" id="extLastName">
+
+            <!-- Step 1 -->
+            <div id="step1">
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <input type="text" id="fullNameInput" placeholder="Full Name (First Middle Last)" required>
+                </div>
+
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <input type="email" name="email" placeholder="Email Address" required>
+                </div>
+
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                    <span class="toggle" onclick="togglePass('password', this)">Show</span>
+                </div>
+
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+                    <span class="toggle" onclick="togglePass('confirmPassword', this)">Show</span>
+                </div>
+
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.85 12.85 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    <input type="text" name="phoneNumber" placeholder="Phone Number" required value="<%= (form && form.phoneNumber) ? form.phoneNumber : '' %>" <%= (form && form.phoneNumber) ? 'readonly' : '' %>>
+                </div>
+
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="7" y1="16" x2="13" y2="16"></line></svg>
+                    <input type="text" name="idNumber" placeholder="ID Number">
+                </div>
+
+                <div class="field no-label">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                    <select name="gender" id="genderSelect" required>
+                        <option value="" disabled selected>Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <button type="button" class="btn" onclick="goToStep(2)">
+                    Next 
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </div>
+
+            <!-- Step 2 -->
+            <div id="step2" class="hidden">
+                <div class="field">
+                    <label>County</label>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <select name="county" id="countySelect" onchange="loadConstituencies()" onfocus="initCounties()" required>
+                        <option value="" disabled selected>-- Select County --</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Constituency</label>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <select name="constituency" id="constituencySelect" onchange="loadWards()" required>
+                        <option value="" disabled selected>-- Select Constituency --</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Ward</label>
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <select name="ward" id="wardSelect" required>
+                        <option value="" disabled selected>-- Select Ward --</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Age Bracket</label>
+                    <div class="radio-grid">
+                        <div class="radio-item">
+                            <input type="radio" name="ageBracket" value="18-25" id="age1" required>
+                            <label for="age1" class="radio-label">18 – 25</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" name="ageBracket" value="26-35" id="age2">
+                            <label for="age2" class="radio-label">26 – 35</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" name="ageBracket" value="36-45" id="age3">
+                            <label for="age3" class="radio-label">36 – 45</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" name="ageBracket" value="46+" id="age4">
+                            <label for="age4" class="radio-label">46+</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" onclick="goToStep(1)" class="btn secondary">Back</button>
+                    <button type="submit" class="btn">Complete</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="footer">
+            <p style="font-size: 13px; color: #64748b;">Already have an account? <a href="/login">Login</a></p>
+        </div>
     </div>
+</div>
 
-    <script>
-      // === PASSWORD TOGGLE LOGIC ===
-      function togglePassword(inputId, icon) {
-        const input = document.getElementById(inputId);
-        const isPassword = input.type === "password";
-        input.type = isPassword ? "text" : "password";
-        icon.classList.toggle("fa-eye-slash", !isPassword);
-        icon.classList.toggle("fa-eye", isPassword);
-      }
-
-      // === FORM SUBMISSION LOGIC ===
-      function handleRegisterSubmit(event) {
-        const form = event.target;
-
-        // Password Match Check
-        const password = document.getElementById("password").value;
-        const confirmPassword =
-          document.getElementById("confirmPassword").value;
-
-        if (password !== confirmPassword) {
-          alert("Passwords do not match!");
-          document.getElementById("confirmPassword").focus();
-          event.preventDefault();
-          return false;
+<script>
+    function togglePass(id, el) {
+        const input = document.getElementById(id);
+        if (input.type === "password") {
+            input.type = "text";
+            el.innerText = "Hide";
+        } else {
+            input.type = "password";
+            el.innerText = "Show";
         }
+    }
 
-        // Populate hidden fields for backend
-        const fullName = document.getElementById("fullNameInput").value.trim();
-        const nameParts = fullName.split(/\s+/);
-
-        let firstName = nameParts[0] || "";
-        let middleName = "";
-        let lastName = "";
-
-        if (nameParts.length === 2) {
-          lastName = nameParts[1];
-        } else if (nameParts.length > 2) {
-          middleName = nameParts.slice(1, -1).join(" ");
-          lastName = nameParts[nameParts.length - 1];
-        }
-
-        document.getElementById("extFirstName").value = firstName;
-        document.getElementById("extMiddleName").value = middleName;
-        document.getElementById("extLastName").value = lastName;
-
-        // No manual ward option: ward must be selected from list
-        const wardSelect = document.getElementById("wardSelect");
-        if (!wardSelect.value) {
-          alert("Please select a ward from the list.");
-          event.preventDefault();
-          return false;
-        }
-
-        return true; // Allow submission
-      }
-
-      // Manual ward entry removed — users must select a ward from the list
-
-      // Initialize on load
-      window.onload = function () {
-        initCounties();
-        // radio highlight handler
-        document.querySelectorAll(".radio-option input").forEach((i) =>
-          i.addEventListener("change", function () {
-            highlightRadio(this);
-          })
-        );
-      };
-
-      // === RADIO HIGHLIGHT LOGIC ===
-      function highlightRadio(radioInput) {
-        document
-          .querySelectorAll(".radio-option")
-          .forEach((opt) => opt.classList.remove("selected"));
-        radioInput.parentElement.classList.add("selected");
-      }
-
-      // Fetch counties from API
-      function initCounties() {
-        const countySelect = document.getElementById("countySelect");
-        if (!countySelect) return;
-        if (countySelect.options.length > 1) return;
-        fetch("/api/locations/counties")
-          .then((r) => r.json())
-          .then((list) => {
-            list.forEach((county) => {
-              const option = document.createElement("option");
-              option.value = county;
-              option.textContent = county;
-              countySelect.appendChild(option);
-            });
-          })
-          .catch((err) => console.error("Failed to load counties", err));
-      }
-
-      // Load constituencies via API
-      function loadConstituencies(forceRefresh = false) {
-        const countySelect = document.getElementById("countySelect");
-        const constituencySelect =
-          document.getElementById("constituencySelect");
-        const wardSelect = document.getElementById("wardSelect");
-        if (!constituencySelect) return;
-        if (!forceRefresh && constituencySelect.options.length > 1) return;
-        const selectedCounty = countySelect ? countySelect.value : "";
-
-        constituencySelect.innerHTML =
-          '<option value="" disabled selected>-- Select Constituency --</option>';
-        wardSelect.innerHTML =
-          '<option value="" disabled selected>-- Select Ward --</option>';
-
-        if (!selectedCounty) return;
-        fetch(
-          `/api/locations/${encodeURIComponent(selectedCounty)}/constituencies`
-        )
-          .then((r) => r.json())
-          .then((list) => {
-            list.forEach((cons) => {
-              const option = document.createElement("option");
-              option.value = cons;
-              option.textContent = cons;
-              constituencySelect.appendChild(option);
-            });
-          })
-          .catch((err) => console.error("Failed to load constituencies", err));
-      }
-
-      function loadWards(forceRefresh = false) {
-        const countySelect = document.getElementById("countySelect");
-        const constituencySelect =
-          document.getElementById("constituencySelect");
-        const wardSelect = document.getElementById("wardSelect");
-        if (!wardSelect) return;
-        if (!forceRefresh && wardSelect.options.length > 1) return;
-
-        const selectedCounty = countySelect ? countySelect.value : "";
-        const selectedConstituency = constituencySelect
-          ? constituencySelect.value
-          : "";
-
-        // Clear previous options
-        wardSelect.innerHTML =
-          '<option value="" disabled selected>-- Select Ward --</option>';
-
-        if (!selectedCounty || !selectedConstituency) return;
-
-        fetch(
-          `/api/locations/${encodeURIComponent(
-            selectedCounty
-          )}/${encodeURIComponent(selectedConstituency)}/wards`
-        )
-          .then((r) => r.json())
-          .then((list) => {
-            if (!Array.isArray(list) || list.length === 0) {
-              const option = document.createElement("option");
-              option.value = "";
-              option.textContent = "(No Wards Listed)";
-              option.disabled = true;
-              wardSelect.appendChild(option);
-              return;
-            }
-            list.sort().forEach((ward) => {
-              const option = document.createElement("option");
-              option.value = ward;
-              option.textContent = ward;
-              wardSelect.appendChild(option);
-            });
-          })
-          .catch((err) => console.error("Failed to load wards", err));
-      }
-    </script>
-    <script>
-      // Simple step controller
-      function goToStep(n) {
+    function goToStep(n) {
         const step1 = document.getElementById("step1");
         const step2 = document.getElementById("step2");
+        const dot1 = document.getElementById("dot1");
+        const dot2 = document.getElementById("dot2");
+
         if (n === 2) {
-          // validate step1 required fields
-          const full = document.getElementById("fullNameInput").value.trim();
-          const email = document
-            .querySelector('input[name="email"]')
-            .value.trim();
-          const pwd = document.getElementById("password").value;
-          const conf = document.getElementById("confirmPassword").value;
-          const phone = document
-            .querySelector('input[name="phoneNumber"]')
-            .value.trim();
-          const gender = document.getElementById("genderSelect").value;
-          if (!full || !email || !pwd || !conf || !phone || !gender) {
-            alert("Please fill all required fields on this step.");
-            return false;
-          }
-          if (pwd !== conf) {
-            alert("Passwords do not match");
-            return false;
-          }
-          step1.classList.add("hidden");
-          step2.classList.remove("hidden");
-          return true;
+            // Basic validation
+            const name = document.getElementById("fullNameInput").value.trim();
+            const email = document.querySelector('input[name="email"]').value;
+            const pass = document.getElementById("password").value;
+            const confirm = document.getElementById("confirmPassword").value;
+            const phone = document.querySelector('input[name="phoneNumber"]').value;
+            const gender = document.getElementById("genderSelect").value;
+
+            if (!name || !email || !pass || !confirm || !phone || !gender) {
+                alert("Please fill all required fields");
+                return;
+            }
+
+            if (pass !== confirm) {
+                alert("Passwords do not match");
+                return;
+            }
+
+            // Split Name
+            const parts = name.split(/\s+/);
+            document.getElementById("extFirstName").value = parts[0] || "";
+            if (parts.length === 2) {
+                document.getElementById("extLastName").value = parts[1];
+            } else if (parts.length > 2) {
+                document.getElementById("extMiddleName").value = parts.slice(1, -1).join(" ");
+                document.getElementById("extLastName").value = parts[parts.length - 1];
+            }
+
+            step1.classList.add("hidden");
+            step2.classList.remove("hidden");
+            dot1.classList.remove("active");
+            dot2.classList.add("active");
+        } else {
+            step2.classList.add("hidden");
+            step1.classList.remove("hidden");
+            dot2.classList.remove("active");
+            dot1.classList.add("active");
         }
-        // n === 1
-        step2.classList.add("hidden");
-        step1.classList.remove("hidden");
-        return true;
-      }
-    </script>
-  </body>
+    }
+
+    // Location APIs
+    function initCounties() {
+        const select = document.getElementById("countySelect");
+        if (select.options.length > 1) return;
+        fetch("/api/locations/counties")
+            .then(r => r.json())
+            .then(list => {
+                list.forEach(c => {
+                    const o = document.createElement("option");
+                    o.value = o.textContent = c;
+                    select.appendChild(o);
+                });
+            });
+    }
+
+    function loadConstituencies() {
+        const county = document.getElementById("countySelect").value;
+        const consSelect = document.getElementById("constituencySelect");
+        const wardSelect = document.getElementById("wardSelect");
+        
+        // Clear both dropdowns when county changes
+        consSelect.innerHTML = '<option value="" disabled selected>-- Select Constituency --</option>';
+        wardSelect.innerHTML = '<option value="" disabled selected>-- Select Ward --</option>';
+
+        if (!county) return;
+        
+        fetch(`/api/locations/${encodeURIComponent(county)}/constituencies`)
+            .then(r => r.json())
+            .then(list => {
+                list.sort().forEach(c => {
+                    const o = document.createElement("option");
+                    o.value = o.textContent = c;
+                    consSelect.appendChild(o);
+                });
+            });
+    }
+
+    function loadWards() {
+        const county = document.getElementById("countySelect").value;
+        const cons = document.getElementById("constituencySelect").value;
+        const wardSelect = document.getElementById("wardSelect");
+
+        if (!county || !cons) return;
+
+        // Clear ward dropdown when constituency changes
+        wardSelect.innerHTML = '<option value="" disabled selected>-- Select Ward --</option>';
+
+        fetch(`/api/locations/${encodeURIComponent(county)}/${encodeURIComponent(cons)}/wards`)
+            .then(r => r.json())
+            .then(list => {
+                list.sort().forEach(w => {
+                    const o = document.createElement("option");
+                    o.value = o.textContent = w;
+                    wardSelect.appendChild(o);
+                });
+            });
+    }
+</script>
+
+</body>
 </html>
+

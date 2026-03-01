@@ -43,7 +43,6 @@ const restructureData = (data) => {
 
     structured[county][constituency][ward].push(group);
   }
-  // console.log("Data restructured to hierarchy.");
   return structured;
 };
 
@@ -68,9 +67,7 @@ const flattenData = (data) => {
 /* 📋 General Form (GET) */
 router.get("/", (req, res) => {
   let raw = readJSON(generalFile, {});
-  const { view } = req.query; // Get view from query params
-  const userPhone = req.session?.user?.phoneNumber;
-
+  
   // Auto-migrate if array is detected
   if (Array.isArray(raw)) {
     raw = restructureData(raw);
@@ -78,16 +75,10 @@ router.get("/", (req, res) => {
   }
 
   let allGroups = flattenData(raw);
-  let displayGroups = allGroups;
-
-  if (view === 'my_groups' && userPhone) {
-    displayGroups = allGroups.filter(group => group.processorPhone === userPhone);
-  }
-
+  
   // Pass flat list to frontend for dropdowns etc.
-  res.render("general", {
-    groups: displayGroups,
-    view: view, // Pass the view type to the template
+  res.render("general_new", {
+    groups: allGroups,
   });
 });
 
@@ -155,16 +146,14 @@ router.post("/verify", (req, res) => {
 
 /* ✅ Verify Member Phone Numbers against data.json (POST) */
 router.post("/verify-members", (req, res) => {
-  const { phoneNumbers } = req.body; // Array of { type, phone, id }
+  const { phoneNumbers } = req.body;
   const dataFile = path.join(__dirname, "../data.json");
   const userData = readJSON(dataFile, []);
 
   const results = phoneNumbers.map((member) => {
-    // Normalize inputs
     const inputPhone = String(member.phone).trim();
     const inputId = String(member.id).trim();
 
-    // Find user by phone number
     const user = userData.find(
       (u) => String(u.phoneNumber).trim() === inputPhone,
     );
@@ -195,7 +184,6 @@ router.post("/verify-members", (req, res) => {
 
 /* 💾 Save General Account (POST) */
 router.post("/", (req, res) => {
-  // Extract fields from body
   const {
     groupName,
     chairpersonalphonenumber,
@@ -210,7 +198,6 @@ router.post("/", (req, res) => {
   let accounts = readJSON(generalFile, {});
   if (Array.isArray(accounts)) {
     accounts = restructureData(accounts);
-    // We don't write immediately, we write after pushing new data
   }
 
   if (!groupName || !chairpersonalphonenumber || !firstName || !county) {
@@ -230,7 +217,6 @@ router.post("/", (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  // Ensure path exists in hierarchy
   if (!accounts[county]) accounts[county] = {};
   if (!accounts[county][constituency]) accounts[county][constituency] = {};
   if (!accounts[county][constituency][ward])
@@ -265,7 +251,6 @@ router.post("/update-members", (req, res) => {
     writeJSON(generalFile, accounts);
   }
 
-  // Find the group in hierarchy
   let targetGroup = null;
   let locationPath = null;
 
@@ -295,7 +280,6 @@ router.post("/update-members", (req, res) => {
     });
   }
 
-  // Update the account with new member data
   const updatedAccount = {
     ...targetGroup,
     ...membersData,
@@ -303,7 +287,6 @@ router.post("/update-members", (req, res) => {
     agentProcessed: req.session?.user?.phoneNumber || "Unknown",
   };
 
-  // Count actual people submitted
   const actualPeopleCount = Object.keys(updatedAccount).filter(
     (key) =>
       key.startsWith("trustee_") ||
@@ -313,7 +296,6 @@ router.post("/update-members", (req, res) => {
 
   const totalProposed = parseInt(totalProposedMembers) || 0;
 
-  // Phase Logic
   if (totalProposed > 0) {
     updatedAccount.totalProposedMembers = totalProposed;
     if (actualPeopleCount < totalProposed) {
@@ -325,7 +307,6 @@ router.post("/update-members", (req, res) => {
     updatedAccount.phase = 2;
   }
 
-  // Update in place
   accounts[locationPath.c][locationPath.consti][locationPath.w][
     locationPath.idx
   ] = updatedAccount;
@@ -365,8 +346,6 @@ router.post("/set-principles", (req, res) => {
 
   if (!targetGroup) return res.json({ success: false, message: "Group not found" });
 
-  // 1. Generate Account Number (Kenya Government Setup)
-  // Structure: Country(254) + CountyCode(3) + ConstiCode(3) + WardCode(4) + Position(3)
   const locationsFile = path.join(__dirname, "../locations.json");
   const locationsData = readJSON(locationsFile, {});
   
@@ -404,7 +383,6 @@ router.post("/set-principles", (req, res) => {
                        globalWardIdx.toString().padStart(4, '0') + 
                        (locationPath.idx + 1).toString().padStart(3, '0');
 
-  // 2. Update Group Record
   accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].principles = principles;
   accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].principlesSetAt = new Date().toISOString();
   accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].phase = 3;
@@ -413,7 +391,6 @@ router.post("/set-principles", (req, res) => {
   
   writeJSON(generalFile, accounts);
 
-  // Get total members for success display
   const totalMembers = Object.keys(targetGroup).filter(k => 
     k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
   ).length;
@@ -427,7 +404,7 @@ router.post("/set-principles", (req, res) => {
 });
 
 // JSON endpoints for client-side consumption
-// GET /general/groups -> returns all groups (flattened for legacy compatibility)
+// GET /general/groups -> returns all groups
 router.get("/groups", (req, res) => {
   let accounts = readJSON(generalFile, {});
   if (Array.isArray(accounts)) {
@@ -437,14 +414,374 @@ router.get("/groups", (req, res) => {
   res.json(flattenData(accounts));
 });
 
-// GET /general/users -> returns all users
+// GET /general/my-groups -> returns groups where user is a member
+router.get("/my-groups", (req, res) => {
+  const userPhone = req.session?.user?.phoneNumber;
+  
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+
+  const allGroups = flattenData(accounts);
+  const userGroups = [];
+
+  for (const group of allGroups) {
+    for (const key in group) {
+      if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+        const memberInfo = group[key];
+        if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+          userGroups.push({
+            groupName: group.groupName,
+            phone: group.phone,
+            role: memberInfo.type,
+            roleTitle: memberInfo.title || '',
+            accountNumber: group.accountNumber || ''
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  res.json({ 
+    success: true, 
+    groups: userGroups,
+    userPhone: userPhone
+  });
+});
+
+// POST /general/verify-access
+router.post("/verify-access", (req, res) => {
+  const userPhone = req.session?.user?.phoneNumber;
+  const { groupName, chairpersonPhone } = req.body;
+
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+
+  const allGroups = flattenData(accounts);
+  
+  const userGroups = [];
+  for (const group of allGroups) {
+    for (const key in group) {
+      if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+        const memberInfo = group[key];
+        if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+          userGroups.push(group);
+          break;
+        }
+      }
+    }
+  }
+
+  if (userGroups.length > 0) {
+    if (!groupName) {
+      return res.json({ 
+        success: false, 
+        requiresGroupSelection: true,
+        message: "Please select a group to verify" 
+      });
+    }
+
+    const targetGroup = allGroups.find(g => g.groupName === groupName);
+    if (!targetGroup) {
+      return res.json({ success: false, message: "Group not found" });
+    }
+
+    const chairpersonPhoneMatch = targetGroup.phone === chairpersonPhone || 
+                                  targetGroup.chairpersonalphonenumber === chairpersonPhone;
+    
+    if (!chairpersonPhoneMatch) {
+      return res.json({ success: false, message: "Chairperson phone does not match the group" });
+    }
+
+    return res.json({ 
+      success: true, 
+      verified: true,
+      verificationType: "group",
+      groupName: targetGroup.groupName
+    });
+
+  } else {
+    if (!chairpersonPhone) {
+      return res.json({ 
+        success: false, 
+        requiresGroupSelection: false,
+        message: "Please enter your phone number for verification" 
+      });
+    }
+
+    if (String(chairpersonPhone).trim() !== String(userPhone).trim()) {
+      return res.json({ 
+        success: false, 
+        message: "Phone number does not match your account." 
+      });
+    }
+
+    return res.json({ 
+      success: true, 
+      verified: true,
+      verificationType: "personal",
+      userPhone: userPhone
+    });
+  }
+});
+
+// POST /general/verify-member
+router.post("/verify-member", (req, res) => {
+  const { groupName } = req.body;
+  const userPhone = req.session?.user?.phoneNumber;
+
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
+  }
+
+  if (!groupName) {
+    return res.json({ success: false, message: "Group name required" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+
+  const allGroups = flattenData(accounts);
+  const group = allGroups.find(g => g.groupName === groupName);
+
+  if (!group) {
+    return res.json({ success: false, message: "Group not found" });
+  }
+
+  let userRole = null;
+  let memberInfo = null;
+
+  for (const key in group) {
+    if (key.startsWith("trustee_") || key.startsWith("official_")) {
+      const info = group[key];
+      if (info && String(info.phone).trim() === String(userPhone).trim()) {
+        userRole = info.type;
+        memberInfo = info;
+        break;
+      }
+    }
+  }
+
+  if (!userRole) {
+    return res.json({ 
+      success: false, 
+      message: "You are not authorized to access this group." 
+    });
+  }
+
+  res.json({ 
+    success: true, 
+    role: userRole,
+    memberInfo: memberInfo,
+    groupName: group.groupName
+  });
+});
+
+// GET /general/users
 router.get("/users", (req, res) => {
   const dataFile = path.join(__dirname, "../data.json");
   const users = readJSON(dataFile, []);
   res.json(users);
 });
 
-/* 🙋‍♂️ Get User Role in a specific group */
+// POST /general/verify-pin
+router.post("/verify-pin", (req, res) => {
+  const { groupName, pin } = req.body;
+  const userPhone = req.session?.user?.phoneNumber;
+
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
+  }
+
+  if (!groupName || !pin) {
+    return res.json({ success: false, message: "Group name and PIN required" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+
+  const allGroups = flattenData(accounts);
+  const group = allGroups.find(g => g.groupName === groupName);
+
+  if (!group) {
+    return res.json({ success: false, message: "Group not found" });
+  }
+
+  const storedPin = group.constitutionStartKey;
+  if (storedPin && String(storedPin).trim() === String(pin).trim()) {
+    return res.json({ 
+      success: true, 
+      verified: true,
+      message: "PIN verified successfully" 
+    });
+  } else {
+    return res.json({ 
+      success: false, 
+      verified: false,
+      message: "Invalid PIN." 
+    });
+  }
+});
+
+// POST /general/generate-key
+router.post("/generate-key", (req, res) => {
+  const { groupName, customKey } = req.body;
+  const userPhone = req.session?.user?.phoneNumber;
+
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
+  }
+
+  if (!groupName) {
+    return res.json({ success: false, message: "Group name required" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+
+  let targetGroup = null;
+  let locationPath = null;
+
+  outer: for (const c in accounts) {
+    for (const consti in accounts[c]) {
+      for (const w in accounts[c][consti]) {
+        const list = accounts[c][consti][w];
+        const idx = list.findIndex(acc => acc.groupName === groupName);
+        if (idx !== -1) {
+          targetGroup = list[idx];
+          locationPath = { c, consti, w, idx };
+          break outer;
+        }
+      }
+    }
+  }
+
+  if (!targetGroup) {
+    return res.json({ success: false, message: "Group not found" });
+  }
+
+  let isAuthorized = false;
+  for (const key in targetGroup) {
+    if (key.startsWith("trustee_") || key.startsWith("official_")) {
+      const info = targetGroup[key];
+      if (info && String(info.phone).trim() === String(userPhone).trim()) {
+        isAuthorized = true;
+        break;
+      }
+    }
+  }
+
+  if (!isAuthorized) {
+    return res.json({ success: false, message: "You are not authorized" });
+  }
+
+  let newKey;
+  if (customKey && customKey.length >= 4 && customKey.length <= 6) {
+    newKey = customKey;
+  } else {
+    newKey = Math.floor(100000 + Math.random() * 900000).toString();
+  }
+  
+  const chairpersonPhone = targetGroup.phone || targetGroup.chairpersonalphonenumber;
+
+  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].constitutionStartKey = newKey;
+  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].constitutionKeyGeneratedAt = new Date().toISOString();
+  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].constitutionKeySetByAgentAt = new Date().toISOString();
+  
+  writeJSON(generalFile, accounts);
+
+  console.log(`[SMS] Sending key ${newKey} to chairperson ${chairpersonPhone}`);
+
+  res.json({ 
+    success: true, 
+    message: "Key generated successfully",
+    newKey: newKey,
+    chairpersonPhone: chairpersonPhone,
+    sent: true
+  });
+});
+
+// GET /general/user-role-type
+router.get("/user-role-type", (req, res) => {
+  const userPhone = req.session?.user?.phoneNumber;
+
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+
+  const allGroups = flattenData(accounts);
+  
+  let isTrustee = false;
+  let isOfficial = false;
+  let isMember = false;
+  const userGroups = [];
+
+  for (const group of allGroups) {
+    let userRoleInGroup = null;
+    
+    for (const key in group) {
+      if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+        const memberInfo = group[key];
+        if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+          if (key.startsWith("trustee_")) {
+            isTrustee = true;
+            userRoleInGroup = "trustee";
+          } else if (key.startsWith("official_")) {
+            isOfficial = true;
+            userRoleInGroup = userRoleInGroup || "official";
+          } else if (key.startsWith("member_")) {
+            isMember = true;
+            userRoleInGroup = userRoleInGroup || "member";
+          }
+        }
+      }
+    }
+
+    if (userRoleInGroup) {
+      userGroups.push({
+        groupName: group.groupName,
+        role: userRoleInGroup,
+        phone: group.phone,
+        accountNumber: group.accountNumber || '',
+        constitutionStartKey: group.constitutionStartKey || ''
+      });
+    }
+  }
+
+  res.json({
+    success: true,
+    isTrustee,
+    isOfficial,
+    isMember,
+    hasGroupAccount: isTrustee || isOfficial,
+    groups: userGroups
+  });
+});
+
+// POST /general/user-role
 router.post("/user-role", (req, res) => {
   const { groupName } = req.body;
   const userPhone = req.session?.user?.phoneNumber;
@@ -454,7 +791,6 @@ router.post("/user-role", (req, res) => {
   }
 
   const accounts = readJSON(generalFile, {});
-  // Use existing flatten function, but ensure it doesn't modify data we need
   const allGroups = flattenData(accounts);
   const group = allGroups.find(g => g.groupName === groupName);
 
@@ -464,14 +800,12 @@ router.post("/user-role", (req, res) => {
 
   let userRole = "not_member";
 
-  // Iterate over all properties of the group to find member entries
   for (const key in group) {
-    // Check for keys like trustee_1, official_1, member_1, etc.
     if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
       const memberInfo = group[key];
       if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
-        userRole = memberInfo.type; // This will be 'trustee', 'official', or 'member'
-        break; // Found the user, no need to loop further
+        userRole = memberInfo.type;
+        break;
       }
     }
   }

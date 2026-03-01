@@ -233,5 +233,35 @@
         }
       ]
     }
+  },
+  "Baringo": {
+    "Tiaty": {
+      "Amaya": [
+        {
+          "groupName": "bvjdjf",
+          "phone": "0740415992",
+          "firstName": "brian",
+          "secondName": "omondi",
+          "lastName": "okeyo",
+          "county": "Baringo",
+          "constituency": "Tiaty",
+          "ward": "Amaya",
+          "processorPhone": "0740000141",
+          "createdAt": "2026-03-01T15:13:53.391Z"
+        },
+        {
+          "groupName": "ONE SA",
+          "phone": "0740415992",
+          "firstName": "Brian",
+          "secondName": "Omondi",
+          "lastName": "okeyo",
+          "county": "Baringo",
+          "constituency": "Tiaty",
+          "ward": "Amaya",
+          "processorPhone": "0741001141",
+          "createdAt": "2026-03-01T19:49:05.817Z"
+        }
+      ]
+    }
   }
 }

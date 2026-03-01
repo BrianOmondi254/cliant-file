@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const bcrypt = require("bcrypt");
 
 const router = express.Router();
 const groupsFile = path.join(__dirname, "../general.json");
@@ -340,9 +341,28 @@ router.get("/group/:groupName", (req, res) => {
 
     const group = allGroups.find(g => g.groupName === groupName);
 
+    let userRole = 'member'; // Default to member if found in group
+    const userPhone = norm(req.session.user.phoneNumber);
+
     if (group) {
+      // Determine specific role
+      let found = false;
+      for (const key in group) {
+        const item = group[key];
+        if (item && typeof item === 'object' && item.phone && norm(item.phone) === userPhone) {
+           found = true;
+           if (key.startsWith('trustee_')) userRole = 'trustee';
+           else if (key.startsWith('official_') && userRole !== 'trustee') userRole = 'official';
+        }
+      }
+      // Chairperson is treated as trustee
+      if (group.chairpersonalphonenumber && norm(group.chairpersonalphonenumber) === userPhone) {
+          userRole = 'trustee';
+      }
+
       res.render("group-details", {
         user: req.session.user,
+        userRole: userRole,
         group: group,
         alert: null
       });
