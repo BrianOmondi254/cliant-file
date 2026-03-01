@@ -283,11 +283,13 @@ const app = {
             html += '<div style="margin-bottom:15px;">';
             html += '<p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">ADDED ACCOUNTS:</p>';
             addedAccounts.forEach((acc, index) => {
-                html += '<div style="display:flex;align-items:center;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;gap:8px;">';
-                html += '<button onclick="app.removeAccount(' + index + ',\'' + encodeURIComponent(decodedGroupName) + '\')" style="background:#ef4444;color:white;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;flex-shrink:0;">×</button>';
-                html += '<span style="font-weight:600;color:#1e293b;font-size:12px;flex:1;">' + acc.accountNumber + '</span>';
-                html += '<span style="color:#64748b;font-size:11px;flex:1;">' + acc.accountName + '</span>';
-                html += '<span style="color:var(--primary);font-weight:600;font-size:12px;flex:1;text-align:right;">KSh ' + acc.inputAmount + '</span>';
+                html += '<div style="display:flex;align-items:center;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;gap:10px;">';
+                html += '<button onclick="app.removeAccount(' + index + ',\'' + encodeURIComponent(decodedGroupName) + '\')" style="background:#ef4444;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">×</button>';
+                html += '<div style="flex:1;overflow:hidden;">';
+                html += '<div style="font-weight:600;color:#1e293b;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + acc.accountName + '</div>';
+                html += '<div style="color:#64748b;font-size:11px;">' + acc.accountNumber + '</div>';
+                html += '</div>';
+                html += '<div style="color:var(--primary);font-weight:700;font-size:13px;white-space:nowrap;">KSh ' + acc.inputAmount + '</div>';
                 html += '</div>';
             });
             html += '</div>';
@@ -296,15 +298,21 @@ const app = {
         // Selected account info - inline display
         if (this.data.searchedAccount) {
             const acc = this.data.searchedAccount;
-            html += '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:12px;border-radius:8px;margin-bottom:12px;color:white;">';
-            html += '<div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">';
-            html += '<div style="flex:1;min-width:80px;"><span style="font-size:10px;opacity:0.6;display:block;">ACCOUNT</span><span style="font-weight:600;font-size:13px;">' + acc.accountNumber + '</span></div>';
-            html += '<div style="flex:1;min-width:80px;"><span style="font-size:10px;opacity:0.6;display:block;">NAME</span><span style="font-weight:600;font-size:13px;">' + acc.accountName + '</span></div>';
-            html += '<div style="flex:1;min-width:80px;text-align:right;"><span style="font-size:10px;opacity:0.6;display:block;">EXPECTED</span><span style="color:#fbbf24;font-weight:600;font-size:13px;">KSh ' + acc.expectedAmount + '</span></div>';
+            html += '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:15px;border-radius:12px;margin-bottom:15px;color:white;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
+            html += '<div>';
+            html += '<div style="font-size:15px;font-weight:600;margin-bottom:2px;">' + acc.accountName + '</div>';
+            html += '<div style="font-size:12px;opacity:0.8;">' + acc.accountNumber + '</div>';
             html += '</div>';
-            html += '<div style="display:flex;gap:8px;align-items:center;">';
-            html += '<span style="font-size:11px;opacity:0.7;white-space:nowrap;">AMOUNT:</span>';
-            html += '<input type="number" id="accountAmount" class="form-input" placeholder="Enter amount" inputmode="numeric" style="flex:1;padding:8px;font-size:13px;">';
+            html += '<div style="text-align:right;">';
+            html += '<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">EXPECTED</div>';
+            html += '<div style="color:#fbbf24;font-weight:600;font-size:13px;">KSh ' + acc.expectedAmount + '</div>';
+            html += '</div>';
+            html += '</div>';
+            
+            html += '<div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:8px;">';
+            html += '<span style="font-size:12px;opacity:0.9;white-space:nowrap;">Amount:</span>';
+            html += '<input type="number" id="accountAmount" class="form-input" placeholder="0" inputmode="numeric" style="flex:1;padding:8px;font-size:14px;border:none;background:transparent;color:white;font-weight:600;text-align:right;">';
             html += '</div>';
             html += '</div>';
         }
@@ -391,10 +399,12 @@ const app = {
         
         // Show all added accounts - inline: number | name | amount
         addedAccounts.forEach(acc => {
-            html += '<div style="display:flex;align-items:center;padding:8px;background:rgba(255,255,255,0.1);border-radius:6px;margin-bottom:6px;gap:8px;">';
-            html += '<span style="font-weight:600;font-size:12px;flex:1;">' + acc.accountNumber + '</span>';
-            html += '<span style="font-size:11px;opacity:0.8;flex:1;">' + acc.accountName + '</span>';
-            html += '<span style="color:#fbbf24;font-weight:600;font-size:12px;flex:1;text-align:right;">KSh ' + acc.inputAmount + '</span>';
+            html += '<div style="display:flex;align-items:center;padding:10px;background:rgba(255,255,255,0.1);border-radius:8px;margin-bottom:8px;gap:10px;">';
+            html += '<div style="flex:1;overflow:hidden;">';
+            html += '<div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + acc.accountName + '</div>';
+            html += '<div style="font-size:11px;opacity:0.8;">' + acc.accountNumber + '</div>';
+            html += '</div>';
+            html += '<div style="color:#fbbf24;font-weight:600;font-size:13px;white-space:nowrap;">KSh ' + acc.inputAmount + '</div>';
             html += '</div>';
         });
         

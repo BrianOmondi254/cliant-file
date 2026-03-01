@@ -32,6 +32,18 @@
             border-radius: 22px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
             overflow: hidden; animation: slideUp 0.5s ease-out;
         }
+        @media (max-width: 480px) {
+            body {
+                padding: 0;
+            }
+            .main-container {
+                width: 100%;
+                max-width: 100%;
+                border-radius: 0;
+                min-height: 100vh;
+                box-shadow: none;
+            }
+        }
         @keyframes slideUp {
             from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
