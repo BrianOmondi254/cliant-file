@@ -3,412 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create Agent - Modern Interface</title>
-  <!-- Importing a clean font -->
+  <title>Dealer Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Importing Remix Icon for beautiful icons -->
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-  
   <style>
     :root {
-      --primary-color: #4F46E5; /* Indigo */
-      --primary-hover: #4338ca;
-      --success-color: #10B981; /* Emerald */
-      --bg-color: #F3F4F6;
-      --card-bg: #ffffff;
-      --text-main: #1F2937;
-      --text-muted: #6B7280;
-      --border-color: #E5E7EB;
-      --danger-color: #EF4444;
-      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      --primary-color: #0f9d58; --primary-hover: #0b7d46; --success-color: #10B981; --bg-color: #f1f5f9;
+      --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border-color: #E5E7EB;
+      --danger-color: #EF4444; --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     }
-
     body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg-color);
-      background-image: radial-gradient(#E5E7EB 1px, transparent 1px);
-      background-size: 20px 20px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      color: var(--text-main);
+      font-family: 'Inter', sans-serif; background: linear-gradient(160deg,#0f2027,#203a43,#2c5364); display: flex; justify-content: center;
+      align-items: flex-start; min-height: 100vh; margin: 0; padding: 40px 20px; color: var(--text-main);
     }
-
-    /* Card Container */
     .card {
-      background: var(--card-bg);
-      padding: 40px;
-      width: 100%;
-      max-width: 420px;
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.3s ease;
+      background: var(--card-bg); padding: 40px; width: 100%; max-width: 480px; border-radius: 16px;
+      box-shadow: var(--shadow); transition: transform 0.3s ease;
     }
-
-    /* Header Area */
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .header h3 {
-      margin: 10px 0 5px;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .header p {
-      margin: 0;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h3 { margin: 10px 0 5px; font-size: 24px; font-weight: 700; }
+    .header p { margin: 0; color: var(--text-muted); font-size: 14px; }
     .icon-circle {
-      width: 50px;
-      height: 50px;
-      background: #EEF2FF;
-      color: var(--primary-color);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 10px;
-      font-size: 24px;
+      width: 50px; height: 50px; background: #EEF2FF; color: var(--primary-color); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 24px;
     }
-
-    /* Form Elements */
-    .form-group {
-      margin-bottom: 20px;
-      position: relative;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .input-wrapper {
-      position: relative;
-    }
-
-    .input-wrapper i:not(.toggle-pin) {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 18px;
-    }
-
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+    .input-wrapper { position: relative; }
+    .input-wrapper i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 18px; }
     input {
-      width: 100%;
-      padding: 12px 42px 12px 42px; /* Symmetrical padding for icons on both sides */
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      font-size: 16px;
-      box-sizing: border-box;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      font-family: inherit;
+      width: 100%; padding: 12px 12px 12px 42px; border: 2px solid var(--border-color); border-radius: 8px;
+      font-size: 16px; box-sizing: border-box; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
     }
-
-    input:focus {
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-    }
-
-    input.error {
-      border-color: var(--danger-color);
-    }
-
-    /* Buttons */
+    input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
     .btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
+      width: 100%; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;
+      font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
     }
-
-    .btn-primary {
-      background: var(--primary-color);
-      color: white;
-      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    .btn-primary { background: var(--primary-color); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: 500; }
+    .alert.error { background: #FEE2E2; color: #B91C1C; }
+    .alert.success { background: #D1FAE5; color: #065F46; }
+    .dashboard-container { max-width: 800px; width: 100%; }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .agent-list { list-style: none; padding: 0; margin: 0; }
+    .agent-item {
+      display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px;
+      border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-    }
-
-    .btn-secondary {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border-color);
-      margin-top: 10px;
-    }
-
-    .btn-secondary:hover {
-      background: #F9FAFB;
-      color: var(--text-main);
-    }
-
-    /* Preview Section */
-    .preview-card {
-      background: #F8FAFC;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
-      text-align: left;
-    }
-
-    .preview-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .preview-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-
-    .preview-item:first-child {
-      padding-top: 0;
-    }
-
-    .preview-label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .preview-value {
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    /* Success State */
-    .success-state {
-      text-align: center;
-      padding: 20px 0;
-    }
-
-    .success-icon {
-      font-size: 64px;
-      color: var(--success-color);
-      margin-bottom: 20px;
-      display: block;
-      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .success-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text-main);
-      margin-bottom: 8px;
-    }
-
-    .success-msg {
-      color: var(--text-muted);
-      margin-bottom: 30px;
-    }
-
-    /* Utility Classes */
-    .hidden {
-      display: none !important;
-    }
-
-    .error-msg {
-      color: var(--danger-color);
-      font-size: 13px;
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    /* Loading Spinner */
-    .spinner {
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      border-top-color: white;
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes popIn {
-      from { transform: scale(0); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    /* Responsive */
-    @media (max-width: 480px) {
-      .card {
-        margin: 20px;
-        padding: 25px;
-      }
-    }
+    .agent-info h4 { margin: 0 0 5px; font-size: 16px; }
+    .agent-info p { margin: 0; font-size: 13px; color: var(--text-muted); }
   </style>
 </head>
 <body>
 
-<div class="container">
-    <% if (locals.success) { %>
-        <div class="alert success"><%= success %></div>
+<% if (step === 'not-dealer') { %>
+  <div class="card">
+    <div class="header">
+      <div class="icon-circle" style="background: #FEF2F2; color: var(--danger-color);"><i class="ri-error-warning-line"></i></div>
+      <h3>Access Denied</h3>
+      <p>You are not registered as a dealer.</p>
+    </div>
+    <% if (message && message.text) { %>
+      <div class="alert error"><%= message.text %></div>
     <% } %>
-    
-    <% if (locals.error) { %>
-        <div class="alert error"><%= error %></div>
-    <% } %>
-
-      <form id="checkForm" action="/dealer/preview" method="POST">
-        <div class="form-group">
-          <label for="phoneNumber">Phone Number</label>
-          <div class="input-wrapper">
-            <i class="ri-phone-line"></i>
-            <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="e.g. 0700 123 456" required>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary" id="checkBtn">
-          <span>Check Account</span>
-          <i class="ri-arrow-right-line"></i>
-        </button>
-      </form>
-    </div>
-
-    <!-- STEP 2: PREVIEW DETAILS -->
-    <div id="step-preview" class="<%= preview ? '' : 'hidden' %>">
-      <div class="header">
-        <div class="icon-circle">
-          <i class="ri-user-search-line"></i>
-        </div>
-        <h3>Confirm Details</h3>
-        <p>Review agent information below</p>
-      </div>
-
-      <% if (preview) { %>
-      <div class="preview-card">
-        <div class="preview-item">
-          <span class="preview-label">
-            <i class="ri-user-line"></i> Full Name
-          </span>
-          <span class="preview-value"><%= preview.name %></span>
-        </div>
-        <div class="preview-item">
-          <span class="preview-label">
-            <i class="ri-map-pin-line"></i> County
-          </span>
-          <span class="preview-value"><%= preview.county %></span>
-        </div>
-        <div class="preview-item">
-          <span class="preview-label">
-            <i class="ri-map-pin-2-line"></i> Constituency
-          </span>
-          <span class="preview-value"><%= preview.constituency %></span>
-        </div>
-        <div class="preview-item">
-          <span class="preview-label">
-            <i class="ri-map-pin-range-line"></i> Ward
-          </span>
-          <span class="preview-value"><%= preview.ward %></span>
-        </div>
-        <div class="preview-item">
-          <span class="preview-label">
-            <i class="ri-smartphone-line"></i> Phone
-          </span>
-          <span class="preview-value"><%= preview.phoneNumber %></span>
-        </div>
-      </div>
-
-      <form id="createForm" action="/dealer/create-pin" method="POST">
-        <input type="hidden" name="phoneNumber" value="<%= preview.phoneNumber %>">
-        <div class="form-group">
-          <label for="pin">Create PIN (4 digits)</label>
-          <div class="input-wrapper">
-            <i class="ri-lock-line"></i>
-            <input type="password" id="pin" name="pin" placeholder="Enter 4‑digit PIN" required minlength="4" maxlength="4" pattern="\d{4}" />
-            <i class="ri-eye-line toggle-pin" onclick="toggleDealerPin()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted);"></i>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary" id="createBtn">
-          <i class="ri-check-line"></i> Save PIN
-        </button>
-      </form>
-      <script>
-        function toggleDealerPin() {
-          const pinInput = document.getElementById('pin');
-          const icon = document.querySelector('.toggle-pin');
-          if (pinInput.type === 'password') {
-            pinInput.type = 'text';
-            icon.classList.remove('ri-eye-line');
-            icon.classList.add('ri-eye-off-line');
-          } else {
-            pinInput.type = 'password';
-            icon.classList.remove('ri-eye-off-line');
-            icon.classList.add('ri-eye-line');
-          }
-        }
-      </script>
-      <% } %>
-      <button class="btn btn-secondary" onclick="resetApp()">
-        <i class="ri-arrow-left-line"></i> Cancel / Back
-      </button>
-    </div>
-
-    <!-- STEP 3: SUCCESS -->
-    <div id="step-success" class="<%= success ? '' : 'hidden' %>">
-      <div class="success-state">
-        <i class="ri-checkbox-circle-fill success-icon"></i>
-        <div class="success-title">Agent Created!</div>
-        <p class="success-msg"><%= success %></p>
-        
-        <button class="btn btn-primary" onclick="resetApp()">
-          <i class="ri-add-line"></i> Create Another
-        </button>
-        <button class="btn btn-secondary" onclick="window.location.href='/personal/myaccount'">
-          <i class="ri-dashboard-line"></i> Go to Dashboard
-        </button>
-      </div>
-    </div>
-
   </div>
+<% } %>
 
-  <script>
-    // 3. Reset Function (Back / Create Another)
-    function resetApp() {
-      window.location.href = '/dealer';
-    }
+<% if (step === 'create-pin') { %>
+  <div class="card">
+    <div class="header">
+      <div class="icon-circle"><i class="ri-lock-password-line"></i></div>
+      <h3>Create Dealer PIN</h3>
+      <p>Welcome, <%= user.firstName %>. Set a PIN to secure your dealer account.</p>
+    </div>
+    <form action="/dealer/create-pin" method="POST">
+      <div class="form-group">
+        <label for="pin">New 4-Digit PIN</label>
+        <div class="input-wrapper">
+          <i class="ri-lock-line"></i>
+          <input type="password" id="pin" name="pin" placeholder="****" required minlength="4" maxlength="4" pattern="\d{4}" inputmode="numeric" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="confirmPin">Confirm PIN</label>
+        <div class="input-wrapper">
+          <i class="ri-lock-line"></i>
+          <input type="password" id="confirmPin" name="confirmPin" placeholder="****" required minlength="4" maxlength="4" pattern="\d{4}" inputmode="numeric" autocomplete="new-password">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="ri-check-line"></i> Save and Continue
+      </button>
+    </form>
+  </div>
+<% } %>
 
-  </script>
+<% if (step === 'enter-pin') { %>
+  <div class="card">
+    <div class="header">
+      <div class="icon-circle"><i class="ri-shield-keyhole-line"></i></div>
+      <h3>Dealer Verification</h3>
+      <p>Welcome back, <%= user.firstName %>. Please enter your PIN.</p>
+    </div>
+    <% if (message && message.text) { %>
+      <div class="alert <%= message.type %>"><%= message.text %></div>
+    <% } %>
+    <form action="/dealer/login" method="POST">
+      <div class="form-group">
+        <label for="pin">Your 4-Digit PIN</label>
+        <div class="input-wrapper">
+          <i class="ri-lock-line"></i>
+          <input type="password" id="pin" name="pin" placeholder="****" required minlength="4" maxlength="4" pattern="\d{4}" inputmode="numeric" autocomplete="current-password">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="ri-arrow-right-line"></i> Access Dashboard
+      </button>
+    </form>
+  </div>
+<% } %>
+
+<% if (step === 'dashboard') { %>
+  <div class="card dashboard-container">
+    <div style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 30px 20px; color: white; margin: -40px -40px 25px -40px; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); border-radius: 16px 16px 0 0;">
+        <h1 style="font-size: 26px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
+        <p style="font-size: 10px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-top: 4px;">Dealer Business Portal</p>
+        <div style="position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: rgba(255, 255, 255, 0.1); border-radius: 50%;"></div>
+        <div style="position: absolute; bottom: -30%; left: -10%; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.05); border-radius: 50%;"></div>
+    </div>
+    <div class="dashboard-header">
+      <div>
+        <h3>Dealer Dashboard</h3>
+        <p>Welcome, <%= dealer.name || user.firstName %>.</p>
+      </div>
+      <a href="/logout" class="btn" style="width: auto; background: var(--danger-color); color: white;"><i class="ri-logout-box-line"></i> Logout</a>
+    </div>
+
+    <h4>Your Agents (<%= agents.length %>)</h4>
+    <ul class="agent-list">
+      <% if (agents.length > 0) { %>
+        <% agents.forEach(agent => { %>
+          <li class="agent-item">
+            <div class="agent-info">
+              <h4><%= agent.name %></h4>
+              <p><%= agent.phoneNumber %> | <%= agent.ward %>, <%= agent.constituency %></p>
+            </div>
+            <i class="ri-user-line" style="color: var(--primary-color);"></i>
+          </li>
+        <% }) %>
+      <% } else { %>
+        <li class="agent-item">
+          <p>You have not created any agents yet.</p>
+        </li>
+      <% } %>
+    </ul>
+    
+    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 30px 0;">
+
+    <div>
+      <h3>Create New Agent</h3>
+      <!-- Agent creation form can be placed here -->
+      <p style="color: var(--text-muted);">The UI for creating a new agent can be integrated here as a new component.</p>
+    </div>
+  </div>
+<% } %>
+
 </body>
 </html>

@@ -17,8 +17,8 @@
           "agentProcessed": "0740001141",
           "phase": 3,
           "totalProposedMembers": 15,
-          "constitutionStartKey": "5907",
-          "constitutionKeyGeneratedAt": "2026-02-08T20:07:42.359Z",
+          "constitutionStartKey": "$2b$10$bvKXSzXRMuhkXGLUDJ0Vq.QQ7VUMk9g/mBh4174Emcy3A23dL.fgC",
+          "constitutionKeyGeneratedAt": "2026-03-03T20:42:39.756Z",
           "constitutionKeySetByAgentAt": "2026-02-22T19:48:05.417Z",
           "principles": {
             "otherContributions": [
@@ -179,7 +179,25 @@
             "index": "10",
             "phone": "0749001141",
             "id": "35951457"
-          }
+          },
+          "constitutionKeySetBy": "0741001141",
+          "messages": [
+            {
+              "to": "0700051102",
+              "type": "security_update",
+              "content": "[Security Update] Your group \"kinda eteko\" is now secured. The new Constitution Key is: 1234. Set by: brian  jimbo (3/3/2026, 11:42:39 PM).",
+              "timestamp": "2026-03-03T20:42:39.986Z"
+            },
+            {
+              "broadcast": true,
+              "roles": [
+                "trustee"
+              ],
+              "type": "security_alert",
+              "content": "[Security Alert] A new Secure Group PIN and Security Key have been established for \"kinda eteko\" by Chairperson brian  jimbo. Keys have been updated securely. (3/3/2026, 11:42:39 PM)",
+              "timestamp": "2026-03-03T20:42:39.986Z"
+            }
+          ]
         }
       ]
     }

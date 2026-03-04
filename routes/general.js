@@ -599,7 +599,7 @@ router.get("/users", (req, res) => {
 });
 
 // POST /general/verify-pin
-router.post("/verify-pin", (req, res) => {
+router.post("/verify-pin", async (req, res) => {
   const { groupName, pin } = req.body;
   const userPhone = req.session?.user?.phoneNumber;
 
@@ -623,24 +623,36 @@ router.post("/verify-pin", (req, res) => {
     return res.json({ success: false, message: "Group not found" });
   }
 
-  const storedPin = group.constitutionStartKey;
-  if (storedPin && String(storedPin).trim() === String(pin).trim()) {
-    return res.json({ 
-      success: true, 
-      verified: true,
-      message: "PIN verified successfully" 
-    });
-  } else {
-    return res.json({ 
-      success: false, 
-      verified: false,
-      message: "Invalid PIN." 
-    });
+  const bcrypt = require("bcrypt");
+  const storedPin = group.constitutionStartKey; // This is now a Bcrypt hash
+
+  if (!storedPin) {
+    return res.json({ success: false, message: "PIN not set for this group." });
+  }
+
+  try {
+    const isValid = await bcrypt.compare(pin, storedPin);
+    if (isValid) {
+      return res.json({ 
+        success: true, 
+        verified: true,
+        message: "PIN verified successfully" 
+      });
+    } else {
+      return res.json({ 
+        success: false, 
+        verified: false,
+        message: "Invalid PIN." 
+      });
+    }
+  } catch (err) {
+    console.error("Bcrypt error:", err);
+    return res.json({ success: false, message: "Verification error." });
   }
 });
 
 // POST /general/generate-key
-router.post("/generate-key", (req, res) => {
+router.post("/generate-key", async (req, res) => {
   const { groupName, customKey } = req.body;
   const userPhone = req.session?.user?.phoneNumber;
 
@@ -678,12 +690,15 @@ router.post("/generate-key", (req, res) => {
     return res.json({ success: false, message: "Group not found" });
   }
 
+  // Auth check: Is current user a Trustee or Official?
   let isAuthorized = false;
+  let currentUserRole = '';
   for (const key in targetGroup) {
     if (key.startsWith("trustee_") || key.startsWith("official_")) {
       const info = targetGroup[key];
       if (info && String(info.phone).trim() === String(userPhone).trim()) {
         isAuthorized = true;
+        currentUserRole = info.type;
         break;
       }
     }
@@ -693,27 +708,64 @@ router.post("/generate-key", (req, res) => {
     return res.json({ success: false, message: "You are not authorized" });
   }
 
+  const bcrypt = require("bcrypt");
+  const saltRounds = 10;
+
   let newKey;
+  let isCustom = false;
   if (customKey && customKey.length >= 4 && customKey.length <= 6) {
     newKey = customKey;
+    isCustom = true;
   } else {
     newKey = Math.floor(100000 + Math.random() * 900000).toString();
   }
   
   const chairpersonPhone = targetGroup.phone || targetGroup.chairpersonalphonenumber;
+  const chairpersonName = `${targetGroup.firstName} ${targetGroup.lastName}`;
 
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].constitutionStartKey = newKey;
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].constitutionKeyGeneratedAt = new Date().toISOString();
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].constitutionKeySetByAgentAt = new Date().toISOString();
+  // Hash the key for the database
+  const hashedKey = await bcrypt.hash(newKey, saltRounds);
+
+  // Update group data
+  const groupUpdate = accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx];
+  groupUpdate.constitutionStartKey = hashedKey; // Store Bcrypt hash
+  groupUpdate.constitutionKeyGeneratedAt = new Date().toISOString();
+  groupUpdate.constitutionKeySetBy = userPhone;
+  
+  // Create structured notifications (stored in a 'messages' array on the group)
+  if (!groupUpdate.messages) groupUpdate.messages = [];
+  
+  const timestamp = new Date().toLocaleString();
+  
+  // 1. Message for Chairperson (Full Info)
+  const chairMsg = {
+    to: chairpersonPhone,
+    type: 'security_update',
+    content: `[Security Update] Your group "${groupName}" is now secured. The new Constitution Key is: ${newKey}. Set by: ${chairpersonName} (${timestamp}).`,
+    timestamp: new Date().toISOString()
+  };
+  
+  // 2. Message for Trustees (Notification only)
+  const trusteeMsg = {
+    broadcast: true,
+    roles: ['trustee'],
+    type: 'security_alert',
+    content: `[Security Alert] A new Secure Group PIN and Security Key have been established for "${groupName}" by Chairperson ${chairpersonName}. Keys have been updated securely. (${timestamp})`,
+    timestamp: new Date().toISOString()
+  };
+  
+  groupUpdate.messages.push(chairMsg, trusteeMsg);
   
   writeJSON(generalFile, accounts);
 
-  console.log(`[SMS] Sending key ${newKey} to chairperson ${chairpersonPhone}`);
+  // In a real app, you would send SMS here
+  console.log(`[SMS-CHAIR] Sending to ${chairpersonPhone}: Key is ${newKey}`);
+  console.log(`[SMS-TRUSTEES] Notifying trustees that ${chairpersonName} updated security.`);
 
   res.json({ 
     success: true, 
-    message: "Key generated successfully",
-    newKey: newKey,
+    message: isCustom ? "PIN created successfully" : "New Security Key generated",
+    newKey: isCustom ? "****" : newKey, // Hide custom PIN in response
     chairpersonPhone: chairpersonPhone,
     sent: true
   });

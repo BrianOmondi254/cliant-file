@@ -37,6 +37,13 @@ body {
   padding: 20px; color: white; position: relative;
   overflow: hidden; text-align: center;
 }
+.back-arrow {
+  position: absolute; top: 15px; left: 15px; color: white; font-size: 1.2rem;
+  cursor: pointer; z-index: 10; transition: transform 0.2s ease;
+  padding: 5px; display: flex; align-items: center; justify-content: center;
+  text-decoration: none;
+}
+.back-arrow:hover { transform: translateX(-3px); opacity: 0.8; }
 .header-section::before {
   content: ''; position: absolute; top: -50%; right: -20%;
   width: 300px; height: 300px; background: rgba(255, 255, 255, 0.1);
@@ -148,6 +155,9 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
 
 <div class="main-container">
   <div class="header-section">
+    <a href="/personal" class="back-arrow">
+      <i class="fas fa-arrow-left"></i>
+    </a>
     <div class="header-content">
       <h2><i class="fas fa-users-cog"></i> Group Account</h2>
       <p>Manage your savings</p>
@@ -725,26 +735,28 @@ async function verifyGroupPin() {
   const msg = document.getElementById('pinVerifyMsg');
   
   if (!pin || pin.length < 4) {
-    msg.textContent = "Please enter a valid PIN/key";
+    msg.textContent = "Please enter a valid 4-6 digit Constitution Key.";
     return;
   }
   
-  // Find group with matching PIN
-  const groups = userRoleData.groups || [];
-  let matchedGroup = null;
-  
-  for (const group of groups) {
-    if (group.constitutionStartKey && group.constitutionStartKey === pin) {
-      matchedGroup = group;
-      break;
+  try {
+    const res = await fetch("/general/verify-pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ groupName: selectedGroupForPin, pin: pin })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      document.getElementById('pinVerification').classList.add('hidden');
+      // Find the group object to pass to view
+      const group = userRoleData.groups.find(g => g.groupName === selectedGroupForPin);
+      showGroupAccountView(group);
+    } else {
+      msg.textContent = data.message || "Invalid Constitution Key.";
     }
-  }
-  
-  if (matchedGroup) {
-    document.getElementById('pinVerification').classList.add('hidden');
-    showGroupAccountView(matchedGroup);
-  } else {
-    msg.textContent = "Invalid PIN. You can create a new PIN or generate a new key.";
+  } catch (err) {
+    msg.textContent = "Error verifying key.";
   }
 }
 
@@ -766,7 +778,7 @@ async function createNewPin() {
   const msg = document.getElementById('createPinMsg');
   
   if (!newPin || newPin.length < 4) {
-    msg.textContent = "Please enter a valid 4-6 digit PIN";
+    msg.textContent = "Please enter a valid 4-6 digit Constitution Key.";
     return;
   }
   
@@ -775,7 +787,6 @@ async function createNewPin() {
     return;
   }
   
-  // Get the selected group
   const groups = userRoleData.groups || [];
   const groupWithAccess = groups.find(g => g.groupName === selectedGroupForPin);
   
@@ -794,11 +805,13 @@ async function createNewPin() {
     
     if (data.success) {
       msg.style.color = 'var(--primary)';
-      msg.innerHTML = '<i class="fas fa-check-circle"></i> PIN created successfully!';
+      msg.innerHTML = '<i class="fas fa-check-circle"></i> PIN set and Security Key generated!';
       
       setTimeout(() => {
         document.getElementById('createPinSection').classList.add('hidden');
-        loadUserRoleData();
+        // Update local data so it knows PIN is now set
+        groupWithAccess.constitutionStartKey = "****"; 
+        showGroupAccountView(groupWithAccess);
       }, 1500);
     } else {
       msg.style.color = 'red';
@@ -855,17 +868,32 @@ function showGroupAccountView(group) {
   const roleColor = group.role === 'trustee' ? '#7c3aed' : '#0891b2';
   
   container.innerHTML = `
-    <div style="background: linear-gradient(135deg, #7c3aed, #a78bfa); padding: 20px; border-radius: 12px; color: white; margin-bottom: 15px; text-align: center;">
+    <div style="background: linear-gradient(135deg, #7c3aed, #a78bfa); padding: 20px; border-radius: 12px; color: white; margin-bottom: 20px; text-align: center; box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);">
       <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px;"></i>
-      <h3 style="color: white; margin: 0 0 5px;">${group.groupName}</h3>
-      <p style="margin: 0; opacity: 0.9; font-size: 0.85rem;">
+      <h3 style="color: white; margin: 0 0 5px; font-size: 1.25rem;">${group.groupName}</h3>
+      <p style="margin: 0; opacity: 0.9; font-size: 0.85rem; font-weight: 500;">
         <i class="fas ${roleIcon}"></i> ${group.role.toUpperCase()}
-        ${group.accountNumber ? '<br>Account: ' + group.accountNumber : ''}
+        ${group.accountNumber ? '<br><span style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:4px; font-family:monospace; margin-top:5px; display:inline-block;">A/C: ' + group.accountNumber + '</span>' : ''}
       </p>
     </div>
-    <div style="text-align: center; padding: 20px;">
-      <i class="fas fa-cog fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
-      <p style="margin-top: 15px; color: var(--text-muted);">Group account management coming soon...</p>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+      <button onclick="window.location.href='/personal/send-money?group=' + encodeURIComponent('${group.groupName}')" style="margin-top: 0; flex-direction: column; height: 80px; background: #fff; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem;">
+        <i class="fas fa-paper-plane" style="font-size: 1.2rem; color: var(--primary); margin-bottom: 5px;"></i>
+        Deposit
+      </button>
+      <button onclick="alert('Withdrawal coming soon')" style="margin-top: 0; flex-direction: column; height: 80px; background: #fff; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem;">
+        <i class="fas fa-hand-holding-dollar" style="font-size: 1.2rem; color: #f59e0b; margin-bottom: 5px;"></i>
+        Withdraw
+      </button>
+      <button onclick="alert('Statement coming soon')" style="margin-top: 0; flex-direction: column; height: 80px; background: #fff; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem;">
+        <i class="fas fa-file-invoice-dollar" style="font-size: 1.2rem; color: #0891b2; margin-bottom: 5px;"></i>
+        Statement
+      </button>
+      <button onclick="alert('Member list coming soon')" style="margin-top: 0; flex-direction: column; height: 80px; background: #fff; color: var(--text); border: 1px solid var(--border); font-size: 0.8rem;">
+        <i class="fas fa-user-group" style="font-size: 1.2rem; color: #7c3aed; margin-bottom: 5px;"></i>
+        Members
+      </button>
     </div>
   `;
 }

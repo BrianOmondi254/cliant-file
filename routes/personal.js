@@ -164,11 +164,33 @@ router.get("/", (req, res) => {
               userIsTrusteeInThisGroup = true;
           }
 
-          // 3. Collect Constitution Key ONLY if user is a TRUSTEE of this group
-          if (group.constitutionStartKey && userIsTrusteeInThisGroup) {
+          // 3. Collect Security Messages
+          if (group.messages && Array.isArray(group.messages)) {
+              group.messages.forEach(msg => {
+                  if (msg.to && norm(msg.to) === norm(phone)) {
+                      constitutionKeys.push({
+                          groupName: group.groupName,
+                          type: msg.type,
+                          content: msg.content,
+                          isNew: true
+                      });
+                  } else if (msg.broadcast && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
+                      constitutionKeys.push({
+                          groupName: group.groupName,
+                          type: msg.type,
+                          content: msg.content,
+                          isNew: true
+                      });
+                  }
+              });
+          }
+
+          // Legacy support for plain-text initial keys
+          if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
               constitutionKeys.push({
                   groupName: group.groupName,
-                  key: group.constitutionStartKey
+                  key: group.constitutionStartKey,
+                  type: 'legacy'
               });
           }
       }
@@ -341,11 +363,11 @@ router.get("/group/:groupName", (req, res) => {
 
     const group = allGroups.find(g => g.groupName === groupName);
 
-    let userRole = 'member'; // Default to member if found in group
+    let userRole = 'member';
     const userPhone = norm(req.session.user.phoneNumber);
 
     if (group) {
-      // Determine specific role
+      // 1. Determine User's Role
       let found = false;
       for (const key in group) {
         const item = group[key];
@@ -355,17 +377,88 @@ router.get("/group/:groupName", (req, res) => {
            else if (key.startsWith('official_') && userRole !== 'trustee') userRole = 'official';
         }
       }
-      // Chairperson is treated as trustee
       if (group.chairpersonalphonenumber && norm(group.chairpersonalphonenumber) === userPhone) {
           userRole = 'trustee';
       }
 
+      // 2. Augment group object with data for the view
+      // Check for PIN (Secure Bcrypt Hash)
+      group.pinIsSet = !!group.constitutionStartKey && String(group.constitutionStartKey).startsWith('$2');
+
+      // Load user names for fallback
+      const usersFile = path.join(__dirname, "../data.json");
+      const users = readJSON(usersFile, []);
+      const getUserName = (phone) => {
+          const u = users.find(user => norm(user.phoneNumber) === norm(phone));
+          return u ? `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim() : null;
+      };
+
+      // Consolidate members list
+      group.members = [];
+      const memberKeys = Object.keys(group).filter(k => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_'));
+      
+      memberKeys.forEach(key => {
+          const item = group[key];
+          if (item && typeof item === 'object' && item.phone) {
+              const name = item.name || getUserName(item.phone) || "Unknown Name";
+              group.members.push({
+                  name: name,
+                  phone: item.phone,
+                  membershipNumber: key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+              });
+          }
+      });
+
+      // Add chairperson if not already in members list
+      if (group.chairpersonalphonenumber) {
+          const chairName = (group.firstName ? `${group.firstName} ${group.secondName} ${group.lastName}` : getUserName(group.chairpersonalphonenumber)) || "Chairperson";
+          if (!group.members.some(m => norm(m.phone) === norm(group.chairpersonalphonenumber))) {
+              group.members.unshift({
+                  name: chairName,
+                  phone: group.chairpersonalphonenumber,
+                  membershipNumber: 'Chairperson'
+              });
+          }
+      }
+
+      // 3. Dynamic Constitution Generation
+      if (group.principles) {
+          const p = group.principles;
+          const points = [];
+          
+          points.push(`This group shall be known as ${group.groupName}, located in ${group.ward} Ward, ${group.constituency} Constituency, ${group.county} County.`);
+          
+          if (p.intervals) {
+              points.push(`Members shall meet ${p.intervals.frequency} on ${p.intervals.period.charAt(0).toUpperCase() + p.intervals.period.slice(1)} to conduct group business.`);
+              points.push(`The group savings cycle is established for a duration of ${p.intervals.endSavingPeriod || '1 year'}.`);
+          }
+          
+          if (p.otherContributions && p.otherContributions.length > 0) {
+              const contribs = p.otherContributions.map(c => `${c.accountName} (Account ${c.accountNumber}) at KES ${c.expectedAmount}`).join(', ');
+              points.push(`Standard contributions shall include: ${contribs}.`);
+          }
+          
+          if (p.loans) {
+              points.push(`Members qualify for loans after ${p.loans.duration ? p.loans.duration.days : '30'} days of active participation.`);
+              points.push(`Loans shall attract an interest rate of ${p.loans.interestAndLimits ? p.loans.interestAndLimits.interestRate : '0'}% per period.`);
+              points.push(`The maximum loan amount is set at x${p.loans.interestAndLimits ? p.loans.interestAndLimits.limitMultiplier : '3'} of a member's total savings.`);
+          }
+          
+          if (p.governance) {
+              points.push(`A quorum of ${p.governance.fastNotificationThreshold || '60'}% is required for fast-tracked constitutional changes.`);
+              points.push(`Major account edits and member removals require a consensus threshold of ${p.governance.editAccountThreshold || '75'}%.`);
+          }
+
+          group.constitutionPoints = points;
+      }
+      
       res.render("group-details", {
         user: req.session.user,
         userRole: userRole,
-        group: group,
+        group: group, // Pass the augmented group object
         alert: null
       });
+
     } else {
       res.render("myaccount", {
         user: req.session.user,

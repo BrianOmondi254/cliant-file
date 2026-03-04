@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 <!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
   * {
@@ -17,8 +19,8 @@
   }
 
   body {
-    font-family: 'Poppins', sans-serif;
-    background: #f5f7fa;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(160deg,#0f2027,#203a43,#2c5364);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -28,18 +30,28 @@
 
   .box {
     background: #ffffff;
-    padding: 30px;
+    padding: 0;
     width: 100%;
     max-width: 420px;
-    border-radius: 20px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    border-radius: 28px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.35);
     position: relative;
-    transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .box > div:not(.unified-header):not(.dashboard-sidebar):not(.dashboard-main-content):not(.message) {
+    padding: 35px 25px;
+  }
+
+  .message {
+    margin: 15px 25px;
+    padding: 12px;
   }
 
   .box.dashboard-wide {
     max-width: 480px;
-    padding: 25px;
+    padding: 0;
   }
 
   @media (min-width: 768px) {
@@ -63,13 +75,13 @@
     display: flex;
     justify-content: space-around;
     align-items: center;
-    background: #ffffff;
+    background: #022c22;
     padding: 12px 5px;
     border-radius: 12px;
-    margin-top: 10px;
+    margin-top: -15px;
     margin-bottom: 25px;
-    border: 1px solid #edf2f7;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(15, 157, 88, 0.3);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.2);
     position: relative;
     overflow: hidden;
   }
@@ -77,9 +89,10 @@
   .nav-glider {
     position: absolute;
     bottom: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #0288d1, #03a9f4);
-    border-radius: 4px 4px 0 0;
+    height: 3px;
+    background: linear-gradient(90deg, #00f2fe, #4facfe);
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+    border-radius: 3px 3px 0 0;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 10;
   }
@@ -100,14 +113,15 @@
   }
 
   .top-nav-container.active {
-    color: #0288d1;
+    color: #00f2fe;
+    text-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
   }
 
   .nav-circle {
     width: 38px;
     height: 38px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -115,6 +129,7 @@
     margin-bottom: 6px;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .top-nav-container.active .nav-circle {
@@ -137,6 +152,19 @@
     text-transform: uppercase;
     letter-spacing: 0.8px;
     transition: all 0.3s ease;
+    position: relative;
+    padding-bottom: 4px;
+  }
+  
+  .top-nav-container:hover span::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(15, 157, 88, 0.2);
+    border-radius: 2px;
   }
 
   /* Custom Header Section */
@@ -152,16 +180,16 @@
   .brand-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
-    color: #008080;
+    gap: 8px;
+    color: #0f9d58;
     font-weight: 800;
-    font-size: 18px;
+    font-size: 14px;
     letter-spacing: -0.5px;
   }
 
   .brand-logo i {
-    font-size: 22px;
-    color: #5f9ea0;
+    font-size: 18px;
+    color: #0f9d58;
   }
 
   .header-actions {
@@ -173,19 +201,19 @@
   .user-badge {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    gap: 6px;
+    padding: 4px 10px;
     background: #f1f5f9;
     border-radius: 20px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     color: #475569;
     cursor: default;
   }
 
   .logout-link {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,6 +222,7 @@
     background: #fef2f2;
     transition: all 0.2s ease;
     text-decoration: none;
+    font-size: 11px;
   }
 
   .logout-link:hover {
@@ -204,17 +233,22 @@
   h2, h3 {
     text-align: center;
     margin-bottom: 24px;
-    color: #2c3e50;
-    font-weight: 600;
-    font-size: 24px;
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.5px;
   }
 
   .agent-name {
     text-align: center;
-    font-size: 16px;
-    color: #34495e;
-    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 25px;
     font-weight: 500;
+    background: #f8fafc;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
   }
 
   /* Input Groups with Icons */
@@ -241,24 +275,25 @@
   
   input, select {
     width: 100%;
-    padding: 13px 42px 13px 42px; /* Sufficient padding for icons on both sides */
-    border-radius: 8px;
-    border: 1.5px solid #dfe6e9;
-    font-size: 14px;
-    font-family: 'Poppins', sans-serif;
+    padding: 12px 42px 12px 42px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
     background: #ffffff;
-    color: #2c3e50;
+    color: #1e293b;
     transition: all 0.3s ease;
+    font-weight: 500;
   }
 
   input:focus, select:focus {
-    border-color: #5f9ea0;
-    box-shadow: 0 0 0 3px rgba(95, 158, 160, 0.1);
+    border-color: #0f9d58;
+    box-shadow: 0 0 0 4px rgba(15, 157, 88, 0.15);
     outline: none;
   }
 
   input:focus + i:not(.toggle-password), .input-group:focus-within i:not(.toggle-password) {
-    color: #5f9ea0;
+    color: #0f9d58;
   }
 
   input::placeholder {
@@ -274,22 +309,27 @@
   /* Buttons */
   button {
     width: 100%;
-    padding: 14px;
+    padding: 12px;
     border: none;
-    border-radius: 8px;
-    background: #5f9ea0;
+    border-radius: 10px;
+    background: #0f9d58;
     color: white;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-family: 'Poppins', sans-serif;
-    margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
 
   button:hover {
-    background: #4a7c7e;
-    box-shadow: 0 4px 12px rgba(95, 158, 160, 0.3);
+    background: #0b7d46;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(15, 157, 88, 0.2);
   }
 
   button:active {
@@ -340,19 +380,19 @@
   
   /* Link Styling */
   a {
-    color: #5f9ea0;
+    color: #0f9d58;
     text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s;
+    font-weight: 600;
+    transition: all 0.3s;
     font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   
   a:hover { 
-    color: #4a7c7e;
-  }
-
-  a i {
-    margin-right: 4px;
+    color: #0b7d46;
+    text-decoration: underline;
   }
 
   /* Form sections */
@@ -906,7 +946,29 @@
     background:  #e0f2f1;
   }
   
-  /* Installment options smooth reveal */
+  /* Financial Hub Action Buttons Hover */
+  #agentFinancialHubView button {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  #agentFinancialHubView button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.08) !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  #agentFinancialHubView button:active {
+    transform: translateY(-1px);
+  }
+  
+  #agentFinancialHubView button:hover div[style*="background"] {
+    transform: scale(1.05);
+  }
+
+  #agentFinancialHubView div[style*="background"] {
+    transition: transform 0.3s ease;
+  }
+  
   #installmentOptionsDiv,
   #customRoundsDiv {
     animation: expandDown 0.3s ease;
@@ -1065,6 +1127,28 @@
 <body>
 
 <div class="box <%= step === 'dashboard' ? 'dashboard-wide' : '' %>">
+    <div class="unified-header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 15px 20px; color: white; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <!-- NAVIGATION CONTROLS (TOP) -->
+        <% if (step === 'dashboard') { %>
+        <a href="javascript:void(0)" onclick="appBackNavigation()" title="Back" style="position: absolute; top: 18px; left: 18px; color: white; opacity: 0.8; font-size: 1.1rem; z-index: 100; transition: all 0.3s ease;">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <% } %>
+
+        <a href="/logout" title="Logout" style="position: absolute; top: 18px; right: 18px; color: white; opacity: 0.8; font-size: 1.1rem; z-index: 100; transition: all 0.3s ease;">
+            <i class="fas fa-power-off"></i>
+        </a>
+
+        <h1 style="font-size: 22px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
+        <p style="font-size: 9px; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 2px;">Agent Service Terminal</p>
+        
+        <h2 id="headerRole" style="font-size: 0.85rem; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.25); padding: 10px 25px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-left: -20px; margin-right: -20px; margin-bottom: -15px; background: linear-gradient(135deg, #0f9d58, #34d399); position: relative; z-index: 1;">
+            <i class="fas fa-users-cog" style="font-size: 0.9rem;"></i> <%= step === 'dashboard' ? 'Agent Portal' : 'Agent Access' %>
+        </h2>
+
+        <div style="position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: rgba(255, 255, 255, 0.1); border-radius: 50%;"></div>
+        <div style="position: absolute; bottom: -30%; left: -10%; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.05); border-radius: 50%;"></div>
+    </div>
 
   <!-- MESSAGE -->
   <% if (locals.message) { %>
@@ -1075,68 +1159,67 @@
 
   <!-- NOT AN AGENT -->
   <% if (step === "not-agent") { %>
-    <h3>Access Denied</h3>
-    <p style="text-align:center; color:#555;">
-      Your account is not registered as an agent.
-    </p>
+    <div style="text-align: center; padding: 20px 0;">
+        <i class="fas fa-shield-slash" style="font-size: 48px; color: #ef4444; margin-bottom: 15px; opacity: 0.8;"></i>
+        <h3 style="color: #ef4444; margin-bottom: 10px;">Access Denied</h3>
+        <p style="color: #64748b; font-size: 14px; line-height: 1.6;">
+            Your account is not registered with an active agent license.
+        </p>
+    </div>
   <% } %>
 
-  <!-- CREATE PIN -->
+  <!-- CREATE PIN (AGENT ACCESS) -->
   <% if (step === "create-pin") { %>
-    <h3>Agent Verification</h3>
-    <div class="agent-name">
-      Welcome, <%= agentName || 'Agent' %>
-    </div>
+    <div class="agent-access-content">
+      <h3>Agent Verification</h3>
+      
+      <input type="hidden" id="phoneNumber" value="<%= phoneNumber %>">
 
-    <input type="hidden" id="phoneNumber" value="<%= phoneNumber %>">
-
-    <div class="input-group">
-      <i class="fas fa-lock"></i>
-      <input
-        type="password"
-        id="createPin"
-        placeholder="Create PIN"
-        required>
-      <i class="fas fa-eye toggle-password" onclick="togglePinVisibility('createPin', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #95a5a6; pointer-events: all; z-index: 10;"></i>
-    </div>
-    <div class="input-group">
-      <i class="fas fa-lock"></i>
-      <input
-        type="password"
-        id="confirmPin"
-        placeholder="Confirm PIN"
-        required
-      >
-      <i class="fas fa-eye toggle-password" onclick="togglePinVisibility('confirmPin', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #95a5a6; pointer-events: all; z-index: 10;"></i>
-    </div>
-    <button type="button" onclick="createAgentPin()">Save PIN</button>
-  <% } %>
-
-  <!-- ENTER PIN -->
-  <% if (step === "enter-pin") { %>
-    <h3>Agent Login</h3>
-    <div class="agent-name">
-      Welcome, <%= agentName || 'Agent' %>
-    </div>
-    <form action="/agent/login" method="POST">
       <div class="input-group">
         <i class="fas fa-lock"></i>
-        <input type="password" name="pin" id="loginPin" placeholder="Enter Agent PIN" required>
-        <i class="fas fa-eye toggle-password" onclick="togglePinVisibility('loginPin', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #95a5a6; pointer-events: all; z-index: 10;"></i>
+        <input
+          type="password"
+          id="createPin"
+          placeholder="Create PIN"
+          required>
+        <i class="fas fa-eye toggle-password" onclick="togglePinVisibility('createPin', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; pointer-events: all; z-index: 10;"></i>
       </div>
-      <button type="submit">Verify PIN</button>
-    </form>
-    <div style="text-align: center; margin-top: 15px;">
-      <a href="/logout" style="color: #666; font-size: 14px; text-decoration: none;">
-        <i class="fas fa-arrow-left"></i> Back to Main Login
-      </a>
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input
+          type="password"
+          id="confirmPin"
+          placeholder="Confirm PIN"
+          required
+        >
+        <i class="fas fa-eye toggle-password" onclick="togglePinVisibility('confirmPin', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; pointer-events: all; z-index: 10;"></i>
+      </div>
+      <button type="button" onclick="createAgentPin()">Save PIN</button>
+    </div>
+  <% } %>
+
+  <!-- ENTER PIN (AGENT ACCESS) -->
+  <% if (step === "enter-pin") { %>
+    <div class="agent-access-content">
+      <h3>Agent Login</h3>
+      
+      <form action="/agent/login" method="POST">
+        <div class="input-group">
+          <i class="fas fa-lock"></i>
+          <input type="password" name="pin" id="loginPin" placeholder="Enter Agent PIN" required>
+          <i class="fas fa-eye toggle-password" onclick="togglePinVisibility('loginPin', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; pointer-events: all; z-index: 10;"></i>
+        </div>
+        <button type="submit">Verify PIN</button>
+      </form>
+      </div>
     </div>
   <% } %>
 
 
   <!-- DASHBOARD -->
   <% if (step === "dashboard") { %>
-    <div class="dashboard-sidebar">
+    
+    <div class="dashboard-sidebar" style="padding: 20px;">
       <!-- BRAND HEADER -->
       <div class="agent-brand-header">
         <div class="brand-logo">
@@ -1148,9 +1231,6 @@
             <i class="fas fa-user-circle"></i>
             <span><%= agent ? (agent.name.split(' ')[0]) : 'Agent' %></span>
           </div>
-          <a href="/logout" class="logout-link" title="Logout">
-            <i class="fas fa-power-off"></i>
-          </a>
         </div>
       </div>
 
@@ -1159,7 +1239,7 @@
 
 
         <!-- My Account -->
-        <div id="myAccountNav" class="top-nav-container" onclick="showMyAccount()" title="My Account">
+        <div id="myAccountNav" class="top-nav-container active" onclick="showMyAccount()" title="My Account">
           <div class="nav-circle">
             <i class="fas fa-vault"></i>
           </div>
@@ -1167,7 +1247,7 @@
         </div>
 
         <!-- Groups Account -->
-        <div id="groupsAccountNav" class="top-nav-container active" onclick="showAgentDashboard()" title="Groups Account">
+        <div id="groupsAccountNav" class="top-nav-container" onclick="showAgentDashboard()" title="Groups Account">
           <div class="nav-circle">
             <i class="fas fa-layer-group"></i>
           </div>
@@ -1191,15 +1271,199 @@
         </div>
 
         <!-- BLUE MOVING GLIDER -->
-        <div id="navGlider" class="nav-glider"></div>
+        <div id="navGlider" class="nav-glider" style="height: 3px; border-radius: 3px 3px 0 0;"></div>
       </div>
     </div>
 
     <!-- MAIN CONTENT AREA -->
     <div class="dashboard-main-content">
 
+    <!-- 0. AGENT FINANCIAL HUB VIEW -->
+    <div id="agentFinancialHubView" style="animation: fadeIn 0.4s ease;">
+      <div style="display:flex; gap:12px; margin-bottom:15px; align-items: flex-start;">
+        <!-- Balance Card (Financial Status) -->
+        <div class="dashboard-card" style="flex:1; margin:0; background: linear-gradient(135deg, #0f9d58, #34d399); color:white; border:none; box-shadow:0 8px 20px rgba(15, 157, 88, 0.15); position:relative; overflow:hidden; padding:0;">
+          <div style="padding:12px 15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.05);">
+            <div style="font-size:9px; text-transform:uppercase; font-weight:800; opacity:0.9; letter-spacing:0.5px;">Financial Status</div>
+            <button onclick="toggleFinancialSection('floatContent', this)" style="background:transparent; border:none; color:white; cursor:pointer; padding:5px; margin:0; width:auto; height:auto; box-shadow:none;">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+          <div id="floatContent" class="hidden" style="padding: 0 15px 15px 15px; position:relative; z-index:2; transition: all 0.3s ease;">
+            <div style="font-size:9px; text-transform:uppercase; font-weight:800; opacity:0.9; margin-bottom:4px; margin-top:8px;">Agent Float</div>
+            <div style="display:flex; align-items:baseline; gap:4px;">
+              <span style="font-size:10px; font-weight:600; opacity:0.8;">KES</span>
+              <span style="font-size:20px; font-weight:900; letter-spacing:-0.5px;">125,450.00</span>
+            </div>
+            
+            <div style="margin-top:4px; display:flex; align-items:baseline; gap:4px; opacity:0.85;">
+              <span style="font-size:8px; font-weight:700;">SHARE:</span>
+              <span style="font-size:10px; font-weight:600;">KES 12,240.50</span>
+            </div>
+
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.2); display:flex; align-items:baseline; gap:4px;">
+              <span style="font-size:8px; font-weight:800;">TOTAL:</span>
+              <span style="font-size:13px; font-weight:800;">KES 137,690.50</span>
+            </div>
+            <i class="fas fa-vault" style="position:absolute; right:-10px; bottom:-5px; font-size:40px; opacity:0.1; transform: rotate(-15deg); pointer-events:none;"></i>
+          </div>
+        </div>
+
+        <!-- PERFORMANCE MONITOR SECTION -->
+        <div class="dashboard-card" style="flex:1; margin:0; padding:0; border:1.5px solid #f1f5f9; background:white; overflow:hidden;">
+          <div style="padding:12px 15px; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border-bottom:1px solid #f1f5f9;">
+            <h4 style="font-size:9px; color:#1e293b; font-weight:700; text-transform:uppercase; margin:0; cursor:pointer; color:#0f9d58;" onclick="showDetailedPerformance()">Performance <i class="fas fa-external-link-alt" style="font-size:7px; margin-left:3px;"></i></h4>
+            <button onclick="toggleFinancialSection('perfContent', this)" style="background:transparent; border:none; color:#64748b; cursor:pointer; padding:5px; margin:0; width:auto; height:auto; box-shadow:none;">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+          
+          <div id="perfContent" class="hidden" style="padding:10px; transition: all 0.3s ease;">
+            <!-- Horizontal Weekly List -->
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:5px; padding-bottom:5px; -ms-overflow-style:none; scrollbar-width:none;">
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">M</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">1.2k</div>
+               </div>
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">T</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">2.5k</div>
+               </div>
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">W</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">1.8k</div>
+               </div>
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">T</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">3.1k</div>
+               </div>
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">F</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">2.9k</div>
+               </div>
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">S</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">4.2k</div>
+               </div>
+               <div style="flex:1; text-align:center;">
+                 <div style="font-size:6px; font-weight:700; color:#94a3b8; text-transform:uppercase;">S</div>
+                 <div style="font-size:8px; font-weight:800; color:#1e293b; margin-top:1px;">3.8k</div>
+               </div>
+            </div>
+            <div style="margin-top:6px; text-align:right;">
+               <span style="font-size:7px; font-weight:800; color:#0f9d58; text-transform:uppercase; letter-spacing:0.5px;">Weekly: KES 19.5k</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Financial Action Menu -->
+      <div style="margin-top:20px;">
+        <h4 style="font-size:12px; color:#1e293b; margin: 0 0 12px 5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Operations Hub</h4>
+        
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <!-- Agent Float -->
+          <button onclick="alert('Agent Float feature coming soon')" style="width:100%; background:#fff; color:#1e293b; border:1.5px solid #e2e8f0; margin:0; padding:16px 20px; font-size:14px; border-radius:16px; font-weight:600; display:flex; align-items:center; justify-content:space-between; transition:all 0.3s ease; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div style="width:40px; height:40px; background:#f0fdf4; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#059669;">
+                <i class="fas fa-money-bill-transfer"></i>
+              </div>
+              <span>Agent Float</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:#cbd5e1;"></i>
+          </button>
+
+          <!-- Deposit Amount -->
+          <button onclick="alert('Deposit Amount feature coming soon')" style="width:100%; background:#fff; color:#1e293b; border:1.5px solid #e2e8f0; margin:0; padding:16px 20px; font-size:14px; border-radius:16px; font-weight:600; display:flex; align-items:center; justify-content:space-between; transition:all 0.3s ease; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div style="width:40px; height:40px; background:#eff6ff; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#2563eb;">
+                <i class="fas fa-hand-holding-dollar"></i>
+              </div>
+              <span>Deposit Amount</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:#cbd5e1;"></i>
+          </button>
+
+          <!-- Process Withdrawal -->
+          <button onclick="alert('Process Withdrawal feature coming soon')" style="width:100%; background:#fff; color:#1e293b; border:1.5px solid #e2e8f0; margin:0; padding:16px 20px; font-size:14px; border-radius:16px; font-weight:600; display:flex; align-items:center; justify-content:space-between; transition:all 0.3s ease; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div style="width:40px; height:40px; background:#fff7ed; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#d97706;">
+                <i class="fas fa-atm"></i>
+              </div>
+              <span>Process Withdrawal</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:#cbd5e1;"></i>
+          </button>
+
+          <!-- Give Loan -->
+          <button onclick="alert('Give Loan feature coming soon')" style="width:100%; background:#fff; color:#1e293b; border:1.5px solid #e2e8f0; margin:0; padding:16px 20px; font-size:14px; border-radius:16px; font-weight:600; display:flex; align-items:center; justify-content:space-between; transition:all 0.3s ease; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <div style="width:40px; height:40px; background:#faf5ff; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#7c3aed;">
+                <i class="fas fa-handshake"></i>
+              </div>
+              <span>Give Loan</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:#cbd5e1;"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAILED PERFORMANCE PAGE VIEW -->
+    <div id="detailedPerformanceView" class="hidden" style="animation: slideUp 0.5s ease; padding: 0 5px;">
+        <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:18px; font-weight:800; color:#1e293b; margin:0;">Performance Portal</h3>
+            <button onclick="showMyAccount()" style="width:auto; margin:0; padding:6px 12px; font-size:11px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px;">
+              <i class="fas fa-arrow-left"></i> Back to Hub
+            </button>
+        </div>
+
+        <!-- Performance Stats Overview -->
+        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; margin-bottom:20px;">
+           <div class="dashboard-card" style="margin:0; background:#f0fdf4; border:1px solid #bbf7d0; padding:15px;">
+             <div style="font-size:9px; color:#166534; font-weight:800; text-transform:uppercase;">Daily Average</div>
+             <div style="font-size:20px; font-weight:900; color:#14532d; margin-top:5px;">KES 2.8k</div>
+             <div style="font-size:9px; color:#15803d; margin-top:3px; font-weight:600;"><i class="fas fa-arrow-up"></i> 12% vs LW</div>
+           </div>
+           <div class="dashboard-card" style="margin:0; background:#eff6ff; border:1px solid #bfdbfe; padding:15px;">
+             <div style="font-size:9px; color:#1e40af; font-weight:800; text-transform:uppercase;">Monthly Volume</div>
+             <div style="font-size:20px; font-weight:900; color:#1e3a8a; margin-top:5px;">KES 84k</div>
+             <div style="font-size:9px; color:#1d4ed8; margin-top:3px; font-weight:600;"><i class="fas fa-check-circle"></i> On Target</div>
+           </div>
+        </div>
+
+        <!-- Charts Container -->
+        <div class="dashboard-card" style="margin-bottom:20px; padding:20px; border:1.5px solid #f1f5f9;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h4 style="font-size:12px; color:#1e293b; font-weight:800; text-transform:uppercase; margin:0;">Daily Tracking</h4>
+                <div style="background:#f1f5f9; padding:3px; border-radius:10px; display:flex; gap:3px;">
+                    <button onclick="updateDetailedPerformanceChart('1W', this)" class="detail-chart-btn active" style="font-size:9px; padding:4px 10px; border-radius:7px; background:#0f9d58; color:white; border:none; cursor:pointer; font-weight:700;">1W</button>
+                    <button onclick="updateDetailedPerformanceChart('1M', this)" class="detail-chart-btn" style="font-size:9px; padding:4px 10px; border-radius:7px; background:transparent; color:#64748b; border:none; cursor:pointer; font-weight:700;">1M</button>
+                    <button onclick="updateDetailedPerformanceChart('3M', this)" class="detail-chart-btn" style="font-size:9px; padding:4px 10px; border-radius:7px; background:transparent; color:#64748b; border:none; cursor:pointer; font-weight:700;">3M</button>
+                </div>
+            </div>
+            <div style="height:180px; width:100%; position:relative;">
+              <canvas id="detailedDailyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="dashboard-card" style="padding:20px; border:1.5px solid #f1f5f9;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h4 style="font-size:12px; color:#1e293b; font-weight:800; text-transform:uppercase; margin:0;">Weekly Trends</h4>
+                <div style="background:#f1f5f9; padding:3px; border-radius:10px; display:flex; gap:3px;">
+                    <button onclick="updateWeeklyPerformanceChart('1M', this)" class="detail-weekly-btn active" style="font-size:9px; padding:4px 10px; border-radius:7px; background:#0f9d58; color:white; border:none; cursor:pointer; font-weight:700;">1M</button>
+                    <button onclick="updateWeeklyPerformanceChart('1Y', this)" class="detail-weekly-btn" style="font-size:9px; padding:4px 10px; border-radius:7px; background:transparent; color:#64748b; border:none; cursor:pointer; font-weight:700;">1Y</button>
+                </div>
+            </div>
+            <div style="height:180px; width:100%; position:relative;">
+              <canvas id="detailedWeeklyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN DASHBOARD VIEW (Managed Groups Only) -->
-    <div id="agentDashboardView">
+    <div id="agentDashboardView" class="hidden">
       <script>window.managedGroups = <%- JSON.stringify(groups || []) %>;</script>
       <!-- GROUPS SUB-HEADER -->
       <div class="groups-sub-nav">
@@ -1523,7 +1787,10 @@
       </div>
     </div>
 
-    <!-- 5. GROUP DETAILS VIEW -->
+
+
+    <!-- 6. GROUP DETAILS VIEW -->
+
     <div id="groupDetailsView" class="hidden" style="animation: fadeIn 0.4s ease;">
       <!-- Group Header Card -->
       <div class="dashboard-card" style="margin-top:0; background:linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color:white; border:none; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
@@ -3476,6 +3743,8 @@
       'createGroupForm', 
       'groupDetailsView', 
       'agentProfileView', 
+      'agentFinancialHubView',
+      'detailedPerformanceView',
       'underConstructionView'
     ];
     views.forEach(id => {
@@ -3538,6 +3807,17 @@
 
 
 
+  function showDetailedPerformance() {
+    hideAllAgentViews();
+    document.getElementById('detailedPerformanceView').classList.remove('hidden');
+    // We don't have a nav tab for this, so just update glider or keep it on account
+    document.getElementById('myAccountNav').classList.add('active');
+    updateNavGlider();
+    
+    // Initialize detailed charts with a slight delay
+    setTimeout(initDetailedPerformanceCharts, 100);
+  }
+
   function showAgentProfile() {
     hideAllAgentViews();
     document.getElementById('agentProfileView').classList.remove('hidden');
@@ -3547,9 +3827,290 @@
 
   function showMyAccount() {
     hideAllAgentViews();
-    document.getElementById('underConstructionView').classList.remove('hidden');
+    document.getElementById('agentFinancialHubView').classList.remove('hidden');
     document.getElementById('myAccountNav').classList.add('active');
     updateNavGlider();
+    
+    // Initialize Chart
+    setTimeout(initAgentPerformanceChart, 100);
+  }
+
+  function appBackNavigation() {
+    const detailsView = document.getElementById('groupDetailsView');
+    const createForm = document.getElementById('createGroupForm');
+    const dashboardView = document.getElementById('agentDashboardView');
+    const profileView = document.getElementById('agentProfileView');
+    const hubView = document.getElementById('agentFinancialHubView');
+
+    // If in Details or Create Form, go back to Dashboard (Groups List)
+    if ((detailsView && !detailsView.classList.contains('hidden')) || 
+        (createForm && !createForm.classList.contains('hidden'))) {
+        showAgentDashboard();
+        return;
+    }
+
+    // If in Dashboard or Profile, go back to Account Hub (Home)
+    if ((dashboardView && !dashboardView.classList.contains('hidden')) || 
+        (profileView && !profileView.classList.contains('hidden'))) {
+        showMyAccount();
+        return;
+    }
+    
+    // If in Hub (home view), go back to agent login page
+    window.location.href = '/logout';
+  }
+
+  let agentPerfChartInstance = null;
+
+  function initAgentPerformanceChart() {
+    const ctx = document.getElementById('agentPerformanceChart');
+    if (!ctx) return;
+
+    if (agentPerfChartInstance) {
+        agentPerfChartInstance.destroy();
+    }
+
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const data = [12, 19, 15, 25, 22, 30, 28];
+
+    agentPerfChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Performance',
+                data: data,
+                borderColor: '#0f9d58',
+                backgroundColor: 'rgba(15, 157, 88, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#0f9d58',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: '#1e293b',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    padding: 10,
+                    cornerRadius: 8,
+                    displayColors: false
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    grid: { display: false },
+                    ticks: { font: { size: 10 }, color: '#94a3b8' }
+                },
+                y: {
+                    display: false,
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+  }
+
+  function updateAgentPerformanceChart(range, btn) {
+    // Update active button state
+    document.querySelectorAll('.chart-filter-btn').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = '#64748b';
+    });
+    btn.style.background = '#0f9d58';
+    btn.style.color = 'white';
+
+    if (!agentPerfChartInstance) return;
+
+    let labels = [];
+    let data = [];
+
+    if (range === '1W') {
+        labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        data = [12, 19, 15, 25, 22, 30, 28];
+    } else if (range === '1M') {
+        labels = ['W1', 'W2', 'W3', 'W4'];
+        data = [45, 52, 48, 70];
+    } else if (range === '3M') {
+        labels = ['Jan', 'Feb', 'Mar'];
+        data = [120, 150, 140];
+    } else if (range === '6M') {
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        data = [120, 150, 140, 180, 210, 200];
+    } else if (range === '1Y') {
+        labels = ['2023 Q3', '2023 Q4', '2024 Q1', '2024 Q2'];
+        data = [500, 650, 580, 900];
+    }
+
+    agentPerfChartInstance.data.labels = labels;
+    agentPerfChartInstance.datasets[0].data = data;
+    agentPerfChartInstance.update();
+  }
+
+  let detailedDailyChartInstance = null;
+  let detailedWeeklyChartInstance = null;
+
+  function initDetailedPerformanceCharts() {
+    const dailyCtx = document.getElementById('detailedDailyChart');
+    const weeklyCtx = document.getElementById('detailedWeeklyChart');
+    
+    if (detailedDailyChartInstance) detailedDailyChartInstance.destroy();
+    if (detailedWeeklyChartInstance) detailedWeeklyChartInstance.destroy();
+
+    detailedDailyChartInstance = new Chart(dailyCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Volume (KES)',
+                data: [1200, 2500, 1800, 3100, 2900, 4200, 3800],
+                borderColor: '#0f9d58',
+                backgroundColor: 'rgba(15, 157, 88, 0.1)',
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#0f9d58',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#94a3b8' } },
+                y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#94a3b8' } }
+            }
+        }
+    });
+
+    detailedWeeklyChartInstance = new Chart(weeklyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Total Volume',
+                data: [18500, 21200, 19500, 24800],
+                backgroundColor: '#0f9d58',
+                borderRadius: 6,
+                barThickness: 20
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#94a3b8' } },
+                y: { grid: { borderDash: [5, 5], color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#94a3b8' } }
+            }
+        }
+    });
+  }
+
+  function updateDetailedPerformanceChart(range, btn) {
+    document.querySelectorAll('.detail-chart-btn').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = '#64748b';
+    });
+    btn.style.background = '#0f9d58';
+    btn.style.color = 'white';
+
+    let data = [];
+    let labels = [];
+
+    if (range === '1W') {
+        labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        data = [1200, 2500, 1800, 3100, 2900, 4200, 3800];
+    } else if (range === '1M') {
+        labels = ['W1', 'W2', 'W3', 'W4'];
+        data = [18500, 21200, 19500, 24800];
+    } else if (range === '3M') {
+        labels = ['Jan', 'Feb', 'Mar'];
+        data = [82000, 75000, 84000];
+    }
+
+    detailedDailyChartInstance.data.labels = labels;
+    detailedDailyChartInstance.datasets[0].data = data;
+    detailedDailyChartInstance.update();
+  }
+
+  function updateWeeklyPerformanceChart(range, btn) {
+    document.querySelectorAll('.detail-weekly-btn').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = '#64748b';
+    });
+    btn.style.background = '#0f9d58';
+    btn.style.color = 'white';
+
+    let data = [];
+    let labels = [];
+
+    if (range === '1M') {
+        labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        data = [18500, 21200, 19500, 24800];
+    } else if (range === '1Y') {
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        data = [75000, 82000, 78000, 85000, 92000, 88000, 95000, 102000, 98000, 105000, 110000, 115000];
+    }
+
+    detailedWeeklyChartInstance.data.labels = labels;
+    detailedWeeklyChartInstance.datasets[0].data = data;
+    detailedWeeklyChartInstance.update();
+  }
+
+  function toggleFinancialSection(contentId, btn) {
+    const sections = ['floatContent', 'perfContent'];
+    const content = document.getElementById(contentId);
+    const isCurrentlyHidden = content.classList.contains('hidden');
+
+    // Close ALL sections and reset ALL icons first if we are OPENING a new one
+    // Note: If we are CLOSING one that is already open, it just closes it normally.
+    if (isCurrentlyHidden) {
+        sections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
+
+        // Reset all icons associated with these sections
+        document.querySelectorAll('[onclick^="toggleFinancialSection"]').forEach(b => {
+            const i = b.querySelector('i');
+            if (i) {
+                i.classList.remove('fa-chevron-up');
+                i.classList.add('fa-chevron-down');
+            }
+        });
+
+        // Open the target one
+        content.classList.remove('hidden');
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        }
+    } else {
+        // Just hide the current one if it was open
+        content.classList.add('hidden');
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        }
+    }
   }
 
   function showPersonalAccount() {
@@ -3590,6 +4151,8 @@
   // Initial position on load
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(updateNavGlider, 300);
+    // Initialize things for the default Account view
+    setTimeout(initAgentPerformanceChart, 500);
   });
 
   function showCreateGroupForm() {
@@ -3645,9 +4208,16 @@
     const detailsView = document.getElementById('groupDetailsView');
     const profileView = document.getElementById('agentProfileView');
     const createView = document.getElementById('createGroupForm');
+    const detailedPerfView = document.getElementById('detailedPerformanceView');
+
+    // If within detailed performance, go back to account hub
+    if (detailedPerfView && !detailedPerfView.classList.contains('hidden')) {
+      showMyAccount();
+      return;
+    }
 
     // If within group details, detailed back logic applies
-    if (!detailsView.classList.contains('hidden')) {
+    if (detailsView && !detailsView.classList.contains('hidden')) {
       handleDetailBack();
       return;
     }

@@ -1,4 +1,4 @@
-with <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -12,7 +12,7 @@ with <!DOCTYPE html>
   --primary: #0f9d58;
   --primary-dark: #0b7d46;
   --bg: #f1f5f9;
-  -- ard: #ffffff;
+  --card: #ffffff;
   --text: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
@@ -69,6 +69,27 @@ body {
   position: relative;
   overflow: hidden;
   text-align: center;
+}
+
+.back-arrow {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s ease;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.back-arrow:hover {
+  transform: translateX(-3px);
+  opacity: 0.8;
 }
 
 .header-section::before {
@@ -362,9 +383,15 @@ button.secondary:hover {
 
 <div class="main-container">
   <div class="header-section">
+    <a href="/personal" class="back-arrow">
+      <i class="fas fa-arrow-left"></i>
+    </a>
     <div class="header-content">
-      <h2><i class="fas fa-users-cog"></i> Group Account</h2>
-      <p>Create group savings account</p>
+      <h1 style="font-size: 24px; font-weight: 800; color: white; margin: 0 0 5px; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
+      <p style="font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 12px;">Secure Group Banking</p>
+      <h2 style="font-size: 1.1rem; opacity: 1; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
+        <i class="fas fa-users-cog"></i> Group Account
+      </h2>
     </div>
   </div>
 
@@ -436,6 +463,9 @@ button.secondary:hover {
       <i class="fas fa-folder-open" style="font-size: 48px; color: var(--border); margin-bottom: 15px;"></i>
       <p style="color: var(--text-muted);">You are not a member of any group yet.</p>
       <p style="font-size: 0.85rem; color: var(--text-muted);">Create a group or ask to be added to an existing group.</p>
+      <button type="button" onclick="switchTab('createGroup')" style="margin-top: 20px; width: auto; padding: 12px 30px; background: var(--primary); color: white; border-radius: 10px; font-weight: 700; border: none; cursor: pointer;">
+        <i class="fas fa-plus-circle"></i> Create New Group
+      </button>
     </div>
 
     <!-- Under Construction Message -->
@@ -1066,7 +1096,15 @@ async function loadMyGroupsAfterVerify() {
       listEl.innerHTML = html;
       listEl.classList.remove('hidden');
     } else {
-      listEl.innerHTML = '<div style="text-align: center; padding: 30px 10px;"><i class="fas fa-check-circle" style="font-size: 48px; color: var(--primary); margin-bottom: 15px;"></i><p style="color: var(--text); font-weight: 600;">Verification Successful!</p><p style="color: var(--text-muted); font-size: 0.85rem;">You dont have any groups yet.</p><p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 10px;">Create a group to start saving.</p></div>';
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 30px 10px;">
+          <i class="fas fa-check-circle" style="font-size: 48px; color: var(--primary); margin-bottom: 15px;"></i>
+          <p style="color: var(--text); font-weight: 600;">Verification Successful!</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">You don't have any groups yet.</p>
+          <button type="button" onclick="switchTab('createGroup')" style="margin-top: 20px; width: auto; padding: 12px 30px; background: var(--primary); color: white; border-radius: 10px; font-weight: 700; border: none; cursor: pointer;">
+            <i class="fas fa-plus-circle"></i> Create Group Now
+          </button>
+        </div>`;
       listEl.classList.remove('hidden');
     }
   } catch (err) {
