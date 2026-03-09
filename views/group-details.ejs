@@ -69,7 +69,8 @@
         .action-button:hover, .dropdown-button:hover { background: var(--primary-dark); transform: translateY(-2px); }
         .btn-disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; background-color: var(--text-muted) !important; }
         .hidden { display: none; }
-        .back-nav { position: absolute; left: 15px; top: 20px; z-index: 10; color: white; font-size: 1.2rem; cursor: pointer; }
+        .back-nav { position: absolute; left: 15px; top: 20px; z-index: 10; color: white; font-size: 1.2rem; cursor: pointer; text-decoration: none; }
+        .home-nav { position: absolute; right: 15px; top: 20px; z-index: 10; color: white; font-size: 1.2rem; cursor: pointer; text-decoration: none; }
         .members-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         .members-table th, .members-table td { padding: 8px 10px; border: 1px solid var(--border); text-align: left; }
         .members-table th { background-color: #f8fafc; font-weight: 600; color: var(--text-muted); }
@@ -87,6 +88,7 @@
         <% if (group) { %>
             <div class="header-section">
                 <a href="/personal/general" class="back-nav"><i class="fas fa-arrow-left"></i></a>
+                <a href="/personal" class="home-nav"><i class="fas fa-home"></i></a>
                 <div class="header-content">
                     <h1 style="font-size: 24px; font-weight: 800; color: white; margin: 0 0 5px; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
                     <p style="font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 12px;">Premium Group Financials</p>
@@ -100,16 +102,84 @@
                 <% if (userRole === 'official' || userRole === 'trustee') { %>
                     <button class="tab-button" onclick="switchTab('groupAccount')"><i class="fas fa-building-columns"></i> Group Account</button>
                 <% } %>
-                <button class="tab-button" onclick="switchTab('groupDetails')"><i class="fas fa-info-circle"></i> Group Details</button>
+                <button class="tab-button" onclick="switchTab('proceedings')"><i class="fas fa-gavel"></i> Proceedings</button>
             </div>
 
             <!-- MY ACCOUNT SECTION -->
             <div id="myAccountSection" class="step-box">
-                <a href="#" class="action-button <%= userRole === 'member' ? 'btn-disabled' : '' %>"><i class="fas fa-hand-holding-usd"></i> Contribution</a>
-                <a href="#" class="action-button <%= userRole === 'member' ? 'btn-disabled' : '' %>"><i class="fas fa-money-bill-wave"></i> Loan</a>
-                <a href="#" class="action-button <%= userRole === 'member' ? 'btn-disabled' : '' %>"><i class="fas fa-id-card"></i> Membership</a>
-                <a href="#" class="action-button <%= userRole === 'member' ? 'btn-disabled' : '' %>"><i class="fas fa-file-invoice"></i> Account Details</a>
-                <% if (userRole === 'member') { %><p style="font-size: 0.8rem; color: var(--danger); margin-top: 15px; text-align: center;"><i class="fas fa-lock"></i> Member access is currently read-only.</p><% } %>
+                
+                <!-- Other Buttons -->
+                <div id="otherButtonsGD">
+                    <a href="#" class="action-button"><i class="fas fa-hand-holding-usd"></i> Contribution</a>
+                    <a href="#" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
+                    <a href="#" class="action-button"><i class="fas fa-id-card"></i> Membership</a>
+                </div>
+                
+                <!-- Change PIN Section (below other buttons) -->
+                <div id="changePinContainerGD" style="margin-top: 15px;">
+                    <a href="#" class="action-button" onclick="showChangePinOptionsGD()"><i class="fas fa-key"></i> Change PIN</a>
+                </div>
+                
+                <!-- Account Details Button -->
+                <div id="accountDetailsContainerGD" style="margin-top: 15px;">
+                    <a href="#" class="action-button" onclick="switchTab('accountDetails')"><i class="fas fa-file-invoice"></i> Account Details</a>
+                </div>
+                
+                <!-- Change PIN Options (hidden by default) -->
+                <div id="changePinOptionsGD" class="hidden" style="margin-top: 15px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="showNewPinFormGD()" class="action-button" style="flex: 1;"><i class="fas fa-edit"></i> New PIN</button>
+                        <button onclick="showForgotPinFormGD()" class="action-button" style="flex: 1; background: #f59e0b;"><i class="fas fa-question-circle"></i> Forgot PIN</button>
+                    </div>
+                    <button onclick="hideChangePinOptionsGD()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <!-- New PIN Form (for users who know their PIN) -->
+                <div id="newPinFormGD" class="hidden" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border); position: relative;">
+                    <button onclick="hideChangePinOptionsGD()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+                    <h4 style="margin-bottom: 15px; text-align: center;"><i class="fas fa-key"></i> Change Personal PIN</h4>
+                    <div class="info-item">
+                        <span class="info-label">Current PIN</span>
+                        <input type="password" id="oldPinGD" class="form-input" placeholder="****" maxlength="4" inputmode="numeric">
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">New PIN</span>
+                        <input type="password" id="newPinGD" class="form-input" placeholder="****" maxlength="4" inputmode="numeric">
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Confirm PIN</span>
+                        <input type="password" id="confirmPinGD" class="form-input" placeholder="****" maxlength="4" inputmode="numeric">
+                    </div>
+                    <button onclick="submitChangePinGD()" class="action-button" style="background-color: var(--success); width: 100%; margin-top: 10px;"><i class="fas fa-save"></i> Save PIN</button>
+                    <p id="pinMessageGD" style="text-align: center; margin-top: 10px; font-size: 0.85rem;"></p>
+                </div>
+                
+                <!-- Forgot PIN Form (for users who forgot their PIN) -->
+                <div id="forgotPinFormGD" class="hidden" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 10px; border: 1px solid var(--border); position: relative;">
+                    <button onclick="hideChangePinOptionsGD()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+                    <h4 style="margin-bottom: 15px; text-align: center;"><i class="fas fa-question-circle"></i> Reset Personal PIN</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Request a start key via SMS to reset your PIN</p>
+                    <button onclick="requestStartKeyGD()" class="action-button" style="width: 100%; margin-bottom: 15px; background: #7c3aed;"><i class="fas fa-sms"></i> Request Start Key (SMS)</button>
+                    
+                    <div id="startKeyInputGD" class="hidden">
+                        <div class="info-item">
+                            <span class="info-label">Start Key (from SMS)</span>
+                            <input type="text" id="startKeyGD" class="form-input" placeholder="Enter start key" inputmode="numeric">
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">New PIN</span>
+                            <input type="password" id="resetNewPinGD" class="form-input" placeholder="****" maxlength="4" inputmode="numeric">
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Confirm PIN</span>
+                            <input type="password" id="resetConfirmPinGD" class="form-input" placeholder="****" maxlength="4" inputmode="numeric">
+                        </div>
+                        <button onclick="submitResetPinGD()" class="action-button" style="background-color: var(--success); width: 100%; margin-top: 10px;"><i class="fas fa-save"></i> Reset PIN</button>
+                    </div>
+                    
+                    <p id="forgotPinMessageGD" style="text-align: center; margin-top: 10px; font-size: 0.85rem;"></p>
+                </div>
+                
             </div>
 
             <!-- GROUP ACCOUNT SECTION -->
@@ -123,7 +193,7 @@
                         <a href="#" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
                         <a href="#" class="action-button" onclick="switchTab('performance')"><i class="fas fa-chart-line"></i> Performance</a>
                         <a href="#" class="action-button"><i class="fas fa-receipt"></i> A/C Statement</a>
-                        <a href="#" class="action-button"><i class="fas fa-cogs"></i> A/C Details</a>
+                        <a href="#" class="action-button" onclick="switchTab('accountDetails')"><i class="fas fa-cogs"></i> A/C Details</a>
                     </div>
                 <% } else { %>
                     <!-- PIN not set, show verification/creation flow -->
@@ -150,79 +220,208 @@
             </div>
             <% } %>
 
-            <!-- GROUP DETAILS SECTION -->
-            <div id="groupDetailsSection" class="step-box hidden">
-                <!-- Account Summary Card -->
-                <div style="background: #eff6ff; padding: 15px; border-radius: 16px; border: 1px solid #bfdbfe; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(30, 64, 175, 0.05);">
-                    <div>
+            <!-- PROCEEDINGS SECTION (formerly Group Details) -->
+            <div id="proceedingsSection" class="step-box hidden">
+                <div style="text-align: center; padding: 40px 20px;">
+                    <i class="fas fa-hard-hat" style="font-size: 3rem; color: #f59e0b; margin-bottom: 20px;"></i>
+                    <h3>Under Construction</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Proceedings content is currently under construction!</p>
+                </div>
+            </div>
+
+            <!-- ACCOUNT DETAILS SECTION -->
+            <div id="accountDetailsSection" class="step-box hidden">
+                
+                <!-- PROCEEDINGS TABS - Inline tab navigation -->
+                <div class="tab-navigation" style="margin-bottom: 15px; background: none; border-bottom: none; padding: 0;">
+                    <button class="tab-button active" onclick="toggleProceedingsTab('summaryContent', this)" style="flex: 1; padding: 14px 8px; background: none; border: none; font-size: 0.8rem; font-weight: 600; color: var(--text); border-radius: 8px 8px 0 0;">
+                        <i class="fas fa-chart-bar" style="margin-right: 5px;"></i> Summary
+                    </button>
+                    <button class="tab-button" onclick="toggleProceedingsTab('membersContent', this)" style="flex: 1; padding: 14px 8px; background: none; border: none; font-size: 0.8rem; font-weight: 600; color: var(--text); border-radius: 8px 8px 0 0;">
+                        <i class="fas fa-users" style="margin-right: 5px;"></i> Members
+                    </button>
+                    <button class="tab-button" onclick="toggleProceedingsTab('constitutionContent', this)" style="flex: 1; padding: 14px 8px; background: none; border: none; font-size: 0.8rem; font-weight: 600; color: var(--text); border-radius: 8px 8px 0 0;">
+                        <i class="fas fa-file-contract" style="margin-right: 5px;"></i> Constitution
+                    </button>
+                </div>
+                
+                <!-- COLLAPSIBLE CONTENT AREAS -->
+                
+                <!-- SUMMARY Content -->
+                <div id="summaryContent" class="proceedings-content" style="background: #eff6ff; padding: 15px; border-radius: 16px; border: 1px solid #bfdbfe; margin-bottom: 15px; display: block;">
+                    <% if (group.summaryStats) { %>
+                    <!-- Realtime Statistics (Rounds & Countdown) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <div style="background: white; border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <span style="display: block; font-size: 0.5rem; text-transform: uppercase; color: #2563eb; font-weight: 800; margin-bottom: 2px; letter-spacing: 0.5px;">Next Meeting</span>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #1e40af;">
+                                <%= group.summaryStats.daysUntilMeeting === 0 ? 'Today' : (group.summaryStats.daysUntilMeeting === 1 ? '1 Day' : group.summaryStats.daysUntilMeeting + ' Days') %>
+                            </span>
+                        </div>
+                        <div style="background: #fdf4ff; border: 1px solid #fbcfe8; border-radius: 8px; padding: 6px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <span style="display: block; font-size: 0.5rem; text-transform: uppercase; color: #c026d3; font-weight: 800; margin-bottom: 2px; letter-spacing: 0.5px;">Active</span>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #86198f;">
+                                R-<%= group.summaryStats.activeRound %>
+                            </span>
+                        </div>
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <span style="display: block; font-size: 0.5rem; text-transform: uppercase; color: #d97706; font-weight: 800; margin-bottom: 2px; letter-spacing: 0.5px;">Remaining</span>
+                            <span style="font-size: 0.75rem; font-weight: 800; color: #92400e;">
+                                <%= group.summaryStats.remainRounds %>
+                            </span>
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <!-- Group Account Number -->
+                    <div style="margin-bottom: 15px;">
                         <span style="font-size: 0.6rem; color: #1e40af; text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 4px; letter-spacing: 0.5px;">Group Account Number</span>
                         <span style="font-weight: 800; font-size: 1.1rem; color: #1e3a8a; letter-spacing: 1px;"><%= group.accountNumber || 'Pending Allocation' %></span>
                     </div>
-                    <div style="text-align: right;">
+                    
+                    <!-- Info Grid: Frequency, Meeting Day, Interest Rate, Loan Limit -->
+                    <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Frequency</span>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-calendar-alt" style="color: var(--primary); margin-right: 5px;"></i> <%= (group.principles && group.principles.intervals) ? group.principles.intervals.frequency : 'Not Set' %></span>
+                        </div>
+                        <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Meeting Day</span>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-clock" style="color: var(--primary); margin-right: 5px;"></i> <%= (group.principles && group.principles.intervals) ? group.principles.intervals.period : 'Not Set' %></span>
+                        </div>
+                        <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Interest Rate</span>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-percent" style="color: var(--primary); margin-right: 5px;"></i> <%= (group.principles && group.principles.loans && group.principles.loans.interestAndLimits) ? group.principles.loans.interestAndLimits.interestRate : '0' %>%</span>
+                        </div>
+                        <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                            <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Loan Limit</span>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-money-bill-wave" style="color: var(--primary); margin-right: 5px;"></i> x<%= (group.principles && group.principles.loans && group.principles.loans.interestAndLimits) ? group.principles.loans.interestAndLimits.limitMultiplier : '0' %></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Location Info included in Summary -->
+                    <div style="background: #f0fdf4; padding: 12px; border-radius: 12px; border: 1px solid #bcf0da; margin-top: 12px;">
+                        <span style="font-size: 0.65rem; color: #065f46; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Location</span>
+                        <span style="font-weight: 600; font-size: 0.85rem; color: #047857;">
+                            <i class="fas fa-map-marker-alt"></i> <%= group.county %> | <%= group.constituency %> | <%= group.ward %>
+                        </span>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div style="text-align: right; margin-top: 10px;">
                         <span style="font-size: 0.6rem; color: #1e40af; text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 4px; letter-spacing: 0.5px;">Status</span>
                         <span class="badge" style="background: #1e40af; color: white; border: none; font-size: 0.7rem; padding: 5px 12px; border-radius: 20px; font-weight: 700;">Phase <%= group.phase || 'Active' %></span>
                     </div>
                 </div>
 
-                <div class="info-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-                    <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Frequency</span>
-                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-calendar-alt" style="color: var(--primary); margin-right: 5px;"></i> <%= (group.principles && group.principles.intervals) ? group.principles.intervals.frequency : 'Not Set' %></span>
+                <!-- MEMBERS Content -->
+                <div id="membersContent" class="proceedings-content" style="background: #f0fdf4; padding: 15px; border-radius: 16px; border: 1px solid #bcf0da; margin-bottom: 15px; display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 0.75rem; font-weight: 600; color: #047857;">Members List</span>
+                        <div style="text-align: right;">
+                            <span style="display: block; font-size: 0.6rem; color: #10b981; font-weight: 700; text-transform: uppercase;">Generated</span>
+                            <span style="font-size: 0.65rem; color: var(--text-muted);"><%= new Date().toLocaleDateString() %></span>
+                        </div>
                     </div>
-                    <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Meeting Day</span>
-                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-clock" style="color: var(--primary); margin-right: 5px;"></i> <%= (group.principles && group.principles.intervals) ? group.principles.intervals.period : 'Not Set' %></span>
-                    </div>
-                    <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Interest Rate</span>
-                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-percent" style="color: var(--primary); margin-right: 5px;"></i> <%= (group.principles && group.principles.loans && group.principles.loans.interestAndLimits) ? group.principles.loans.interestAndLimits.interestRate : '0' %>%</span>
-                    </div>
-                    <div class="info-card" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;">Loan Limit</span>
-                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--text);"><i class="fas fa-money-bill-wave" style="color: var(--primary); margin-right: 5px;"></i> x<%= (group.principles && group.principles.loans && group.principles.loans.interestAndLimits) ? group.principles.loans.interestAndLimits.limitMultiplier : '0' %></span>
-                    </div>
+                    
+                    <button onclick="downloadMembersList()" style="width: 100%; margin-bottom: 15px; background: #10b981; color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-weight: 600; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
+                        <i class="fas fa-file-csv" style="margin-right: 5px;"></i> Download
+                    </button>
+                    <table class="members-table">
+                        <thead><tr><th style="width: 50px; text-align: center;">#</th><th>Name</th><th>Role</th><th>Phone</th></tr></thead>
+                        <tbody>
+                            <% if (group.members && group.members.length > 0) { %>
+                                <% group.members.forEach((member, index) => { 
+                                    // Get the member data from group to find index
+                                    const memberKey = Object.keys(group).find(k => group[k] && group[k].phone === member.phone);
+                                    const memberData = memberKey ? group[memberKey] : null;
+                                    const memberIndex = memberData ? memberData.index : (index + 1);
+                                    const memberType = memberData ? (memberData.title || (memberKey && memberKey.includes('trustee') ? 'Trustee' : memberKey && memberKey.includes('official') ? 'Official' : 'Member')) : 'Member';
+                                %>
+                                    <tr>
+                                        <td style="text-align: center; font-weight: 600; color: #10b981;"><%= memberIndex %></td>
+                                        <td><%= member.name %></td>
+                                        <td><%= memberType %></td>
+                                        <td><%= member.phone %></td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr><td colspan="4" style="text-align: center;">No members found.</td></tr>
+                            <% } %>
+                        </tbody>
+                    </table>
                 </div>
 
-                <div style="background: #f0fdf4; padding: 12px; border-radius: 12px; border: 1px solid #bcf0da; margin-bottom: 20px;">
-                    <h4 style="margin: 0 0 8px; font-size: 0.8rem; color: #065f46; display: flex; align-items: center; gap: 6px;">
-                        <i class="fas fa-map-marker-alt"></i> Location Info
-                    </h4>
-                    <p style="margin: 0; font-size: 0.75rem; color: #047857;">
-                        <%= group.county %> | <%= group.constituency %> | <%= group.ward %>
-                    </p>
-                </div>
-
-                <h3 style="font-size: 1.1rem; margin-bottom: 12px;"><i class="fas fa-users" style="color: var(--primary);"></i> Group Members</h3>
-                <table class="members-table">
-                    <thead><tr><th>Name</th><th>Role/No.</th><th>Phone</th></tr></thead>
-                    <tbody>
-                        <% if (group.members && group.members.length > 0) { %>
-                            <% group.members.forEach(member => { %>
-                                <tr>
-                                    <td><%= member.name %></td>
-                                    <td><%= member.membershipNumber %></td>
-                                    <td><%= member.phone %></td>
-                                </tr>
-                            <% }); %>
+                <!-- CONSTITUTION Content -->
+                <div id="constitutionContent" class="proceedings-content" style="background: #f5f3ff; padding: 15px; border-radius: 16px; border: 1px solid #ddd6fe; margin-bottom: 15px; display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 0.75rem; font-weight: 600; color: #6d28d9;">Constitution & Principles</span>
+                        <div style="text-align: right;">
+                            <span style="display: block; font-size: 0.6rem; color: #8b5cf6; font-weight: 700; text-transform: uppercase;">Updated</span>
+                            <span style="font-size: 0.65rem; color: var(--text-muted);"><%= group.principlesSetAt ? new Date(group.principlesSetAt).toLocaleDateString() : (group.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'N/A') %></span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="downloadConstitution()" style="width: 100%; margin-bottom: 15px; background: #8b5cf6; color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-weight: 600; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);">
+                        <i class="fas fa-file-pdf" style="margin-right: 5px;"></i> Download
+                    </button>
+                    
+                    <div class="constitution-content" style="max-height: 400px; overflow-y: auto; background: transparent; border: none; padding: 0; margin-top: 0;">
+                        <% if (group.constitutionPoints && group.constitutionPoints.length > 0) { %>
+                            <% 
+                                // Group points by category with tailored styling
+                                const categories = {
+                                    'Identities': { points: [], color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe', icon: 'fa-id-card' },
+                                    'Meetings & Intervals': { points: [], color: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8', icon: 'fa-users' },
+                                    'Accounts & Capital': { points: [], color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe', icon: 'fa-university' },
+                                    'Loans & Credit': { points: [], color: '#10b981', bg: '#f0fdf4', border: '#bcf0da', icon: 'fa-money-bill-wave' },
+                                    'Share & Profit': { points: [], color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', icon: 'fa-coins' },
+                                    'Rules & Penalties': { points: [], color: '#ef4444', bg: '#fef2f2', border: '#fecaca', icon: 'fa-exclamation-triangle' },
+                                    'Other Declarations': { points: [], color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb', icon: 'fa-gavel' }
+                                };
+                                
+                                group.constitutionPoints.forEach(point => {
+                                    const lower = point.toLowerCase();
+                                    if (lower.includes('member') || lower.includes('capacity') || lower.includes('geographically')) {
+                                        categories['Identities'].points.push(point);
+                                    } else if (lower.includes('meet') || lower.includes('cycle') || lower.includes('duration is established')) {
+                                        categories['Meetings & Intervals'].points.push(point);
+                                    } else if (lower.includes('loan') || lower.includes('rollover')) {
+                                        categories['Loans & Credit'].points.push(point);
+                                    } else if (lower.includes('share') || lower.includes('dividend') || lower.includes('profit')) {
+                                        categories['Share & Profit'].points.push(point);
+                                    } else if (lower.includes('fine') || lower.includes('penalty') || lower.includes('governance') || lower.includes('consensus') || lower.includes('quorum') || lower.includes('rule')) {
+                                        categories['Rules & Penalties'].points.push(point);
+                                    } else if (lower.includes('account') || lower.includes('contribution') || lower.includes('pool')) {
+                                        categories['Accounts & Capital'].points.push(point);
+                                    } else {
+                                        categories['Other Declarations'].points.push(point);
+                                    }
+                                });
+                            %>
+                            
+                            <% Object.keys(categories).forEach(cat => { 
+                                if (categories[cat].points.length > 0) {
+                            %>
+                                <div style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; text-align: left;">
+                                    <h4 style="font-size: 0.8rem; color: <%= categories[cat].color %>; font-weight: 800; margin: 0 0 2px 0; text-transform: uppercase; display: flex; align-items: center; letter-spacing: 0.5px;">
+                                        <i class="fas <%= categories[cat].icon %>" style="margin-right: 6px; font-size: 0.8rem;"></i> <%= cat %>
+                                    </h4>
+                                    <% categories[cat].points.forEach(point => { %>
+                                        <p style="font-size: 0.75rem; color: var(--text); margin: 0; line-height: 1.25; text-align: left;"><%= point %></p>
+                                    <% }); %>
+                                </div>
+                            <% 
+                                } 
+                            }); 
+                            %>
                         <% } else { %>
-                            <tr><td colspan="3" style="text-align: center;">No members found.</td></tr>
+                            <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border); text-align: center;">
+                                <i class="fas fa-file-signature" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 10px;"></i>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;"><%= group.constitution || 'No formal constitution content has been initialized yet.' %></p>
+                            </div>
                         <% } %>
-                    </tbody>
-                </table>
-
-                <h3 style="margin-top: 25px; font-size: 1.1rem; margin-bottom: 12px;"><i class="fas fa-file-contract" style="color: var(--primary);"></i> Group Constitution</h3>
-                <div class="constitution-content" style="max-height: 350px; overflow-y: auto; background: #fff; border: 1px solid var(--border); padding: 20px;">
-                    <% if (group.constitutionPoints && group.constitutionPoints.length > 0) { %>
-                        <ol style="padding-left: 20px; margin: 0;">
-                            <% group.constitutionPoints.forEach(point => { %>
-                                <li style="margin-bottom: 12px; font-size: 0.85rem; line-height: 1.6; color: var(--text); padding-left: 5px;">
-                                    <%= point %>
-                                </li>
-                            <% }); %>
-                        </ol>
-                    <% } else { %>
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;"><%= group.constitution || 'No constitution content available.' %></p>
-                    <% } %>
+                    </div>
                 </div>
             </div>
             
@@ -246,7 +445,7 @@
 
     <script>
         const correctKey = "<%= (userRole === 'official' || userRole === 'trustee') ? (group.constitutionStartKey || '') : '' %>";
-        const allSections = ['myAccountSection', 'groupAccountSection', 'groupDetailsSection', 'performanceSection'];
+        const allSections = ['myAccountSection', 'groupAccountSection', 'proceedingsSection', 'performanceSection', 'accountDetailsSection'];
         const allTabs = document.querySelectorAll('.tab-button');
 
         function switchTab(tabId) {
@@ -261,6 +460,138 @@
                 }
             });
         }
+
+        // Toggle Proceedings tab - shows only one content at a time
+        function toggleProceedingsTab(contentId, buttonElement) {
+            // Remove active class from all tab buttons in this specific tab navigation
+            const allProcTabs = buttonElement.parentElement.querySelectorAll('.tab-button');
+            allProcTabs.forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.color = 'var(--text)';
+            });
+            
+            // Add active class to clicked button
+            buttonElement.classList.add('active');
+            buttonElement.style.color = 'var(--primary)';
+            
+            // Hide all proceedings content
+            document.getElementById('summaryContent').style.display = 'none';
+            document.getElementById('membersContent').style.display = 'none';
+            document.getElementById('constitutionContent').style.display = 'none';
+            
+            // Show selected content
+            const selectedContent = document.getElementById(contentId);
+            if (selectedContent) {
+                selectedContent.style.display = 'block';
+            }
+        }
+        
+        // Download Members List as Text Document (Bypasses Excel DLL errors)
+        function downloadMembersList() {
+            const groupName = <%- JSON.stringify(group.groupName || "Group") %>;
+            const downloadedAt = new Date().toLocaleString();
+            
+            let txtContent = `========================================================\n`;
+            txtContent += `   ${groupName.toUpperCase()} - OFFICIAL MEMBERS LIST\n`;
+            txtContent += `   Exported On: ${downloadedAt}\n`;
+            txtContent += `========================================================\n\n`;
+            
+            txtContent += `[ NO. ] | [ NAME ]                          | [ ROLE ]      | [ PHONE ]\n`;
+            txtContent += `-`.repeat(80) + `\n`;
+            
+            // Get members from the table
+            const rows = document.querySelectorAll('#membersContent table tbody tr');
+            let memberCount = 0;
+            
+            rows.forEach((row) => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 3) {
+                    // Check if it's the empty placeholder row
+                    if (cells.length === 1 && cells[0].colSpan > 1) {
+                        return;
+                    }
+                    const num = cells[0].textContent.trim().padEnd(5, ' ');
+                    const name = cells[1].textContent.trim().padEnd(30, ' ');
+                    const role = cells[2].textContent.trim().padEnd(13, ' ');
+                    const phone = cells[3] ? cells[3].textContent.trim() : '';
+                    
+                    txtContent += `  ${num} | ${name} | ${role} | ${phone}\n`;
+                    memberCount++;
+                }
+            });
+            
+            if (memberCount === 0) {
+                txtContent += `  No members found in this group yet.\n`;
+            }
+            
+            txtContent += `\n========================================================\n`;
+            txtContent += `TOTAL MEMBERS: ${memberCount}\n`;
+            txtContent += `Generated dynamically by Tbank Investment Systems.\n`;
+            
+            const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${groupName.replace(/\s+/g, '_')}_Members.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Download Constitution as Text Document
+        function downloadConstitution() {
+            const groupName = <%- JSON.stringify(group.groupName || "Group") %>;
+            const updatedDate = <%- JSON.stringify(group.principlesSetAt ? new Date(group.principlesSetAt).toLocaleString() : (group.createdAt ? new Date(group.createdAt).toLocaleString() : "N/A")) %>;
+            const downloadedAt = new Date().toLocaleString();
+            
+            let content = `========================================================\n`;
+            content += `   ${groupName.toUpperCase()} - OFFICIAL CONSTITUTION\n`;
+            content += `   Last Updated: ${updatedDate}\n`;
+            content += `========================================================\n\n`;
+            
+            // Get constitution points from the displayed categories
+            const categoryDivs = document.querySelectorAll('#constitutionContent > div.constitution-content > div');
+            
+            if (categoryDivs.length === 0) {
+                content += "No formal constitution content has been initialized yet.\n";
+            } else {
+                categoryDivs.forEach(div => {
+                    const header = div.querySelector('h4');
+                    if (header) {
+                        const catName = header.textContent.trim();
+                        content += `\n[ ${catName.toUpperCase()} ]\n`;
+                        content += `-`.repeat(catName.length + 4) + `\n`;
+                        
+                        const paragraphs = div.querySelectorAll('p');
+                        paragraphs.forEach((p, idx) => {
+                            content += `  ${idx + 1}. ${p.textContent.trim()}\n`;
+                        });
+                        content += `\n`;
+                    }
+                });
+            }
+            
+            // Add a footer
+            content += `========================================================\n`;
+            content += `Generated dynamically by Tbank Investment Systems.\n`;
+            content += `Exported on: ${downloadedAt}\n`;
+            
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `${groupName.replace(/\s+/g, '_')}_Constitution.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Initialize - show Summary content when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ensure Summary is shown by default
+            const summaryContent = document.getElementById('summaryContent');
+            if (summaryContent) {
+                summaryContent.style.display = 'block';
+            }
+        });
 
         async function verifyConstitutionKey() {
             const input = document.getElementById('constitutionKeyInput').value.trim();
@@ -325,6 +656,137 @@
         document.addEventListener('DOMContentLoaded', () => {
             switchTab('myAccount');
         });
+    </script>
+    
+    <!-- Change PIN Functions -->
+    <script>
+        function showChangePinOptionsGD() {
+            // Hide other buttons, show change pin options
+            document.getElementById('otherButtonsGD').classList.add('hidden');
+            document.getElementById('changePinContainerGD').classList.add('hidden');
+            document.getElementById('accountDetailsContainerGD').classList.add('hidden');
+            document.getElementById('changePinOptionsGD').classList.remove('hidden');
+        }
+        
+        function hideChangePinOptionsGD() {
+            // Show other buttons, hide all pin forms
+            document.getElementById('otherButtonsGD').classList.remove('hidden');
+            document.getElementById('changePinContainerGD').classList.remove('hidden');
+            document.getElementById('accountDetailsContainerGD').classList.remove('hidden');
+            document.getElementById('changePinOptionsGD').classList.add('hidden');
+            document.getElementById('newPinFormGD').classList.add('hidden');
+            document.getElementById('forgotPinFormGD').classList.add('hidden');
+            // Clear all inputs
+            document.getElementById('oldPinGD').value = '';
+            document.getElementById('newPinGD').value = '';
+            document.getElementById('confirmPinGD').value = '';
+            document.getElementById('pinMessageGD').textContent = '';
+            document.getElementById('startKeyGD').value = '';
+            document.getElementById('resetNewPinGD').value = '';
+            document.getElementById('resetConfirmPinGD').value = '';
+            document.getElementById('forgotPinMessageGD').textContent = '';
+            document.getElementById('startKeyInputGD').classList.add('hidden');
+        }
+        
+        function showNewPinFormGD() {
+            document.getElementById('changePinOptionsGD').classList.add('hidden');
+            document.getElementById('newPinFormGD').classList.remove('hidden');
+        }
+        
+        function showForgotPinFormGD() {
+            document.getElementById('changePinOptionsGD').classList.add('hidden');
+            document.getElementById('forgotPinFormGD').classList.remove('hidden');
+        }
+        
+        async function requestStartKeyGD() {
+            const msg = document.getElementById('forgotPinMessageGD');
+            // TODO: Integrate with SMS service to send start key
+            msg.textContent = 'SMS integration pending. Please contact support for start key.';
+            msg.style.color = '#f59e0b';
+            // Show the start key input for now (will be populated after SMS)
+            document.getElementById('startKeyInputGD').classList.remove('hidden');
+        }
+        
+        async function submitResetPinGD() {
+            const startKey = document.getElementById('startKeyGD').value;
+            const newPin = document.getElementById('resetNewPinGD').value;
+            const confirmPin = document.getElementById('resetConfirmPinGD').value;
+            const msg = document.getElementById('forgotPinMessageGD');
+            
+            // Validation
+            if (!startKey || startKey.length < 4) {
+                msg.textContent = 'Please enter the start key from SMS';
+                msg.style.color = 'red';
+                return;
+            }
+            if (!newPin || newPin.length < 4) {
+                msg.textContent = 'New PIN must be 4 digits';
+                msg.style.color = 'red';
+                return;
+            }
+            if (newPin !== confirmPin) {
+                msg.textContent = 'PINs do not match';
+                msg.style.color = 'red';
+                return;
+            }
+            
+            // TODO: Verify start key with backend and reset PIN
+            msg.textContent = 'Start key verification integration pending.';
+            msg.style.color = '#f59e0b';
+        }
+        
+        async function submitChangePinGD() {
+            const oldPin = document.getElementById('oldPinGD').value;
+            const newPin = document.getElementById('newPinGD').value;
+            const confirmPin = document.getElementById('confirmPinGD').value;
+            const msg = document.getElementById('pinMessageGD');
+            
+            // Validation
+            if (!oldPin || oldPin.length < 4) {
+                msg.textContent = 'Please enter your current PIN';
+                msg.style.color = 'red';
+                return;
+            }
+            if (!newPin || newPin.length < 4) {
+                msg.textContent = 'New PIN must be 4 digits';
+                msg.style.color = 'red';
+                return;
+            }
+            if (newPin !== confirmPin) {
+                msg.textContent = 'PINs do not match';
+                msg.style.color = 'red';
+                return;
+            }
+            if (oldPin === newPin) {
+                msg.textContent = 'New PIN must be different from current PIN';
+                msg.style.color = 'red';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/personal/change-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oldPin, newPin })
+                });
+                
+                const result = await res.json();
+                if (result.success) {
+                    msg.textContent = 'PIN changed successfully!';
+                    msg.style.color = 'green';
+                    setTimeout(() => {
+                        hideChangePinOptionsGD();
+                    }, 1500);
+                } else {
+                    msg.textContent = result.message || 'Failed to change PIN';
+                    msg.style.color = 'red';
+                }
+            } catch (e) {
+                console.error(e);
+                msg.textContent = 'Server error occurred';
+                msg.style.color = 'red';
+            }
+        }
     </script>
 </body>
 </html>

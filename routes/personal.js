@@ -306,6 +306,54 @@ router.post("/verify-pin", async (req, res) => {
   }
 });
 
+/* 🔒 Change Personal PIN */
+router.post("/change-pin", async (req, res) => {
+  try {
+    const { oldPin, newPin } = req.body;
+    const phone = req.session.user && req.session.user.phoneNumber;
+
+    if (!oldPin || !newPin) {
+      return res.status(400).json({ success: false, message: "Old PIN and new PIN are required" });
+    }
+
+    if (newPin.length < 4 || !/^\d{4}$/.test(newPin)) {
+      return res.status(400).json({ success: false, message: "New PIN must be exactly 4 digits" });
+    }
+
+    const usersFile = path.join(__dirname, "../data.json");
+    const users = readJSON(usersFile, []);
+    const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
+
+    if (userIndex === -1) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const user = users[userIndex];
+
+    // Verify old PIN first
+    if (!user.personalPin) {
+      return res.status(400).json({ success: false, message: "No PIN set. Please set a PIN first." });
+    }
+
+    const isOldPinValid = await bcrypt.compare(oldPin, user.personalPin);
+    if (!isOldPinValid) {
+      return res.status(401).json({ success: false, message: "Incorrect old PIN" });
+    }
+
+    // Hash the new PIN and save
+    const saltRounds = 10;
+    const hashedNewPin = await bcrypt.hash(newPin, saltRounds);
+    
+    users[userIndex].personalPin = hashedNewPin;
+    writeJSON(usersFile, users);
+
+    res.json({ success: true, message: "PIN changed successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 /* 📂 My Groups */
 router.get("/myaccount", (req, res) => {
   try {
@@ -426,31 +474,107 @@ router.get("/group/:groupName", (req, res) => {
           const p = group.principles;
           const points = [];
           
-          points.push(`This group shall be known as ${group.groupName}, located in ${group.ward} Ward, ${group.constituency} Constituency, ${group.county} County.`);
+          // Identity / Basics
+          points.push(`This member group shall officially be known as ${group.groupName}, anchored geographically in ${group.ward} Ward, ${group.constituency} Constituency, ${group.county} County.`);
+          points.push(`The maximum proposed capacity for this group is ${group.totalProposedMembers || 15} members.`);
           
+          // Meetings & Intervals
           if (p.intervals) {
-              points.push(`Members shall meet ${p.intervals.frequency} on ${p.intervals.period.charAt(0).toUpperCase() + p.intervals.period.slice(1)} to conduct group business.`);
-              points.push(`The group savings cycle is established for a duration of ${p.intervals.endSavingPeriod || '1 year'}.`);
+              points.push(`Members shall collectively meet ${p.intervals.frequency} on every ${p.intervals.period.charAt(0).toUpperCase() + p.intervals.period.slice(1)}.`);
+              points.push(`The group savings cycle and account life duration is established for exactly ${p.intervals.endSavingPeriod || '1 year'}.`);
           }
           
+          // Accounts & Contributions
           if (p.otherContributions && p.otherContributions.length > 0) {
-              const contribs = p.otherContributions.map(c => `${c.accountName} (Account ${c.accountNumber}) at KES ${c.expectedAmount}`).join(', ');
-              points.push(`Standard contributions shall include: ${contribs}.`);
+              const contribs = p.otherContributions.map(c => `${c.accountName} (Account No. ${c.accountNumber}) with amount KES ${c.expectedAmount}`).join('; ');
+              points.push(`The standard bank account contributions shall be maintained strictly as: ${contribs}.`);
           }
           
+          // Division of Share / Distribution
+          if (p.distribution) {
+              points.push(`Dividend distribution shall follow a '${p.distribution.model}' model. Official percentage cut: ${p.distribution.officialPct}%. Performance-based share percentage: ${p.distribution.performancePct || 0}%.`);
+              if (p.distribution.targetAccountName) {
+                  points.push(`Profit division will accumulate towards '${p.distribution.targetAccountName}' account pool.`);
+              }
+          }
+          
+          // Balancing and Welfare/Penalty
+          if (p.balancing && p.balancing.benefitAccounts) {
+              points.push(`Benefits and fines shall be distributed across the following pool accounts: ${p.balancing.benefitAccounts.join(', ')}.`);
+          }
+          
+          // Loans
           if (p.loans) {
-              points.push(`Members qualify for loans after ${p.loans.duration ? p.loans.duration.days : '30'} days of active participation.`);
-              points.push(`Loans shall attract an interest rate of ${p.loans.interestAndLimits ? p.loans.interestAndLimits.interestRate : '0'}% per period.`);
-              points.push(`The maximum loan amount is set at x${p.loans.interestAndLimits ? p.loans.interestAndLimits.limitMultiplier : '3'} of a member's total savings.`);
+              points.push(`Members qualify for loans based on '${p.loans.qualificationType || 'duration'}', specifically after ${p.loans.duration ? p.loans.duration.days : '30'} days of active participation.`);
+              points.push(`Active loans shall attract a fixed interest rate of ${p.loans.interestAndLimits ? p.loans.interestAndLimits.interestRate : '0'}% per interval.`);
+              points.push(`The maximum loan limit per member is strictly capped at x${p.loans.interestAndLimits ? p.loans.interestAndLimits.limitMultiplier : '3'} of their total savings.`);
+              
+              if (p.loans.repayment) {
+                  points.push(`Loan repayment defaults to ${p.loans.repayment.durationDays || '30'} days, permitting a maximum of ${p.loans.repayment.maxRollovers || '3'} rollovers. Fees applied via '${p.loans.repayment.rolloverMethod || 'fixed'}' scale.`);
+              }
           }
           
+          // Governance
           if (p.governance) {
-              points.push(`A quorum of ${p.governance.fastNotificationThreshold || '60'}% is required for fast-tracked constitutional changes.`);
-              points.push(`Major account edits and member removals require a consensus threshold of ${p.governance.editAccountThreshold || '75'}%.`);
+              points.push(`For governance, any rapid constitutional changes will mandate at least ${p.governance.fastNotificationThreshold || '60'}% voting quorum.`);
+              points.push(`Major account edits and potential member removals strictly require a super-majority consensus threshold of ${p.governance.editAccountThreshold || '75'}%.`);
           }
 
           group.constitutionPoints = points;
+      } else {
+          group.constitutionPoints = [
+              `This member group shall officially be known as ${group.groupName}, anchored geographically in ${group.ward} Ward, ${group.constituency} Constituency, ${group.county} County.`,
+              `The maximum proposed capacity for this group is ${group.totalProposedMembers || 15} members.`,
+              `The comprehensive principles and constitution rules have not yet been fully initialized.`
+          ];
       }
+      
+      // 4. Calculate Summary Stats (Countdown and Rounds)
+      const now = new Date();
+      let daysUntilMeeting = 0;
+      let activeRound = 1;
+      let remainRounds = 0;
+      
+      if (group.principles && group.principles.intervals) {
+          const mapDays = { 'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6 };
+          const p = group.principles;
+          
+          if (p.intervals.period) {
+              const meetingDayInt = mapDays[p.intervals.period.toLowerCase()];
+              if (meetingDayInt !== undefined) {
+                  const currentDayInt = now.getDay();
+                  daysUntilMeeting = meetingDayInt - currentDayInt;
+                  if (daysUntilMeeting <= 0) daysUntilMeeting += 7;
+                  if (meetingDayInt === currentDayInt) daysUntilMeeting = 0; 
+              }
+          }
+          
+          let roundDurationDays = 7;
+          const freq = (p.intervals.frequency || 'weekly').toLowerCase();
+          if (freq === 'monthly') roundDurationDays = 30;
+          if (freq === 'daily') roundDurationDays = 1;
+
+          const startDate = new Date(group.principlesSetAt || group.createdAt || now);
+          const diffTime = Math.max(0, now - startDate);
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          activeRound = Math.floor(diffDays / roundDurationDays) + 1;
+          
+          let totalDurationMonths = 12;
+          const endPeriod = (p.intervals.endSavingPeriod || '1-year').toLowerCase();
+          if (endPeriod.includes('6-month')) totalDurationMonths = 6;
+          else if (endPeriod.includes('1-year') || endPeriod.includes('1 year')) totalDurationMonths = 12;
+          else if (endPeriod.includes('2-year') || endPeriod.includes('2 year')) totalDurationMonths = 24;
+          
+          const totalDays = totalDurationMonths * 30; 
+          const totalRounds = Math.floor(totalDays / roundDurationDays);
+          
+          remainRounds = Math.max(0, totalRounds - activeRound);
+      }
+      group.summaryStats = {
+          daysUntilMeeting,
+          activeRound,
+          remainRounds
+      };
       
       res.render("group-details", {
         user: req.session.user,

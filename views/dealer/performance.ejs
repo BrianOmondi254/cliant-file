@@ -1,0 +1,232 @@
+<div id="performance-data-container">
+    <div class="sub-nav">
+        <button class="sub-nav-btn active" onclick="switchPerformanceTab('summary', this)">Summary</button>
+        <button class="sub-nav-btn" onclick="switchPerformanceTab('groups', this)">Groups</button>
+    </div>
+
+    <div id="summary-section" class="performance-section">
+        <div class="summary-list">
+            <div class="summary-item" onclick="showAgentPerformanceChart()">
+                <i class="fas fa-users"></i>
+                <div class="summary-details">
+                    <div class="summary-value" id="total-agents">0</div>
+                    <div class="summary-label">Total Agents</div>
+                </div>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-layer-group"></i>
+                <div class="summary-details">
+                    <div class="summary-value" id="total-groups">0</div>
+                    <div class="summary-label">Total Groups</div>
+                </div>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-user-friends"></i>
+                <div class="summary-details">
+                    <div class="summary-value" id="total-members">0</div>
+                    <div class="summary-label">Total Members</div>
+                </div>
+            </div>
+            <div class="summary-item">
+                <i class="fas fa-balance-scale"></i>
+                <div class="summary-details">
+                    <div class="summary-value" id="avg-members">0</div>
+                    <div class="summary-label">Avg Members/Group</div>
+                </div>
+            </div>
+        </div>
+        <div id="chart-container" style="display: none; margin-top: 20px;">
+            <canvas id="agentPerformanceChart"></canvas>
+            <div style="text-align: center; margin-top: 10px;">
+                <select id="period-filter" onchange="updateChart()">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="365">Last Year</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="groups-section" class="performance-section" style="display: none;">
+        <ul id="group-list" class="agent-list"></ul>
+    </div>
+</div>
+
+<script>
+    let performanceData;
+    let agentPerformanceChart;
+
+    function switchPerformanceTab(tab, element) {
+        document.querySelectorAll('.performance-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        document.querySelectorAll('.sub-nav-btn').forEach(button => {
+            button.classList.remove('active');
+        });
+
+        document.getElementById(tab + '-section').style.display = 'block';
+        element.classList.add('active');
+    }
+
+    function showAgentPerformanceChart() {
+        const chartContainer = document.getElementById('chart-container');
+        chartContainer.style.display = chartContainer.style.display === 'none' ? 'block' : 'none';
+        if (chartContainer.style.display === 'block') {
+            updateChart();
+        }
+    }
+
+    function updateChart() {
+        if (!performanceData) return;
+
+        const period = document.getElementById('period-filter').value;
+        const now = new Date();
+        let filteredGroups = performanceData.groups;
+
+        if (period !== 'all') {
+            const days = parseInt(period);
+            const cutoffDate = new Date(new Date().setDate(now.getDate() - days));
+            filteredGroups = performanceData.groups.filter(g => new Date(g.createdAt) >= cutoffDate);
+        }
+        
+        const agentPerformance = {};
+        performanceData.agents.forEach(agent => {
+            agentPerformance[norm(agent.phoneNumber)] = {
+                name: agent.name,
+                groupsCreated: 0
+            };
+        });
+
+        filteredGroups.forEach(group => {
+            const processorPhone = norm(group.processorPhone);
+            if (agentPerformance[processorPhone]) {
+                agentPerformance[processorPhone].groupsCreated++;
+            }
+        });
+
+        const agentPerformanceArray = Object.values(agentPerformance);
+
+        const chartData = {
+            labels: agentPerformanceArray.map(a => a.name),
+            datasets: [{
+                label: 'Groups Created',
+                data: agentPerformanceArray.map(a => a.groupsCreated),
+                backgroundColor: 'rgba(15, 157, 88, 0.6)',
+                borderColor: 'rgba(15, 157, 88, 1)',
+                borderWidth: 1
+            }]
+        };
+
+        if (agentPerformanceChart) {
+            agentPerformanceChart.data = chartData;
+            agentPerformanceChart.update();
+        } else {
+            const ctx = document.getElementById('agentPerformanceChart').getContext('2d');
+            agentPerformanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/dealer/performance')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    performanceData = data.performance;
+
+                    document.getElementById('total-agents').textContent = performanceData.totalAgents;
+                    document.getElementById('total-groups').textContent = performanceData.totalGroups;
+                    document.getElementById('total-members').textContent = performanceData.totalMembers;
+                    document.getElementById('avg-members').textContent = performanceData.averageMembersPerGroup;
+
+                    const groupList = document.getElementById('group-list');
+                    groupList.innerHTML = ''; 
+                    if(performanceData.groups.length > 0) {
+                        performanceData.groups.forEach(group => {
+                            const li = document.createElement('li');
+                            li.className = 'agent-item';
+                            li.innerHTML = `
+                                <div class="agent-info">
+                                    <h4>${group.name}</h4>
+                                    <p>Members: ${group.members.length}</p>
+                                </div>
+                                <i class="fas fa-layer-group" style="color: #0f9d58; font-size: 18px;"></i>
+                            `;
+                            groupList.appendChild(li);
+                        });
+                    } else {
+                        groupList.innerHTML = '<li class="agent-item"><p>No groups found.</p></li>';
+                    }
+                } else {
+                    console.error('Failed to fetch performance data:', data.error);
+                }
+            })
+            .catch(error => console.error('Error fetching performance data:', error));
+    });
+
+    function norm(p) {
+      if (!p) return "";
+      let s = String(p).trim();
+      if (s.startsWith("0")) s = s.substring(1);
+      if (s.startsWith("+254")) s = s.substring(4);
+      if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+      return s;
+    };
+</script>
+
+<style>
+    .summary-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: space-between;
+    }
+    .summary-item {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex-basis: calc(50% - 5px);
+        text-align: center;
+    }
+    .summary-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .summary-item i {
+        font-size: 24px;
+        color: #0f9d58;
+        margin-bottom: 10px;
+    }
+    .summary-details {
+        display: flex;
+        flex-direction: column;
+    }
+    .summary-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .summary-label {
+        font-size: 12px;
+        color: #64748b;
+    }
+</style>

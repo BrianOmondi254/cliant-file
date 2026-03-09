@@ -61,10 +61,12 @@
     navLinks.push({ name: 'General', action: "app.handleGeneralClick()" });
     navLinks.push({ name: 'Personal', action: "app.switchRole('Personal')" });
     navLinks.push({ name: 'Message', action: "app.openInbox()" });
-    navLinks.push({ name: 'Out', action: "window.location.replace('/logout?t=' + Date.now())" });
     const activeIndex = navLinks.findIndex(l => l.name === 'Personal');
 %>
 <div class="container">
+    <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
+        <button onclick="window.location.replace('/logout?t=' + Date.now())" style="background: rgba(220, 38, 38, 0.9); border: none; color: white; font-size: 0.8rem; font-weight: bold; padding: 6px 12px; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; transition: all 0.2s;"><i class="fa-solid fa-power-off"></i> Out</button>
+    </div>
     <div style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 30px 20px; color: white; margin: -20px -20px 25px -20px; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1);">
         <h1 style="font-size: 26px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
         <p style="font-size: 10px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-top: 4px;">Secure Digital Wealth</p>
@@ -275,6 +277,126 @@ const app = {
             if (result.success) { this.showToast("PIN set successfully!", "success"); this.data.hasPersonalPin = true; this.render(); }
             else { this.showToast(result.message || "Failed to set PIN", "error"); }
         } catch (e) { console.error(e); this.showToast("Server error occurred", "error"); }
+    },
+    flowNewPin() {
+        // Close current modal and show change PIN options
+        const modal = document.getElementById('customModal');
+        if (modal) modal.style.display = 'none';
+        
+        // Render change PIN options
+        const main = document.getElementById('main-content');
+        if (main) {
+            main.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;position:relative;">
+                <button onclick="app.render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;"><i class="fas fa-times"></i></button>
+                <h2 style="margin-bottom:1rem;">Change PIN</h2>
+                <p style="color:#6b7280;margin-bottom:1rem;">Select an option to change or reset your PIN.</p>
+                <div style="display:flex;gap:10px;">
+                    <button class="btn btn-primary" style="flex:1;padding:12px;" onclick="app.showNewPinFormCliant()">
+                        <i class="fas fa-edit"></i> New PIN
+                    </button>
+                    <button class="btn" style="flex:1;padding:12px;background:#f59e0b;color:#fff;" onclick="app.showForgotPinFormCliant()">
+                        <i class="fas fa-question-circle"></i> Forgot PIN
+                    </button>
+                </div>
+            </div>`;
+        }
+    },
+    showNewPinFormCliant() {
+        const main = document.getElementById('main-content');
+        if (main) {
+            main.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;position:relative;">
+                <button onclick="app.render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;"><i class="fas fa-times"></i></button>
+                <h2 style="margin-bottom:1rem;">Change PIN</h2>
+                <p style="color:#6b7280;margin-bottom:1rem;">Enter your current PIN and choose a new PIN.</p>
+                <div class="form-group"><label class="form-label">Current PIN</label><input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
+                <div class="form-group"><label class="form-label">New PIN</label><input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
+                <div class="form-group"><label class="form-label">Confirm New PIN</label><input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
+                <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="app.changePersonalPin()">Change PIN</button>
+            </div>`;
+        }
+    },
+    showForgotPinFormCliant() {
+        const main = document.getElementById('main-content');
+        if (main) {
+            main.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;position:relative;">
+                <button onclick="app.render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;"><i class="fas fa-times"></i></button>
+                <h2 style="margin-bottom:1rem;">Reset PIN</h2>
+                <p style="color:#6b7280;margin-bottom:1rem;">Request a start key via SMS to reset your PIN.</p>
+                <button class="btn" style="width:100%;padding:12px;background:#7c3aed;color:#fff;margin-bottom:15px;" onclick="app.requestStartKeyCliant()">
+                    <i class="fas fa-sms"></i> Request Start Key (SMS)
+                </button>
+                <div id="startKeySectionCliant" class="hidden">
+                    <div class="form-group"><label class="form-label">Start Key (from SMS)</label><input type="text" id="startKeyCliant" class="form-input" placeholder="Enter start key" inputmode="numeric"></div>
+                    <div class="form-group"><label class="form-label">New PIN</label><input type="password" id="resetNewPinCliant" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
+                    <div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="resetConfirmPinCliant" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
+                    <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="app.submitResetPinCliant()">Reset PIN</button>
+                </div>
+                <p id="resetPinMsgCliant" style="color:#6b7280;margin-top:1rem;font-size:0.9rem;"></p>
+            </div>`;
+        }
+    },
+    async requestStartKeyCliant() {
+        const msg = document.getElementById('resetPinMsgCliant');
+        // TODO: Integrate with SMS service to send start key
+        if (msg) {
+            msg.textContent = 'SMS integration pending. Please contact support for start key.';
+            msg.style.color = '#f59e0b';
+        }
+        const section = document.getElementById('startKeySectionCliant');
+        if (section) section.classList.remove('hidden');
+    },
+    async submitResetPinCliant() {
+        const startKey = document.getElementById('startKeyCliant')?.value;
+        const newPin = document.getElementById('resetNewPinCliant')?.value;
+        const confirmPin = document.getElementById('resetConfirmPinCliant')?.value;
+        const msg = document.getElementById('resetPinMsgCliant');
+        
+        if (!startKey || startKey.length < 4) {
+            if (msg) { msg.textContent = 'Please enter the start key from SMS'; msg.style.color = 'red'; }
+            return;
+        }
+        if (!newPin || newPin.length < 4) {
+            if (msg) { msg.textContent = 'New PIN must be 4 digits'; msg.style.color = 'red'; }
+            return;
+        }
+        if (newPin !== confirmPin) {
+            if (msg) { msg.textContent = 'PINs do not match'; msg.style.color = 'red'; }
+            return;
+        }
+        
+        // TODO: Verify start key with backend and reset PIN
+        if (msg) {
+            msg.textContent = 'Start key verification integration pending.';
+            msg.style.color = '#f59e0b';
+        }
+    },
+    async changePersonalPin() {
+        const oldPin = document.getElementById('oldPersonalPin').value;
+        const newPin = document.getElementById('newChangePin').value;
+        const confirmPin = document.getElementById('confirmChangePin').value;
+        
+        if (!oldPin || oldPin.length < 4) { this.showToast("Please enter your current PIN", "error"); return; }
+        if (!newPin || newPin.length < 4) { this.showToast("New PIN must be 4 digits", "error"); return; }
+        if (newPin !== confirmPin) { this.showToast("New PINs do not match", "error"); return; }
+        if (oldPin === newPin) { this.showToast("New PIN must be different from current PIN", "error"); return; }
+        
+        try {
+            const res = await fetch('/personal/change-pin', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ oldPin, newPin }) 
+            });
+            const result = await res.json();
+            if (result.success) { 
+                this.showToast("PIN changed successfully!", "success"); 
+                this.render(); 
+            } else { 
+                this.showToast(result.message || "Failed to change PIN", "error"); 
+            }
+        } catch (e) { 
+            console.error(e); 
+            this.showToast("Server error occurred", "error"); 
+        }
     },
     showPersonalFile() {
         const u = this.data.user;

@@ -196,6 +196,15 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
         <p>View your personal savings</p>
       </div>
       
+      <!-- Change PIN (shown for ALL users who have a PIN) -->
+      <% if (typeof hasPersonalPin !== 'undefined' && hasPersonalPin) { %>
+      <div id="changePinBtn" class="account-type-btn" onclick="selectAccountType('changePin')">
+        <i class="fas fa-key" style="color: #f59e0b;"></i>
+        <h4><i class="fas fa-key"></i> Change PIN</h4>
+        <p>Update your personal PIN</p>
+      </div>
+      <% } %>
+      
       <!-- Group Account (shown ONLY for trustees and officials) -->
       <div id="groupAccountBtn" class="account-type-btn hidden" onclick="selectAccountType('groupAccount')">
         <i class="fas fa-users" style="color: #7c3aed;"></i>
@@ -270,7 +279,46 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
         <i class="fas fa-user-circle" style="font-size: 64px; color: var(--primary); margin-bottom: 15px;"></i>
         <h4 style="color: var(--text); margin-bottom: 10px;">My Personal Account</h4>
         <p style="color: var(--text-muted); font-size: 0.85rem;">Your personal savings are managed here.</p>
-        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 15px;">Feature coming soon...</p>
+        
+        <!-- Change PIN Section -->
+        <div id="changePinSection" style="margin-top: 25px; padding: 15px; background: var(--background); border-radius: 10px;">
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px;">Secure your account with a PIN</p>
+          <% if (typeof hasPersonalPin !== 'undefined' && hasPersonalPin) { %>
+            <button type="button" onclick="showChangePinForm()" class="primary" style="padding: 10px 20px; border-radius: 8px;">
+              <i class="fas fa-key"></i> Change PIN
+            </button>
+          <% } else { %>
+            <button type="button" onclick="showSetPinForm()" class="primary" style="padding: 10px 20px; border-radius: 8px;">
+              <i class="fas fa-lock"></i> Set PIN
+            </button>
+          <% } %>
+        </div>
+        
+        <!-- Change PIN Form (hidden by default) -->
+        <div id="changePinForm" class="hidden" style="margin-top: 20px; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto;">
+          <% if (typeof hasPersonalPin !== 'undefined' && hasPersonalPin) { %>
+            <div class="form-group">
+              <label style="font-size: 0.85rem;">Current PIN</label>
+              <input type="password" id="oldPinGeneral" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+            </div>
+          <% } %>
+          <div class="form-group">
+            <label style="font-size: 0.85rem;">New PIN</label>
+            <input type="password" id="newPinGeneral" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85rem;">Confirm PIN</label>
+            <input type="password" id="confirmPinGeneral" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+          </div>
+          <button type="button" onclick="submitPinChangeGeneral()" class="primary" style="width: 100%; padding: 12px; border-radius: 8px; margin-top: 10px;">
+            <i class="fas fa-check"></i> Save PIN
+          </button>
+          <button type="button" onclick="cancelPinChangeGeneral()" class="secondary" style="width: 100%; padding: 10px; border-radius: 8px; margin-top: 8px;">
+            Cancel
+          </button>
+        </div>
+        
+        <p id="pinMessage" style="color: var(--primary); font-size: 0.8rem; margin-top: 15px;"></p>
       </div>
       <button type="button" onclick="backToAccountSelection()" class="secondary">
         <i class="fas fa-arrow-left"></i> Back
@@ -290,6 +338,79 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
       <i class="fas fa-folder-open" style="font-size: 48px; color: var(--border); margin-bottom: 15px;"></i>
       <p style="color: var(--text-muted);">You are not a member of any group yet.</p>
       <p style="font-size: 0.85rem; color: var(--text-muted);">Create a group or ask to be added to an existing group.</p>
+    </div>
+    
+    <!-- Change PIN View -->
+    <div id="changePinView" class="hidden">
+      <div style="text-align: center; padding: 20px; position: relative;">
+        <button onclick="backToAccountSelection()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+        <i class="fas fa-key" style="font-size: 64px; color: #f59e0b; margin-bottom: 15px;"></i>
+        <h4 style="color: var(--text); margin-bottom: 10px;">Change PIN</h4>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Update your personal security PIN</p>
+        
+        <!-- Change PIN Options -->
+        <div id="changePinOptionsGN" style="margin-top: 25px;">
+          <div style="display: flex; gap: 10px;">
+            <button onclick="showNewPinFormGN()" class="primary" style="flex: 1; padding: 12px; border-radius: 8px;">
+              <i class="fas fa-edit"></i> New PIN
+            </button>
+            <button onclick="showForgotPinFormGN()" class="primary" style="flex: 1; padding: 12px; border-radius: 8px; background: #f59e0b;">
+              <i class="fas fa-question-circle"></i> Forgot PIN
+            </button>
+          </div>
+        </div>
+        
+        <!-- New PIN Form -->
+        <div id="newPinFormGN" class="hidden" style="margin-top: 25px; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto; position: relative; padding: 15px; background: #f8fafc; border-radius: 10px;">
+          <button onclick="backToAccountSelection()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+          <div class="form-group">
+            <label style="font-size: 0.85rem;">Current PIN</label>
+            <input type="password" id="oldPinGeneral2" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85rem;">New PIN</label>
+            <input type="password" id="newPinGeneral2" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85rem;">Confirm PIN</label>
+            <input type="password" id="confirmPinGeneral2" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+          </div>
+          <button type="button" onclick="submitChangePinGeneral()" class="primary" style="width: 100%; padding: 12px; border-radius: 8px; margin-top: 10px;">
+            <i class="fas fa-check"></i> Change PIN
+          </button>
+          <p id="pinMessage2" style="color: var(--primary); font-size: 0.8rem; margin-top: 15px; text-align: center;"></p>
+        </div>
+        
+        <!-- Forgot PIN Form -->
+        <div id="forgotPinFormGN" class="hidden" style="margin-top: 25px; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto; position: relative; padding: 15px; background: #f8fafc; border-radius: 10px;">
+          <button onclick="backToAccountSelection()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);"><i class="fas fa-times"></i></button>
+          <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Request a start key via SMS to reset your PIN</p>
+          <button type="button" onclick="requestStartKeyGN()" class="primary" style="width: 100%; padding: 12px; border-radius: 8px; margin-bottom: 15px; background: #7c3aed;">
+            <i class="fas fa-sms"></i> Request Start Key (SMS)
+          </button>
+          
+          <div id="startKeyInputGN" class="hidden">
+            <div class="form-group">
+              <label style="font-size: 0.85rem;">Start Key (from SMS)</label>
+              <input type="text" id="startKeyGN" class="form-input" placeholder="Enter start key" inputmode="numeric">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.85rem;">New PIN</label>
+              <input type="password" id="resetNewPinGN" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 0.85rem;">Confirm PIN</label>
+              <input type="password" id="resetConfirmPinGN" class="form-input" maxlength="4" placeholder="****" inputmode="numeric">
+            </div>
+            <button type="button" onclick="submitResetPinGN()" class="primary" style="width: 100%; padding: 12px; border-radius: 8px; margin-top: 10px;">
+              <i class="fas fa-check"></i> Reset PIN
+            </button>
+          </div>
+          
+          <p id="forgotPinMessageGN" style="color: var(--primary); font-size: 0.8rem; margin-top: 15px; text-align: center;"></p>
+        </div>
+        
+      </div>
     </div>
   </div>
 
@@ -660,6 +781,10 @@ function selectAccountType(type) {
     // Show My Account directly
     document.getElementById('accountTypeSelection').classList.add('hidden');
     document.getElementById('myAccountView').classList.remove('hidden');
+  } else if (type === 'changePin') {
+    // Show Change PIN view directly
+    document.getElementById('accountTypeSelection').classList.add('hidden');
+    document.getElementById('changePinView').classList.remove('hidden');
   } else if (type === 'groupAccount') {
     // Show group list first so user can choose which group
     const groups = userRoleData.groups || [];
@@ -727,7 +852,212 @@ function backToAccountSelection() {
   document.getElementById('pinVerification').classList.add('hidden');
   document.getElementById('createPinSection').classList.add('hidden');
   document.getElementById('generateKeySection').classList.add('hidden');
+  document.getElementById('changePinView').classList.add('hidden');
   document.getElementById('accountTypeSelection').classList.remove('hidden');
+}
+
+async function submitChangePinGeneral() {
+  const oldPin = document.getElementById('oldPinGeneral2').value;
+  const newPin = document.getElementById('newPinGeneral2').value;
+  const confirmPin = document.getElementById('confirmPinGeneral2').value;
+  const msg = document.getElementById('pinMessage2');
+  
+  // Validation
+  if (!oldPin || oldPin.length < 4) {
+    msg.textContent = 'Please enter your current PIN';
+    msg.style.color = 'red';
+    return;
+  }
+  if (!newPin || newPin.length < 4) {
+    msg.textContent = 'New PIN must be 4 digits';
+    msg.style.color = 'red';
+    return;
+  }
+  if (newPin !== confirmPin) {
+    msg.textContent = 'PINs do not match';
+    msg.style.color = 'red';
+    return;
+  }
+  if (oldPin === newPin) {
+    msg.textContent = 'New PIN must be different from current PIN';
+    msg.style.color = 'red';
+    return;
+  }
+  
+  try {
+    const res = await fetch('/personal/change-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPin, newPin })
+    });
+    
+    const result = await res.json();
+    if (result.success) {
+      msg.textContent = 'PIN changed successfully!';
+      msg.style.color = 'green';
+      setTimeout(() => {
+        backToAccountSelection();
+      }, 1500);
+    } else {
+      msg.textContent = result.message || 'Failed to change PIN';
+      msg.style.color = 'red';
+    }
+  } catch (e) {
+    console.error(e);
+    msg.textContent = 'Server error occurred';
+    msg.style.color = 'red';
+  }
+}
+
+// Forgot PIN Functions for General New
+function showNewPinFormGN() {
+  document.getElementById('changePinOptionsGN').classList.add('hidden');
+  document.getElementById('newPinFormGN').classList.remove('hidden');
+}
+
+function showForgotPinFormGN() {
+  document.getElementById('changePinOptionsGN').classList.add('hidden');
+  document.getElementById('forgotPinFormGN').classList.remove('hidden');
+}
+
+function backToChangePinOptionsGN() {
+  document.getElementById('changePinOptionsGN').classList.remove('hidden');
+  document.getElementById('newPinFormGN').classList.add('hidden');
+  document.getElementById('forgotPinFormGN').classList.add('hidden');
+  // Clear inputs
+  document.getElementById('oldPinGeneral2').value = '';
+  document.getElementById('newPinGeneral2').value = '';
+  document.getElementById('confirmPinGeneral2').value = '';
+  document.getElementById('pinMessage2').textContent = '';
+  document.getElementById('startKeyGN').value = '';
+  document.getElementById('resetNewPinGN').value = '';
+  document.getElementById('resetConfirmPinGN').value = '';
+  document.getElementById('forgotPinMessageGN').textContent = '';
+  document.getElementById('startKeyInputGN').classList.add('hidden');
+}
+
+async function requestStartKeyGN() {
+  const msg = document.getElementById('forgotPinMessageGN');
+  // TODO: Integrate with SMS service to send start key
+  msg.textContent = 'SMS integration pending. Please contact support for start key.';
+  msg.style.color = '#f59e0b';
+  // Show the start key input for now
+  document.getElementById('startKeyInputGN').classList.remove('hidden');
+}
+
+async function submitResetPinGN() {
+  const startKey = document.getElementById('startKeyGN').value;
+  const newPin = document.getElementById('resetNewPinGN').value;
+  const confirmPin = document.getElementById('resetConfirmPinGN').value;
+  const msg = document.getElementById('forgotPinMessageGN');
+  
+  // Validation
+  if (!startKey || startKey.length < 4) {
+    msg.textContent = 'Please enter the start key from SMS';
+    msg.style.color = 'red';
+    return;
+  }
+  if (!newPin || newPin.length < 4) {
+    msg.textContent = 'New PIN must be 4 digits';
+    msg.style.color = 'red';
+    return;
+  }
+  if (newPin !== confirmPin) {
+    msg.textContent = 'PINs do not match';
+    msg.style.color = 'red';
+    return;
+  }
+  
+  // TODO: Verify start key with backend and reset PIN
+  msg.textContent = 'Start key verification integration pending.';
+  msg.style.color = '#f59e0b';
+}
+
+// Personal PIN Change Functions
+function showSetPinForm() {
+  document.getElementById('changePinSection').classList.add('hidden');
+  document.getElementById('changePinForm').classList.remove('hidden');
+}
+
+function showChangePinForm() {
+  document.getElementById('changePinSection').classList.add('hidden');
+  document.getElementById('changePinForm').classList.remove('hidden');
+}
+
+function cancelPinChangeGeneral() {
+  document.getElementById('changePinForm').classList.add('hidden');
+  document.getElementById('changePinSection').classList.remove('hidden');
+  document.getElementById('oldPinGeneral').value = '';
+  document.getElementById('newPinGeneral').value = '';
+  document.getElementById('confirmPinGeneral').value = '';
+  document.getElementById('pinMessage').textContent = '';
+}
+
+async function submitPinChangeGeneral() {
+  const oldPinField = document.getElementById('oldPinGeneral');
+  const oldPin = oldPinField ? oldPinField.value : '';
+  const newPin = document.getElementById('newPinGeneral').value;
+  const confirmPin = document.getElementById('confirmPinGeneral').value;
+  const msg = document.getElementById('pinMessage');
+  const hasPersonalPin = oldPinField !== null && oldPinField !== undefined;
+  
+  // Validation
+  if (hasPersonalPin && (!oldPin || oldPin.length < 4)) {
+    msg.textContent = 'Please enter your current PIN';
+    msg.style.color = 'red';
+    return;
+  }
+  if (!newPin || newPin.length < 4) {
+    msg.textContent = 'New PIN must be 4 digits';
+    msg.style.color = 'red';
+    return;
+  }
+  if (newPin !== confirmPin) {
+    msg.textContent = 'PINs do not match';
+    msg.style.color = 'red';
+    return;
+  }
+  if (hasPersonalPin && oldPin === newPin) {
+    msg.textContent = 'New PIN must be different from current PIN';
+    msg.style.color = 'red';
+    return;
+  }
+  
+  try {
+    let res;
+    if (hasPersonalPin) {
+      // Change existing PIN
+      res = await fetch('/personal/change-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPin, newPin })
+      });
+    } else {
+      // Set new PIN
+      res = await fetch('/personal/set-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: newPin })
+      });
+    }
+    
+    const result = await res.json();
+    if (result.success) {
+      msg.textContent = hasPersonalPin ? 'PIN changed successfully!' : 'PIN set successfully!';
+      msg.style.color = 'green';
+      setTimeout(() => {
+        cancelPinChangeGeneral();
+        location.reload();
+      }, 1500);
+    } else {
+      msg.textContent = result.message || 'Failed to save PIN';
+      msg.style.color = 'red';
+    }
+  } catch (e) {
+    console.error(e);
+    msg.textContent = 'Server error occurred';
+    msg.style.color = 'red';
+  }
 }
 
 async function verifyGroupPin() {

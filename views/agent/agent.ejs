@@ -3439,14 +3439,15 @@
 
   function populateGroupDetails(group) {
       const nameEl = document.getElementById('detailsGroupName');
-      nameEl.textContent = group.groupName;
       
-      // If it's a "New Group" (no trustee_1), hide the name in related content as requested
+      // Check if it's a "New Group" (no trustee_1) - show Agent Verification instead of content
       if (!group.trustee_1) {
-          nameEl.style.opacity = '0';
-      } else {
-          nameEl.style.opacity = '1';
+          // Show Agent Verification form for new groups
+          showAgentVerificationForNewGroup(group);
+          return;
       }
+      
+      nameEl.textContent = group.groupName;
       
       // Calculate Stats (Count unique people objects)
       const personKeys = Object.keys(group).filter(k => k.match(/^(trustee|official|member)_\d+$/));
@@ -3508,6 +3509,134 @@
           
           if (phaseActionsDiv) phaseActionsDiv.classList.remove('hidden');
           if (principlesWrapper) principlesWrapper.classList.add('hidden');
+      }
+  }
+
+  // Function to show Agent Verification form for New Groups
+  function showAgentVerificationForNewGroup(group) {
+      const nameEl = document.getElementById('detailsGroupName');
+      const phaseStatusRow = document.getElementById('phaseStatusRow');
+      const phaseStatusText = document.getElementById('phaseStatusText');
+      const groupMainInfo = document.getElementById('groupMainInfo');
+      const principlesSection = document.getElementById('principlesSection');
+      const phaseActions = document.getElementById('phaseActions');
+      const membersListSection = document.getElementById('membersListSection');
+      
+      // Hide all content sections
+      if (groupMainInfo) groupMainInfo.classList.add('hidden');
+      if (principlesSection) principlesSection.classList.add('hidden');
+      if (phaseActions) phaseActions.classList.add('hidden');
+      if (membersListSection) membersListSection.classList.add('hidden');
+      
+      // Set header for new group verification
+      nameEl.textContent = 'Agent Verification';
+      nameEl.style.opacity = '1';
+      phaseStatusText.textContent = 'New Group - Verify Chairperson';
+      phaseStatusRow.style.background = '#e1f5fe';
+      phaseStatusText.style.color = '#0288d1';
+      
+      // Store the selected group name globally for verification
+      window.selectedNewGroupName = group.groupName;
+      
+      // Show createGroupSection and createGroupForm
+      const createGroupSection = document.getElementById('createGroupSection');
+      if (createGroupSection) {
+          createGroupSection.classList.remove('hidden');
+      }
+      
+      const createForm = document.getElementById('createGroupForm');
+      if (createForm) {
+          createForm.classList.remove('hidden');
+      }
+      
+      // Show verification step
+      const verificationStep = document.getElementById('verificationStep');
+      if (verificationStep) {
+          verificationStep.classList.remove('hidden');
+      }
+      
+      // Hide other steps
+      document.getElementById('totalMembersStep').classList.add('hidden');
+      document.getElementById('paymentStep').classList.add('hidden');
+      document.getElementById('cAccount').classList.add('hidden');
+      document.getElementById('reviewStep').classList.add('hidden');
+      
+      // Pre-select the group and show phone input
+      const groupSelect = document.getElementById('verifyGroup');
+      if (groupSelect) {
+          groupSelect.value = group.groupName;
+          // Show phone input directly
+          document.getElementById('groupSelectContainer').classList.add('hidden');
+          document.getElementById('phoneVerifyContainer').classList.remove('hidden');
+          document.getElementById('selectedGroupDisplay').textContent = group.groupName;
+      }
+  }
+
+  // Override the existing verifyChairperson to handle new groups flow
+  const originalVerifyChairperson = verifyChairperson;
+  async function verifyChairperson() {
+      const phone = document.getElementById("verifyPhone").value;
+      const group = document.getElementById("verifyGroup").value;
+      const msg = document.getElementById("verifyMsg");
+      
+      if (!phone || !group) {
+        msg.textContent = "Please select a group and enter a phone number.";
+        return;
+      }
+
+      // Check if this is a new group (no trustee_1)
+      const selectedGroup = window.managedGroups.find(g => g.groupName === group);
+      if (selectedGroup && !selectedGroup.trustee_1) {
+          // This is a new group - skip to member registration directly
+          window.pendingChairpersonPhone = phone;
+          
+          // Hide verification, show member details directly
+          document.getElementById("verificationStep").classList.add("hidden");
+          document.getElementById("cAccount").classList.remove("hidden");
+          document.getElementById("displayGroup2").textContent = group;
+          document.getElementById("displayGroup").textContent = group;
+          
+          // Clear and generate member fields
+          document.getElementById('trusteesContainer').innerHTML = '';
+          document.getElementById('officialsContainer').innerHTML = '';
+          document.getElementById('membersContainer').innerHTML = '';
+          
+          window.tbankCounts = { trustees: 3, officials: 1 };
+          window.currentTotalMembers = 15;
+          
+          // Generate fields
+          generateFields("Trustee", 3, "trusteesContainer");
+          generateFlexibleFields("Official", 1, 1, "officialsContainer");
+          generateFlexibleFields("Member", 5, 15, "membersContainer");
+          
+          return;
+      }
+      
+      // Original flow for existing groups
+      try {
+        const res = await fetch("/general/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            chairpersonalphonenumber: phone,
+            groupName: group
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          window.tbankCounts = data.counts;
+          window.tbankFees = data.fees;
+          
+          document.getElementById("verificationStep").classList.add("hidden");
+          document.getElementById("totalMembersStep").classList.remove("hidden");
+          document.getElementById("displayGroup").textContent = group;
+        } else {
+          msg.textContent = data.message || "Verification failed.";
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "Error verifying details.";
       }
   }
 

@@ -294,4 +294,102 @@ router.post("/set-constitution-key", async (req, res) => {
   }
 });
 
+// POST /agent/register-new-group - Register new group with members
+router.post("/register-new-group", async (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.json({ success: false, message: "Unauthorized" });
+  }
+
+  const { groupName, chairpersonPhone, trustees, officials, members } = req.body;
+  
+  if (!groupName || !chairpersonPhone) {
+    return res.json({ success: false, message: "Group name and chairperson phone are required" });
+  }
+  
+  // Load general.json
+  let general = loadJSON(generalFile);
+  
+  // Find and update the group
+  let found = false;
+  
+  const updateGroup = (g) => {
+      // Add chairperson as trustee_1
+      g.trustee_1 = chairpersonPhone;
+      g.trustee_1_name = "Chairperson";
+      g.phone = chairpersonPhone;
+      g.createdAt = g.createdAt || new Date().toISOString();
+      g.updatedAt = new Date().toISOString();
+      g.registeredByAgent = req.session.user.phoneNumber;
+      
+      // Add trustees
+      if (trustees && trustees.length > 0) {
+          trustees.forEach((t, idx) => {
+              g[`trustee_${idx + 1}`] = { 
+                  name: t.name, 
+                  id: t.id, 
+                  phone: t.phone, 
+                  type: 'trustee' 
+              };
+              if (idx === 0) {
+                  g.trustee_1_name = t.name;
+              }
+          });
+      }
+      
+      // Add officials
+      if (officials && officials.length > 0) {
+          officials.forEach((o, idx) => {
+              g[`official_${idx + 1}`] = { 
+                  name: o.name, 
+                  id: o.id, 
+                  phone: o.phone, 
+                  type: 'official' 
+              };
+          });
+      }
+      
+      // Add members
+      if (members && members.length > 0) {
+          members.forEach((m, idx) => {
+              g[`member_${idx + 1}`] = { 
+                  name: m.name, 
+                  id: m.id, 
+                  phone: m.phone, 
+                  type: 'member' 
+              };
+          });
+          g.totalProposedMembers = trustees.length + officials.length + members.length;
+      }
+      
+      found = true;
+  };
+
+  if (Array.isArray(general)) {
+       const g = general.find(g => g.groupName === groupName);
+       if (g) updateGroup(g);
+  } else {
+       // Traverse Hierarchy
+       for (const c in general) {
+           if (typeof general[c] !== 'object') continue;
+           for (const co in general[c]) {
+               if (typeof general[c][co] !== 'object') continue;
+               for (const w in general[c][co]) {
+                   const list = general[c][co][w];
+                   if (Array.isArray(list)) {
+                       const g = list.find(g => g.groupName === groupName);
+                       if (g) updateGroup(g);
+                   }
+               }
+           }
+       }
+  }
+
+  if (found) {
+      fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
+      return res.json({ success: true, message: "Group registered successfully" });
+  } else {
+      return res.json({ success: false, message: "Group not found." });
+  }
+});
+
 module.exports = router;
