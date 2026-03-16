@@ -5,7 +5,7 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const usersFile = path.join(__dirname, "../data.json");
 const agentFile = path.join(__dirname, "../agent.json");
-const dealerFile = path.join(__dirname, "../dealer.json");
+const dealerFile = path.join(__dirname, "../dealer.json"); 
 
 // Helper functions
 const readJSON = (file, fallback = []) => {

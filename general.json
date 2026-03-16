@@ -117,69 +117,6 @@
           "principlesSetAt": "2026-02-22T19:54:17.316Z",
           "accountNumber": "2540442621424001",
           "pin": "5907",
-          "trustee_1": {
-            "type": "trustee",
-            "index": "1",
-            "title": "Chairperson",
-            "phone": "0700051102",
-            "id": "35951444"
-          },
-          "trustee_2": {
-            "type": "trustee",
-            "index": "2",
-            "title": "Treasurer",
-            "phone": "0741001141",
-            "id": "35951449"
-          },
-          "trustee_3": {
-            "type": "trustee",
-            "index": "3",
-            "title": "Secretary",
-            "phone": "0742001141",
-            "id": "35951450"
-          },
-          "official_1": {
-            "type": "official",
-            "index": "4",
-            "phone": "0743001141",
-            "id": "35951451"
-          },
-          "member_1": {
-            "type": "member",
-            "index": "5",
-            "phone": "0744001141",
-            "id": "35951452"
-          },
-          "member_2": {
-            "type": "member",
-            "index": "6",
-            "phone": "0745001141",
-            "id": "35951453"
-          },
-          "member_3": {
-            "type": "member",
-            "index": "7",
-            "phone": "0746001141",
-            "id": "35951454"
-          },
-          "member_4": {
-            "type": "member",
-            "index": "8",
-            "phone": "0747001141",
-            "id": "35951455"
-          },
-          "member_5": {
-            "type": "member",
-            "index": "9",
-            "phone": "0748001141",
-            "id": "35951456"
-          },
-          "member_6": {
-            "type": "member",
-            "index": "10",
-            "phone": "0749001141",
-            "id": "35951457"
-          },
           "constitutionKeySetBy": "0741001141",
           "messages": [
             {
@@ -197,7 +134,60 @@
               "content": "[Security Alert] A new Secure Group PIN and Security Key have been established for \"kinda eteko\" by Chairperson brian  jimbo. Keys have been updated securely. (3/3/2026, 11:42:39 PM)",
               "timestamp": "2026-03-03T20:42:39.986Z"
             }
-          ]
+          ],
+          "trustee_1": {
+            "type": "trustee",
+            "title": "Chairperson",
+            "phone": "0700051102",
+            "id": "35951444"
+          },
+          "trustee_2": {
+            "type": "trustee",
+            "title": "Treasurer",
+            "phone": "0741001141",
+            "id": "35951449"
+          },
+          "trustee_3": {
+            "type": "trustee",
+            "title": "Secretary",
+            "phone": "0742001141",
+            "id": "35951450"
+          },
+          "official_4": {
+            "type": "official",
+            "phone": "0743001141",
+            "id": "35951451"
+          },
+          "member_7": {
+            "type": "member",
+            "phone": "0744001141",
+            "id": "35951452"
+          },
+          "member_8": {
+            "type": "member",
+            "phone": "0745001141",
+            "id": "35951453"
+          },
+          "member_9": {
+            "type": "member",
+            "phone": "0746001141",
+            "id": "35951454"
+          },
+          "member_10": {
+            "type": "member",
+            "phone": "0747001141",
+            "id": "35951455"
+          },
+          "member_11": {
+            "type": "member",
+            "phone": "0748001141",
+            "id": "35951456"
+          },
+          "member_12": {
+            "type": "member",
+            "phone": "0749001141",
+            "id": "35951457"
+          }
         }
       ]
     }
@@ -215,7 +205,187 @@
           "constituency": "Ugenya",
           "ward": "East Ugenya",
           "processorPhone": "0741001141",
-          "createdAt": "2026-02-08T17:21:23.460Z"
+          "createdAt": "2026-02-08T17:21:23.460Z",
+          "membersPopulatedAt": "2026-03-16T19:45:05.375Z",
+          "agentProcessed": "0740001141",
+          "totalProposedMembers": 15,
+          "phase": 2,
+          "trustee_1": {
+            "type": "trustee",
+            "title": "Chairperson",
+            "phone": "0740415992",
+            "id": "35951449"
+          },
+          "trustee_2": {
+            "type": "trustee",
+            "title": "Trustee",
+            "phone": "0741001141",
+            "id": "35951449"
+          },
+          "trustee_3": {
+            "type": "trustee",
+            "title": "Secretary",
+            "phone": "0742001141",
+            "id": "35951450"
+          },
+          "official_4": {
+            "type": "official",
+            "phone": "0743001141",
+            "id": "35951451"
+          },
+          "member_7": {
+            "type": "member",
+            "phone": "0744001141",
+            "id": "35951452"
+          },
+          "member_8": {
+            "type": "member",
+            "phone": "0745001141",
+            "id": "35951453"
+          },
+          "member_9": {
+            "type": "member",
+            "phone": "0746001141",
+            "id": "35951454"
+          },
+          "member_10": {
+            "type": "member",
+            "phone": "0747001141",
+            "id": "35951455"
+          },
+          "member_11": {
+            "type": "member",
+            "phone": "0748001141",
+            "id": "35951456"
+          },
+          "official_5": {
+            "type": "official",
+            "index": "5",
+            "title": "oditer",
+            "phone": "0748001141",
+            "id": "35951456"
+          },
+          "official_6": {
+            "type": "official",
+            "index": "6",
+            "title": "ass charperson",
+            "phone": "0749001141",
+            "id": "35951457"
+          },
+          "member_12": {
+            "type": "member",
+            "index": "12",
+            "phone": "0741101141",
+            "id": "35951448"
+          },
+          "member_13": {
+            "type": "member",
+            "index": "13",
+            "phone": "0741201141",
+            "id": "35951449"
+          },
+          "member_14": {
+            "type": "member",
+            "index": "14",
+            "phone": "0741301141",
+            "id": "35951451"
+          },
+          "member_15": {
+            "type": "member",
+            "index": "15",
+            "phone": "0741001143",
+            "id": "35951454"
+          },
+          "messages": [
+            {
+              "to": "0748001141",
+              "type": "group_added",
+              "title": "Group Registration Notice",
+              "content": "You have been added to ONE SACCO . \nAgent: System Agent (0740001141)\nChairperson: 0740415992\nRole: Official",
+              "createdAt": "2026-03-16T19:45:05.401Z",
+              "isNew": true
+            },
+            {
+              "to": "0749001141",
+              "type": "group_added",
+              "title": "Group Registration Notice",
+              "content": "You have been added to ONE SACCO . \nAgent: System Agent (0740001141)\nChairperson: 0740415992\nRole: Official",
+              "createdAt": "2026-03-16T19:45:05.401Z",
+              "isNew": true
+            },
+            {
+              "to": "0741101141",
+              "type": "group_added",
+              "title": "Group Registration Notice",
+              "content": "You have been added to ONE SACCO . \nAgent: System Agent (0740001141)\nChairperson: 0740415992\nRole: Member",
+              "createdAt": "2026-03-16T19:45:05.401Z",
+              "isNew": true
+            },
+            {
+              "to": "0741201141",
+              "type": "group_added",
+              "title": "Group Registration Notice",
+              "content": "You have been added to ONE SACCO . \nAgent: System Agent (0740001141)\nChairperson: 0740415992\nRole: Member",
+              "createdAt": "2026-03-16T19:45:05.401Z",
+              "isNew": true
+            },
+            {
+              "to": "0741301141",
+              "type": "group_added",
+              "title": "Group Registration Notice",
+              "content": "You have been added to ONE SACCO . \nAgent: System Agent (0740001141)\nChairperson: 0740415992\nRole: Member",
+              "createdAt": "2026-03-16T19:45:05.401Z",
+              "isNew": true
+            },
+            {
+              "to": "0741001143",
+              "type": "group_added",
+              "title": "Group Registration Notice",
+              "content": "You have been added to ONE SACCO . \nAgent: System Agent (0740001141)\nChairperson: 0740415992\nRole: Member",
+              "createdAt": "2026-03-16T19:45:05.402Z",
+              "isNew": true
+            }
+          ]
+        },
+        {
+          "groupName": "namla  sacco",
+          "phone": "0740415992",
+          "firstName": "Brian",
+          "secondName": "Omondi",
+          "lastName": "okeyo",
+          "county": "Siaya",
+          "constituency": "Ugenya",
+          "ward": "East Ugenya",
+          "processorPhone": "0740415992",
+          "createdAt": "2026-03-13T20:24:34.669Z"
+        },
+        {
+          "groupName": "ONE SACCO ALIANCE",
+          "phone": "0740415992",
+          "firstName": "Brian",
+          "secondName": "Omondi",
+          "lastName": "0m0ndi",
+          "county": "Siaya",
+          "constituency": "Ugenya",
+          "ward": "East Ugenya",
+          "processorPhone": "0740415992",
+          "createdAt": "2026-03-13T20:48:10.173Z",
+          "messages": [
+            {
+              "to": "0740415992",
+              "type": "security_alert",
+              "title": "Group Creation",
+              "content": "Your application for ONE SACCO ALIANCE is pending. Agent available at your location. Contact: 0740001141",
+              "createdAt": "2026-03-13T20:48:10.097Z"
+            },
+            {
+              "to": "0740001141",
+              "type": "security_alert",
+              "title": "Group Creation",
+              "content": "Group Creation Request: ONE SACCO ALIANCE. Submitted by Processor: 0740415992. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
+              "createdAt": "2026-03-13T20:48:10.173Z"
+            }
+          ]
         }
       ]
     }
@@ -278,6 +448,32 @@
           "ward": "Amaya",
           "processorPhone": "0741001141",
           "createdAt": "2026-03-01T19:49:05.817Z"
+        }
+      ]
+    }
+  },
+  "Kakamega": {
+    "Mumias East": {
+      "Lusheya/Lubinu": [
+        {
+          "groupName": "one one",
+          "phone": "0740415992",
+          "firstName": "brian",
+          "secondName": "brian",
+          "lastName": "brian",
+          "county": "Kakamega",
+          "constituency": "Mumias East",
+          "ward": "Lusheya/Lubinu",
+          "processorPhone": "0740415992",
+          "createdAt": "2026-03-13T20:44:54.186Z",
+          "messages": [
+            {
+              "to": "0740415992",
+              "type": "security_alert",
+              "content": "Your application for one one is pending. Note: Your regional block is not yet allocated to any of our officials.",
+              "createdAt": "2026-03-13T20:44:54.181Z"
+            }
+          ]
         }
       ]
     }

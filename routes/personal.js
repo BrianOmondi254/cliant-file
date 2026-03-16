@@ -122,10 +122,10 @@ router.get("/", (req, res) => {
     const showAgent = (req.session.isAgent || isAgentInFile || false) && !showDealer; // Agent should not be dealer
     const generalExists = search(generals);
 
-    const hasAgentPin = req.session.hasAgentPin || false;
+
 
     const dealerIsVerified = !!req.session.dealerPhone;
-    const agentIsVerified = !!req.session.agentVerified;
+    const agentIsVerified = true; // Agent portal access is now direct
 
     // Identify if user is a trustee, official or member and collect keys
     let isTrustee = false;
@@ -169,14 +169,14 @@ router.get("/", (req, res) => {
               group.messages.forEach(msg => {
                   if (msg.to && norm(msg.to) === norm(phone)) {
                       constitutionKeys.push({
-                          groupName: group.groupName,
+                          groupName: msg.title || group.groupName,
                           type: msg.type,
                           content: msg.content,
                           isNew: true
                       });
                   } else if (msg.broadcast && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
                       constitutionKeys.push({
-                          groupName: group.groupName,
+                          groupName: msg.title || group.groupName,
                           type: msg.type,
                           content: msg.content,
                           isNew: true
@@ -227,7 +227,7 @@ router.get("/", (req, res) => {
       dealerIsVerified,
       agentIsVerified,
       personalIsVerified: req.session.personalVerified || false, // Pass verified status
-      hasAgentPin,
+      hasAgentPin: true,
       hasPersonalPin, // Pass hasPersonalPin to view
       hasDealerPin: req.session.hasDealerPin || false,
       constitutionKeys, // Pass keys to view

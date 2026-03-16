@@ -468,6 +468,27 @@ button.secondary:hover {
       </button>
     </div>
 
+    </div>
+
+    <!-- Pending Group Panel -->
+    <div id="pendingGroupPanel" class="hidden" style="text-align: center; padding: 10px 5px;">
+      <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 16px; padding: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+        <i class="fas fa-hourglass-half" style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;"></i>
+        <h4 style="color: #92400e; margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Account Processing</h4>
+        <p style="color: #92400e; font-size: 0.9rem; line-height: 1.6; margin: 0 0 15px;">
+          This group account selected is pending and awaits group constitution setup by an Agent.
+        </p>
+        <div id="pendingAgentInfo" style="background: white; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-top: 5px;">
+          <p style="margin: 0; font-size: 0.8rem; color: #92400e;">
+            <i class="fas fa-spinner fa-spin"></i> Looking up assigned agent...
+          </p>
+        </div>
+      </div>
+      <button type="button" onclick="backFromPendingNote()" style="margin-top: 25px; background: #e2e8f0; color: #333; border-radius: 12px; width: auto; padding: 10px 24px;">
+        <i class="fas fa-arrow-left"></i> Back to Groups
+      </button>
+    </div>
+
     <!-- Under Construction Message -->
     <div id="underConstruction" class="hidden" style="text-align: center; padding: 40px 20px;">
       <i class="fas fa-hard-hat" style="font-size: 64px; color: #f59e0b; margin-bottom: 20px;"></i>
@@ -490,49 +511,13 @@ button.secondary:hover {
         <div class="step-indicator" id="indicator-3">3</div>
       </div>
 
-      <% if (!locals.isCreation) { %>
-      <div class="step-box" id="verificationStep">
-        <h3><i class="fas fa-user-check"></i> Agent Verification</h3>
-        
-        <label>Select Group Name</label>
-        <div class="input-group">
-          <i class="fas fa-users"></i>
-          <select id="verifyGroup" onchange="showPhoneInput()">
-            <option value="" disabled selected>-- Select Group --</option>
-            <% if (locals.groups && groups.length > 0) { %>
-              <% groups.forEach(function(group) { %>
-                <option value="<%= group.groupName %>"><%= group.groupName %></option>
-              <% }); %>
-            <% } else { %>
-              <option value="" disabled>No groups found. Debug: <%= locals.debugMsg %></option>
-            <% } %>
-          </select>
-        </div>
-
-        <div id="phoneVerifyContainer" class="hidden">
-          <label>Enter Chairperson Phone Number</label>
-          <div class="input-group">
-            <i class="fas fa-phone"></i>
-            <input type="number" id="verifyPhone" placeholder="07XX XXX XXX">
-          </div>
-          <button type="button" onclick="verifyChairperson()">Verify <i class="fas fa-search"></i></button>
-        </div>
-        
-        <p id="verifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
-      </div>
-      <% } %>
-
-      <div class="step-box <%= locals.isCreation ? '' : 'hidden' %>" id="cAccount">
+      <div class="step-box" id="cAccount">
         <h3><i class="fas fa-users-cog"></i>Create Group Account</h3>
 
         <label>Group Name</label>
         <div class="input-group" style="margin-bottom: 10px;">
           <i class="fas fa-users"></i>
-          <% if (locals.isCreation) { %>
-            <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
-          <% } else { %>
-            <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" readonly required style="background:#e9ecef;">
-          <% } %>
+          <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
         </div>
 
         <div style="border: 1px solid var(--border); padding: 12px; border-radius: 10px; margin-bottom: 8px; background: #f8f9fa;">
@@ -543,11 +528,7 @@ button.secondary:hover {
             <label style="margin-top: 0;">Chairperson Phone</label>
             <div class="input-group">
             <i class="fas fa-phone"></i>
-            <% if (locals.isCreation) { %>
-                <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number" required>
-            <% } else { %>
-                <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" readonly required style="background:#e9ecef;">
-            <% } %>
+            <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number" required>
             </div>
 
             <label>Chairperson Name (Enter First, Middle & Last Name)</label>
@@ -635,6 +616,9 @@ button.secondary:hover {
       </div>
     </form>
     </div>
+
+    </form>
+    </div>
   </div>
 </div>
 <script>
@@ -693,6 +677,30 @@ async function verifyChairperson() {
   }
 }
 
+function generateMemberInputFields(type, count, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    let html = `<h4 style="margin-top:0; margin-bottom:10px; font-size:0.9rem; color:var(--text);">${type.charAt(0).toUpperCase() + type.slice(1)}s (${count})</h4>`;
+    if (count === 0) {
+        container.innerHTML = html;
+        return;
+    }
+
+    for (let i = 0; i < count; i++) {
+        html += `
+        <div style="border: 1px solid #eee; border-left: 3px solid var(--primary); padding: 10px; border-radius: 8px; margin-bottom: 10px; background: #fdfdfd;">
+            <p style="font-weight: 600; font-size: 0.8rem; margin: 0 0 8px; color: #555;">${type.charAt(0).toUpperCase() + type.slice(1)} ${i + 1}</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <input type="text" name="${type}s[${i}][name]" placeholder="Full Name" required style="flex: 2 1 120px; padding: 8px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc;">
+                <input type="number" name="${type}s[${i}][phone]" placeholder="Phone" required style="flex: 2 1 120px; padding: 8px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc;">
+                <input type="text" name="${type}s[${i}][id]" placeholder="ID (Optional)" style="flex: 1 1 80px; padding: 8px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc;">
+            </div>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
+
 function generateFields(label, count, containerId) {
   const container = document.getElementById(containerId);
   container.innerHTML = `<h4>${label}s (${count})</h4>`;
@@ -706,6 +714,23 @@ function generateFields(label, count, containerId) {
     `;
     container.appendChild(div);
   }
+}
+
+function showCreateForm() {
+  const vStep = document.getElementById("verificationStep");
+  const cAccount = document.getElementById("cAccount");
+  if (vStep) vStep.classList.add("hidden");
+  if (cAccount) {
+    cAccount.classList.remove("hidden");
+    // Ensure group name and phone are not readonly if they were
+    document.getElementById("confirmedGroup").readOnly = false;
+    document.getElementById("confirmedGroup").style.background = "#fff";
+    document.getElementById("confirmedPhone").readOnly = false;
+    document.getElementById("confirmedPhone").style.background = "#fff";
+    document.getElementById("confirmedPhone").value = "";
+    document.getElementById("confirmedGroup").value = "";
+  }
+  updateProgress(1);
 }
 
 function goBackFromStep1() {
@@ -759,10 +784,48 @@ function nextStep() {
   updateProgress(2);
 }
 
-function showMembership() {
+async function showMembership() {
   document.getElementById("Regions").classList.add("hidden");
   document.getElementById("Membership").classList.remove("hidden");
   updateProgress(3);
+
+  // Show a loading state
+  document.getElementById('trusteesContainer').innerHTML = '<p>Loading membership rules...</p>';
+  document.getElementById('officialsContainer').innerHTML = '';
+  document.getElementById('membersContainer').innerHTML = '';
+
+  try {
+    const res = await fetch("/general/tbank-config");
+    const data = await res.json();
+
+    if (data.success) {
+      // The chairperson is already defined in step 1, so we need one less trustee field.
+      const trusteeCount = (data.counts.trustees || 1) - 1;
+
+      generateMemberInputFields("trustee", trusteeCount, "trusteesContainer");
+      generateMemberInputFields("official", data.counts.officials, "officialsContainer");
+      generateMemberInputFields("member", data.counts.members, "membersContainer");
+      
+      // Add a hidden input for totalProposedMembers
+      const total = data.counts.trustees + data.counts.officials + data.counts.members;
+      const membershipDiv = document.getElementById('Membership');
+      let hiddenInput = document.getElementById('totalProposedMembersInput');
+      if (!hiddenInput) {
+          hiddenInput = document.createElement('input');
+          hiddenInput.type = 'hidden';
+          hiddenInput.name = 'totalProposedMembers';
+          hiddenInput.id = 'totalProposedMembersInput';
+          membershipDiv.appendChild(hiddenInput);
+      }
+      hiddenInput.value = total;
+
+    } else {
+      document.getElementById('trusteesContainer').innerHTML = `<div style="background:#fff3f3; border-left:3px solid #f00; padding:10px;"><p style="color:red; margin:0;">Could not load membership rules. ${data.message || 'Please ensure T-Bank compliance is set by HQ.'}</p></div>`;
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById('trusteesContainer').innerHTML = '<p style="color:red;">Error fetching membership rules.</p>';
+  }
 
   let summary = '<div style="background:#f8f9fa; padding:10px; border-radius:8px; border:1px solid #eee;">';
   
@@ -889,10 +952,15 @@ document.addEventListener("DOMContentLoaded", () => {
   updateProgress(1);
 
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('mode') === 'create') {
+  const mode = urlParams.get('mode');
+  const tab = urlParams.get('tab');
+
+  if (mode === 'create') {
     switchTab('createGroup');
+  } else if (tab === 'mySaving') {
+    switchTab('mySaving');
   } else {
-    loadMyGroups();
+    switchTab('mySaving');
   }
 });
 
@@ -918,19 +986,22 @@ function switchTab(tab) {
   const mySavingSection = document.getElementById('mySavingSection');
   const createGroupContent = document.getElementById('createGroupContent');
   
+  // Reset all
+  [mySavingTab, createGroupTab].forEach(t => t?.classList.remove('active'));
+  [mySavingSection, createGroupContent].forEach(s => s?.classList.add('hidden'));
+
   if (tab === 'mySaving') {
     mySavingTab.classList.add('active');
-    createGroupTab.classList.remove('active');
     mySavingSection.classList.remove('hidden');
-    createGroupContent.classList.add('hidden');
-    
-    // Load user's groups
     loadMyGroups();
-  } else {
+  } else if (tab === 'createGroup') {
     createGroupTab.classList.add('active');
-    mySavingTab.classList.remove('active');
     createGroupContent.classList.remove('hidden');
-    mySavingSection.classList.add('hidden');
+    // Ensure form is visible
+    document.getElementById('cAccount').classList.remove('hidden');
+    document.getElementById('Regions').classList.add('hidden');
+    document.getElementById('Membership').classList.add('hidden');
+    updateProgress(1);
   }
 }
 
@@ -958,12 +1029,16 @@ async function loadMyGroups() {
       let html = '<div style="margin-top: 15px;">';
       
       data.groups.forEach(group => {
+        const isPending = !group.accountNumber;
         const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : (group.role === 'official' ? 'fa-user-gear' : 'fa-user');
         const roleColor = group.role === 'trustee' ? '#7c3aed' : (group.role === 'official' ? '#0891b2' : '#64748b');
+        const badge = isPending
+          ? '<span style="background: #fffbeb; color: #d97706; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #fef3c7;">PENDING</span>'
+          : '<span style="background: #f0fdf4; color: #16a34a; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #dcfce7;">ACTIVE</span>';
         
         html += `
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease;" 
-               onclick="selectGroup('${group.groupName}', '${group.role}')">
+               onclick="selectGroup('${group.groupName}', '${group.accountNumber || ''}')">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <h4 style="margin: 0 0 5px; color: var(--text); font-size: 1rem;">
@@ -976,8 +1051,7 @@ async function loadMyGroups() {
                 </p>
               </div>
               <div style="text-align: right;">
-                ${group.accountNumber ? `<p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Account: ${group.accountNumber}</p>` : ''}
-                <i class="fas fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 5px;"></i>
+                ${badge}
               </div>
             </div>
           </div>
@@ -997,9 +1071,48 @@ async function loadMyGroups() {
   }
 }
 
-async function selectGroup(groupName, role) {
-  // Navigate to the group details page
-  window.location.href = `/personal/group/${encodeURIComponent(groupName)}`;
+async function selectGroup(groupName, accountNumber) {
+  const isPending = !accountNumber;
+  if (isPending) {
+    document.getElementById('myGroupsList').classList.add('hidden');
+    const panel = document.getElementById('pendingGroupPanel');
+    panel.classList.remove('hidden');
+    
+    // Reset agent info to loading state
+    const agentInfoEl = document.getElementById('pendingAgentInfo');
+    agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #92400e;"><i class="fas fa-spinner fa-spin"></i> Looking up assigned agent...</p>';
+    
+    // Fetch the agent for this group
+    try {
+      const res = await fetch(`/general/agent-for-group?groupName=${encodeURIComponent(groupName)}`);
+      const data = await res.json();
+      if (data.success) {
+        agentInfoEl.innerHTML = `
+          <p style="margin: 0 0 5px; font-size: 0.75rem; color: #92400e; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Your Assigned Agent</p>
+          <p style="margin: 0 0 4px; font-size: 0.9rem; color: #92400e; font-weight: 600;">
+            <i class="fas fa-user-tie" style="color: #d97706;"></i> ${data.agentName}
+          </p>
+          <a href="tel:${data.agentPhone}" style="text-decoration: none;">
+            <p style="margin: 0; font-size: 1rem; color: #0891b2; font-weight: 800; letter-spacing: 1px;">
+              <i class="fas fa-phone-alt" style="color: #0891b2;"></i> ${data.agentPhone}
+            </p>
+          </a>
+          ${data.note === 'constituency' ? '<p style="margin: 5px 0 0; font-size: 0.7rem; color: #d97706;"><i class="fas fa-info-circle"></i> Nearest agent in your constituency</p>' : ''}
+        `;
+      } else {
+        agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #d97706;"><i class="fas fa-exclamation-circle"></i> No agent assigned to your area yet. Please contact support.</p>';
+      }
+    } catch (e) {
+      agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #d97706;"><i class="fas fa-exclamation-circle"></i> Could not load agent info.</p>';
+    }
+  } else {
+    window.location.href = `/personal/group/${encodeURIComponent(groupName)}`;
+  }
+}
+
+function backFromPendingNote() {
+  document.getElementById('pendingGroupPanel').classList.add('hidden');
+  document.getElementById('myGroupsList').classList.remove('hidden');
 }
 
 function backToMyGroups() {

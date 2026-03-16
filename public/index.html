@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cliant">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="description" content="Cliant Mobile Banking - Access your accounts, transfer money, and manage your finances on the go">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.svg">
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.svg">
+    
+    <!-- Preconnect to production server -->
+    <link rel="preconnect" href="https://tbank-8sid.onrender.com">
+    
+    <title>Cliant - Mobile Banking</title>
+    
+    <style>
+        /* Critical CSS for fast initial paint */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overscroll-behavior: none;
+        }
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .status {
+            color: white;
+            margin-top: 20px;
+            font-size: 16px;
+            text-align: center;
+            padding: 0 20px;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        /* PWA Install prompt */
+        .install-prompt {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 16px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+            z-index: 1000;
+        }
+        .install-prompt.show {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .install-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="logo">Cliant</div>
+        <div class="loader"></div>
+        <p class="status" id="status">Loading Cliant...</p>
+    </div>
+    
+    <!-- PWA Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        <p>Install Cliant for the best experience</p>
+        <button class="install-btn" id="installBtn">Install</button>
+    </div>
+
+    <script>
+        // Configuration
+        const PRODUCTION_URL = 'https://tbank-8sid.onrender.com';
+        const statusEl = document.getElementById('status');
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js', {
+                        scope: '/'
+                    });
+                    console.log('Cliant: Service Worker registered:', registration.scope);
+                } catch (error) {
+                    console.log('Cliant: Service Worker registration failed:', error);
+                }
+            });
+        }
+        
+        // Check if running in Capacitor
+        if (window.Capacitor) {
+            // Mobile app - redirect to production
+            statusEl.textContent = 'Opening Cliant...';
+            setTimeout(() => {
+                window.location.href = PRODUCTION_URL;
+            }, 500);
+        } else {
+            // Running in browser - redirect to production
+            statusEl.textContent = 'Loading Cliant...';
+            setTimeout(() => {
+                window.location.href = PRODUCTION_URL;
+            }, 300);
+        }
+        
+        // PWA Install Prompt
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+        const installBtn = document.getElementById('installBtn');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install prompt after a delay
+            setTimeout(() => {
+                if (!window.matchMedia('(display-mode: standalone)').matches) {
+                    installPrompt.classList.add('show');
+                }
+            }, 3000);
+        });
+        
+        installBtn?.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('Cliant: Install prompt result:', outcome);
+                deferredPrompt = null;
+                installPrompt.classList.remove('show');
+            }
+        });
+        
+        // Handle app installed
+        window.addEventListener('appinstalled', () => {
+            console.log('Cliant: App installed');
+            installPrompt.classList.remove('show');
+        });
+    </script>
+</body>
+</html>

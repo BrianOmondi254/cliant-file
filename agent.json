@@ -7,7 +7,6 @@
     "constituency": "Ugenya",
     "ward": "East Ugenya",
     "isBlocked": false,
-    "pin": "$2b$10$Z76aY1vW5zZOBkM314F.LeeXOUPC4AV6E6fW/dUe7iXrviKENYqL2",
     "passkey": "2234",
     "createdAt": "2026-01-15T23:26:18.462Z",
     "groupsTotal": [],
@@ -34,7 +33,6 @@
     "constituency": "Awendo",
     "ward": "East Sakwa",
     "isBlocked": false,
-    "pin": "$2b$10$gLTYrMKapp2e0/Nt21bPMOjyJu2OF98h8.Ef69D0Nufu7yavWJqBi",
     "passkey": "5678",
     "createdAt": "2026-01-16T20:13:16.980Z",
     "groupsTotal": [],
@@ -60,8 +58,7 @@
     "constituency": "Kisumu East",
     "ward": "Kajulu",
     "dealerPhone": "0740000142",
-    "createdAt": "2026-02-08T06:55:25.150Z",
-    "pin": "$2b$10$JGpbS8R/em7Gjh4wcLGnY.k.XR45Jjr3Y0YphvAhHoiBtRPrjqXlO"
+    "createdAt": "2026-02-08T06:55:25.150Z"
   },
   {
     "name": "brian kisii agent two",
@@ -70,8 +67,7 @@
     "constituency": "Bonchari",
     "ward": "bomariba",
     "dealerPhone": "0740123456",
-    "createdAt": "2026-02-09T19:35:58.083Z",
-    "pin": "$2b$10$9OJl7G2aZjKSfm2zZuPOqOo6ianUpQqGYVdVTrG6EvSl16Hfqu3QO"
+    "createdAt": "2026-02-09T19:35:58.083Z"
   },
   {
     "name": "kisi agent",
@@ -80,7 +76,6 @@
     "constituency": "Bonchari",
     "ward": "Bogiakumu",
     "dealerPhone": "0740123456",
-    "createdAt": "2026-02-09T19:37:30.192Z",
-    "pin": "$2b$10$psHzGkYs8Bmp/UrunqYU3ulsobg040UTD5P8wosTyCZ3yCPN81sC6"
+    "createdAt": "2026-02-09T19:37:30.192Z"
   }
 ]

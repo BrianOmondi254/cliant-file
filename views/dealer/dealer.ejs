@@ -76,7 +76,7 @@
     <div class="header">
       <div class="icon-circle"><i class="ri-lock-password-line"></i></div>
       <h3>Create Dealer PIN</h3>
-      <p>Welcome, <%= user.firstName %>. Set a PIN to secure your dealer account.</p>
+      <p>Set a PIN to secure your dealer account.</p>
     </div>
     <form action="/dealer/create-pin" method="POST">
       <div class="form-group">
@@ -105,7 +105,7 @@
     <div class="header">
       <div class="icon-circle"><i class="ri-shield-keyhole-line"></i></div>
       <h3>Dealer Verification</h3>
-      <p>Welcome back, <%= user.firstName %>. Please enter your PIN.</p>
+      <p>Please enter your PIN.</p>
     </div>
     <% if (message && message.text) { %>
       <div class="alert <%= message.type %>"><%= message.text %></div>
@@ -136,7 +136,6 @@
     <div class="dashboard-header">
       <div>
         <h3>Dealer Dashboard</h3>
-        <p>Welcome, <%= dealer.name || user.firstName %>.</p>
       </div>
       <a href="/logout" class="btn" style="width: auto; background: var(--danger-color); color: white;"><i class="ri-logout-box-line"></i> Logout</a>
     </div>

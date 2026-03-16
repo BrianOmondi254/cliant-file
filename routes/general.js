@@ -144,6 +144,38 @@ router.post("/verify", (req, res) => {
   });
 });
 
+/* ⚙️ Get TBank Config (for new group form) */
+router.get("/tbank-config", (req, res) => {
+  const tbankFile = path.join(__dirname, "../tbank.json");
+  const tbankData = readJSON(tbankFile, null);
+
+  // Check TBank Completion
+  if (
+    !tbankData ||
+    !tbankData.compliance ||
+    tbankData.compliance.completed !== true
+  ) {
+    return res.json({
+      success: false,
+      message: "T-Bank compliance not completed by HQ.",
+    });
+  }
+
+  // Return Counts
+  const { trustees, officials, members, maxMembers } =
+    tbankData.compliance.membership;
+  
+  return res.json({
+    success: true,
+    counts: {
+      trustees: parseInt(trustees) || 0,
+      officials: parseInt(officials) || 0,
+      members: parseInt(members) || 0,
+      maxMembers: parseInt(maxMembers) || 100,
+    }
+  });
+});
+
 /* ✅ Verify Member Phone Numbers against data.json (POST) */
 router.post("/verify-members", (req, res) => {
   const { phoneNumbers } = req.body;
@@ -193,6 +225,11 @@ router.post("/", (req, res) => {
     county,
     constituency,
     ward,
+    // New fields from the form
+    trustees,
+    officials,
+    members,
+    totalProposedMembers
   } = req.body;
 
   let accounts = readJSON(generalFile, {});
@@ -202,6 +239,68 @@ router.post("/", (req, res) => {
 
   if (!groupName || !chairpersonalphonenumber || !firstName || !county) {
     return res.status(400).send("Missing required fields.");
+  }
+
+  // 1. Hierarchical official verification
+  const agentFile = path.join(__dirname, "../agent.json");
+  const dealerFile = path.join(__dirname, "../dealer.json");
+  const hqFile = path.join(__dirname, "../hq.json");
+
+  const agents = readJSON(agentFile, []);
+  const dealers = readJSON(dealerFile, []);
+  const hqs = readJSON(hqFile, []);
+
+  let allocatedOfficial = null;
+  let officialType = "";
+
+  // Check Agent
+  const agent = agents.find(a => a.ward && a.ward.toLowerCase() === ward.toLowerCase());
+  if (agent) {
+    allocatedOfficial = agent;
+    officialType = "Agent";
+  } else {
+    // Check Dealer
+    const dealer = dealers.find(d => d.ward && d.ward.toLowerCase() === ward.toLowerCase());
+    if (dealer) {
+      allocatedOfficial = dealer;
+      officialType = "Dealer";
+    } else {
+      // Check Regional Office (HQ) by constituency (regional block)
+      const hq = hqs.find(h => h.constituency && h.constituency.toLowerCase() === constituency.toLowerCase());
+      if (hq) {
+        allocatedOfficial = hq;
+        officialType = "Regional Office";
+      }
+    }
+  }
+
+  let notificationContent = "";
+  if (allocatedOfficial) {
+    const officialPhone = allocatedOfficial.phoneNumber || allocatedOfficial.hqPhone || allocatedOfficial.dealerPhone;
+    notificationContent = `Your application for ${groupName} is pending. ${officialType} available at your location. Contact: ${officialPhone}`;
+  } else {
+    notificationContent = `Your application for ${groupName} is pending. Note: Your regional block is not yet allocated to any of our officials.`;
+  }
+
+  const messagesList = [
+    {
+      to: req.session?.user?.phoneNumber,
+      type: "security_alert",
+      title: "Group Creation",
+      content: notificationContent,
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  if (allocatedOfficial) {
+    const officialPhone = allocatedOfficial.phoneNumber || allocatedOfficial.hqPhone || allocatedOfficial.dealerPhone;
+    messagesList.push({
+      to: officialPhone,
+      type: "security_alert",
+      title: "Group Creation",
+      content: `Group Creation Request: ${groupName}. Submitted by Processor: ${req.session?.user?.phoneNumber || 'Anonymous'}. Chairperson Phone: ${chairpersonalphonenumber}. Location: ${county}/${constituency}/${ward}. Please verify this request.`,
+      createdAt: new Date().toISOString()
+    });
   }
 
   const newAccount = {
@@ -215,7 +314,64 @@ router.post("/", (req, res) => {
     ward,
     processorPhone: req.session?.user?.phoneNumber || "Anonymous",
     createdAt: new Date().toISOString(),
+    messages: messagesList,
+    totalProposedMembers: parseInt(totalProposedMembers) || 0,
+    phase: 1 // Initial phase
   };
+
+  // Add members from the form
+  const STD_TRUSTEES = 3;
+  const STD_OFFICIALS = 3;
+
+  // 1. Chairperson is always trustee_1
+  newAccount.trustee_1 = {
+      phone: chairpersonalphonenumber,
+      name: `${firstName} ${secondName || ''} ${lastName}`.trim(),
+      type: 'trustee',
+      title: 'Chairperson'
+  };
+
+  // 2. Add other trustees from the `trustees` array. They will be trustee_2, trustee_3.
+  if (Array.isArray(trustees)) {
+      trustees.slice(0, STD_TRUSTEES - 1).forEach((t, i) => { // Limit to fill up to trustee_3
+          if (t && t.phone && t.name) {
+              newAccount[`trustee_${i + 2}`] = {
+                  phone: t.phone,
+                  name: t.name,
+                  id: t.id || null,
+                  type: 'trustee'
+              };
+          }
+      });
+  }
+
+  // 3. Add officials. They start from index 4.
+  if (Array.isArray(officials)) {
+      officials.slice(0, STD_OFFICIALS).forEach((o, i) => { // Limit to fill up to official_6
+          if (o && o.phone && o.name) {
+              newAccount[`official_${STD_TRUSTEES + i + 1}`] = {
+                  phone: o.phone,
+                  name: o.name,
+                  id: o.id || null,
+                  type: 'official'
+              };
+          }
+      });
+  }
+
+  // 4. Add members. They start from index 7.
+  if (Array.isArray(members)) {
+      members.forEach((m, i) => {
+          if (m && m.phone && m.name) {
+              newAccount[`member_${STD_TRUSTEES + STD_OFFICIALS + i + 1}`] = {
+                  phone: m.phone,
+                  name: m.name,
+                  id: m.id || null,
+                  type: 'member'
+              };
+          }
+      });
+  }
 
   if (!accounts[county]) accounts[county] = {};
   if (!accounts[county][constituency]) accounts[county][constituency] = {};
@@ -226,7 +382,36 @@ router.post("/", (req, res) => {
 
   writeJSON(generalFile, accounts);
 
-  res.redirect("/login?alert=Account%20Created%20Successfully");
+  // Return a success view with the message
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Submission Successful</title>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+      <style>
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .success-card { background: white; color: #1e293b; padding: 40px; border-radius: 24px; text-align: center; max-width: 400px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .icon-box { background: #dcfce7; color: #16a34a; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; }
+        h2 { margin: 0 0 12px; font-weight: 800; color: #0f172a; }
+        p { color: #64748b; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px; }
+        .btn { display: inline-block; background: #0f9d58; color: white; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; transition: all 0.3s; width: 100%; box-sizing: border-box; }
+        .btn:hover { background: #0b7d46; transform: translateY(-2px); }
+      </style>
+    </head>
+    <body>
+      <div class="success-card">
+        <div class="icon-box"><i class="fas fa-check"></i></div>
+        <h2>Group Creation</h2>
+        <p>${notificationContent}</p>
+        <p>Please wait for agent response. This notice has been posted to your inbox.</p>
+        <a href="/personal" class="btn">Back to Wallet</a>
+      </div>
+    </body>
+    </html>
+  `);
 });
 
 /* 📝 Update Group Members (Agent Submission) */
@@ -306,6 +491,59 @@ router.post("/update-members", (req, res) => {
   } else {
     updatedAccount.phase = 2;
   }
+
+  // --- Notification Logic ---
+  const agentPhone = req.session?.user?.phoneNumber || "Unknown";
+  let agentName = "System Agent";
+  try {
+    const agentFile = path.join(__dirname, "../agent.json");
+    if (fs.existsSync(agentFile)) {
+      const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
+      const foundAgent = agents.find(a => norm(a.phoneNumber) === norm(agentPhone));
+      if (foundAgent) agentName = foundAgent.name;
+    }
+  } catch (e) {
+    console.error("Error looking up agent name:", e);
+  }
+
+  const messages = updatedAccount.messages || [];
+  
+  Object.values(membersData).forEach(member => {
+    if (member && member.phone) {
+      const memberPhone = member.phone;
+      const memberType = member.type || "member";
+      const memberIndex = member.index || "N/A";
+      
+      const messageContent = `You have been added to ${groupName}. \n` +
+                             `Agent: ${agentName} (${agentPhone})\n` +
+                             `Chairperson: ${chairpersonalphonenumber}\n` +
+                             `Role: ${memberType.charAt(0).toUpperCase() + memberType.slice(1)}`;
+
+      // Create message for this member
+      const newMessage = {
+        to: memberPhone,
+        type: "group_added",
+        title: "Group Registration Notice",
+        content: messageContent,
+        createdAt: new Date().toISOString(),
+        isNew: true
+      };
+
+      // Avoid duplicate notifications for the same group in this session
+      const alreadyNotified = messages.some(m => 
+        m.to === memberPhone && 
+        m.type === "group_added" && 
+        m.content.includes(groupName)
+      );
+      
+      if (!alreadyNotified) {
+        messages.push(newMessage);
+      }
+    }
+  });
+
+  updatedAccount.messages = messages;
+  // --- End Notification Logic ---
 
   accounts[locationPath.c][locationPath.consti][locationPath.w][
     locationPath.idx
@@ -440,7 +678,10 @@ router.get("/my-groups", (req, res) => {
             phone: group.phone,
             role: memberInfo.type,
             roleTitle: memberInfo.title || '',
-            accountNumber: group.accountNumber || ''
+            accountNumber: group.accountNumber || '',
+            county: group.county || '',
+            constituency: group.constituency || '',
+            ward: group.ward || ''
           });
           break;
         }
@@ -453,6 +694,49 @@ router.get("/my-groups", (req, res) => {
     groups: userGroups,
     userPhone: userPhone
   });
+});
+
+// GET /general/agent-for-group -> returns agent assigned to a group's ward
+router.get("/agent-for-group", (req, res) => {
+  const { groupName } = req.query;
+  if (!groupName) {
+    return res.status(400).json({ success: false, message: "Missing groupName" });
+  }
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) accounts = restructureData(accounts);
+  const allGroups = flattenData(accounts);
+  const group = allGroups.find(g => g.groupName === groupName);
+
+  if (!group) {
+    return res.status(404).json({ success: false, message: "Group not found" });
+  }
+
+  const agentFile = path.join(__dirname, "../agent.json");
+  const agents = readJSON(agentFile, []);
+
+  // Find agent matching group's county+constituency+ward
+  const agent = agents.find(a =>
+    String(a.county).trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+    String(a.constituency).trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase() &&
+    String(a.ward).trim().toLowerCase() === String(group.ward || '').trim().toLowerCase()
+  );
+
+  if (agent) {
+    return res.json({ success: true, agentName: agent.name, agentPhone: agent.phoneNumber });
+  }
+
+  // No agent in this exact ward - try constituency level
+  const constituencyAgent = agents.find(a =>
+    String(a.county).trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+    String(a.constituency).trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase()
+  );
+
+  if (constituencyAgent) {
+    return res.json({ success: true, agentName: constituencyAgent.name, agentPhone: constituencyAgent.phoneNumber, note: 'constituency' });
+  }
+
+  return res.json({ success: false, message: "No agent assigned to this area yet" });
 });
 
 // POST /general/verify-access
@@ -817,6 +1101,7 @@ router.get("/user-role-type", (req, res) => {
         groupName: group.groupName,
         role: userRoleInGroup,
         phone: group.phone,
+        phase: group.phase || 1, // Added phase tracking
         accountNumber: group.accountNumber || '',
         constitutionStartKey: group.constitutionStartKey || ''
       });

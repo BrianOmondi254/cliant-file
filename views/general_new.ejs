@@ -183,10 +183,16 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
       <p style="margin-top: 10px; color: var(--text-muted);">Loading...</p>
     </div>
     
+    <!-- Group Context Header (Shows which group is selected) -->
+    <div id="groupContextHeader" class="hidden" style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #0f9d58, #10b981); border-radius: 12px; color: white;">
+      <h4 id="selectedGroupNameDisplay" style="margin: 0; color: white; font-size: 1.1rem;">Group Name</h4>
+      <p id="selectedGroupRoleDisplay" style="margin: 5px 0 0; font-size: 0.8rem; opacity: 0.9; font-weight: 500;">Role: Member</p>
+    </div>
+
     <!-- Account Type Selection -->
     <div id="accountTypeSelection" class="hidden">
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; text-align: center;">
-        Select an account type to access:
+        Select an account type to proceed:
       </p>
       
       <!-- My Account (shown for ALL users: member, official, trustee) -->
@@ -254,6 +260,20 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
       <p id="createPinMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
     </div>
     
+    <!-- Pending Group Note -->
+    <div id="pendingGroupView" class="hidden" style="text-align: center; padding: 10px 5px;">
+      <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 16px; padding: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+        <i class="fas fa-hourglass-half" style="font-size: 48px; color: #f59e0b; margin-bottom: 20px;"></i>
+        <h4 style="color: #92400e; margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Account Processing</h4>
+        <p style="color: #92400e; font-size: 0.9rem; line-height: 1.6; margin: 0;">
+          This group account selected is pending and awaits group constitution setup by an Agent.
+        </p>
+      </div>
+      <button type="button" onclick="backToAccountSelection()" class="secondary" style="margin-top: 25px; border-radius: 12px;">
+        <i class="fas fa-arrow-left"></i> Back to Groups
+      </button>
+    </div>
+
     <!-- Generate Key Section -->
     <div id="generateKeySection" class="hidden">
       <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
@@ -434,12 +454,18 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
             <option value="" disabled selected>-- Select Group --</option>
             <% if (locals.groups && groups.length > 0) { %>
               <% groups.forEach(function(group) { %>
-                <option value="<%= group.groupName %>"><%= group.groupName %></option>
+                <option value="<%= group.groupName %>" data-pending="<%= !group.accountNumber %>"><%= group.groupName %></option>
               <% }); %>
             <% } else { %>
               <option value="" disabled>No groups found</option>
             <% } %>
           </select>
+        </div>
+        <div id="pendingGroupNote" class="hidden" style="margin-top: 10px; padding: 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; display: flex; align-items: flex-start; gap: 10px;">
+          <i class="fas fa-clock" style="color: #d97706; margin-top: 2px;"></i>
+          <p style="margin: 0; font-size: 0.8rem; color: #92400e; line-height: 1.4;">
+            <strong>Group Pending:</strong> This group account selected is pending and awaits group constitution setup by an agent.
+          </p>
         </div>
         <div id="phoneVerifyContainer" class="hidden">
           <label>Enter Chairperson Phone Number</label>
@@ -561,10 +587,25 @@ let userRoleData = null;
 let selectedGroupForPin = null;
 
 function showPhoneInput() {
-  const group = document.getElementById("verifyGroup").value;
+  const select = document.getElementById("verifyGroup");
+  const selectedOption = select.options[select.selectedIndex];
+  const group = select.value;
+  const isPending = selectedOption ? selectedOption.getAttribute('data-pending') === 'true' : false;
+  
   const phoneContainer = document.getElementById("phoneVerifyContainer");
-  if (group) phoneContainer.classList.remove("hidden");
-  else phoneContainer.classList.add("hidden");
+  const pendingNote = document.getElementById("pendingGroupNote");
+  
+  if (group) {
+    phoneContainer.classList.remove("hidden");
+    if (isPending) {
+      pendingNote.classList.remove("hidden");
+    } else {
+      pendingNote.classList.add("hidden");
+    }
+  } else {
+    phoneContainer.classList.add("hidden");
+    pendingNote.classList.add("hidden");
+  }
 }
 
 async function verifyChairperson() {
@@ -735,17 +776,20 @@ function switchTab(tab) {
 /* ========== MY SAVING FUNCTIONS ========== */
 async function loadUserRoleData() {
   const loadingEl = document.getElementById('myGroupsLoading');
-  const accountTypeSel = document.getElementById('accountTypeSelection');
   const noGroupsEl = document.getElementById('noGroupsMessage');
   
-  // Hide all other sections
-  accountTypeSel.classList.add('hidden');
+  // Clean all views
+  const views = [
+    'accountTypeSelection', 'myAccountView', 'groupAccountView', 
+    'pinVerification', 'createPinSection', 'generateKeySection', 
+    'pendingGroupView', 'changePinView'
+  ];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  
   noGroupsEl.classList.add('hidden');
-  document.getElementById('myAccountView').classList.add('hidden');
-  document.getElementById('groupAccountView').classList.add('hidden');
-  document.getElementById('pinVerification').classList.add('hidden');
-  document.getElementById('createPinSection').classList.add('hidden');
-  document.getElementById('generateKeySection').classList.add('hidden');
   loadingEl.classList.remove('hidden');
   
   try {
@@ -754,72 +798,81 @@ async function loadUserRoleData() {
     loadingEl.classList.add('hidden');
     
     if (userRoleData.success && userRoleData.groups && userRoleData.groups.length > 0) {
-      // Show account type selection
-      accountTypeSel.classList.remove('hidden');
-      
-      // Always show My Account button for all users
-      document.getElementById('myAccountBtn').classList.remove('hidden');
-      
-      // If member only, hide Group Account; if trustee/official, show Group Account
-      if (userRoleData.hasGroupAccount) {
-        document.getElementById('groupAccountBtn').classList.remove('hidden');
-      } else {
-        document.getElementById('groupAccountBtn').classList.add('hidden');
-      }
+      showGroupListView();
     } else {
       noGroupsEl.classList.remove('hidden');
     }
   } catch (err) {
-    console.error('Error loading user role data:', err);
+    console.error('Error loading role data:', err);
     loadingEl.classList.add('hidden');
     noGroupsEl.classList.remove('hidden');
   }
 }
 
-function selectAccountType(type) {
-  if (type === 'myAccount') {
-    // Show My Account directly
-    document.getElementById('accountTypeSelection').classList.add('hidden');
-    document.getElementById('myAccountView').classList.remove('hidden');
-  } else if (type === 'changePin') {
-    // Show Change PIN view directly
-    document.getElementById('accountTypeSelection').classList.add('hidden');
-    document.getElementById('changePinView').classList.remove('hidden');
-  } else if (type === 'groupAccount') {
-    // Show group list first so user can choose which group
-    const groups = userRoleData.groups || [];
-    document.getElementById('accountTypeSelection').classList.add('hidden');
+function showGroupListView() {
+  const groups = userRoleData.groups || [];
+  const container = document.getElementById('groupListContainer');
+  const view = document.getElementById('groupAccountView');
+  
+  // Reset selection
+  selectedGroupForPin = null;
+
+  // Show only list
+  const views = ['accountTypeSelection', 'myAccountView', 'pinVerification', 'createPinSection', 'generateKeySection', 'pendingGroupView', 'groupContextHeader'];
+  views.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+  });
+  
+  view.classList.remove('hidden');
+  
+  let groupHtml = '<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; text-align: center;">Choose a group to proceed:</p>';
+  
+  groups.forEach((group) => {
+    const isPending = !group.accountNumber || (parseInt(group.phase) || 1) < 3;
+    const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : (group.role === 'official' ? 'fa-user-gear' : 'fa-user');
+    const roleColor = group.role === 'trustee' ? '#7c3aed' : '#0891b2';
     
-    const container = document.getElementById('groupListContainer');
-    document.getElementById('groupAccountView').classList.remove('hidden');
-    
-    let groupHtml = '<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; text-align: center;">Select a group to access:</p>';
-    
-    groups.forEach((group) => {
-      const hasPin = group.constitutionStartKey && group.constitutionStartKey.length > 0;
-      const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : 'fa-user-gear';
-      const roleColor = group.role === 'trustee' ? '#7c3aed' : '#0891b2';
-      
-      groupHtml += `
-        <div onclick="selectGroupForAccess('${group.groupName}')" style="background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>${group.groupName}</strong>
-              <span style="font-size: 0.75rem; color: ${roleColor}; margin-left: 8px;">
-                <i class="fas ${roleIcon}"></i> ${group.role.toUpperCase()}
-              </span>
-            </div>
-            <div style="text-align: right;">
-              ${hasPin 
-                ? '<span style="color: var(--primary); font-size: 0.75rem;"><i class="fas fa-lock"></i> PIN Set</span>' 
-                : '<span style="color: #f59e0b; font-size: 0.75rem;"><i class="fas fa-lock-open"></i> No PIN</span>'}
+    groupHtml += `
+      <div onclick="selectGroupForAccess('${group.groupName}')" style="background: #f8fafc; padding: 16px; border-radius: 14px; margin-bottom: 12px; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; color: var(--text); font-size: 1.05rem; margin-bottom: 4px;">${group.groupName}</div>
+            <div style="font-size: 0.75rem; color: ${roleColor}; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+              <i class="fas ${roleIcon}"></i> ${group.role.toUpperCase()}
             </div>
           </div>
+          <div style="text-align: right;">
+            ${isPending 
+              ? '<span style="background: #fffbeb; color: #d97706; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #fef3c7;">PENDING</span>'
+              : '<span style="background: #f0fdf4; color: #16a34a; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #dcfce7;">ACTIVE</span>'}
+          </div>
         </div>
-      `;
-    });
+      </div>
+    `;
+  });
+  
+  container.innerHTML = groupHtml;
+}
+
+function selectAccountType(type) {
+  const selectionDiv = document.getElementById('accountTypeSelection');
+  selectionDiv.classList.add('hidden');
+
+  if (type === 'myAccount') {
+    document.getElementById('myAccountView').classList.remove('hidden');
+  } else if (type === 'changePin') {
+    document.getElementById('changePinView').classList.remove('hidden');
+  } else if (type === 'groupAccount') {
+    // Phase 3 proceed after choices
+    const group = userRoleData.groups.find(g => g.groupName === selectedGroupForPin);
+    const hasPin = group && group.constitutionStartKey && group.constitutionStartKey.length > 0;
     
-    container.innerHTML = groupHtml;
+    if (hasPin) {
+      document.getElementById('pinVerification').classList.remove('hidden');
+    } else {
+      document.getElementById('createPinSection').classList.remove('hidden');
+    }
   }
 }
 
@@ -828,32 +881,46 @@ function selectGroupForAccess(groupName) {
   if (!group) return;
   
   selectedGroupForPin = groupName;
-  
-  // Check if this group has a PIN - if NOT, show Create PIN; if YES, show Verify PIN
-  if (group.constitutionStartKey && group.constitutionStartKey.length > 0) {
-    // Has PIN - show verification
-    document.getElementById('groupAccountView').classList.add('hidden');
-    document.getElementById('pinVerification').classList.remove('hidden');
-    document.getElementById('groupPinInput').value = '';
-    document.getElementById('pinVerifyMsg').textContent = '';
+  const isPending = !group.accountNumber || (parseInt(group.phase) || 1) < 3;
+
+  // Clean all views first
+  const views = ['accountTypeSelection', 'myAccountView', 'pinVerification', 'createPinSection', 'generateKeySection', 'pendingGroupView', 'groupAccountView', 'groupContextHeader'];
+  views.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+  });
+
+  if (isPending) {
+    // Show Pending Note ONLY - Ensure header is hidden
+    document.getElementById('pendingGroupView').classList.remove('hidden');
   } else {
-    // No PIN - show Create PIN
-    document.getElementById('groupAccountView').classList.add('hidden');
-    document.getElementById('createPinSection').classList.remove('hidden');
-    document.getElementById('newPinInput').value = '';
-    document.getElementById('confirmPinInput').value = '';
-    document.getElementById('createPinMsg').textContent = '';
+    // Populate and Show Group Context Header
+    document.getElementById('selectedGroupNameDisplay').textContent = group.groupName;
+    document.getElementById('selectedGroupRoleDisplay').textContent = 'Role: ' + group.role.charAt(0).toUpperCase() + group.role.slice(1);
+    document.getElementById('groupContextHeader').classList.remove('hidden');
+
+    // Show Account Options (Proceeding)
+    document.getElementById('accountTypeSelection').classList.remove('hidden');
+    
+    // Toggle Group button based on authorization
+    const groupBtn = document.getElementById('groupAccountBtn');
+    if (group.role === 'trustee' || group.role === 'official') {
+        groupBtn.classList.remove('hidden');
+    } else {
+        groupBtn.classList.add('hidden');
+    }
   }
 }
 
 function backToAccountSelection() {
-  document.getElementById('myAccountView').classList.add('hidden');
-  document.getElementById('groupAccountView').classList.add('hidden');
-  document.getElementById('pinVerification').classList.add('hidden');
-  document.getElementById('createPinSection').classList.add('hidden');
-  document.getElementById('generateKeySection').classList.add('hidden');
-  document.getElementById('changePinView').classList.add('hidden');
-  document.getElementById('accountTypeSelection').classList.remove('hidden');
+  const views = ['myAccountView', 'groupAccountView', 'pinVerification', 'createPinSection', 'generateKeySection', 'changePinView', 'pendingGroupView', 'accountTypeSelection', 'groupContextHeader'];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  
+  // New flow: Always go back to the list of groups
+  showGroupListView();
 }
 
 async function submitChangePinGeneral() {

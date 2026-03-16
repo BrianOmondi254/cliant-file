@@ -22,7 +22,25 @@ const complianceRoutes = require("./route-hq/compliance");
 
 /* ================= APP INIT ================= */
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
+/* ================= STATIC FILES FOR MOBILE ================= */
+app.use(express.static(path.join(__dirname, 'public')));
+
+/* ================= PWA HEADERS ================= */
+// Service Worker caching
+app.get('/sw.js', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.set('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
+
+// Manifest caching
+app.get('/manifest.json', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Content-Type', 'application/json');
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
 
 /* ================= LOCALS ================= */
 // app.locals.locationsData = locationsData; // Commented out to prevent injection into view locals
@@ -78,9 +96,23 @@ app.use("/personal", protect, personalRoutes);
 app.use("/agent", protect, agentRoutes);
 app.use("/dealer", protect, dealerRoutes);
 
-// 4️⃣ Default root redirect → login page
+// 4️⃣ Default root redirect → login page or mobile app
 app.get("/compliance", (req, res) => res.redirect("/hq/compliance"));
-app.get("/", (req, res) => res.redirect("/login"));
+
+// Check if request is from Capacitor (mobile app)
+const isCapacitor = (req) => {
+  return req.get('x-capacitor') === 'true' || 
+         req.get('user-agent')?.includes('Capacitor');
+};
+
+app.get("/", (req, res) => {
+  // Serve mobile index for Capacitor app
+  if (isCapacitor(req)) {
+    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
+  // Redirect to login for browser users
+  res.redirect("/login");
+});
 
 /* ================= START SERVER ================= */
 app.listen(PORT, () => {
