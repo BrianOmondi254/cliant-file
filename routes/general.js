@@ -23,6 +23,15 @@ const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
 
+const norm = (p) => {
+  if (!p) return "";
+  let s = String(p).trim();
+  if (s.startsWith("0")) s = s.substring(1);
+  if (s.startsWith("+254")) s = s.substring(4);
+  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+  return s;
+};
+
 /**
  * Restructures flat group data into hierarchy:
  * County -> Constituency -> Ward -> [Groups]
@@ -75,10 +84,70 @@ router.get("/", (req, res) => {
   }
 
   let allGroups = flattenData(raw);
+  const isCreation = req.query.mode === 'create';
+
+  let selectedGroup = null;
+  if (req.query.groupName) {
+    selectedGroup = allGroups.find(g => g.groupName === req.query.groupName);
+    
+    if (selectedGroup) {
+      // --- Restructure Display Data for View ---
+      
+      // 1. Load User Registry for Name Lookup
+      const usersFile = path.join(__dirname, "../data.json");
+      const users = readJSON(usersFile, []);
+      const getUserName = (phone) => {
+          const u = users.find(user => norm(user.phoneNumber) === norm(phone));
+          return u ? `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim() : null;
+      };
+
+      // 2. Consolidate Members List
+      // Create a clean array of members from the disparate trustee_x, official_x, member_x keys
+      selectedGroup.members = [];
+      const memberKeys = Object.keys(selectedGroup).filter(k => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_'));
+      
+      memberKeys.forEach(key => {
+          const item = selectedGroup[key];
+          if (item && typeof item === 'object' && item.phone) {
+              const name = item.name || getUserName(item.phone) || "Unknown Name";
+              selectedGroup.members.push({
+                  name: name,
+                  phone: item.phone,
+                  role: item.type || 'member',
+                  title: item.title || item.type || 'Member',
+                  id: item.id || ''
+              });
+          }
+      });
+
+      // Sort: Trustees first, then Officials, then Members
+      const roleOrder = { 'trustee': 1, 'official': 2, 'member': 3 };
+      selectedGroup.members.sort((a, b) => (roleOrder[a.role] || 4) - (roleOrder[b.role] || 4));
+
+      // 3. Generate Display Stats
+      const now = new Date();
+      const created = new Date(selectedGroup.createdAt || now);
+      const diffTime = Math.abs(now - created);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      
+      selectedGroup.summaryStats = {
+         activeRound: Math.ceil(diffDays / 7) || 1,
+         daysUntilMeeting: 7 - (diffDays % 7),
+         totalMembers: selectedGroup.members.length
+      };
+
+      // 4. Pin Status
+      selectedGroup.pinIsSet = !!selectedGroup.constitutionStartKey;
+      // --- End Restructure ---
+    }
+  }
   
   // Pass flat list to frontend for dropdowns etc.
   res.render("general_new", {
     groups: allGroups,
+    isCreation,
+    selectedGroup,
+    user: req.session ? req.session.user : null,
   });
 });
 
@@ -141,6 +210,50 @@ router.post("/verify", (req, res) => {
       newGroup: parseFloat(newGroupFee) || 0,
       renewal: parseFloat(renewalFee) || 0,
     },
+  });
+});
+
+/* 💳 Confirm Payment & Setup Registration Form (POST) */
+router.post("/confirm-payment", (req, res) => {
+  const { paymentMethod, totalMembers } = req.body;
+  const tbankFile = path.join(__dirname, "../tbank.json");
+  const tbankData = readJSON(tbankFile, null);
+
+  if (!tbankData || !tbankData.compliance) {
+      return res.json({ success: false, message: "Compliance data unavailable." });
+  }
+
+  // 1. Validate Payment
+  if (!['agent', 'mpesa'].includes(paymentMethod)) {
+      return res.json({ success: false, message: "Invalid payment method selected." });
+  }
+
+  // 2. Calculate Counts
+  const { trustees, officials, maxMembers, members: defaultMembers } = tbankData.compliance.membership;
+  const tCount = parseInt(trustees) || 0;
+  const oCount = parseInt(officials) || 0;
+  const max = parseInt(maxMembers) || 40;
+
+  let mCount = parseInt(defaultMembers) || 0;
+
+  if (totalMembers) {
+      const total = parseInt(totalMembers);
+      if (total > max) {
+          return res.json({ success: false, message: `Total members cannot exceed ${max}.` });
+      }
+      if (total < (tCount + oCount)) {
+          return res.json({ success: false, message: `Total must include at least ${tCount} trustees and ${oCount} officials.` });
+      }
+      mCount = total - tCount - oCount;
+  }
+
+  return res.json({
+    success: true,
+    counts: {
+      trustees: tCount,
+      officials: oCount,
+      members: mCount
+    }
   });
 });
 

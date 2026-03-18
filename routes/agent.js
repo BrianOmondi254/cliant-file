@@ -9,14 +9,14 @@ const generalFile = path.join(__dirname, "../general.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
 const dataFile = path.join(__dirname, "../data.json");
 
-const loadJSON = (file) => {
-  if (!fs.existsSync(file)) return [];
+const loadJSON = (file, fallback = []) => {
+  if (!fs.existsSync(file)) return fallback;
   try {
     const data = fs.readFileSync(file, "utf8");
-    return data ? JSON.parse(data) : [];
+    return data ? JSON.parse(data) : fallback;
   } catch (e) {
     console.error("Error reading JSON:", e);
-    return [];
+    return fallback;
   }
 };
 
@@ -95,60 +95,71 @@ router.get("/", (req, res) => {
   }
 
   // Render the dashboard directly.
-  const generalRaw = loadJSON(generalFile);
+  const generalRaw = loadJSON(generalFile, {});
   const general = flattenData(generalRaw);
   
+  // Normalize agent details once outside the loop for performance
+  const agentWard = agent.ward ? normStr(agent.ward) : "";
+  const agentCounty = agent.county ? normStr(agent.county) : "";
+  const agentConst = agent.constituency ? normStr(agent.constituency) : "";
+  const agentPhoneNormalized = normPhone(agent.phoneNumber);
+
   const managedGroups = general.filter((g) => {
       const groupWard = g.ward ? normStr(g.ward) : "";
-      const agentWard = agent.ward ? normStr(agent.ward) : "";
+      
+      // Geographic Match Logic
+      // 1. Ward must match exactly (and exist for both)
       const sameWard = groupWard && agentWard && groupWard === agentWard;
       
+      // 2. County/Constituency must match IF the agent has them defined
       const groupCounty = g.county ? normStr(g.county) : "";
-      const agentCounty = agent.county ? normStr(agent.county) : "";
       const sameCounty = !agentCounty || (groupCounty && groupCounty === agentCounty);
       
       const groupConst = g.constituency ? normStr(g.constituency) : "";
-      const agentConst = agent.constituency ? normStr(agent.constituency) : "";
       const sameConst = !agentConst || (groupConst && groupConst === agentConst);
       
-      const isProcessor = g.processorPhone && normPhone(g.processorPhone) === normPhone(agent.phoneNumber);
-      const isAgentProcessed = g.agentProcessed && normPhone(g.agentProcessed) === normPhone(agent.phoneNumber);
+      // Direct Assignment Logic
+      const isProcessor = g.processorPhone && normPhone(g.processorPhone) === agentPhoneNormalized;
+      const isAgentProcessed = g.agentProcessed && normPhone(g.agentProcessed) === agentPhoneNormalized;
 
       return (sameWard && sameCounty && sameConst) || isProcessor || isAgentProcessed;
   });
 
   // Augment managed groups with a list of members including their full names
   managedGroups.forEach(group => {
-    group.membersList = [];
-    for (const key in group) {
-        if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
-            let member = group[key];
-            let phone = null;
-            
-            if (member && typeof member === 'object' && member.phone) {
-                phone = member.phone;
-            } else if (typeof member === 'string') {
-                phone = member;
-            }
-
-            if (phone) {
-                const normalizedPhone = normPhone(phone);
-                // Lookup name from data.json, fallback to existing name, fallback to 'Unknown'
-                const memberName = userMap.get(normalizedPhone) || (typeof member === 'object' && member.name ? member.name : '') || 'Unknown Name';
+    // Only create a membersList if the group is already populated with members
+    if (group.membersPopulatedAt || (group.phase && group.phase >= 2)) {
+        group.membersList = [];
+        for (const key in group) {
+            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+                let member = group[key];
+                let phone = null;
                 
-                // Standardize member object
-                const memberObj = typeof member === 'object' ? { ...member } : { phone: phone, type: key.split('_')[0] };
-                memberObj.name = memberName;
+                if (member && typeof member === 'object' && member.phone) {
+                    phone = member.phone;
+                } else if (typeof member === 'string') {
+                    phone = member;
+                }
 
-                // 1. Add to cleaned list for easy iteration
-                group.membersList.push(memberObj);
+                if (phone) {
+                    const normalizedPhone = normPhone(phone);
+                    // Lookup name from data.json, fallback to existing name, fallback to 'Unknown'
+                    const memberName = userMap.get(normalizedPhone) || (typeof member === 'object' && member.name ? member.name : '') || 'Unknown Name';
+                    
+                    // Standardize member object
+                    const memberObj = typeof member === 'object' ? { ...member } : { phone: phone, type: key.split('_')[0] };
+                    memberObj.name = memberName;
 
-                // 2. Update the original key in the group object so legacy views find the name
-                if (typeof group[key] === 'object') {
-                    group[key].name = memberName;
-                } else {
-                    // Convert string-only member to object in-memory
-                    group[key] = memberObj;
+                    // 1. Add to cleaned list for easy iteration
+                    group.membersList.push(memberObj);
+
+                    // 2. Update the original key in the group object so legacy views find the name
+                    if (typeof group[key] === 'object') {
+                        group[key].name = memberName;
+                    } else {
+                        // Convert string-only member to object in-memory
+                        group[key] = memberObj;
+                    }
                 }
             }
         }
@@ -160,14 +171,43 @@ router.get("/", (req, res) => {
 
   const displayAgent = agent ? { ...agent, name: agent.name } : { phoneNumber: currentPhoneNumber, name: "Unknown Agent" };
 
+  const selectedGroupName = req.query.groupName;
+  const selectedGroupIndex = selectedGroupName ? managedGroups.findIndex(g => g.groupName === selectedGroupName) : -1;
+  let selectedGroup = selectedGroupIndex > -1 ? managedGroups[selectedGroupIndex] : null;
+
+  // If a group is selected and it's new (not populated), get registration config
+  let registrationConfig = null;
+  if (selectedGroup && !selectedGroup.membersPopulatedAt && (!selectedGroup.phase || selectedGroup.phase < 2)) {
+    const tbankFile = path.join(__dirname, "../tbank.json");
+    const tbankData = loadJSON(tbankFile, {});
+    
+    if (tbankData && tbankData.compliance && tbankData.compliance.membership) {
+      const { trustees, officials, members, maxMembers } = tbankData.compliance.membership;
+      registrationConfig = {
+        trustees: parseInt(trustees) || 0,
+        officials: parseInt(officials) || 0,
+        members: parseInt(members) || 0,
+        maxMembers: parseInt(maxMembers) || 40,
+        showRegistrationForm: true,
+      };
+    }
+    // To robustly prevent the "Existing Members" view, we replace the group object
+    // in the main list with a minimal one, ensuring the template receives no conflicting data.
+    const minimalGroup = { groupName: selectedGroup.groupName, isNew: true };
+    managedGroups[selectedGroupIndex] = minimalGroup;
+    selectedGroup = minimalGroup;
+  }
+
   res.render("agent/agent", { 
     step: "dashboard", 
     agent: displayAgent, 
     groups: managedGroups, 
+    selectedGroup: selectedGroup,
     dealer: dealer, 
     message: null, 
     phoneNumber: currentPhoneNumber, 
-    user: (req.session && req.session.user) || { phoneNumber: currentPhoneNumber } 
+    user: (req.session && req.session.user) || { phoneNumber: currentPhoneNumber },
+    registrationConfig: registrationConfig
   });
 
 });

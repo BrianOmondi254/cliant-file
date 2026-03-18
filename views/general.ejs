@@ -1,490 +1,651 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>General Account</title>
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>General Account</title>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<style>
-:root {
-  --primary: #0f9d58;
-  --primary-dark: #0b7d46;
-  --bg: #f1f5f9;
-  --card: #ffffff;
-  --text: #1e293b;
-  --text-muted: #64748b;
-  --border: #e2e8f0;
-  --focus-ring: rgba(15, 157, 88, 0.15);
-}
+  <style>
+    :root {
+      --primary: #0f9d58;
+      --primary-dark: #0b7d46;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --focus-ring: rgba(15, 157, 88, 0.15);
+    }
 
-* {
-  box-sizing: border-box;
-}
+    * {
+      box-sizing: border-box;
+    }
 
-body {
-  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  margin: 0;
-  padding: 20px;
-}
+    body {
+      font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
 
-.main-container {
-  width: 95%;
-  max-width: 420px;
-  background: var(--card);
-  border-radius: 22px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
-  animation: slideUp 0.5s ease-out;
-}
+    .main-container {
+      width: 95%;
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 22px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      animation: slideUp 0.5s ease-out;
+    }
 
-@media (max-width: 480px) {
-  body {
-    padding: 0;
-  }
-  .main-container {
-    width: 100%;
-    max-width: 100%;
-    border-radius: 0;
-    min-height: 100vh;
-    box-shadow: none;
-  }
-}
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+      .main-container {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        min-height: 100vh;
+        box-shadow: none;
+      }
+    }
 
-.header-section {
-  background: linear-gradient(135deg, #0f9d58, #34d399);
-  padding: 20px;
-  color: white;
-  position: relative;
-  overflow: hidden;
-  text-align: center;
-}
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
 
-.back-arrow {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  z-index: 10;
-  transition: transform 0.2s ease;
-  padding: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-.back-arrow:hover {
-  transform: translateX(-3px);
-  opacity: 0.8;
-}
+    .header-section {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 20px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
 
-.header-section::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-}
+    .back-arrow {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: white;
+      font-size: 1.2rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: transform 0.2s ease;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
 
-.header-section::after {
-  content: '';
-  position: absolute;
-  bottom: -30%;
-  left: -10%;
-  width: 200px;
-  height: 200px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 50%;
-}
+    .back-arrow:hover {
+      transform: translateX(-3px);
+      opacity: 0.8;
+    }
 
-.header-content {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-}
+    .header-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+    }
 
-.header-content h2 {
-  margin: 0 0 5px;
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-}
+    .header-section::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+    }
 
-.header-content p {
-  margin: 0;
-  opacity: 0.9;
-  font-size: 0.8rem;
-}
+    .header-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
 
-.tab-navigation {
-  display: flex;
-  background: #f8fafc;
-  border-bottom: 1px solid var(--border);
-  padding: 0 10px;
-}
+    .header-content h2 {
+      margin: 0 0 5px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
 
-.tab-button {
-  flex: 1;
-  padding: 14px 10px;
-  background: none;
-  border: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  position: relative;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-radius: 0;
-  margin: 0;
-}
+    .header-content p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 0.8rem;
+    }
 
-.tab-button:hover {
-  color: var(--primary);
-  background: rgba(34, 197, 94, 0.05);
-}
+    .tab-navigation {
+      display: flex;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      padding: 0 10px;
+    }
 
-.tab-button.active {
-  color: var(--primary);
-}
+    .tab-button {
+      flex: 1;
+      padding: 14px 10px;
+      background: none;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: 0;
+      margin: 0;
+    }
 
-.tab-button.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: var(--primary);
-  border-radius: 3px 3px 0 0;
-}
+    .tab-button:hover {
+      color: var(--primary);
+      background: rgba(34, 197, 94, 0.05);
+    }
 
-.tab-button i {
-  font-size: 0.9rem;
-}
+    .tab-button.active {
+      color: var(--primary);
+    }
 
-.content-area {
-  padding: 15px;
-  min-height: auto;
-}
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--primary);
+      border-radius: 3px 3px 0 0;
+    }
 
-.form-wrapper {
-  width: 100%;
-  max-width: 100%;
-}
+    .tab-button i {
+      font-size: 0.9rem;
+    }
 
-.progress-bar {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    margin-bottom: 15px;
-    position: relative;
-    width: 80%;
-    margin-left: auto;
-    margin-right: auto;
-}
-.progress-bar::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-    height: 2px;
-    width: 100%;
-    background-color: var(--border);
-    z-index: 1;
-}
-.step-indicator {
-    z-index: 2;
-    position: relative;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: var(--card);
-    border: 2px solid var(--border);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: 600;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    transition: all 0.3s ease;
-}
-.step-indicator.active {
-    border-color: var(--primary);
-    background-color: var(--primary);
-    color: white;
-}
-.step-indicator.completed {
-    border-color: var(--primary);
-    background-color: white;
-    color: var(--primary);
-}
+    .content-area {
+      padding: 15px;
+      min-height: auto;
+    }
 
-.step-box {
-  background: var(--card);
-  padding: 15px;
-  border-radius: 14px;
-  box-shadow: none;
-  animation: fade 0.5s ease-out;
-  border: none;
-}
+    .form-wrapper {
+      width: 100%;
+      max-width: 100%;
+    }
 
-@keyframes fade {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+    .progress-bar {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-bottom: 15px;
+      position: relative;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
-h3 {
-  margin: 0 0 15px;
-  text-align: center;
-  color: var(--text);
-  font-weight: 700;
-  font-size: 1.2rem;
-  letter-spacing: -0.5px;
-}
+    .progress-bar::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      height: 2px;
+      width: 100%;
+      background-color: var(--border);
+      z-index: 1;
+    }
 
-h3 i {
-  color: var(--primary);
-  margin-right: 8px;
-  vertical-align: middle;
-}
+    .step-indicator {
+      z-index: 2;
+      position: relative;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: var(--card);
+      border: 2px solid var(--border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+    }
 
-label {
-  display: block;
-  font-size: 0.8rem;
-  margin-bottom: 6px;
-  margin-top: 12px;
-  color: var(--text);
-  font-weight: 600;
-}
+    .step-indicator.active {
+      border-color: var(--primary);
+      background-color: var(--primary);
+      color: white;
+    }
 
-.input-group {
-  position: relative;
-}
+    .step-indicator.completed {
+      border-color: var(--primary);
+      background-color: white;
+      color: var(--primary);
+    }
 
-.input-group i.fa, .input-group i.fas {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  pointer-events: none;
-  transition: color 0.3s ease;
-}
+    .step-box {
+      background: var(--card);
+      padding: 15px;
+      border-radius: 14px;
+      box-shadow: none;
+      animation: fade 0.5s ease-out;
+      border: none;
+    }
 
-input, select {
-  width: 100%;
-  padding: 12px 12px 12px 35px;
-  border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  font-size: 13px;
-  color: var(--text);
-  background-color: #fff;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  outline: none;
-}
-input::placeholder {
-    color: var(--text-muted);
-    font-weight: 400;
-    font-size: 12px;
-}
+    @keyframes fade {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
 
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--focus-ring);
-  background-color: #fff;
-}
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-.input-group:focus-within i.fa, .input-group:focus-within i.fas {
-  color: var(--primary);
-}
+    h3 {
+      margin: 0 0 15px;
+      text-align: center;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 1.2rem;
+      letter-spacing: -0.5px;
+    }
 
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 15px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  background: var(--primary);
-  color: white;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
+    h3 i {
+      color: var(--primary);
+      margin-right: 8px;
+      vertical-align: middle;
+    }
 
-button:hover {
-  background: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.2);
-}
+    label {
+      display: block;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+      margin-top: 12px;
+      color: var(--text);
+      font-weight: 600;
+    }
 
-button:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
+    .input-group {
+      position: relative;
+    }
 
-.button-group {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
+    .input-group i.fa,
+    .input-group i.fas {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      pointer-events: none;
+      transition: color 0.3s ease;
+    }
 
-.button-group button, .button-group button[type=button] {
-    flex: 1;
-    margin-top: 0;
-}
-button.secondary {
-    background: #e2e8f0;
-    color: var(--text-muted);
-    font-weight: 600;
-}
-button.secondary:hover {
-    background: #cbd5e1;
-    color: var(--text);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
-}
+    input,
+    select {
+      width: 100%;
+      padding: 12px 12px 12px 35px;
+      border-radius: 10px;
+      border: 1.5px solid #e2e8f0;
+      font-size: 13px;
+      color: var(--text);
+      background-color: #fff;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      outline: none;
+    }
 
-.hidden {
-  display: none;
-}
-</style>
+    input::placeholder {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 12px;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--focus-ring);
+      background-color: #fff;
+    }
+
+    .input-group:focus-within i.fa,
+    .input-group:focus-within i.fas {
+      color: var(--primary);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.2);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .button-group button,
+    .button-group button[type=button] {
+      flex: 1;
+      margin-top: 0;
+    }
+
+    button.secondary {
+      background: #e2e8f0;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    button.secondary:hover {
+      background: #cbd5e1;
+      color: var(--text);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="main-container">
-  <div class="header-section">
-    <a href="/personal" class="back-arrow">
-      <i class="fas fa-arrow-left"></i>
-    </a>
-    <div class="header-content">
-      <h1 style="font-size: 24px; font-weight: 800; color: white; margin: 0 0 5px; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
-      <p style="font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 12px;">Secure Group Banking</p>
-      <h2 style="font-size: 1.1rem; opacity: 1; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
-        <i class="fas fa-users-cog"></i> Group Account
-      </h2>
-    </div>
-  </div>
-
-  <div class="tab-navigation">
-    <button class="tab-button active" id="tabMySaving" onclick="switchTab('mySaving')">
-      <i class="fas fa-piggy-bank"></i> My Saving
-    </button>
-    <button class="tab-button" id="tabCreateGroup" onclick="switchTab('createGroup')">
-      <i class="fas fa-plus-circle"></i> Create Group
-    </button>
-  </div>
-
-  <!-- My Saving Section -->
-  <div id="mySavingSection" class="step-box">
-    <h3><i class="fas fa-piggy-bank"></i> My Saving Groups</h3>
-    
-    <!-- Verification Section -->
-    <div id="verificationSection">
-      <div id="groupVerification" class="hidden">
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
-          You are a member of groups in the system. Please select a group to verify:
-        </p>
-        
-        <label>Select Your Group</label>
-        <div class="input-group">
-          <i class="fas fa-users"></i>
-          <select id="userGroupSelect" onchange="showGroupPhoneInput()">
-            <option value="">-- Select Group --</option>
-          </select>
-        </div>
-
-        <div id="groupChairpersonInput" class="hidden" style="margin-top: 12px;">
-          <label>Enter Chairperson Phone Number</label>
-          <div class="input-group">
-            <i class="fas fa-phone"></i>
-            <input type="number" id="groupChairpersonPhone" placeholder="07XX XXX XXX">
-          </div>
-        </div>
-        
-        <button type="button" onclick="verifyGroupAccess()">Verify <i class="fas fa-check"></i></button>
-        <p id="groupVerifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
-      </div>
-
-      <div id="personalVerification" class="hidden">
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
-          You don't have any groups yet. Please verify with your personal phone number:
-        </p>
-        
-        <label>Your Phone Number</label>
-        <div class="input-group">
-          <i class="fas fa-phone"></i>
-          <input type="number" id="personalPhone" placeholder="07XX XXX XXX">
-        </div>
-        
-        <button type="button" onclick="verifyPersonalAccess()">Verify <i class="fas fa-check"></i></button>
-        <p id="personalVerifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
+  <div class="main-container">
+    <div class="header-section">
+      <a href="/personal" class="back-arrow">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <div class="header-content">
+        <h1
+          style="font-size: 24px; font-weight: 800; color: white; margin: 0 0 5px; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          Tbank Investment</h1>
+        <p
+          style="font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 12px;">
+          Secure Group Banking</p>
+        <h2
+          style="font-size: 1.1rem; opacity: 1; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
+          <i class="fas fa-users-cog"></i> Group Account
+        </h2>
       </div>
     </div>
 
-    <!-- Groups List (shown after verification) -->
-    <div id="myGroupsLoading" style="text-align: center; padding: 20px;">
-      <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--primary);"></i>
-      <p style="margin-top: 10px; color: var(--text-muted);">Loading your groups...</p>
-    </div>
-    
-    <div id="myGroupsList" class="hidden"></div>
-    
-    <div id="noGroupsMessage" class="hidden" style="text-align: center; padding: 30px 10px;">
-      <i class="fas fa-folder-open" style="font-size: 48px; color: var(--border); margin-bottom: 15px;"></i>
-      <p style="color: var(--text-muted);">You are not a member of any group yet.</p>
-      <p style="font-size: 0.85rem; color: var(--text-muted);">Create a group or ask to be added to an existing group.</p>
-      <button type="button" onclick="switchTab('createGroup')" style="margin-top: 20px; width: auto; padding: 12px 30px; background: var(--primary); color: white; border-radius: 10px; font-weight: 700; border: none; cursor: pointer;">
-        <i class="fas fa-plus-circle"></i> Create New Group
+    <div class="tab-navigation">
+      <button class="tab-button active" id="tabMySaving" onclick="switchTab('mySaving')">
+        <i class="fas fa-piggy-bank"></i> My Saving
+      </button>
+      <button class="tab-button" id="tabCreateGroup" onclick="switchTab('createGroup')">
+        <i class="fas fa-plus-circle"></i> Create Group
       </button>
     </div>
+
+    <!-- Create Group Section (Original Form) -->
+    <div id="createGroupContent" class="step-box hidden">
+      <form action="/general" method="POST" onsubmit="return handleGeneralSubmit(event)">
+        <div class="progress-bar">
+          <div class="step-indicator active" id="indicator-1">1</div>
+          <div class="step-indicator" id="indicator-2">2</div>
+          <div class="step-indicator" id="indicator-3">3</div>
+        </div>
+
+        <div class="step-box" id="cAccount">
+          <h3><i class="fas fa-users-cog"></i>Create Group Account</h3>
+
+          <label>Group Name</label>
+          <div class="input-group" style="margin-bottom: 10px;">
+            <i class="fas fa-users"></i>
+            <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
+          </div>
+
+          <div
+            style="border: 1px solid var(--border); padding: 12px; border-radius: 10px; margin-bottom: 8px; background: #f8f9fa;">
+            <h4
+              style="margin-top: 0; color: var(--primary); font-size: 0.95rem; margin-bottom: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; font-weight: 700;">
+              <i class="fas fa-user-tie"></i> Group Chairperson
+            </h4>
+
+            <label style="margin-top: 0;">Chairperson Phone</label>
+            <div class="input-group">
+              <i class="fas fa-phone"></i>
+              <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number"
+                required>
+            </div>
+
+            <label>Chairperson Name (Enter First, Middle & Last Name)</label>
+            <div class="input-group">
+              <i class="fas fa-user"></i>
+              <input type="text" id="fullNameInput" placeholder="First Middle Last" required oninput="parseFullName()">
+            </div>
+            <small style="color:red; font-size:0.7rem; display:none;" id="nameError">Please enter at least 3 names
+              separated by spaces.</small>
+
+            <input type="hidden" name="firstName" id="firstName">
+            <input type="hidden" name="secondName" id="secondName">
+            <input type="hidden" name="lastName" id="lastName">
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button type="button" onclick="goBackFromStep1()"
+              style="flex: 1; background: #e2e8f0; color: #333; border: 1px solid #cbd5e1; justify-content: center; padding: 8px; font-size: 0.8rem;">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button type="button" onclick="nextStep()"
+              style="flex: 1; background: var(--primary); color: white; justify-content: center; padding: 8px; font-size: 0.8rem;">
+              Next <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="step-box hidden" id="Regions">
+          <h3><i class="fas fa-map-marked-alt"></i>Update Group Location</h3>
+
+          <label>County</label>
+          <div class="input-group">
+            <i class="fas fa-globe-africa"></i>
+            <select name="county" id="countySelect" onchange="loadConstituencies()" required>
+              <option value="">-- Select County --</option>
+            </select>
+          </div>
+
+          <label>Constituency</label>
+          <div class="input-group">
+            <i class="fas fa-map-pin"></i>
+            <select name="constituency" id="constituencySelect" onchange="loadWards()" required>
+              <option value="">-- Select Constituency --</option>
+            </select>
+          </div>
+
+          <label>Ward</label>
+          <div class="input-group">
+            <i class="fas fa-map-marker-alt"></i>
+            <select name="ward" id="wardSelect" onchange="checkManualWard()" required>
+              <option value="">-- Select Ward --</option>
+            </select>
+          </div>
+
+          <div id="manualWardContainer" class="hidden" style="margin-top: 8px;">
+            <label>Enter Ward Name Manually</label>
+            <div class="input-group">
+              <i class="fas fa-edit"></i>
+              <input type="text" id="manualWardInput" placeholder="Type Ward Name">
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button type="button" onclick="goToStep1()" class="secondary">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button type="button" onclick="showMembership()">Next <i class="fas fa-arrow-right"></i></button>
+          </div>
+        </div>
+
+        <div class="step-box hidden" id="Membership">
+          <h3><i class="fas fa-users"></i> Membership Details</h3>
+
+          <div id="trusteesContainer"></div>
+          <div id="officialsContainer"></div>
+          <div id="membersContainer"></div>
+
+          <div id="inlineSummary" style="margin-top: 15px; margin-bottom: 12px;"></div>
+
+          <div class="button-group">
+            <button type="button" onclick="goToStep2()" class="secondary">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <button type="submit">
+              Submit <i class="fas fa-check-circle"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- My Saving Section -->
+    <div id="mySavingSection" class="step-box">
+      <h3><i class="fas fa-piggy-bank"></i> My Saving Groups</h3>
+
+      <!-- Verification Section -->
+      <div id="verificationSection">
+        <div id="groupVerification" class="hidden">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+            You are a member of groups in the system. Please select a group to verify:
+          </p>
+
+          <label>Select Your Group</label>
+          <div class="input-group">
+            <i class="fas fa-users"></i>
+            <select id="userGroupSelect" onchange="showGroupPhoneInput()">
+              <option value="">-- Select Group --</option>
+            </select>
+          </div>
+
+          <div id="groupChairpersonInput" class="hidden" style="margin-top: 12px;">
+            <label>Enter Chairperson Phone Number</label>
+            <div class="input-group">
+              <i class="fas fa-phone"></i>
+              <input type="number" id="groupChairpersonPhone" placeholder="07XX XXX XXX">
+            </div>
+          </div>
+
+          <button type="button" onclick="verifyGroupAccess()">Verify <i class="fas fa-check"></i></button>
+          <p id="groupVerifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
+        </div>
+
+        <div id="personalVerification" class="hidden">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+            You don't have any groups yet. Please verify with your personal phone number:
+          </p>
+
+          <label>Your Phone Number</label>
+          <div class="input-group">
+            <i class="fas fa-phone"></i>
+            <input type="number" id="personalPhone" placeholder="07XX XXX XXX">
+          </div>
+
+          <button type="button" onclick="verifyPersonalAccess()">Verify <i class="fas fa-check"></i></button>
+          <p id="personalVerifyMsg" style="color: red; text-align: center; margin-top: 10px;"></p>
+        </div>
+      </div>
+
+      <!-- Groups List (shown after verification) -->
+      <div id="myGroupsLoading" style="text-align: center; padding: 20px;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: var(--primary);"></i>
+        <p style="margin-top: 10px; color: var(--text-muted);">Loading your groups...</p>
+      </div>
+
+      <div id="myGroupsList" class="hidden"></div>
+
+      <div id="noGroupsMessage" class="hidden" style="text-align: center; padding: 30px 10px;">
+        <i class="fas fa-folder-open" style="font-size: 48px; color: var(--border); margin-bottom: 15px;"></i>
+        <p style="color: var(--text-muted);">You are not a member of any group yet.</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Create a group or ask to be added to an existing group.
+        </p>
+        <button type="button" onclick="switchTab('createGroup')"
+          style="margin-top: 20px; width: auto; padding: 12px 30px; background: var(--primary); color: white; border-radius: 10px; font-weight: 700; border: none; cursor: pointer;">
+          <i class="fas fa-plus-circle"></i> Create New Group
+        </button>
+      </div>
 
     </div>
 
     <!-- Pending Group Panel -->
     <div id="pendingGroupPanel" class="hidden" style="text-align: center; padding: 10px 5px;">
-      <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 16px; padding: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
+      <div
+        style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 16px; padding: 25px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);">
         <i class="fas fa-hourglass-half" style="font-size: 48px; color: #f59e0b; margin-bottom: 15px;"></i>
-        <h4 style="color: #92400e; margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Account Processing</h4>
+        <h4
+          style="color: #92400e; margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+          Account Processing</h4>
         <p style="color: #92400e; font-size: 0.9rem; line-height: 1.6; margin: 0 0 15px;">
           This group account selected is pending and awaits group constitution setup by an Agent.
         </p>
-        <div id="pendingAgentInfo" style="background: white; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-top: 5px;">
+        <div id="pendingAgentInfo"
+          style="background: white; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-top: 5px;">
           <p style="margin: 0; font-size: 0.8rem; color: #92400e;">
             <i class="fas fa-spinner fa-spin"></i> Looking up assigned agent...
           </p>
         </div>
       </div>
-      <button type="button" onclick="backFromPendingNote()" style="margin-top: 25px; background: #e2e8f0; color: #333; border-radius: 12px; width: auto; padding: 10px 24px;">
+      <button type="button" onclick="backFromPendingNote()"
+        style="margin-top: 25px; background: #e2e8f0; color: #333; border-radius: 12px; width: auto; padding: 10px 24px;">
         <i class="fas fa-arrow-left"></i> Back to Groups
       </button>
     </div>
@@ -494,200 +655,81 @@ button.secondary:hover {
       <i class="fas fa-hard-hat" style="font-size: 64px; color: #f59e0b; margin-bottom: 20px;"></i>
       <h3 style="color: var(--text); margin-bottom: 10px;">Under Construction</h3>
       <p style="color: var(--text-muted); font-size: 0.9rem;">This feature is coming soon!</p>
-      <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 15px;">Group savings management will be available shortly.</p>
+      <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 15px;">Group savings management will be
+        available shortly.</p>
       <button type="button" onclick="backToMyGroups()" style="margin-top: 20px; width: auto; padding: 10px 30px;">
         <i class="fas fa-arrow-left"></i> Back to My Groups
       </button>
     </div>
   </div>
 
-  <!-- Create Group Section (Original Form) -->
-  <div class="content-area">
-    <div class="form-wrapper hidden" id="createGroupContent">
-    <form action="/general" method="POST" onsubmit="return handleGeneralSubmit(event)">
-      <div class="progress-bar">
-        <div class="step-indicator active" id="indicator-1">1</div>
-        <div class="step-indicator" id="indicator-2">2</div>
-        <div class="step-indicator" id="indicator-3">3</div>
-      </div>
+  <script>
+    function showPhoneInput() {
+      const group = document.getElementById("verifyGroup").value;
+      const phoneContainer = document.getElementById("phoneVerifyContainer");
+      const phoneInput = document.getElementById("verifyPhone");
 
-      <div class="step-box" id="cAccount">
-        <h3><i class="fas fa-users-cog"></i>Create Group Account</h3>
-
-        <label>Group Name</label>
-        <div class="input-group" style="margin-bottom: 10px;">
-          <i class="fas fa-users"></i>
-          <input type="text" name="groupName" id="confirmedGroup" placeholder="Enter group name" required>
-        </div>
-
-        <div style="border: 1px solid var(--border); padding: 12px; border-radius: 10px; margin-bottom: 8px; background: #f8f9fa;">
-            <h4 style="margin-top: 0; color: var(--primary); font-size: 0.95rem; margin-bottom: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; font-weight: 700;">
-                <i class="fas fa-user-tie"></i> Group Chairperson
-            </h4>
-
-            <label style="margin-top: 0;">Chairperson Phone</label>
-            <div class="input-group">
-            <i class="fas fa-phone"></i>
-            <input type="number" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Enter phone number" required>
-            </div>
-
-            <label>Chairperson Name (Enter First, Middle & Last Name)</label>
-            <div class="input-group">
-            <i class="fas fa-user"></i>
-            <input type="text" id="fullNameInput" placeholder="First Middle Last" required oninput="parseFullName()">
-            </div>
-            <small style="color:red; font-size:0.7rem; display:none;" id="nameError">Please enter at least 3 names separated by spaces.</small>
-            
-            <input type="hidden" name="firstName" id="firstName">
-            <input type="hidden" name="secondName" id="secondName">
-            <input type="hidden" name="lastName" id="lastName">
-        </div>
-
-        <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <button type="button" onclick="goBackFromStep1()" style="flex: 1; background: #e2e8f0; color: #333; border: 1px solid #cbd5e1; justify-content: center; padding: 8px; font-size: 0.8rem;">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-            <button type="button" onclick="nextStep()" style="flex: 1; background: var(--primary); color: white; justify-content: center; padding: 8px; font-size: 0.8rem;">
-                Next <i class="fas fa-arrow-right"></i>
-            </button>
-        </div>
-      </div>
-
-      <div class="step-box hidden" id="Regions">
-        <h3><i class="fas fa-map-marked-alt"></i>Update Group Location</h3>
-
-        <label>County</label>
-        <div class="input-group">
-          <i class="fas fa-globe-africa"></i>
-          <select name="county" id="countySelect" onchange="loadConstituencies()" required>
-            <option value="">-- Select County --</option>
-          </select>
-        </div>
-
-        <label>Constituency</label>
-        <div class="input-group">
-          <i class="fas fa-map-pin"></i>
-          <select name="constituency" id="constituencySelect" onchange="loadWards()" required>
-            <option value="">-- Select Constituency --</option>
-          </select>
-        </div>
-
-        <label>Ward</label>
-        <div class="input-group">
-          <i class="fas fa-map-marker-alt"></i>
-          <select name="ward" id="wardSelect" onchange="checkManualWard()" required>
-            <option value="">-- Select Ward --</option>
-          </select>
-        </div>
-
-        <div id="manualWardContainer" class="hidden" style="margin-top: 8px;">
-          <label>Enter Ward Name Manually</label>
-          <div class="input-group">
-            <i class="fas fa-edit"></i>
-            <input type="text" id="manualWardInput" placeholder="Type Ward Name">
-          </div>
-        </div>
-
-        <div class="button-group">
-            <button type="button" onclick="goToStep1()" class="secondary">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-            <button type="button" onclick="showMembership()">Next <i class="fas fa-arrow-right"></i></button>
-        </div>
-      </div>
-
-      <div class="step-box hidden" id="Membership">
-        <h3><i class="fas fa-users"></i> Membership Details</h3>
-        
-        <div id="trusteesContainer"></div>
-        <div id="officialsContainer"></div>
-        <div id="membersContainer"></div>
-
-        <div id="inlineSummary" style="margin-top: 15px; margin-bottom: 12px;"></div>
-
-        <div class="button-group">
-            <button type="button" onclick="goToStep2()" class="secondary">
-                <i class="fas fa-arrow-left"></i> Back
-            </button>
-            <button type="submit">
-                Submit <i class="fas fa-check-circle"></i>
-            </button>
-        </div>
-      </div>
-    </form>
-    </div>
-
-    </form>
-    </div>
-  </div>
-</div>
-<script>
-function showPhoneInput() {
-  const group = document.getElementById("verifyGroup").value;
-  const phoneContainer = document.getElementById("phoneVerifyContainer");
-  const phoneInput = document.getElementById("verifyPhone");
-  
-  if (group) {
-    phoneContainer.classList.remove("hidden");
-  } else {
-    phoneContainer.classList.add("hidden");
-    phoneInput.value = "";
-  }
-}
-
-async function verifyChairperson() {
-  const phone = document.getElementById("verifyPhone").value;
-  const group = document.getElementById("verifyGroup").value;
-  const msg = document.getElementById("verifyMsg");
-  
-  if (!phone || !group) {
-    msg.textContent = "Please select a group and enter a phone number.";
-    return;
-  }
-
-  try {
-    const res = await fetch("/general/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        chairpersonalphonenumber: phone,
-        groupName: group
-      })
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      document.getElementById("verificationStep").classList.add("hidden");
-      document.getElementById("cAccount").classList.remove("hidden");
-      
-      document.getElementById("confirmedPhone").value = phone;
-      document.getElementById("confirmedGroup").value = group;
-
-      generateFields("Trustee", data.counts.trustees, "trusteesContainer");
-      generateFields("Official", data.counts.officials, "officialsContainer");
-      generateFields("Member", data.counts.members, "membersContainer");
-      updateProgress(1);
-
-    } else {
-      msg.textContent = data.message || "Verification failed.";
+      if (group) {
+        phoneContainer.classList.remove("hidden");
+      } else {
+        phoneContainer.classList.add("hidden");
+        phoneInput.value = "";
+      }
     }
-  } catch (err) {
-    console.error(err);
-    msg.textContent = "Error verifying details.";
-  }
-}
 
-function generateMemberInputFields(type, count, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    let html = `<h4 style="margin-top:0; margin-bottom:10px; font-size:0.9rem; color:var(--text);">${type.charAt(0).toUpperCase() + type.slice(1)}s (${count})</h4>`;
-    if (count === 0) {
+    async function verifyChairperson() {
+      const phone = document.getElementById("verifyPhone").value;
+      const group = document.getElementById("verifyGroup").value;
+      const msg = document.getElementById("verifyMsg");
+
+      if (!phone || !group) {
+        msg.textContent = "Please select a group and enter a phone number.";
+        return;
+      }
+
+      try {
+        const res = await fetch("/general/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chairpersonalphonenumber: phone,
+            groupName: group
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById("verificationStep").classList.add("hidden");
+          document.getElementById("cAccount").classList.remove("hidden");
+
+          document.getElementById("confirmedPhone").value = phone;
+          document.getElementById("confirmedGroup").value = group;
+
+          generateFields("Trustee", data.counts.trustees, "trusteesContainer");
+          generateFields("Official", data.counts.officials, "officialsContainer");
+          generateFields("Member", data.counts.members, "membersContainer");
+          updateProgress(1);
+
+        } else {
+          msg.textContent = data.message || "Verification failed.";
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "Error verifying details.";
+      }
+    }
+
+    function generateMemberInputFields(type, count, containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      let html = `<h4 style="margin-top:0; margin-bottom:10px; font-size:0.9rem; color:var(--text);">${type.charAt(0).toUpperCase() + type.slice(1)}s (${count})</h4>`;
+      if (count === 0) {
         container.innerHTML = html;
         return;
-    }
+      }
 
-    for (let i = 0; i < count; i++) {
+      for (let i = 0; i < count; i++) {
         html += `
         <div style="border: 1px solid #eee; border-left: 3px solid var(--primary); padding: 10px; border-radius: 8px; margin-bottom: 10px; background: #fdfdfd;">
             <p style="font-weight: 600; font-size: 0.8rem; margin: 0 0 8px; color: #555;">${type.charAt(0).toUpperCase() + type.slice(1)} ${i + 1}</p>
@@ -697,346 +739,354 @@ function generateMemberInputFields(type, count, containerId) {
                 <input type="text" name="${type}s[${i}][id]" placeholder="ID (Optional)" style="flex: 1 1 80px; padding: 8px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc;">
             </div>
         </div>`;
+      }
+      container.innerHTML = html;
     }
-    container.innerHTML = html;
-}
 
-function generateFields(label, count, containerId) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = `<h4>${label}s (${count})</h4>`;
-  
-  for (let i = 1; i <= count; i++) {
-    const div = document.createElement("div");
-    div.className = "input-group";
-    div.style.marginBottom = "8px";
-    div.innerHTML = `
+    function generateFields(label, count, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = `<h4>${label}s (${count})</h4>`;
+
+      for (let i = 1; i <= count; i++) {
+        const div = document.createElement("div");
+        div.className = "input-group";
+        div.style.marginBottom = "8px";
+        div.innerHTML = `
       <input type="text" name="${label.toLowerCase()}_${i}" placeholder="${label} ${i} Name" required>
     `;
-    container.appendChild(div);
-  }
-}
+        container.appendChild(div);
+      }
+    }
 
-function showCreateForm() {
-  const vStep = document.getElementById("verificationStep");
-  const cAccount = document.getElementById("cAccount");
-  if (vStep) vStep.classList.add("hidden");
-  if (cAccount) {
-    cAccount.classList.remove("hidden");
-    // Ensure group name and phone are not readonly if they were
-    document.getElementById("confirmedGroup").readOnly = false;
-    document.getElementById("confirmedGroup").style.background = "#fff";
-    document.getElementById("confirmedPhone").readOnly = false;
-    document.getElementById("confirmedPhone").style.background = "#fff";
-    document.getElementById("confirmedPhone").value = "";
-    document.getElementById("confirmedGroup").value = "";
-  }
-  updateProgress(1);
-}
+    function showCreateForm() {
+      const vStep = document.getElementById("verificationStep");
+      const cAccount = document.getElementById("cAccount");
+      if (vStep) vStep.classList.add("hidden");
+      if (cAccount) {
+        cAccount.classList.remove("hidden");
+        // Ensure group name and phone are not readonly if they were
+        document.getElementById("confirmedGroup").readOnly = false;
+        document.getElementById("confirmedGroup").style.background = "#fff";
+        document.getElementById("confirmedPhone").readOnly = false;
+        document.getElementById("confirmedPhone").style.background = "#fff";
+        document.getElementById("confirmedPhone").value = "";
+        document.getElementById("confirmedGroup").value = "";
+      }
+      updateProgress(1);
+    }
 
-function goBackFromStep1() {
-  const verifyStep = document.getElementById("verificationStep");
-  if (verifyStep) {
-    document.getElementById("cAccount").classList.add("hidden");
-    verifyStep.classList.remove("hidden");
-    updateProgress(0);
-  } else {
-    window.location.href = '/personal';
-  }
-}
+    function goBackFromStep1() {
+      const verifyStep = document.getElementById("verificationStep");
+      if (verifyStep) {
+        document.getElementById("cAccount").classList.add("hidden");
+        verifyStep.classList.remove("hidden");
+        updateProgress(0);
+      } else {
+        window.location.href = '/personal';
+      }
+    }
 
-function parseFullName() {
-  const full = document.getElementById('fullNameInput').value.trim();
-  const parts = full.split(/\s+/);
-  
-  const f = document.getElementById('firstName');
-  const s = document.getElementById('secondName');
-  const l = document.getElementById('lastName');
-  const input = document.getElementById('fullNameInput');
-  const err = document.getElementById('nameError');
+    function parseFullName() {
+      const full = document.getElementById('fullNameInput').value.trim();
+      const parts = full.split(/\s+/);
 
-  if (parts.length >= 1) f.value = parts[0]; else f.value = '';
-  if (parts.length >= 2) s.value = parts[1]; else s.value = '';
-  if (parts.length >= 3) {
-      l.value = parts.slice(2).join(' ');
-      input.setCustomValidity("");
-      err.style.display = 'none';
-  } else {
-      l.value = '';
-      input.setCustomValidity("Please enter at least three names.");
-      if (full.length > 0) err.style.display = 'block';
-  }
-}
+      const f = document.getElementById('firstName');
+      const s = document.getElementById('secondName');
+      const l = document.getElementById('lastName');
+      const input = document.getElementById('fullNameInput');
+      const err = document.getElementById('nameError');
 
-function nextStep() {
-  const stepBox = document.getElementById("cAccount");
-  const inputs = stepBox.querySelectorAll("input[required], select[required]");
-  let valid = true;
-  inputs.forEach(input => {
-      if (!input.checkValidity()) {
+      if (parts.length >= 1) f.value = parts[0]; else f.value = '';
+      if (parts.length >= 2) s.value = parts[1]; else s.value = '';
+      if (parts.length >= 3) {
+        l.value = parts.slice(2).join(' ');
+        input.setCustomValidity("");
+        err.style.display = 'none';
+      } else {
+        l.value = '';
+        input.setCustomValidity("Please enter at least three names.");
+        if (full.length > 0) err.style.display = 'block';
+      }
+    }
+
+    function nextStep() {
+      const stepBox = document.getElementById("cAccount");
+      const inputs = stepBox.querySelectorAll("input[required], select[required]");
+      let valid = true;
+      inputs.forEach(input => {
+        if (!input.checkValidity()) {
           input.reportValidity();
           valid = false;
-      }
-  });
-  if (!valid) return;
-
-  document.getElementById("cAccount").classList.add("hidden");
-  document.getElementById("Regions").classList.remove("hidden");
-  updateProgress(2);
-}
-
-async function showMembership() {
-  document.getElementById("Regions").classList.add("hidden");
-  document.getElementById("Membership").classList.remove("hidden");
-  updateProgress(3);
-
-  // Show a loading state
-  document.getElementById('trusteesContainer').innerHTML = '<p>Loading membership rules...</p>';
-  document.getElementById('officialsContainer').innerHTML = '';
-  document.getElementById('membersContainer').innerHTML = '';
-
-  try {
-    const res = await fetch("/general/tbank-config");
-    const data = await res.json();
-
-    if (data.success) {
-      // The chairperson is already defined in step 1, so we need one less trustee field.
-      const trusteeCount = (data.counts.trustees || 1) - 1;
-
-      generateMemberInputFields("trustee", trusteeCount, "trusteesContainer");
-      generateMemberInputFields("official", data.counts.officials, "officialsContainer");
-      generateMemberInputFields("member", data.counts.members, "membersContainer");
-      
-      // Add a hidden input for totalProposedMembers
-      const total = data.counts.trustees + data.counts.officials + data.counts.members;
-      const membershipDiv = document.getElementById('Membership');
-      let hiddenInput = document.getElementById('totalProposedMembersInput');
-      if (!hiddenInput) {
-          hiddenInput = document.createElement('input');
-          hiddenInput.type = 'hidden';
-          hiddenInput.name = 'totalProposedMembers';
-          hiddenInput.id = 'totalProposedMembersInput';
-          membershipDiv.appendChild(hiddenInput);
-      }
-      hiddenInput.value = total;
-
-    } else {
-      document.getElementById('trusteesContainer').innerHTML = `<div style="background:#fff3f3; border-left:3px solid #f00; padding:10px;"><p style="color:red; margin:0;">Could not load membership rules. ${data.message || 'Please ensure T-Bank compliance is set by HQ.'}</p></div>`;
-    }
-  } catch (err) {
-    console.error(err);
-    document.getElementById('trusteesContainer').innerHTML = '<p style="color:red;">Error fetching membership rules.</p>';
-  }
-
-  let summary = '<div style="background:#f8f9fa; padding:10px; border-radius:8px; border:1px solid #eee;">';
-  
-  summary += '<h4 style="margin:0 0 8px; color:var(--primary); font-size:0.85rem; border-bottom:1px solid #ddd; padding-bottom:5px;">Application Summary</h4>';
-  
-  summary += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">';
-  summary += '<span style="color:#555;">Group Name:</span> <b>' + (document.getElementById('confirmedGroup').value || '-') + '</b>';
-  summary += '</div>';
-  
-  summary += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">';
-  summary += '<span style="color:#555;">Chairperson:</span> <b>' + (document.getElementById('fullNameInput').value || '-') + '</b>';
-  summary += '</div>';
-
-  summary += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">';
-  summary += '<span style="color:#555;">Phone:</span> <b>' + (document.getElementById('confirmedPhone').value || '-') + '</b>';
-  summary += '</div>';
-
-  const loc = document.getElementById('countySelect').value + ' / ' + document.getElementById('constituencySelect').value + ' / ' + document.getElementById('wardSelect').value;
-  summary += '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; font-size:0.8rem;">';
-  summary += '<span style="color:#555; display:block; margin-bottom:4px;">Location:</span>';
-  summary += '<b>' + loc + '</b>';
-  summary += '</div>';
-
-  summary += '</div>';
-  document.getElementById('inlineSummary').innerHTML = summary;
-}
-
-function goToStep1() {
-  document.getElementById("Membership").classList.add("hidden");
-  document.getElementById("cAccount").classList.remove("hidden");
-  updateProgress(1);
-}
-
-function goToStep2() {
-    document.getElementById('Membership').classList.add('hidden');
-    document.getElementById('Regions').classList.remove('hidden');
-    updateProgress(2);
-}
-
-function handleGeneralSubmit(event) {
-  const wardSelect = document.getElementById("wardSelect");
-  if (wardSelect.value === "OTHER") {
-    const manualWard = document.getElementById("manualWardInput").value.trim();
-    if (!manualWard) {
-      alert("Please enter your ward name.");
-      document.getElementById("manualWardInput").focus();
-      return false;
-    }
-    const opt = document.createElement("option");
-    opt.value = manualWard;
-    opt.text = manualWard;
-    wardSelect.appendChild(opt);
-    wardSelect.value = manualWard;
-  }
-  return true;
-}
-
-function initCounties() {
-  const countySelect = document.getElementById("countySelect");
-  if (!countySelect) return;
-  countySelect.innerHTML = '<option value="">-- Select County --</option>';
-  fetch('/api/locations/counties')
-    .then(r => r.json())
-    .then(list => {
-      list.forEach(county => {
-        const option = document.createElement('option');
-        option.value = county;
-        option.textContent = county;
-        countySelect.appendChild(option);
+        }
       });
-    }).catch(err => console.error('Failed to load counties', err));
-}
+      if (!valid) return;
 
-function loadConstituencies() {
-  const countySelect = document.getElementById("countySelect");
-  const constituencySelect = document.getElementById("constituencySelect");
-  const wardSelect = document.getElementById("wardSelect");
-  const selectedCounty = countySelect.value;
-  constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
-  wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
-  if (!selectedCounty) return;
-  fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/constituencies`)
-    .then(r => r.json())
-    .then(list => {
-      list.forEach(cons => {
-        const option = document.createElement('option');
-        option.value = cons;
-        option.textContent = cons;
-        constituencySelect.appendChild(option);
-      });
-    }).catch(err => console.error('Failed to load constituencies', err));
-}
-
-function loadWards() {
-  const countySelect = document.getElementById("countySelect");
-  const constituencySelect = document.getElementById("constituencySelect");
-  const wardSelect = document.getElementById("wardSelect");
-  const selectedCounty = countySelect.value;
-  const selectedConstituency = constituencySelect.value;
-  wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
-  if (!selectedCounty || !selectedConstituency) return;
-  fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/${encodeURIComponent(selectedConstituency)}/wards`)
-    .then(r => r.json())
-    .then(list => {
-      if (!Array.isArray(list) || list.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = '(No Wards Listed)';
-        option.disabled = true;
-        wardSelect.appendChild(option);
-        return;
-      }
-      list.sort().forEach(ward => {
-        const option = document.createElement('option');
-        option.value = ward;
-        option.textContent = ward;
-        wardSelect.appendChild(option);
-      });
-    }).catch(err => console.error('Failed to load wards', err));
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  initCounties();
-  updateProgress(1);
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const mode = urlParams.get('mode');
-  const tab = urlParams.get('tab');
-
-  if (mode === 'create') {
-    switchTab('createGroup');
-  } else if (tab === 'mySaving') {
-    switchTab('mySaving');
-  } else {
-    switchTab('mySaving');
-  }
-});
-
-function updateProgress(step) {
-  for (let i = 1; i <= 3; i++) {
-    const indicator = document.getElementById(`indicator-${i}`);
-    if (i < step) {
-      indicator.classList.add('completed');
-      indicator.classList.remove('active');
-    } else if (i === step) {
-      indicator.classList.add('active');
-      indicator.classList.remove('completed');
-    } else {
-      indicator.classList.remove('active', 'completed');
+      document.getElementById("cAccount").classList.add("hidden");
+      document.getElementById("Regions").classList.remove("hidden");
+      updateProgress(2);
     }
-  }
-}
 
-/* ========== TAB SWITCHING FUNCTIONS ========== */
-function switchTab(tab) {
-  const mySavingTab = document.getElementById('tabMySaving');
-  const createGroupTab = document.getElementById('tabCreateGroup');
-  const mySavingSection = document.getElementById('mySavingSection');
-  const createGroupContent = document.getElementById('createGroupContent');
-  
-  // Reset all
-  [mySavingTab, createGroupTab].forEach(t => t?.classList.remove('active'));
-  [mySavingSection, createGroupContent].forEach(s => s?.classList.add('hidden'));
+    async function showMembership() {
+      document.getElementById("Regions").classList.add("hidden");
+      document.getElementById("Membership").classList.remove("hidden");
+      updateProgress(3);
 
-  if (tab === 'mySaving') {
-    mySavingTab.classList.add('active');
-    mySavingSection.classList.remove('hidden');
-    loadMyGroups();
-  } else if (tab === 'createGroup') {
-    createGroupTab.classList.add('active');
-    createGroupContent.classList.remove('hidden');
-    // Ensure form is visible
-    document.getElementById('cAccount').classList.remove('hidden');
-    document.getElementById('Regions').classList.add('hidden');
-    document.getElementById('Membership').classList.add('hidden');
-    updateProgress(1);
-  }
-}
+      // Show a loading state
+      document.getElementById('trusteesContainer').innerHTML = '<p>Loading membership rules...</p>';
+      document.getElementById('officialsContainer').innerHTML = '';
+      document.getElementById('membersContainer').innerHTML = '';
 
-/* ========== MY SAVING FUNCTIONS ========== */
-async function loadMyGroups() {
-  const loadingEl = document.getElementById('myGroupsLoading');
-  const listEl = document.getElementById('myGroupsList');
-  const noGroupsEl = document.getElementById('noGroupsMessage');
-  const underConstructionEl = document.getElementById('underConstruction');
-  
-  // Hide other sections
-  listEl.classList.add('hidden');
-  noGroupsEl.classList.add('hidden');
-  underConstructionEl.classList.add('hidden');
-  loadingEl.classList.remove('hidden');
-  
-  try {
-    const res = await fetch('/general/my-groups');
-    const data = await res.json();
-    
-    loadingEl.classList.add('hidden');
-    
-    if (data.success && data.groups && data.groups.length > 0) {
-      // Display user's groups
-      let html = '<div style="margin-top: 15px;">';
-      
-      data.groups.forEach(group => {
-        const isPending = !group.accountNumber;
-        const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : (group.role === 'official' ? 'fa-user-gear' : 'fa-user');
-        const roleColor = group.role === 'trustee' ? '#7c3aed' : (group.role === 'official' ? '#0891b2' : '#64748b');
-        const badge = isPending
-          ? '<span style="background: #fffbeb; color: #d97706; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #fef3c7;">PENDING</span>'
-          : '<span style="background: #f0fdf4; color: #16a34a; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #dcfce7;">ACTIVE</span>';
-        
-        html += `
+      try {
+        const res = await fetch("/general/tbank-config");
+        const data = await res.json();
+
+        if (data.success) {
+          // The chairperson is already defined in step 1, so we need one less trustee field.
+          const trusteeCount = (data.counts.trustees || 1) - 1;
+
+          generateMemberInputFields("trustee", trusteeCount, "trusteesContainer");
+          generateMemberInputFields("official", data.counts.officials, "officialsContainer");
+          generateMemberInputFields("member", data.counts.members, "membersContainer");
+
+          // Add a hidden input for totalProposedMembers
+          const total = data.counts.trustees + data.counts.officials + data.counts.members;
+          const membershipDiv = document.getElementById('Membership');
+          let hiddenInput = document.getElementById('totalProposedMembersInput');
+          if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'totalProposedMembers';
+            hiddenInput.id = 'totalProposedMembersInput';
+            membershipDiv.appendChild(hiddenInput);
+          }
+          hiddenInput.value = total;
+
+        } else {
+          document.getElementById('trusteesContainer').innerHTML = `<div style="background:#fff3f3; border-left:3px solid #f00; padding:10px;"><p style="color:red; margin:0;">Could not load membership rules. ${data.message || 'Please ensure T-Bank compliance is set by HQ.'}</p></div>`;
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById('trusteesContainer').innerHTML = '<p style="color:red;">Error fetching membership rules.</p>';
+      }
+
+      let summary = '<div style="background:#f8f9fa; padding:10px; border-radius:8px; border:1px solid #eee;">';
+
+      summary += '<h4 style="margin:0 0 8px; color:var(--primary); font-size:0.85rem; border-bottom:1px solid #ddd; padding-bottom:5px;">Application Summary</h4>';
+
+      summary += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">';
+      summary += '<span style="color:#555;">Group Name:</span> <b>' + (document.getElementById('confirmedGroup').value || '-') + '</b>';
+      summary += '</div>';
+
+      summary += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">';
+      summary += '<span style="color:#555;">Chairperson:</span> <b>' + (document.getElementById('fullNameInput').value || '-') + '</b>';
+      summary += '</div>';
+
+      summary += '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.8rem;">';
+      summary += '<span style="color:#555;">Phone:</span> <b>' + (document.getElementById('confirmedPhone').value || '-') + '</b>';
+      summary += '</div>';
+
+      const loc = document.getElementById('countySelect').value + ' / ' + document.getElementById('constituencySelect').value + ' / ' + document.getElementById('wardSelect').value;
+      summary += '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd; font-size:0.8rem;">';
+      summary += '<span style="color:#555; display:block; margin-bottom:4px;">Location:</span>';
+      summary += '<b>' + loc + '</b>';
+      summary += '</div>';
+
+      summary += '</div>';
+      document.getElementById('inlineSummary').innerHTML = summary;
+    }
+
+    function goToStep1() {
+      document.getElementById("Membership").classList.add("hidden");
+      document.getElementById("cAccount").classList.remove("hidden");
+      updateProgress(1);
+    }
+
+    function goToStep2() {
+      document.getElementById('Membership').classList.add('hidden');
+      document.getElementById('Regions').classList.remove('hidden');
+      updateProgress(2);
+    }
+
+    function handleGeneralSubmit(event) {
+      const wardSelect = document.getElementById("wardSelect");
+      if (wardSelect.value === "OTHER") {
+        const manualWard = document.getElementById("manualWardInput").value.trim();
+        if (!manualWard) {
+          alert("Please enter your ward name.");
+          document.getElementById("manualWardInput").focus();
+          return false;
+        }
+        const opt = document.createElement("option");
+        opt.value = manualWard;
+        opt.text = manualWard;
+        wardSelect.appendChild(opt);
+        wardSelect.value = manualWard;
+      }
+      return true;
+    }
+
+    function initCounties() {
+      const countySelect = document.getElementById("countySelect");
+      if (!countySelect) return;
+      countySelect.innerHTML = '<option value="">-- Select County --</option>';
+      fetch('/api/locations/counties')
+        .then(r => r.json())
+        .then(list => {
+          list.forEach(county => {
+            const option = document.createElement('option');
+            option.value = county;
+            option.textContent = county;
+            countySelect.appendChild(option);
+          });
+        }).catch(err => console.error('Failed to load counties', err));
+    }
+
+    function loadConstituencies() {
+      const countySelect = document.getElementById("countySelect");
+      const constituencySelect = document.getElementById("constituencySelect");
+      const wardSelect = document.getElementById("wardSelect");
+      const selectedCounty = countySelect.value;
+      constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
+      wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+      if (!selectedCounty) return;
+      fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/constituencies`)
+        .then(r => r.json())
+        .then(list => {
+          list.forEach(cons => {
+            const option = document.createElement('option');
+            option.value = cons;
+            option.textContent = cons;
+            constituencySelect.appendChild(option);
+          });
+        }).catch(err => console.error('Failed to load constituencies', err));
+    }
+
+    function loadWards() {
+      const countySelect = document.getElementById("countySelect");
+      const constituencySelect = document.getElementById("constituencySelect");
+      const wardSelect = document.getElementById("wardSelect");
+      const selectedCounty = countySelect.value;
+      const selectedConstituency = constituencySelect.value;
+      wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+      if (!selectedCounty || !selectedConstituency) return;
+      fetch(`/api/locations/${encodeURIComponent(selectedCounty)}/${encodeURIComponent(selectedConstituency)}/wards`)
+        .then(r => r.json())
+        .then(list => {
+          if (!Array.isArray(list) || list.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '(No Wards Listed)';
+            option.disabled = true;
+            wardSelect.appendChild(option);
+            return;
+          }
+          list.sort().forEach(ward => {
+            const option = document.createElement('option');
+            option.value = ward;
+            option.textContent = ward;
+            wardSelect.appendChild(option);
+          });
+        }).catch(err => console.error('Failed to load wards', err));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initCounties();
+      updateProgress(1);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get('mode');
+      const tab = urlParams.get('tab');
+
+      if (mode === 'create') {
+        switchTab('createGroup');
+      } else if (tab === 'mySaving') {
+        switchTab('mySaving');
+      } else {
+        switchTab('mySaving');
+      }
+    });
+
+    function updateProgress(step) {
+      for (let i = 1; i <= 3; i++) {
+        const indicator = document.getElementById(`indicator-${i}`);
+        if (i < step) {
+          indicator.classList.add('completed');
+          indicator.classList.remove('active');
+        } else if (i === step) {
+          indicator.classList.add('active');
+          indicator.classList.remove('completed');
+        } else {
+          indicator.classList.remove('active', 'completed');
+        }
+      }
+    }
+
+    /* ========== TAB SWITCHING FUNCTIONS ========== */
+    function switchTab(tab) {
+      const mySavingTab = document.getElementById('tabMySaving');
+      const createGroupTab = document.getElementById('tabCreateGroup');
+      const mySavingSection = document.getElementById('mySavingSection');
+      const createGroupContent = document.getElementById('createGroupContent');
+      const pendingPanel = document.getElementById('pendingGroupPanel');
+      const underConstruction = document.getElementById('underConstruction');
+
+      // Ensure only ONE view is visible at a time.
+      [mySavingTab, createGroupTab].forEach(t => t?.classList.remove('active'));
+      [
+        mySavingSection,
+        createGroupContent,
+        pendingPanel,
+        underConstruction
+      ].forEach(s => s?.classList.add('hidden'));
+
+      if (tab === 'mySaving') {
+        mySavingTab.classList.add('active');
+        mySavingSection.classList.remove('hidden');
+        loadMyGroups();
+      } else if (tab === 'createGroup') {
+        createGroupTab.classList.add('active');
+        createGroupContent.classList.remove('hidden');
+
+        // Reset the step-based Create Group form so it never stacks previous steps
+        document.getElementById('cAccount')?.classList.remove('hidden');
+        document.getElementById('Regions')?.classList.add('hidden');
+        document.getElementById('Membership')?.classList.add('hidden');
+        updateProgress(1);
+      }
+    }
+
+    /* ========== MY SAVING FUNCTIONS ========== */
+    async function loadMyGroups() {
+      const loadingEl = document.getElementById('myGroupsLoading');
+      const listEl = document.getElementById('myGroupsList');
+      const noGroupsEl = document.getElementById('noGroupsMessage');
+      const underConstructionEl = document.getElementById('underConstruction');
+
+      // Hide other sections
+      listEl.classList.add('hidden');
+      noGroupsEl.classList.add('hidden');
+      underConstructionEl.classList.add('hidden');
+      loadingEl.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/general/my-groups');
+        const data = await res.json();
+
+        loadingEl.classList.add('hidden');
+
+        if (data.success && data.groups && data.groups.length > 0) {
+          // Display user's groups
+          let html = '<div style="margin-top: 15px;">';
+
+          data.groups.forEach(group => {
+            const isPending = !group.accountNumber;
+            const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : (group.role === 'official' ? 'fa-user-gear' : 'fa-user');
+            const roleColor = group.role === 'trustee' ? '#7c3aed' : (group.role === 'official' ? '#0891b2' : '#64748b');
+            const badge = isPending
+              ? '<span style="background: #fffbeb; color: #d97706; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #fef3c7;">PENDING</span>'
+              : '<span style="background: #f0fdf4; color: #16a34a; font-size: 0.65rem; padding: 4px 10px; border-radius: 30px; font-weight: 800; border: 1px solid #dcfce7;">ACTIVE</span>';
+
+            html += `
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease;" 
                onclick="selectGroup('${group.groupName}', '${group.accountNumber || ''}')">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -1056,38 +1106,48 @@ async function loadMyGroups() {
             </div>
           </div>
         `;
-      });
-      
-      html += '</div>';
-      listEl.innerHTML = html;
-      listEl.classList.remove('hidden');
-    } else {
-      noGroupsEl.classList.remove('hidden');
-    }
-  } catch (err) {
-    console.error('Error loading groups:', err);
-    loadingEl.classList.add('hidden');
-    noGroupsEl.classList.remove('hidden');
-  }
-}
+          });
 
-async function selectGroup(groupName, accountNumber) {
-  const isPending = !accountNumber;
-  if (isPending) {
-    document.getElementById('myGroupsList').classList.add('hidden');
-    const panel = document.getElementById('pendingGroupPanel');
-    panel.classList.remove('hidden');
-    
-    // Reset agent info to loading state
-    const agentInfoEl = document.getElementById('pendingAgentInfo');
-    agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #92400e;"><i class="fas fa-spinner fa-spin"></i> Looking up assigned agent...</p>';
-    
-    // Fetch the agent for this group
-    try {
-      const res = await fetch(`/general/agent-for-group?groupName=${encodeURIComponent(groupName)}`);
-      const data = await res.json();
-      if (data.success) {
-        agentInfoEl.innerHTML = `
+          html += '</div>';
+          listEl.innerHTML = html;
+          listEl.classList.remove('hidden');
+        } else {
+          noGroupsEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error('Error loading groups:', err);
+        loadingEl.classList.add('hidden');
+        noGroupsEl.classList.remove('hidden');
+      }
+    }
+
+    let _pendingGroupName = null;
+
+    async function selectGroup(groupName, accountNumber) {
+      const isPending = !accountNumber;
+      _pendingGroupName = groupName;
+
+      if (isPending) {
+        document.getElementById('myGroupsList').classList.add('hidden');
+        const panel = document.getElementById('pendingGroupPanel');
+        panel.classList.remove('hidden');
+
+        const continueBtn = document.getElementById('continueToConstitutionBtn');
+        if (continueBtn) {
+          continueBtn.disabled = false;
+          continueBtn.dataset.groupName = groupName;
+        }
+
+        // Reset agent info to loading state
+        const agentInfoEl = document.getElementById('pendingAgentInfo');
+        agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #92400e;"><i class="fas fa-spinner fa-spin"></i> Looking up assigned agent...</p>';
+
+        // Fetch the agent for this group
+        try {
+          const res = await fetch(`/general/agent-for-group?groupName=${encodeURIComponent(groupName)}`);
+          const data = await res.json();
+          if (data.success) {
+            agentInfoEl.innerHTML = `
           <p style="margin: 0 0 5px; font-size: 0.75rem; color: #92400e; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Your Assigned Agent</p>
           <p style="margin: 0 0 4px; font-size: 0.9rem; color: #92400e; font-weight: 600;">
             <i class="fas fa-user-tie" style="color: #d97706;"></i> ${data.agentName}
@@ -1099,117 +1159,117 @@ async function selectGroup(groupName, accountNumber) {
           </a>
           ${data.note === 'constituency' ? '<p style="margin: 5px 0 0; font-size: 0.7rem; color: #d97706;"><i class="fas fa-info-circle"></i> Nearest agent in your constituency</p>' : ''}
         `;
+          } else {
+            agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #d97706;"><i class="fas fa-exclamation-circle"></i> No agent assigned to your area yet. Please contact support.</p>';
+          }
+        } catch (e) {
+          agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #d97706;"><i class="fas fa-exclamation-circle"></i> Could not load agent info.</p>';
+        }
       } else {
-        agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #d97706;"><i class="fas fa-exclamation-circle"></i> No agent assigned to your area yet. Please contact support.</p>';
+        window.location.href = `/personal/group/${encodeURIComponent(groupName)}`;
       }
-    } catch (e) {
-      agentInfoEl.innerHTML = '<p style="margin: 0; font-size: 0.8rem; color: #d97706;"><i class="fas fa-exclamation-circle"></i> Could not load agent info.</p>';
     }
-  } else {
-    window.location.href = `/personal/group/${encodeURIComponent(groupName)}`;
-  }
-}
 
-function backFromPendingNote() {
-  document.getElementById('pendingGroupPanel').classList.add('hidden');
-  document.getElementById('myGroupsList').classList.remove('hidden');
-}
-
-function backToMyGroups() {
-  const myGroupsList = document.getElementById('myGroupsList');
-  const underConstruction = document.getElementById('underConstruction');
-  
-  underConstruction.classList.add('hidden');
-  myGroupsList.classList.remove('hidden');
-}
-
-function showGroupPhoneInput() {
-  const groupSelect = document.getElementById('userGroupSelect');
-  const phoneInputDiv = document.getElementById('groupChairpersonInput');
-  if (groupSelect.value) {
-    phoneInputDiv.classList.remove('hidden');
-  } else {
-    phoneInputDiv.classList.add('hidden');
-  }
-}
-
-async function verifyGroupAccess() {
-  const groupName = document.getElementById('userGroupSelect').value;
-  const chairpersonPhone = document.getElementById('groupChairpersonPhone').value;
-  const msg = document.getElementById('groupVerifyMsg');
-  if (!groupName || !chairpersonPhone) {
-    msg.textContent = "Please select a group and enter chairperson phone.";
-    return;
-  }
-  try {
-    const res = await fetch("/general/verify-access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ groupName: groupName, chairpersonPhone: chairpersonPhone })
-    });
-    const data = await res.json();
-    if (data.success) {
-      loadMyGroupsAfterVerify();
-    } else {
-      msg.textContent = data.message || "Verification failed.";
+    function backFromPendingNote() {
+      document.getElementById('pendingGroupPanel').classList.add('hidden');
+      document.getElementById('myGroupsList').classList.remove('hidden');
     }
-  } catch (err) {
-    msg.textContent = "Error verifying details.";
-  }
-}
 
-async function verifyPersonalAccess() {
-  const phone = document.getElementById('personalPhone').value;
-  const msg = document.getElementById('personalVerifyMsg');
-  if (!phone) {
-    msg.textContent = "Please enter your phone number.";
-    return;
-  }
-  try {
-    const res = await fetch("/general/verify-access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chairpersonPhone: phone })
-    });
-    const data = await res.json();
-    if (data.success) {
-      loadMyGroupsAfterVerify();
-    } else {
-      msg.textContent = data.message || "Verification failed.";
+    function backToMyGroups() {
+      const myGroupsList = document.getElementById('myGroupsList');
+      const underConstruction = document.getElementById('underConstruction');
+
+      underConstruction.classList.add('hidden');
+      myGroupsList.classList.remove('hidden');
     }
-  } catch (err) {
-    msg.textContent = "Error verifying details.";
-  }
-}
 
-async function loadMyGroupsAfterVerify() {
-  document.getElementById('verificationSection').classList.add('hidden');
-  document.getElementById('groupVerification').classList.add('hidden');
-  document.getElementById('personalVerification').classList.add('hidden');
-  const loadingEl = document.getElementById('myGroupsLoading');
-  const listEl = document.getElementById('myGroupsList');
-  listEl.classList.add('hidden');
-  loadingEl.classList.remove('hidden');
-  try {
-    const res = await fetch('/general/my-groups');
-    const data = await res.json();
-    loadingEl.classList.add('hidden');
-    if (data.success && data.groups && data.groups.length > 0) {
-      let html = '<div style="margin-top: 15px;">';
-      data.groups.forEach(group => {
-        const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : (group.role === 'official' ? 'fa-user-gear' : 'fa-user');
-        const roleColor = group.role === 'trustee' ? '#7c3aed' : (group.role === 'official' ? '#0891b2' : '#64748b');
-        html += `<div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; cursor: pointer;" onclick="selectGroup('${group.groupName}', '${group.role}')">
+    function showGroupPhoneInput() {
+      const groupSelect = document.getElementById('userGroupSelect');
+      const phoneInputDiv = document.getElementById('groupChairpersonInput');
+      if (groupSelect.value) {
+        phoneInputDiv.classList.remove('hidden');
+      } else {
+        phoneInputDiv.classList.add('hidden');
+      }
+    }
+
+    async function verifyGroupAccess() {
+      const groupName = document.getElementById('userGroupSelect').value;
+      const chairpersonPhone = document.getElementById('groupChairpersonPhone').value;
+      const msg = document.getElementById('groupVerifyMsg');
+      if (!groupName || !chairpersonPhone) {
+        msg.textContent = "Please select a group and enter chairperson phone.";
+        return;
+      }
+      try {
+        const res = await fetch("/general/verify-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ groupName: groupName, chairpersonPhone: chairpersonPhone })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadMyGroupsAfterVerify();
+        } else {
+          msg.textContent = data.message || "Verification failed.";
+        }
+      } catch (err) {
+        msg.textContent = "Error verifying details.";
+      }
+    }
+
+    async function verifyPersonalAccess() {
+      const phone = document.getElementById('personalPhone').value;
+      const msg = document.getElementById('personalVerifyMsg');
+      if (!phone) {
+        msg.textContent = "Please enter your phone number.";
+        return;
+      }
+      try {
+        const res = await fetch("/general/verify-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chairpersonPhone: phone })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadMyGroupsAfterVerify();
+        } else {
+          msg.textContent = data.message || "Verification failed.";
+        }
+      } catch (err) {
+        msg.textContent = "Error verifying details.";
+      }
+    }
+
+    async function loadMyGroupsAfterVerify() {
+      document.getElementById('verificationSection').classList.add('hidden');
+      document.getElementById('groupVerification').classList.add('hidden');
+      document.getElementById('personalVerification').classList.add('hidden');
+      const loadingEl = document.getElementById('myGroupsLoading');
+      const listEl = document.getElementById('myGroupsList');
+      listEl.classList.add('hidden');
+      loadingEl.classList.remove('hidden');
+      try {
+        const res = await fetch('/general/my-groups');
+        const data = await res.json();
+        loadingEl.classList.add('hidden');
+        if (data.success && data.groups && data.groups.length > 0) {
+          let html = '<div style="margin-top: 15px;">';
+          data.groups.forEach(group => {
+            const roleIcon = group.role === 'trustee' ? 'fa-user-tie' : (group.role === 'official' ? 'fa-user-gear' : 'fa-user');
+            const roleColor = group.role === 'trustee' ? '#7c3aed' : (group.role === 'official' ? '#0891b2' : '#64748b');
+            html += `<div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 12px; cursor: pointer;" onclick="selectGroup('${group.groupName}', '${group.role}')">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div><h4 style="margin: 0 0 5px; color: var(--text); font-size: 1rem;"><i class="fas fa-users" style="color: var(--primary); margin-right: 8px;"></i>${group.groupName}</h4>
             <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);"><i class="fas ${roleIcon}" style="color: ${roleColor}; margin-right: 5px;"></i>${group.roleTitle || group.role}</p></div>
             <div style="text-align: right;">${group.accountNumber ? `<p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Account: ${group.accountNumber}</p>` : ''}<i class="fas fa-chevron-right" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 5px;"></i></div></div></div>`;
-      });
-      html += '</div>';
-      listEl.innerHTML = html;
-      listEl.classList.remove('hidden');
-    } else {
-      listEl.innerHTML = `
+          });
+          html += '</div>';
+          listEl.innerHTML = html;
+          listEl.classList.remove('hidden');
+        } else {
+          listEl.innerHTML = `
         <div style="text-align: center; padding: 30px 10px;">
           <i class="fas fa-check-circle" style="font-size: 48px; color: var(--primary); margin-bottom: 15px;"></i>
           <p style="color: var(--text); font-weight: 600;">Verification Successful!</p>
@@ -1218,13 +1278,14 @@ async function loadMyGroupsAfterVerify() {
             <i class="fas fa-plus-circle"></i> Create Group Now
           </button>
         </div>`;
-      listEl.classList.remove('hidden');
+          listEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        loadingEl.classList.add('hidden');
+        document.getElementById('noGroupsMessage').classList.remove('hidden');
+      }
     }
-  } catch (err) {
-    loadingEl.classList.add('hidden');
-    document.getElementById('noGroupsMessage').classList.remove('hidden');
-  }
-}
-</script>
+  </script>
 </body>
+
 </html>

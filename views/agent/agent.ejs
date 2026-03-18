@@ -69,6 +69,11 @@
         position: sticky;
         top: 20px;
       }
+
+      /* Keep the top nav consistent on wide screens */
+      .dashboard-topnav {
+        grid-column: 1 / -1;
+      }
     }
 
     /* Organized Navigation Styles */
@@ -76,6 +81,11 @@
       display: flex;
       justify-content: space-around;
       align-items: center;
+      width: 100%;
+      box-sizing: border-box;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
       background: #ffffff;
       padding: 12px 5px;
       border-radius: 12px;
@@ -1178,28 +1188,9 @@
         <!-- DASHBOARD -->
 
 
-        <div class="dashboard-sidebar" style="padding: 20px;">
-          <!-- BRAND HEADER -->
-          <div class="agent-brand-header">
-            <div class="brand-logo">
-              <i class="fas fa-shield-halved"></i>
-              <span>
-                <%= agent ? agent.ward : 'Agent' %>
-              </span>
-            </div>
-            <div class="header-actions">
-              <div class="user-badge">
-                <i class="fas fa-user-circle"></i>
-                <span>
-                  <%= agent ? (agent.name.split(' ')[0]) : ' Agent' %>
-                </span>
-              </div>
-            </div>
-          </div>
-
+        <div class="dashboard-topnav" style="padding: 0 20px 10px;">
           <!-- TOP NAVIGATION BAR -->
           <div id="topNavBar">
-
 
             <!-- My Account -->
             <div id="myAccountNav" class="top-nav-container active" onclick="showMyAccount()" title="My Account">
@@ -1224,6 +1215,26 @@
 
             <!-- BLUE MOVING GLIDER -->
             <div id="navGlider" class="nav-glider" style="height: 3px; border-radius: 3px 3px 0 0;"></div>
+          </div>
+        </div>
+
+        <div class="dashboard-sidebar" style="padding: 20px;">
+          <!-- BRAND HEADER -->
+          <div class="agent-brand-header">
+            <div class="brand-logo">
+              <i class="fas fa-shield-halved"></i>
+              <span>
+                <%= agent ? agent.ward : 'Agent' %>
+              </span>
+            </div>
+            <div class="header-actions">
+              <div class="user-badge">
+                <i class="fas fa-user-circle"></i>
+                <span>
+                  <%= agent ? (agent.name.split(' ')[0]) : ' Agent' %>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1778,23 +1789,39 @@
                   </div>
                 </div>
 
-                <!-- STEP 4: MAIN FORM -->
-                <div id="cAccount" class="hidden">
-                  <h4 style="margin: 0 0 10px; font-size: 13px; color: #1e293b; text-align: center;">Add Group Members
+                <!-- STEP 4: MAIN FORM (used by both NEW and PENDING groups) -->
+                <div id="cAccount" class="hidden"
+                  style="border-left: 3px solid #e2e8f0; padding-left: 12px; margin-top: 10px;">
+                  <div style="text-align:center; margin: 0 0 12px;">
+                    <div style="font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#64748b;">
+                      Group
+                    </div>
+                    <h3 id="displayGroup2" style="margin:4px 0 0; font-size:16px; font-weight:800; color:#1e293b;"></h3>
+                  </div>
+
+                  <h4 class="hidden" style="margin: 0 0 10px; font-size: 13px; color: #1e293b; text-align: center;">Add Group Members
                   </h4>
                   <div id="trusteesContainer"></div>
 
                   <div id="officialsContainer" style="margin-bottom:20px;"></div>
                   <div id="membersContainer" style="margin-bottom:20px;"></div>
-                  <div style="display:grid; grid-template-columns: 1fr 2fr; gap:10px; margin-top:15px;">
+                  <!-- Inline footer actions: Back (when enabled), Add Member + Review Members -->
+                  <div style="display:flex; gap:10px; margin-top:15px; align-items:center; justify-content:space-between;">
                     <button type="button" id="cAccountBackBtn" onclick="backFromAddMember()" class="hidden"
-                      style="padding: 12px; font-size: 13px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:10px; font-weight:600;">
+                      style="flex:0 0 auto; padding: 10px 14px; font-size: 12px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:999px; font-weight:600; display:flex; align-items:center; gap:6px;">
                       <i class="fas fa-arrow-left"></i> Back
                     </button>
-                    <button type="button" onclick="submitMembers()"
-                      style="padding: 12px; font-size: 13px; border-radius:10px; font-weight:600;">
-                      Verify & Review Members <i class="fas fa-arrow-right"></i>
-                    </button>
+                    <div style="flex:1; display:flex; gap:8px; justify-content:flex-end;">
+                      <button type="button"
+                        onclick="handleDynamicAdd('membersContainer', 'Member', 'fa-user', 1)"
+                        style="padding: 10px 14px; font-size: 12px; border-radius:999px; font-weight:600; background:#f8fafc; color:#475569; border:1px solid #e2e8f0; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-user-plus" style="color:#0288d1;"></i> Add Member
+                      </button>
+                      <button type="button" onclick="submitMembers()"
+                        style="padding: 10px 16px; font-size: 12px; border-radius:999px; font-weight:600; background:#0f9d58; color:#ffffff; border:none; display:flex; align-items:center; gap:6px;">
+                        Review Members <i class="fas fa-arrow-right"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1830,25 +1857,24 @@
             <div id="groupDetailsView" class="hidden" style="animation: fadeIn 0.4s ease;">
               <!-- Group Header Card -->
               <div class="dashboard-card"
-                style="margin-top:0; background:linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color:white; border:none; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
+                style="margin-top:0; background:#ffffff; color:#1e293b; border:none; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
                 <div
                   style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-top: 5px;">
                   <h3 id="detailsGroupName" onclick="hideCurrentGroupDetails()"
-                    style="margin:0; color:white; font-size:18px; text-align:left; font-weight:700; border:none; cursor:pointer;"
+                    style="margin:0; font-size:18px; text-align:left; font-weight:700; border:none; cursor:pointer;"
                     title="Click to collapse">Group Name</h3>
                   <span class="badge"
-                    style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.3); font-size:9px;">DETAILS</span>
+                    style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; font-size:9px;">DETAILS</span>
                 </div>
 
                 <div id="phaseStatusRow"
                   style="padding:10px 15px; border-radius:10px; display:flex; align-items:center; gap:10px; margin-bottom:0; transition:all 0.3s ease;">
-                  <i class="fas fa-info-circle"></i>
                   <span id="phaseStatusText" style="font-weight:700; font-size:13px;">Phase Status</span>
                 </div>
               </div>
 
               <!-- Collapsible Various Content (Member List) AT TOP -->
-              <div class="accordion-section" style="margin-bottom:20px;">
+              <div id="existingMembersAccordion" class="accordion-section" style="margin-bottom:20px;">
                 <div class="accordion-header" onclick="toggleAccordion(this)"
                   style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
                   <div style="display:flex; align-items:center; gap:10px;">
@@ -2974,6 +3000,18 @@
         trusteeErrors.push(`Mandatory: ${requiredTrustees} Trustees must be fully filled.`);
       }
 
+      // For NEW groups only: enforce minimum members (e.g. 5) based on tbank standard
+      if (!isExistingGroup) {
+        const minMembers = (window.tbankCounts && window.tbankCounts.members) || 5;
+        let foundMembers = 0;
+        Object.values(grouped).forEach(m => {
+          if (m.type === 'member' && m.phone && m.phone.trim() !== '') foundMembers++;
+        });
+        if (foundMembers < Math.min(5, minMembers)) {
+          memberErrors.push(`Mandatory: At least ${Math.min(5, minMembers)} Members must be fully filled.`);
+        }
+      }
+
       // Strict Headcount Check - This check is too rigid for adding members incrementally.
       // It requires the agent to fill all member slots at once.
       // By removing it, we allow agents to submit a partial list for verification.
@@ -3371,11 +3409,19 @@
       }
 
       // Show final form
+      const createForm = document.getElementById("createGroupForm");
+      const placeholder = document.getElementById("registrationFormPlaceholder");
+      if (createForm) createForm.classList.remove("hidden");
+      if (placeholder) placeholder.classList.remove("hidden");
+
       document.getElementById("paymentStep").classList.add("hidden");
       document.getElementById("cAccount").classList.remove("hidden");
       document.getElementById("displayGroup2").textContent = document.getElementById("verifyGroup").value;
 
       // Generate Fields
+      document.getElementById('trusteesContainer').innerHTML = '';
+      document.getElementById('officialsContainer').innerHTML = '';
+      document.getElementById('membersContainer').innerHTML = '';
       generateFields("Trustee", window.tbankCounts.trustees, "trusteesContainer");
       generateFlexibleFields("Official", 1, window.tbankCounts.officials, "officialsContainer");
 
@@ -3524,12 +3570,17 @@
       // Build singular control footer
       const controlsDiv = document.getElementById(`${containerId}_controls`);
       controlsDiv.style.cssText = "display:flex; justify-content:center; margin-top: 5px; margin-bottom: 25px; padding: 0 2px;";
-      controlsDiv.innerHTML = `
-        <button type="button" id="btnAddOne${label}" onclick="handleDynamicAdd('${containerId}', '${label}', '${iconClass}', 1)" 
-                style="width:100%; padding:14px; font-size:11px; font-weight:800; text-transform:uppercase; background:#f8fafc; color:#475569; border:1px solid #e2e8f0; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <i class="fas fa-plus-circle" style="color:#5f9ea0;"></i> Add ${label}
-        </button>
-    `;
+      // For Members we now use the inline footer Add button only, so omit the top control.
+      if (label === 'Official') {
+        controlsDiv.innerHTML = `
+          <button type="button" id="btnAddOne${label}" onclick="handleDynamicAdd('${containerId}', '${label}', '${iconClass}', 1)" 
+                  style="width:100%; padding:14px; font-size:11px; font-weight:800; text-transform:uppercase; background:#f8fafc; color:#475569; border:1px solid #e2e8f0; border-radius:14px; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="fas fa-plus-circle" style="color:#5f9ea0;"></i> Add ${label}
+          </button>
+      `;
+      } else {
+        controlsDiv.innerHTML = '';
+      }
 
       checkFieldLimits();
     }
@@ -3901,6 +3952,7 @@
 
     function populateGroupDetails(group) {
       const nameEl = document.getElementById('detailsGroupName');
+      const existingMembersAccordion = document.getElementById('existingMembersAccordion');
 
       // Check if it's a "New Group" (no trustee_1) - show Agent Verification instead of content
       if (!group.trustee_1) {
@@ -3908,6 +3960,9 @@
         showAgentVerificationForNewGroup(group);
         return;
       }
+
+      // Existing group: ensure the "Existing Members" accordion is visible again
+      if (existingMembersAccordion) existingMembersAccordion.classList.remove('hidden');
 
       nameEl.textContent = group.groupName;
 
@@ -4003,6 +4058,7 @@
       const phaseStatusText = document.getElementById('phaseStatusText');
       const placeholder = document.getElementById('registrationFormPlaceholder');
       const createForm = document.getElementById('createGroupForm');
+      const existingMembersAccordion = document.getElementById('existingMembersAccordion');
 
       // Hide other sections
       ['groupMainInfo', 'principlesSection', 'phaseActions', 'membersListSection'].forEach(id => {
@@ -4010,17 +4066,21 @@
         if (el) el.classList.add('hidden');
       });
 
+      // Hide the entire existing-members accordion (header + arrow)
+      if (existingMembersAccordion) existingMembersAccordion.classList.add('hidden');
+
       // Update header
       nameEl.textContent = 'Group Registration';
-      phaseStatusText.textContent = 'Setup Group Structure';
+      phaseStatusText.textContent = '';
 
       // Set internal state values normally handled by verification/total steps
       document.getElementById('verifyPhone').value = group.phone;
       document.getElementById('verifyGroup').value = group.groupName;
       document.getElementById("displayGroup").textContent = group.groupName;
 
-      // Initialize mock data for fee calculation
-      window.tbankCounts = { trustees: 3, officials: 1, members: 15, maxMembers: 100 };
+      // Initialize mock data for fee calculation (NEW GROUP defaults)
+      // Trustees: 3 (fixed), Officials: allow up to 3, Members: standard 15, Max: 100
+      window.tbankCounts = { trustees: 3, officials: 3, members: 15, maxMembers: 100 };
       window.tbankFees = { newGroup: 100 };
 
       // Move form into details view placeholder
@@ -4028,6 +4088,9 @@
         placeholder.appendChild(createForm);
         placeholder.classList.remove('hidden');
         createForm.classList.remove('hidden');
+        // Force visible in case an inline style was previously applied
+        placeholder.style.display = 'block';
+        createForm.style.display = 'block';
       }
 
       // Hide other steps within form, show Step 2 (Total Members)
