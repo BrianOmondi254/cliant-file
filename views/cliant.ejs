@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tbank Investment</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root{--primary:#6366f1;--secondary:#9333ea;--danger:#dc2626;--light:#f1f5f9;--text-dark:#111827;--text-light:#6b7280;--text-main:var(--text-dark);}
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Outfit',sans-serif;}
         body{min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);padding:15px;}
         .container{width:100%;max-width:420px;background:linear-gradient(145deg,#ffffff,#f1f5f9);border-radius:30px;padding:20px;box-shadow:0 25px 50px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.6);position:relative;overflow:hidden;}
         .top-nav{position:relative;display:flex;background:#022c22;border-radius:50px;padding:6px;box-shadow:inset 0 2px 10px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.2);margin-bottom:30px;border:1px solid rgba(15,157,88,0.3);position:relative;overflow:hidden;}
@@ -38,11 +38,13 @@
         .btn-primary:hover{background-color:#4f46e5;}
         .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;justify-content:center;align-items:center;z-index:1000;opacity:0;visibility:hidden;transition:all 0.3s ease;}
         .modal-overlay.open{opacity:1;visibility:visible;}
-        .modal-content{background:white;padding:2rem;border-radius:0.75rem;width:90%;max-width:450px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);transform:translateY(20px);transition:transform 0.3s ease;max-height:90vh;display:flex;flex-direction:column;position:relative;}
+        .modal-content{background:white;padding:2rem;border-radius:0.75rem;width:85%;max-width:360px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);transform:translateY(20px);transition:transform 0.3s ease;max-height:90vh;display:flex;flex-direction:column;position:relative;}
         .modal-overlay.open .modal-content{transform:translateY(0);}
         .modal-close-btn{position:absolute;top:15px;right:15px;background:transparent;border:none;color:#64748b;font-size:1.5rem;cursor:pointer;z-index:10;}
         .modal-close-btn:hover{color:#ef4444;}
-        .modal-header{margin-bottom:1.5rem;font-size:1.25rem;font-weight:700;color:#1e293b;padding-right:30px;}
+        .modal-back-btn{position:absolute;top:15px;left:15px;background:transparent;border:none;color:#64748b;font-size:1.2rem;cursor:pointer;z-index:11;}
+        .modal-back-btn:hover{color:var(--primary);}
+        .modal-header{margin-bottom:1.5rem;font-size:1.25rem;font-weight:700;color:#1e293b;padding-left:35px;padding-right:35px;}
         .modal-body{flex:1;overflow-y:auto;margin-bottom:0;text-align:left;padding-bottom:10px;}
         .modal-list-btn{display:block;width:100%;padding:1rem;margin-bottom:0.75rem;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:0.5rem;cursor:pointer;font-size:0.95rem;font-weight:500;transition:all 0.2s;text-align:left;}
         .modal-list-btn:hover{background-color:#eff6ff;border-color:var(--primary);color:var(--primary);}
@@ -65,11 +67,11 @@
 %>
 <div class="container">
     <div style="position: absolute; top: 15px; right: 15px; z-index: 10;">
-        <button onclick="window.location.replace('/logout?t=' + Date.now())" style="background: rgba(220, 38, 38, 0.9); border: none; color: white; font-size: 0.8rem; font-weight: bold; padding: 6px 12px; border-radius: 20px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 5px; transition: all 0.2s;"><i class="fa-solid fa-power-off"></i> Out</button>
+        <button title="Logout" onclick="window.location.replace('/logout?t=' + Date.now())" style="background: rgba(220, 38, 38, 0.9); border: none; color: white; font-size: 0.9rem; font-weight: bold; padding: 10px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; transition: all 0.2s;"><i class="fa-solid fa-power-off"></i></button>
     </div>
-    <div style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 30px 20px; color: white; margin: -20px -20px 25px -20px; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1);">
-        <h1 style="font-size: 26px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
-        <p style="font-size: 10px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-top: 4px;">Secure Digital Wealth</p>
+    <div style="background: #0f9d58; padding: 25px 20px; color: white; margin: -20px -20px 25px -20px; text-align: center; position: relative; overflow: hidden; border-bottom: 2px solid rgba(0,0,0,0.1);">
+        <h1 style="font-size: 26px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">TBANK INVEST</h1>
+        <p style="font-size: 11.5px; color: rgba(255,255,255,0.95); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.15);">SECURE GROUP NESTING · HARNESSING COLLECTIVE GROWTH</p>
         
         <h2 id="headerRole" style="font-size: 1.1rem; opacity: 1; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
             <i class="fas fa-users-cog"></i> Personal Wallet
@@ -97,6 +99,7 @@
 
 <div id="modalOverlay" class="modal-overlay">
     <div class="modal-content">
+        <button id="modalBackBtn" class="modal-back-btn hidden" onclick="app.onModalBack()"><i class="fa-solid fa-arrow-left"></i></button>
         <button class="modal-close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
         <div class="modal-header" id="modalTitle">Title</div>
         <div class="modal-body" id="modalBody"></div>
@@ -223,10 +226,106 @@ const app = {
         this.openModal();
         this.updateBadge();
     },
-    openModal(title, html) {
-        if (title) document.getElementById('modalTitle').textContent = title;
-        if (html !== undefined) document.getElementById('modalBody').innerHTML = html;
+    openModal(arg1, arg2, arg3) {
         document.getElementById('modalOverlay').classList.add('open');
+        this.data.isMultiMemberFlow = false;
+        this.data.settledMembersData = {};
+        this.data.errorMessage = '';
+        
+        // Scenario 1: title, html, [backAction]
+        if (typeof arg1 === 'string' && typeof arg2 === 'string') {
+            this.updateModalContent(arg1, arg2, arg3);
+            return;
+        }
+
+        // Scenario 2: Action string (workflow trigger)
+        const action = arg1;
+        if (action === 'Send Money') {
+            const groups = this.data.userGroups || [];
+            const activeGroups = groups.filter(g => g.phase === 3);
+            if (activeGroups.length === 0) {
+                this.updateModalContent('Select Group', '<div style="text-align:center;padding:20px;"><p style="text-align:center;color:#6b7280;font-size:14px;">No active Phase 3 groups found.</p></div>');
+            } else {
+                let h = '<div style="text-align:left;margin-bottom:1rem;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Select an <b>Active Group</b> to send money:</p>';
+                activeGroups.forEach((group) => { 
+                    h += `<button class="modal-list-btn" onclick="app.selectGroupForSend(\'${encodeURIComponent(group.groupName)}\')"><i class="fa-solid fa-users" style="color:var(--primary);margin-right:10px;"></i> ${group.groupName}</button>`; 
+                });
+                h += '</div>';
+                this.updateModalContent('Select Group', h);
+            }
+        } else if (action === 'Withdraw') {
+            this.updateModalContent('Withdraw Money', '<button class="modal-list-btn" onclick="app.flowWithdrawMpesa()">To M-Pesa</button>');
+        } else if (action === 'Balance') {
+            this.updateModalContent('Account Balance', '<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="checkPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processCheckBalance()">Check Balance</button>');
+        } else if (action === 'Change PIN') {
+            const h = `
+                <div style="text-align:left;">
+                    <p style="font-size:13px; color:#6b7280; margin-bottom:15px;">Manage your Personal PIN:</p>
+                    <button class="modal-list-btn" onclick="app.showNewPinFormModal()">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:32px; height:32px; background:#eef2ff; color:var(--primary); border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-lock"></i></div>
+                            <div>
+                                <div style="font-weight:700; font-size:14px; color:#1e293b;">Set New PIN</div>
+                                <div style="font-size:11px; color:#64748b;">Update your existing PIN</div>
+                            </div>
+                        </div>
+                    </button>
+                    <button class="modal-list-btn" onclick="app.showForgotPinFormModal()">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:32px; height:32px; background:#fff7ed; color:#f59e0b; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-question-circle"></i></div>
+                            <div>
+                                <div style="font-weight:700; font-size:14px; color:#1e293b;">Forgot PIN</div>
+                                <div style="font-size:11px; color:#64748b;">Reset via security key</div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            `;
+            this.updateModalContent('Change PIN', h);
+        } else if (action === 'Statement') {
+            const h = `
+                <div style="text-align:left;">
+                    <p style="font-size:13px; color:#6b7280; margin-bottom:15px;">Review your transaction history:</p>
+                    <button class="modal-list-btn" onclick="app.flowMiniStatement()">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:32px; height:32px; background:#f0fdf4; color:#22c55e; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-list-ul"></i></div>
+                            <div>
+                                <div style="font-weight:700; font-size:14px; color:#1e293b;">Mini Statement</div>
+                                <div style="font-size:11px; color:#64748b;">View recent activity</div>
+                            </div>
+                        </div>
+                    </button>
+                    
+                    <div style="margin-top:20px; border-top:1px dashed #e2e8f0; padding-top:20px;">
+                        <button class="modal-list-btn" onclick="app.toggleLongStatementOptions()">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:32px; height:32px; background:#eff6ff; color:#3b82f6; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-file-contract"></i></div>
+                                <div style="flex:1; text-align:left;">
+                                    <div style="font-weight:700; font-size:14px; color:#1e293b;">Long Statement (Export)</div>
+                                    <div style="font-size:11px; color:#64748b;">Custom 1-12 month reports</div>
+                                </div>
+                                <i id="longStatementChevron" class="fa-solid fa-chevron-down" style="font-size:10px; color:#94a3b8; transition:0.3s;"></i>
+                            </div>
+                        </button>
+                        
+                        <div id="longStatementOptions" class="hidden" style="margin-top:10px; background:#fcfcfc; padding:15px; border-radius:12px; border:1px solid #f1f5f9;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <select id="statementDuration" class="form-input" style="flex:1; padding:10px; font-size:13px; background:#fff;">
+                                    <option value="1">1 Month</option>
+                                    <option value="3">3 Months</option>
+                                    <option value="6">6 Months</option>
+                                    <option value="12">12 Months</option>
+                                </select>
+                                <button class="btn btn-primary" style="flex:1.2; padding:12px; font-size:13px; background-color:var(--secondary);" onclick="app.flowLongStatement()">
+                                    <i class="fa-solid fa-file-export"></i> Get Statement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            this.updateModalContent('Account Statement', h);
+        }
     },
     closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
     seedHistory() {
@@ -237,6 +336,7 @@ const app = {
         const container = document.getElementById('mainContainer');
         const role = this.data.role;
         if (role === 'Personal') this.renderPersonalView(container);
+        else if (role === 'General') this.renderGeneralView(container);
         else if (role === 'Dealer') {
             window.location.href = '/dealer';
         }
@@ -245,6 +345,151 @@ const app = {
         }
         this.updateNav();
         this.updateBadge();
+    },
+    renderGeneralView(container) {
+        const headerRole = document.getElementById('headerRole');
+        if (headerRole) headerRole.innerHTML = '<i class="fas fa-users"></i> Create Group';
+        container.innerHTML = `
+            <div style="padding: 5px 0;">
+              <!-- Header -->
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <div>
+                  <h4 style="margin: 0 0 4px; font-size: 15px; font-weight: 800; color: #1e293b;">Register New Group</h4>
+                  <p style="margin: 0; font-size: 12px; color: #94a3b8;">Complete all steps to register a group account</p>
+                </div>
+                <div style="width: 42px; height: 42px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4285f4; font-size: 18px;">
+                  <i class="fa-solid fa-users-gear"></i>
+                </div>
+              </div>
+
+              <!-- STEP INDICATOR -->
+              <div id="gStepIndicator" style="display: flex; align-items: center; gap: 0; margin-bottom: 25px; justify-content: center;">
+                <div id="gDot1" style="width:28px;height:28px;border-radius:50%;background:#4285f4;color:white;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</div>
+                <div style="flex:1;height:2px;background:#e2e8f0;max-width:50px;"></div>
+                <div id="gDot2" style="width:28px;height:28px;border-radius:50%;background:#e2e8f0;color:#94a3b8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</div>
+                <div style="flex:1;height:2px;background:#e2e8f0;max-width:50px;"></div>
+                <div id="gDot3" style="width:28px;height:28px;border-radius:50%;background:#e2e8f0;color:#94a3b8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</div>
+              </div>
+
+              <!-- STEP 1: LOOKUP -->
+              <div id="gStep1">
+                <div style="background:#f8fafc;border-radius:16px;padding:25px;border:1px solid #e2e8f0;">
+                  <p style="text-align:center;font-size:12px;color:#64748b;margin-bottom:20px;">Enter the group's phone number to look up or create the account</p>
+                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:15px;">
+                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
+                    <input type="tel" id="gGroupPhone" placeholder="07XXXXXXXX" maxlength="10"
+                      style="flex:1;border:none;outline:none;padding:14px 0;font-size:15px;font-weight:600;color:#1e293b;background:transparent;">
+                  </div>
+                  <button onclick="generalCreateStep1()" style="width:100%;padding:14px;background:#4285f4;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-search" style="margin-right:8px;"></i>Look Up Group
+                  </button>
+                  <p id="gVerifyMsg" style="text-align:center;font-size:12px;margin-top:12px;font-weight:600;"></p>
+                </div>
+              </div>
+
+              <!-- STEP 2: MEMBERS -->
+              <div id="gStep2" style="display:none;">
+                <div style="background:#f8fafc;border-radius:16px;padding:25px;border:1px solid #e2e8f0;text-align:center;">
+                  <div style="font-size:13px;font-weight:700;color:#4285f4;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Group Found</div>
+                  <h3 id="gGroupName" style="color:#1e293b;margin:0 0 20px;font-size:18px;font-weight:800;"></h3>
+                  <p style="font-size:12px;color:#64748b;margin-bottom:20px;">How many members will this group start with?</p>
+                  <div style="display:inline-flex;align-items:center;background:white;border:2px solid #4285f4;border-radius:14px;overflow:hidden;margin-bottom:20px;">
+                    <div style="padding:12px 16px;background:#4285f4;color:white;"><i class="fas fa-users" style="font-size:18px;"></i></div>
+                    <input type="number" id="gMemberCount" placeholder="15" min="1"
+                      style="border:none;outline:none;padding:12px 16px;font-size:22px;font-weight:800;color:#1e293b;width:110px;text-align:center;background:transparent;">
+                  </div>
+                  <button onclick="generalCreateStep2()" style="width:100%;padding:14px;background:#1e293b;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
+                    Confirm & Proceed <i class="fas fa-arrow-right" style="margin-left:8px;"></i>
+                  </button>
+                  <p id="gMembersMsg" style="margin-top:12px;font-size:12px;font-weight:600;"></p>
+                </div>
+              </div>
+
+              <!-- STEP 3: PAYMENT -->
+              <div id="gStep3" style="display:none;">
+                <div style="background:#f0fdf4;border-radius:16px;padding:25px;border:1.5px solid #bbf7d0;text-align:center;">
+                  <div style="font-size:13px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
+                    <i class="fas fa-mobile-alt" style="margin-right:6px;"></i>M-Pesa Payment
+                  </div>
+                  <p style="font-size:12px;color:#64748b;margin:8px 0 20px;">Complete registration by settling the TBank setup fee</p>
+                  <div style="background:white;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #d1fae5;">
+                    <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Total Setup Fee</div>
+                    <div id="gFeeDisplay" style="font-size:30px;font-weight:800;color:#065f46;">KES 0.00</div>
+                    <div id="gFeeBreakdown" style="font-size:11px;color:#6b7280;margin-top:6px;font-weight:500;"></div>
+                    <div style="display:inline-flex;align-items:center;gap:8px;background:#ecfdf5;padding:6px 14px;border-radius:20px;margin-top:10px;font-size:13px;font-weight:700;color:#059669;">
+                      <i class="fas fa-users"></i>
+                      <span id="gMemberDisplay">0</span> Members
+                    </div>
+                  </div>
+                  <div style="text-align:left;margin-bottom:18px;">
+                    <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">M-Pesa Phone Number</label>
+                    <div style="display:flex;align-items:center;background:white;border:1.5px solid #d1d5db;border-radius:12px;overflow:hidden;">
+                      <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
+                      <input type="tel" id="gMpesaPhone" placeholder="07XXXXXXXX" maxlength="10"
+                        style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
+                    </div>
+                  </div>
+                  <button onclick="generalCreateStep3()" style="width:100%;padding:14px;background:#059669;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
+                    <i class="fas fa-lock" style="margin-right:8px;"></i>Pay & Complete Registration
+                  </button>
+                  <p id="gPaymentMsg" style="text-align:center;font-size:12px;margin-top:12px;font-weight:600;"></p>
+                  <button onclick="app.switchRole('General')" style="width:100%;padding:10px;background:transparent;color:#94a3b8;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;cursor:pointer;margin-top:8px;">Cancel</button>
+                </div>
+              </div>
+            </div>
+        `;
+        // Attach helper functions to window for inline onclick
+        window.generalCreateStep1 = async () => {
+            const phone = document.getElementById('gGroupPhone').value.trim();
+            const msg = document.getElementById('gVerifyMsg');
+            if (!phone || phone.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid 10-digit phone number.'; return; }
+            msg.style.color='#4285f4'; msg.textContent='Looking up group...';
+            try {
+                const res = await fetch('/agent/lookup-group?phone=' + phone);
+                const data = await res.json();
+                if (data.groupName) {
+                    document.getElementById('gGroupName').textContent = data.groupName;
+                    window._gGroupData = data;
+                    document.getElementById('gStep1').style.display = 'none';
+                    document.getElementById('gStep2').style.display = 'block';
+                    document.getElementById('gDot1').style.background = '#22c55e';
+                    document.getElementById('gDot2').style.background = '#4285f4';
+                    document.getElementById('gDot2').style.color = 'white';
+                } else { msg.style.color='#ef4444'; msg.textContent = data.message || 'Group not found.'; }
+            } catch(e) { msg.style.color='#ef4444'; msg.textContent='Server error. Try again.'; }
+        };
+        window.generalCreateStep2 = () => {
+            const count = parseInt(document.getElementById('gMemberCount').value);
+            const msg = document.getElementById('gMembersMsg');
+            if (!count || count < 1) { msg.style.color='#ef4444'; msg.textContent='Enter a valid member count.'; return; }
+            const fee = count * 100;
+            document.getElementById('gFeeDisplay').textContent = 'KES ' + fee.toLocaleString() + '.00';
+            document.getElementById('gFeeBreakdown').textContent = count + ' members × KES 100 setup fee';
+            document.getElementById('gMemberDisplay').textContent = count;
+            document.getElementById('gStep2').style.display = 'none';
+            document.getElementById('gStep3').style.display = 'block';
+            document.getElementById('gDot2').style.background = '#22c55e';
+            document.getElementById('gDot3').style.background = '#4285f4';
+            document.getElementById('gDot3').style.color = 'white';
+        };
+        window.generalCreateStep3 = async () => {
+            const phone = document.getElementById('gMpesaPhone').value.trim();
+            const msg = document.getElementById('gPaymentMsg');
+            if (!phone || phone.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid M-Pesa number.'; return; }
+            msg.style.color='#059669'; msg.textContent='Sending STK push...';
+            try {
+                const res = await fetch('/agent/create-group-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, groupData: window._gGroupData, members: parseInt(document.getElementById('gMemberDisplay').textContent) })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    msg.style.color='#059669'; msg.textContent='Payment initiated! Check your phone.';
+                    app.showToast('STK Push sent successfully!', 'success');
+                } else { msg.style.color='#ef4444'; msg.textContent = result.message || 'Payment failed.'; }
+            } catch(e) { msg.style.color='#ef4444'; msg.textContent='Server error. Try again.'; }
+        };
     },
     renderPersonalView(container) {
         const headerRole = document.getElementById('headerRole');
@@ -257,7 +502,6 @@ const app = {
                 <div class="menu">
                     <div class="menu-item" onclick="app.openModal('Send Money')">Send Money <span class="arrow">›</span></div>
                     <div class="menu-item" onclick="app.openModal('Withdraw')">Withdraw Money <span class="arrow">›</span></div>
-                    <div class="menu-item" onclick="app.showPersonalFile()">My Personal File <span class="arrow">›</span></div>
                     <div class="menu-item" onclick="app.openModal('Change PIN')">Change PIN <span class="arrow">›</span></div>
                     <div class="menu-item" onclick="app.openModal('Statement')">Account Statement <span class="arrow">›</span></div>
                 </div>`;
@@ -278,72 +522,91 @@ const app = {
             else { this.showToast(result.message || "Failed to set PIN", "error"); }
         } catch (e) { console.error(e); this.showToast("Server error occurred", "error"); }
     },
-    flowNewPin() {
-        // Close current modal and show change PIN options
-        const modal = document.getElementById('customModal');
-        if (modal) modal.style.display = 'none';
-        
-        // Render change PIN options
-        const main = document.getElementById('main-content');
-        if (main) {
-            main.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;position:relative;">
-                <button onclick="app.render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;"><i class="fas fa-times"></i></button>
-                <h2 style="margin-bottom:1rem;">Change PIN</h2>
-                <p style="color:#6b7280;margin-bottom:1rem;">Select an option to change or reset your PIN.</p>
-                <div style="display:flex;gap:10px;">
-                    <button class="btn btn-primary" style="flex:1;padding:12px;" onclick="app.showNewPinFormCliant()">
-                        <i class="fas fa-edit"></i> New PIN
-                    </button>
-                    <button class="btn" style="flex:1;padding:12px;background:#f59e0b;color:#fff;" onclick="app.showForgotPinFormCliant()">
-                        <i class="fas fa-question-circle"></i> Forgot PIN
+    showNewPinFormModal() {
+        const html = `
+            <div style="text-align:left;">
+                <div style="background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
+                    <p style="font-size:13px; color:#475569; margin:0; line-height:1.4;">Enter your <b>Current PIN</b> first, then choose a secure 4-digit <b>New PIN</b> below.</p>
+                </div>
+                <div class="form-group"><label class="form-label" style="font-size:11px; color:#64748b; font-weight:700;">CURRENT PIN</label><input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px; font-weight:700;"></div>
+                <div class="form-group"><label class="form-label" style="font-size:11px; color:#64748b; font-weight:700;">NEW 4-DIGIT PIN</label><input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px; font-weight:700;"></div>
+                <div class="form-group"><label class="form-label" style="font-size:11px; color:#64748b; font-weight:700;">CONFIRM NEW PIN</label><input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px; font-weight:700;"></div>
+                <button class="btn btn-primary" style="padding:15px; margin-top:10px; font-size:15px;" onclick="app.changePersonalPin()"><i class="fa-solid fa-check-circle"></i> Save New PIN</button>
+            </div>
+        `;
+        this.updateModalContent('Set New PIN', html, () => this.openModal('Change PIN'));
+    },
+    showForgotPinFormModal() {
+        const html = `
+            <div style="text-align:left;">
+                <div id="requestPhase">
+                    <div style="text-align:center; padding:20px 0;">
+                        <div style="width:60px; height:60px; background:#fff7ed; color:#f59e0b; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px;">
+                            <i class="fa-solid fa-comment-sms" style="font-size:24px;"></i>
+                        </div>
+                        <h4 style="font-size:16px; font-weight:700; color:#1e293b; margin-bottom:8px;">Reset Security PIN</h4>
+                        <p style="font-size:13px; color:#64748b; line-height:1.5;">We will send a <b>Start Key</b> to your registered mobile number via SMS to verify your identity.</p>
+                    </div>
+                    <button class="btn" style="background:#7c3aed; color:#fff; padding:15px; font-weight:700;" onclick="app.requestStartKeyCliant()">
+                        <i class="fas fa-sms"></i> Send SMS Start Key
                     </button>
                 </div>
-            </div>`;
-        }
-    },
-    showNewPinFormCliant() {
-        const main = document.getElementById('main-content');
-        if (main) {
-            main.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;position:relative;">
-                <button onclick="app.render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;"><i class="fas fa-times"></i></button>
-                <h2 style="margin-bottom:1rem;">Change PIN</h2>
-                <p style="color:#6b7280;margin-bottom:1rem;">Enter your current PIN and choose a new PIN.</p>
-                <div class="form-group"><label class="form-label">Current PIN</label><input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
-                <div class="form-group"><label class="form-label">New PIN</label><input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
-                <div class="form-group"><label class="form-label">Confirm New PIN</label><input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
-                <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="app.changePersonalPin()">Change PIN</button>
-            </div>`;
-        }
-    },
-    showForgotPinFormCliant() {
-        const main = document.getElementById('main-content');
-        if (main) {
-            main.innerHTML = `<div class="box-wrapper" style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:0 auto;position:relative;">
-                <button onclick="app.render()" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;"><i class="fas fa-times"></i></button>
-                <h2 style="margin-bottom:1rem;">Reset PIN</h2>
-                <p style="color:#6b7280;margin-bottom:1rem;">Request a start key via SMS to reset your PIN.</p>
-                <button class="btn" style="width:100%;padding:12px;background:#7c3aed;color:#fff;margin-bottom:15px;" onclick="app.requestStartKeyCliant()">
-                    <i class="fas fa-sms"></i> Request Start Key (SMS)
-                </button>
+
                 <div id="startKeySectionCliant" class="hidden">
-                    <div class="form-group"><label class="form-label">Start Key (from SMS)</label><input type="text" id="startKeyCliant" class="form-input" placeholder="Enter start key" inputmode="numeric"></div>
-                    <div class="form-group"><label class="form-label">New PIN</label><input type="password" id="resetNewPinCliant" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
-                    <div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="resetConfirmPinCliant" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div>
-                    <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="app.submitResetPinCliant()">Reset PIN</button>
+                    <div style="background:#f0f9ff; padding:12px; border-radius:10px; border:1px solid #bae6fd; margin-bottom:20px; display:flex; gap:10px; align-items:center;">
+                        <i class="fa-solid fa-circle-info" style="color:#0ea5e9;"></i>
+                        <p style="font-size:12px; color:#0369a1; margin:0;">Enter the key sent to your phone.</p>
+                    </div>
+                    
+                    <!-- Phase 1: Start Key Input -->
+                    <div class="form-group">
+                        <label class="form-label" style="font-size:11px; color:#64748b; font-weight:700;">START KEY (FROM SMS)</label>
+                        <input type="password" id="startKeyCliant" name="security-start-key" class="form-input" placeholder="••••" inputmode="numeric" 
+                               autocomplete="one-time-code" style="letter-spacing:4px; font-weight:700;" oninput="app.revealResetPinFields()">
+                    </div>
+
+                    <!-- Phase 2: New PIN Inputs (Hidden by default) -->
+                    <div id="pinEntryFields" class="hidden" style="margin-top:15px; border-top:1px dashed #e2e8f0; padding-top:15px;">
+                        <div class="form-group"><label class="form-label" style="font-size:11px; color:#64748b; font-weight:700;">NEW 4-DIGIT PIN</label><input type="password" id="resetNewPinCliant" autocomplete="new-password" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px; font-weight:700;" oninput="app.checkResetPinMatch()"></div>
+                        <div class="form-group"><label class="form-label" style="font-size:11px; color:#64748b; font-weight:700;">CONFIRM PIN</label><input type="password" id="resetConfirmPinCliant" autocomplete="new-password" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px; font-weight:700;" oninput="app.checkResetPinMatch()"></div>
+                        
+                        <!-- Phase 3: Submit Button (Hidden by default) -->
+                        <button id="finalResetBtn" class="btn btn-primary hidden" onclick="app.submitResetPinCliant()" style="padding:15px; font-size:15px;">
+                            <i class="fa-solid fa-key"></i> Reset & Login
+                        </button>
+                    </div>
+                    <p id="resetPinMsgCliant" style="color:#ef4444; margin-top:15px; font-size:12px; font-weight:600; text-align:center;"></p>
                 </div>
-                <p id="resetPinMsgCliant" style="color:#6b7280;margin-top:1rem;font-size:0.9rem;"></p>
-            </div>`;
+            </div>
+        `;
+        this.updateModalContent('Forgot PIN', html, () => this.openModal('Change PIN'));
+    },
+    requestStartKeyCliant() {
+        const requestPhase = document.getElementById('requestPhase');
+        const section = document.getElementById('startKeySectionCliant');
+        if (requestPhase) requestPhase.classList.add('hidden');
+        if (section) section.classList.remove('hidden');
+        this.showToast('SMS Start Key sent to your phone.', 'success');
+    },
+    revealResetPinFields() {
+        const key = document.getElementById('startKeyCliant')?.value || '';
+        const fields = document.getElementById('pinEntryFields');
+        if (fields) {
+            if (key.length >= 4) fields.classList.remove('hidden');
+            else fields.classList.add('hidden');
         }
     },
-    async requestStartKeyCliant() {
-        const msg = document.getElementById('resetPinMsgCliant');
-        // TODO: Integrate with SMS service to send start key
-        if (msg) {
-            msg.textContent = 'SMS integration pending. Please contact support for start key.';
-            msg.style.color = '#f59e0b';
+    checkResetPinMatch() {
+        const pin1 = document.getElementById('resetNewPinCliant')?.value || '';
+        const pin2 = document.getElementById('resetConfirmPinCliant')?.value || '';
+        const btn = document.getElementById('finalResetBtn');
+        if (btn) {
+            if (pin1.length === 4 && pin1 === pin2) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
         }
-        const section = document.getElementById('startKeySectionCliant');
-        if (section) section.classList.remove('hidden');
     },
     async submitResetPinCliant() {
         const startKey = document.getElementById('startKeyCliant')?.value;
@@ -398,12 +661,28 @@ const app = {
             this.showToast("Server error occurred", "error"); 
         }
     },
-    showPersonalFile() {
-        const u = this.data.user;
-        this.updateModalContent('My Personal File', '<div style="text-align:center;"><h4 style="margin-bottom:1rem;">Member Information</h4><p><b>Name:</b> ' + u.firstName + ' ' + u.lastName + '</p><p><b>Phone:</b> ' + u.phoneNumber + '</p></div>');
-        this.openModal('My Personal File');
+    toggleLongStatementOptions() {
+        const target = document.getElementById('longStatementOptions');
+        const chevron = document.getElementById('longStatementChevron');
+        if (target) {
+            const isHidden = target.classList.contains('hidden');
+            if (isHidden) {
+                target.classList.remove('hidden');
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            } else {
+                target.classList.add('hidden');
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            }
+        }
     },
-    handleGeneralClick() { window.location.href = '/personal/general'; },
+    flowLongStatement() {
+        const months = document.getElementById('statementDuration')?.value || '1';
+        this.showToast(`Requesting ${months} month(s) statement...`, 'info');
+        // TODO: Backend integration for PDF/CSV generation
+        setTimeout(() => {
+            this.showToast('Full statement available in your Inbox soon.', 'success');
+        }, 1500);
+    },
     handleDealerClick() { 
         if (!this.data.isDealer) { 
             this.showToast('You are not registered as a dealer.', 'error'); 
@@ -411,43 +690,41 @@ const app = {
         } 
         this.switchRole('Dealer'); 
     },
-    openModal(action) {
-        const modal = document.getElementById('modalOverlay');
-        modal.classList.add('open');
-        const title = document.getElementById('modalTitle');
-        const body = document.getElementById('modalBody');
-        if (action === 'Send Money') { 
-            title.innerText = 'Select Group'; 
-            const groups = this.data.userGroups || [];
-            if (groups.length === 0) body.innerHTML = '<p style="text-align:center;color:#6b7280;margin-bottom:1rem;">No group account is linked to your phone number.</p><button class="modal-list-btn" onclick="app.closeModal()">Close</button>';
-            else {
-                let html = '<div style="text-align:left;margin-bottom:1rem;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Select a group account to send money:</p>';
-                groups.forEach((group, index) => { html += '<button class="modal-list-btn" onclick="app.selectGroupForSend(\'' + encodeURIComponent(group.groupName) + '\')"><i class="fa-solid fa-users" style="color:var(--primary);margin-right:8px;"></i> ' + (group.groupName || 'Unnamed Group') + '</button>'; });
-                html += '</div>';
-                body.innerHTML = html;
-            }
-        }
-        else if (action === 'Withdraw') { title.innerText = 'Withdraw Money'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowWithdrawMpesa()">To M-Pesa</button>'; }
-        else if (action === 'Balance') { title.innerText = 'Account Balance'; body.innerHTML = '<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="checkPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processCheckBalance()">Check Balance</button>'; }
-        else if (action === 'Change PIN') { title.innerText = 'Change PIN'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowNewPin()">New PIN</button>'; }
-        else if (action === 'Statement') { title.innerText = 'Account Statement'; body.innerHTML = '<button class="modal-list-btn" onclick="app.flowMiniStatement()">Mini Statement</button>'; }
-    },
+    handleGeneralClick() { this.switchRole('General'); },
     selectGroupForSend(groupName) {
         const decodedGroupName = decodeURIComponent(groupName);
         this.data.errorMessage = '';
-        this.updateModalContent('Send Money - ' + decodedGroupName, '<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Choose where to send money:</p><button class="modal-list-btn" onclick="app.sendToMyAccount(\'' + encodeURIComponent(decodedGroupName) + '\')"><i class="fa-solid fa-building-columns" style="color:var(--primary);margin-right:8px;"></i> My Account</button><button class="modal-list-btn" onclick="app.sendToOtherMember(\'' + encodeURIComponent(decodedGroupName) + '\')"><i class="fa-solid fa-user-group" style="color:var(--secondary);margin-right:8px;"></i> Other Member A/C</button></div><button class="modal-list-btn" onclick="app.openModal(\'Send Money\')" style="margin-top:15px;">Back</button>');
+        this.updateModalContent('Send Money - ' + decodedGroupName, '<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Choose where to send money:</p><button class="modal-list-btn" onclick="app.sendToMyAccount(\'' + encodeURIComponent(decodedGroupName) + '\')"><i class="fa-solid fa-building-columns" style="color:var(--primary);margin-right:8px;"></i> My Account</button><button class="modal-list-btn" onclick="app.sendToOtherMember(\'' + encodeURIComponent(decodedGroupName) + '\')"><i class="fa-solid fa-user-group" style="color:var(--secondary);margin-right:8px;"></i> Other Member A/C</button></div>', () => this.openModal('Send Money'));
+    },
+    showPersonalFile() {
+        const u = this.data.user;
+        let html = `
+            <div style="text-align:center; padding: 5px;">
+                <div style="background: #f8fafc; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                    <div style="width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; font-size: 24px;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <h4 style="margin-bottom:6px; color: #1e293b; font-size: 18px;">${u.firstName} ${u.lastName}</h4>
+                    <p style="color: #64748b; font-weight: 500; font-size: 14px;">${u.phoneNumber}</p>
+                </div>
+            </div>
+        `;
+        this.updateModalContent('My Personal File', html);
+        this.openModal('My Personal File');
     },
     sendToMyAccount(groupName) {
         const decodedGroupName = decodeURIComponent(groupName);
         const group = this.data.userGroups.find(g => g.groupName === decodedGroupName);
         if (!group || !group.principles || !group.principles.otherContributions) {
-            this.updateModalContent('Send to My Account', '<div style="text-align:center;padding:20px;"><p style="color:#6b7280;">No accounts found for this group.</p><button class="modal-list-btn" onclick="app.selectGroupForSend(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:15px;">Back</button></div>');
+            this.updateModalContent('Send to My Account', '<div style="text-align:center;padding:20px;"><p style="color:#6b7280;">No accounts found for this group.</p></div>', () => this.selectGroupForSend(decodedGroupName));
             return;
         }
-        const accounts = group.principles.otherContributions;
-        if (!this.data.groupAccounts) this.data.groupAccounts = accounts;
-        if (!this.data.addedAccounts) this.data.addedAccounts = [];
+        this.data.groupAccounts = group.principles.otherContributions;
+        this.data.addedAccounts = [];
         this.data.errorMessage = '';
+        this.data.sendMode = 'my';
+        this.data.recipientName = 'My Account';
+        this.data.isMultiMemberFlow = false;
         this.renderAccountForm(decodedGroupName);
     },
     renderAccountForm(groupName) {
@@ -620,9 +897,14 @@ const app = {
         html += '<button class="btn btn-primary" onclick="app.processPayment(\'tbank\')" style="flex:1;padding:12px;background-color:#10b981;"><i class="fa-solid fa-university"></i> tBank</button>';
         html += '<button class="btn btn-primary" onclick="app.processPayment(\'mpesa\')" style="flex:1;padding:12px;background-color:#22c55e;"><i class="fa-solid fa-mobile"></i> M-Pesa</button>';
         html += '</div>';
-        html += '<button class="modal-list-btn" onclick="app.renderAccountForm(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:10px;">Back</button></div>';
         
-        this.updateModalContent('Confirm Payment - ' + decodedGroupName, html);
+        if (this.data.sendMode === 'my') {
+            html += '<button class="modal-list-btn" onclick="app.renderAccountForm(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:10px;">Back</button></div>';
+        } else {
+            html += '<button class="modal-list-btn" onclick="app.showFinalPaymentOptions(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:10px;">Back</button></div>';
+        }
+        
+        this.updateModalContent('Verify Final Payment', html);
     },
     processPayment(method) {
         const methodName = method === 'tbank' ? 'tBank' : 'M-Pesa';
@@ -635,9 +917,645 @@ const app = {
             '</div>'
         );
     },
+    renderAccountForm(groupName) {
+        const accounts = this.data.groupAccounts || [];
+        const decodedGroupName = decodeURIComponent(groupName);
+        const addedAccounts = this.data.addedAccounts || [];
+        const errorMsg = this.data.errorMessage || '';
+        const sendTo = this.data.recipientName || 'My Account';
+        
+        let html = '<div style="text-align:left;">';
+        
+        if (this.data.sendMode === 'other') {
+            html += `<div style="background:#f0f9ff; padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #bae6fd; display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-user-check" style="color:var(--primary);"></i>
+                        <span style="font-size:13px; font-weight:600; color:#0369a1;">Recipient: ${sendTo}</span>
+                     </div>`;
+        }
+
+        html += '<div style="margin-bottom:10px;">';
+        html += '<p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">SOURCE: Select Account</p>';
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+        html += '<select id="sourceAccount" class="form-input" onchange="app.onSourceChange(\'' + encodeURIComponent(decodedGroupName) + '\')" style="flex:1;min-width:150px;padding:10px;font-size:13px;">';
+        html += '<option value="">-- Select --</option>';
+        accounts.forEach((acc, index) => {
+            const isAlreadyAdded = addedAccounts.some(added => added.accountNumber === acc.accountNumber);
+            if (isAlreadyAdded) {
+                html += '<option value="' + index + '" disabled style="color:#cbd5e1;">' + acc.accountNumber + ' - ' + acc.accountName + ' (Added)</option>';
+            } else {
+                html += '<option value="' + index + '">' + acc.accountNumber + ' - ' + acc.accountName + '</option>';
+            }
+        });
+        html += '</select>';
+        html += '</div>';
+        html += '</div>';
+        
+        if (errorMsg) {
+            html += '<div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px;margin-bottom:15px;">';
+            html += '<p style="color:#dc2626;font-size:13px;margin:0;">' + errorMsg + '</p>';
+            html += '</div>';
+        }
+        
+        if (addedAccounts.length > 0) {
+            html += '<div style="margin-bottom:15px;">';
+            html += '<p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">ADDED ACCOUNTS:</p>';
+            addedAccounts.forEach((acc, index) => {
+                html += '<div style="display:flex;align-items:center;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;gap:10px;">';
+                html += '<button onclick="app.removeAccount(' + index + ',\'' + encodeURIComponent(decodedGroupName) + '\')" style="background:#ef4444;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">×</button>';
+                html += '<div style="flex:1;overflow:hidden;">';
+                html += '<div style="font-weight:600;color:#1e293b;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + acc.accountName + '</div>';
+                html += '<div style="color:#64748b;font-size:11px;">' + acc.accountNumber + '</div>';
+                html += '</div>';
+                html += '<div style="color:var(--primary);font-weight:700;font-size:13px;white-space:nowrap;">KSh ' + acc.inputAmount + '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+        }
+        
+        if (this.data.searchedAccount) {
+            const acc = this.data.searchedAccount;
+            html += '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:15px;border-radius:12px;margin-bottom:15px;color:white;">';
+            html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">';
+            html += '<div>';
+            html += '<div style="font-size:15px;font-weight:600;margin-bottom:2px;">' + acc.accountName + '</div>';
+            html += '<div style="font-size:12px;opacity:0.8;">' + acc.accountNumber + '</div>';
+            html += '</div>';
+            html += '<div style="text-align:right;">';
+            html += '<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">EXPECTED</div>';
+            html += '<div style="color:#fbbf24;font-weight:600;font-size:13px;">KSh ' + acc.expectedAmount + '</div>';
+            html += '</div>';
+            html += '</div>';
+            
+            html += '<div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:8px;">';
+            html += '<span style="font-size:12px;opacity:0.9;white-space:nowrap;">Amount:</span>';
+            html += '<input type="number" id="accountAmount" class="form-input" placeholder="0" inputmode="numeric" style="flex:1;padding:8px;font-size:14px;border:none;background:transparent;color:white;font-weight:600;text-align:right;">';
+            html += '</div>';
+            html += '</div>';
+        }
+        
+        html += '<div style="display:flex;gap:10px;margin-top:15px;">';
+        html += '<button class="btn btn-primary" onclick="app.addNextAccount(\'' + encodeURIComponent(decodedGroupName) + '\')" style="flex:1;padding:12px;"><i class="fa-solid fa-plus"></i> Add</button>';
+        html += '<button class="btn btn-primary" onclick="app.confirmPayment(\'' + encodeURIComponent(decodedGroupName) + '\')" style="flex:1;padding:12px;background-color:var(--secondary);"><i class="fa-solid fa-check"></i> Confirm</button>';
+        html += '</div></div>';
+        
+        const title = this.data.sendMode === 'other' ? `Send to member` : `Send to My Account - ${decodedGroupName}`;
+        const backAction = this.data.sendMode === 'other' ? () => this.sendToOtherMember(decodedGroupName) : () => this.selectGroupForSend(decodedGroupName);
+        this.updateModalContent(title, html, backAction);
+    },
+    showFinalPaymentOptions(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const accounts = this.data.groupAccounts || [];
+        const addedAccounts = this.data.addedAccounts || [];
+        const remaining = accounts.filter(acc => !addedAccounts.some(a => a.accountNumber === acc.accountNumber));
+
+        let html = `
+            <div style="text-align:center;">
+                <div style="width:50px; height:50px; background:#fefce8; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px;">
+                    <i class="fa-solid fa-wallet" style="color:#eab308; font-size:24px;"></i>
+                </div>
+                <p style="font-size:13px; color:#64748b; margin-bottom:20px;">Review or add more accounts for this recipient:</p>
+                
+                <div style="text-align:left; margin-bottom:25px; border-top:1px dashed #e2e8f0; padding-top:15px;">
+                    <div onclick="app.toggleOtherAccountsCollapse()" style="cursor:pointer; display:inline-block; margin-bottom:5px;">
+                        <p style="font-size:12px;color:var(--primary);margin-bottom:0;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">SOURCE: Select Account</p>
+                    </div>
+                    
+                    <div id="other-accounts-list" style="display:none; margin-top:10px;">
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <select class="form-input" onchange="if(this.value!=='') app.selectQuickAccount('${encodeURIComponent(decodedGroupName)}', this.value)" style="flex:1;min-width:150px;padding:10px;font-size:13px; background:#fff; border:1px solid var(--primary);">
+                                <option value="">-- Select --</option>
+        `;
+        
+        if (remaining.length > 0) {
+            remaining.forEach((acc) => {
+                const globalIndex = accounts.indexOf(acc);
+                html += `<option value="${globalIndex}">${acc.accountNumber} - ${acc.accountName}</option>`;
+            });
+        }
+
+        html += `
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="app.showFinalPaymentSummary('${encodeURIComponent(decodedGroupName)}')" style="background:var(--secondary); width:100%; padding:14px; font-size:15px; border-radius:10px;">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Verify payment
+                </button>
+            </div>
+        `;
+        this.updateModalContent('Payment Options', html, () => this.renderAccountForm(decodedGroupName));
+    },
+    toggleOtherAccountsCollapse() {
+        const target = document.getElementById('other-accounts-list');
+        if (target) {
+            const isHidden = target.style.display === 'none' || target.style.display === '';
+            target.style.display = isHidden ? 'flex' : 'none';
+        }
+    },
+    selectQuickAccount(groupName, index) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const accounts = this.data.groupAccounts || [];
+        const acc = accounts[index];
+        if (acc) {
+            this.data.searchedAccount = {
+                accountName: acc.accountName,
+                accountNumber: acc.accountNumber,
+                expectedAmount: acc.inputAmount || acc.estimatedAmount || "0"
+            };
+            this.data.errorMessage = '';
+            this.renderAccountForm(decodedGroupName);
+        }
+    },
+    onSourceChange(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const select = document.getElementById('sourceAccount');
+        const index = select ? select.value : '';
+        if (index === '') {
+            this.data.searchedAccount = null;
+            this.renderAccountForm(decodedGroupName);
+            return;
+        }
+        const acc = this.data.groupAccounts[index];
+        this.data.searchedAccount = {
+            accountName: acc.accountName,
+            accountNumber: acc.accountNumber,
+            expectedAmount: acc.inputAmount || acc.estimatedAmount || "0"
+        };
+        this.renderAccountForm(decodedGroupName);
+    },
+    addNextAccount(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const searchedAccount = this.data.searchedAccount;
+        if (!searchedAccount) {
+            this.data.errorMessage = 'Please select a source account first';
+            this.renderAccountForm(decodedGroupName);
+            return;
+        }
+        
+        if (!this.data.addedAccounts) this.data.addedAccounts = [];
+        
+        const amountInput = document.getElementById('accountAmount');
+        const amount = amountInput ? amountInput.value : '0';
+        
+        this.data.addedAccounts.push({
+            accountName: searchedAccount.accountName,
+            accountNumber: searchedAccount.accountNumber,
+            inputAmount: amount
+        });
+        
+        this.data.searchedAccount = null;
+        this.data.errorMessage = '';
+        this.renderAccountForm(decodedGroupName);
+    },
+    removeAccount(index, groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        if (this.data.addedAccounts && this.data.addedAccounts[index]) {
+            this.data.addedAccounts.splice(index, 1);
+        }
+        this.renderAccountForm(decodedGroupName);
+    },
+    confirmPayment(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        
+        // Auto-add pending input if user forgot to click "Add"
+        if (this.data.searchedAccount) {
+            const amountInput = document.getElementById('accountAmount');
+            const amount = amountInput ? amountInput.value.trim() : "";
+            if (amount !== "" && parseFloat(amount) > 0) {
+                if (!this.data.addedAccounts) this.data.addedAccounts = [];
+                this.data.addedAccounts.push({
+                    accountName: this.data.searchedAccount.accountName,
+                    accountNumber: this.data.searchedAccount.accountNumber,
+                    inputAmount: amount
+                });
+                this.data.searchedAccount = null;
+            }
+        }
+
+        const addedAccounts = this.data.addedAccounts || [];
+        if (addedAccounts.length === 0) {
+            this.data.errorMessage = 'Please select an account and enter an amount first';
+            this.renderAccountForm(decodedGroupName);
+            return;
+        }
+
+        this.showFinalPaymentOptions(decodedGroupName);
+    },
+    showFinalPaymentSummary(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const addedAccounts = this.data.addedAccounts || [];
+
+        // Handle Multi-Member Flow
+        if (this.data.isMultiMemberFlow) {
+            const currentIdx = this.data.selectedMemberIndex;
+            if (!this.data.settledMembersData) this.data.settledMembersData = {};
+            
+            // Save this member's accounts
+            this.data.settledMembersData[currentIdx] = {
+                name: this.data.recipientName,
+                accounts: [...addedAccounts]
+            };
+
+            const allDone = this.data.verifiedMembersList.every(m => this.data.settledMembersData[m.index]);
+
+            if (!allDone) {
+                let html = `
+                    <div style="text-align:center; padding:20px;">
+                        <div style="width:60px; height:60px; background:#f0fdf4; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 15px;">
+                            <i class="fa-solid fa-check" style="color:#10b981; font-size:30px;"></i>
+                        </div>
+                        <h3 style="color:#1e293b; margin-bottom:10px;">Details Saved</h3>
+                        <p style="color:#6b7280; font-size:14px; margin-bottom:20px;">Accounts for <b>${this.data.recipientName}</b> have been added to the list.</p>
+                        <button class="btn btn-primary" onclick="app.showSeveralMembersSummary('${encodeURIComponent(decodedGroupName)}', app.data.verifiedMembersList)">Select Other Member</button>
+                    </div>
+                `;
+                this.updateModalContent('Details Saved', html);
+                return;
+            } else {
+                this.renderFinalBulkSummary(decodedGroupName);
+                return;
+            }
+        }
+        
+        // Standard flow for single member / my account
+        let total = 0;
+        addedAccounts.forEach(acc => total += parseFloat(acc.inputAmount) || 0);
+        
+        let html = '<div style="text-align:left;">';
+        html += '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:15px;border-radius:12px;margin-bottom:15px;color:white;">';
+        html += '<h3 style="margin:0 0 12px 0;color:white;font-size:14px;text-align:center;">PAYMENT DETAILS</h3>';
+        
+        const sendTo = this.data.recipientName || 'My Account';
+        const memberIdx = this.data.selectedMemberIndex;
+
+        html += `<div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.2);">
+                    <p style="font-size:10px; margin:0; opacity:0.7; letter-spacing:1px; text-transform:uppercase;">Recipient</p>
+                    <p style="font-weight:700; margin:4px 0 0 0; color:#fbbf24; font-size:14px;">${sendTo}</p>
+                 </div>`;
+        
+        if (this.data.sendMode === 'other' && memberIdx) {
+            html += `<div style="background:rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.2);">
+                        <p style="font-size:10px; margin:0; opacity:0.7; letter-spacing:1px; text-transform:uppercase;">Members Group A/C Number</p>
+                        <p style="font-weight:700; margin:4px 0 0 0; color:#fbbf24; font-size:14px;">${memberIdx}</p>
+                     </div>`;
+        }
+
+        addedAccounts.forEach((acc, idx) => {
+            html += '<div style="display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.1);border-radius:10px;margin-bottom:8px;gap:12px;position:relative;border:1px solid rgba(255,255,255,0.05);">';
+            html += '<div style="flex:1;overflow:hidden;">';
+            html += '<div style="font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;">' + acc.accountName + '</div>';
+            html += '<div style="font-size:11px;opacity:0.7;color:#fff;">' + acc.accountNumber + '</div>';
+            html += '</div>';
+            html += '<div style="color:#fbbf24;font-weight:700;font-size:14px;white-space:nowrap; margin-right:35px;">KSh ' + acc.inputAmount + '</div>';
+            html += `<button onclick="app.removeAccountFromSummary(${idx}, '${encodeURIComponent(decodedGroupName)}')" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:rgba(239, 68, 68, 0.1); border:none; color:#f87171; cursor:pointer; font-size:14px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:0.2s;"><i class="fa-solid fa-xmark"></i></button>`;
+            html += '</div>';
+        });
+        
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(251,191,36,0.2);border-radius:6px;margin-top:10px;">';
+        html += '<span style="font-weight:600;font-size:14px;">TOTAL</span>';
+        html += '<span style="color:#fbbf24;font-weight:700;font-size:18px;">KSh ' + total.toLocaleString() + '</span>';
+        html += '</div>';
+        html += '</div>';
+        
+        html += '<div style="display:flex;gap:10px;margin-top:15px;">';
+        html += '<button class="btn btn-primary" onclick="app.processPayment(\'tbank\')" style="flex:1;padding:12px;background-color:#10b981;"><i class="fa-solid fa-university"></i> tBank</button>';
+        html += '<button class="btn btn-primary" onclick="app.processPayment(\'mpesa\')" style="flex:1;padding:12px;background-color:#22c55e;"><i class="fa-solid fa-mobile"></i> M-Pesa</button>';
+        html += '</div>';
+        
+        if (this.data.sendMode === 'my') {
+            html += '<button class="modal-list-btn" onclick="app.renderAccountForm(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:10px;">Back</button></div>';
+        } else {
+            html += '<button class="modal-list-btn" onclick="app.showFinalPaymentOptions(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:10px;">Back</button></div>';
+        }
+        
+        this.updateModalContent('Verify Final Payment', html);
+    },
+    renderFinalBulkSummary(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const data = this.data.settledMembersData;
+        let totalSum = 0;
+
+        let html = '<div style="text-align:left; max-height:65vh; overflow-y:auto; padding:0 5px 0 0;">';
+        
+        for (const idx in data) {
+            const m = data[idx];
+            let memberTotal = 0;
+            m.accounts.forEach(a => memberTotal += parseFloat(a.inputAmount) || 0);
+            totalSum += memberTotal;
+
+            html += `
+                <div style="margin-bottom:15px; border-bottom:1px dashed #e2e8f0; padding-bottom:12px;">
+                    <div style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; position:relative;">
+                        <div onclick="app.toggleMemberCollapse('${idx}')" style="flex:1;">
+                            <div style="font-weight:700; color:var(--primary); font-size:15px; margin-bottom:2px;">${m.name}</div>
+                            <div style="font-size:10px; color:#64748b; font-weight:600;">A/C: ${idx}</div>
+                        </div>
+                        <div style="text-align:right; margin-right:45px; cursor:pointer;" onclick="app.toggleMemberCollapse('${idx}')">
+                            <div style="font-weight:700; color:#10b981; font-size:14px;">
+                                KSh ${memberTotal.toLocaleString()}
+                            </div>
+                            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase;">${m.accounts.length} Account(s)</div>
+                        </div>
+                        <!-- Individual Member Removal Button -->
+                        <button onclick="event.stopPropagation(); app.removeFullMemberFromSummary('${idx}', '${encodeURIComponent(decodedGroupName)}')" 
+                                style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:rgba(239, 68, 68, 0.1); border:none; color:#ef4444; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;">
+                            <i class="fa-solid fa-trash-can" style="font-size:13px;"></i>
+                        </button>
+                    </div>
+                    <div id="collapse-${idx}" style="display:none; padding-top:10px;">
+            `;
+
+            m.accounts.forEach((a, accIdx) => {
+                html += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; margin-bottom:8px; color:#64748b; padding-left:10px; border-left:3px solid var(--primary); background:#fcfcfc; padding:10px; border-radius:8px; position:relative;">
+                        <div style="flex:1;">
+                            <span style="font-weight:600; color:#334155;">${a.accountName}</span>
+                            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">KSh ${parseFloat(a.inputAmount).toLocaleString()}</div>
+                        </div>
+                        <button onclick="app.removeBulkAccountFromSummary('${idx}', ${accIdx}, '${encodeURIComponent(decodedGroupName)}')" style="background:rgba(239, 68, 68, 0.05); border:none; color:#ef4444; cursor:pointer; font-size:13px; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `
+            <div style="background:linear-gradient(135deg,#1e293b,#334155); padding:20px; border-radius:15px; color:white; text-align:center; margin-top:10px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                <div style="font-size:12px; opacity:0.8; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Grand Total</div>
+                <div style="font-size:24px; font-weight:800; color:#fbbf24;">KSh ${totalSum.toLocaleString()}</div>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn btn-primary" onclick="app.processPayment('tbank')" style="flex:1; background:#10b981;"><i class="fa-solid fa-university"></i> tBank</button>
+                <button class="btn btn-primary" onclick="app.processPayment('mpesa')" style="flex:1; background:#22c55e;"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
+            </div>
+        </div>`;
+
+        this.updateModalContent('Payment Summary', html, () => this.showSeveralMembersSummary(decodedGroupName, this.data.verifiedMembersList));
+    },
     sendToOtherMember(groupName) {
         const decodedGroupName = decodeURIComponent(groupName);
-        this.updateModalContent('Send to Other Member', '<div style="text-align:center;padding:40px 20px;"><i class="fa-solid fa-hard-hat" style="font-size:48px;color:var(--primary);margin-bottom:20px;"></i><h3 style="color:#1e293b;margin-bottom:10px;">Under Construction</h3><p style="color:#6b7280;">Sending to other members is currently being developed.</p><button class="modal-list-btn" onclick="app.selectGroupForSend(\'' + encodeURIComponent(decodedGroupName) + '\')" style="margin-top:20px;">Back</button></div>');
+        let html = `
+            <div style="text-align:center;">
+                <p style="font-size:13px; color:#6b7280; margin-bottom:20px;">Choose a sending option for this group:</p>
+                <button class="modal-list-btn" onclick="app.showSingleMemberSearch('${encodeURIComponent(decodedGroupName)}')">
+                    <i class="fa-solid fa-user" style="color:var(--primary); margin-right:10px;"></i> A Member
+                </button>
+                <button class="modal-list-btn" onclick="app.showAddSeveralMembers('${encodeURIComponent(decodedGroupName)}')">
+                    <i class="fa-solid fa-users-viewfinder" style="color:var(--primary); margin-right:10px;"></i> Add Several
+                </button>
+            </div>
+        `;
+        this.updateModalContent('Other Member Options', html, () => this.selectGroupForSend(decodedGroupName));
+    },
+    showSingleMemberSearch(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        let html = `
+            <div style="text-align:left;">
+                <p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Enter Members Group A/C Number to verify:</p>
+                <div class="form-group">
+                    <label class="form-label">Members Group A/C Number</label>
+                    <input type="text" id="memberIndexInput" class="form-input" placeholder="e.g. 7" inputmode="numeric">
+                </div>
+                <div id="memberVerifyError" style="color:#ef4444; font-size:12px; margin-bottom:10px; font-weight: 500;" class="hidden"></div>
+                <button class="btn btn-primary" onclick="app.verifyMemberIndex('${encodeURIComponent(decodedGroupName)}')">Verify A/C Number</button>
+            </div>
+        `;
+        this.updateModalContent('Verify Member A/C Number', html, () => this.sendToOtherMember(decodedGroupName));
+    },
+    showAddSeveralMembers(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const group = this.data.userGroups.find(g => g.groupName === decodedGroupName);
+        if (!group) return;
+        
+        let totalGroupMembers = 0;
+        for (const key in group) {
+            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+                totalGroupMembers++;
+            }
+        }
+
+        let html = `
+            <div style="text-align:left;">
+                <p style="font-size:13px;color:#6b7280;margin-bottom:15px;">How many members do you wish to add? (Group Size: ${totalGroupMembers})</p>
+                <div class="form-group">
+                    <label class="form-label">Total Number of Members</label>
+                    <input type="number" id="severalCountInput" class="form-input" min="1" max="${totalGroupMembers}" placeholder="e.g. 5">
+                </div>
+                <div id="severalError" style="color:#ef4444; font-size:12px; margin-bottom:10px;" class="hidden"></div>
+                <button class="btn btn-primary" onclick="app.renderSeveralMemberInputs('${encodeURIComponent(decodedGroupName)}', ${totalGroupMembers})">Continue</button>
+            </div>
+        `;
+        this.updateModalContent('Add Several Members', html, () => this.sendToOtherMember(decodedGroupName));
+    },
+    renderSeveralMemberInputs(groupName, max) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const input = document.getElementById('severalCountInput');
+        const count = parseInt(input ? input.value : 0);
+        const errorDiv = document.getElementById('severalError');
+        
+        if (isNaN(count) || count < 1 || count > max) {
+            if (errorDiv) {
+                errorDiv.innerText = `Please enter a valid number between 1 and ${max}.`;
+                errorDiv.classList.remove('hidden');
+            }
+            return;
+        }
+
+        let html = '<div style="text-align:left; max-height:60vh; overflow-y:auto; padding-right:5px;">';
+        html += `<p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Enter A/C numbers for ${count} members:</p>`;
+        
+        for (let i = 1; i <= count; i++) {
+            html += `
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label class="form-label">Member ${i} A/C Number</label>
+                    <input type="text" class="form-input several-member-input" data-index="${i}" placeholder="e.g. 7" inputmode="numeric">
+                </div>
+            `;
+        }
+        
+        html += `
+            <div id="severalVerifyError" style="color:#ef4444; font-size:12px; margin-bottom:10px;" class="hidden"></div>
+            <button class="btn btn-primary" onclick="app.verifySeveralMembers('${encodeURIComponent(decodedGroupName)}')">Verify All Members</button>
+        </div>`;
+        this.updateModalContent(`Enter Details for ${count} Members`, html, () => this.showAddSeveralMembers(decodedGroupName));
+    },
+    verifySeveralMembers(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const inputs = document.querySelectorAll('.several-member-input');
+        const indices = Array.from(inputs).map(i => i.value.trim()).filter(v => v !== '');
+        const errorDiv = document.getElementById('severalVerifyError');
+        
+        if (indices.length < inputs.length) {
+            if (errorDiv) { errorDiv.innerText = "Please fill in all account numbers."; errorDiv.classList.remove('hidden'); }
+            return;
+        }
+
+        const uniqueIndices = new Set(indices);
+        if (uniqueIndices.size !== indices.length) {
+            if (errorDiv) { 
+                errorDiv.innerText = "Each member account number must be unique."; 
+                errorDiv.classList.remove('hidden'); 
+            }
+            return;
+        }
+
+        const group = this.data.userGroups.find(g => g.groupName === decodedGroupName);
+        if (!group) return;
+
+        let verifiedMembers = [];
+        let errors = [];
+
+        indices.forEach((index, idx) => {
+            let foundName = null;
+            for (const key in group) {
+                if ((key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) && key.endsWith('_' + index)) {
+                    foundName = group[key].name || "Member " + index;
+                    break;
+                }
+            }
+            if (foundName) verifiedMembers.push({ name: foundName, index: index });
+            else errors.push(`A/C ${index} (Field ${idx + 1}) not found.`);
+        });
+
+        if (errors.length > 0) {
+            if (errorDiv) { errorDiv.innerText = errors[0]; errorDiv.classList.remove('hidden'); }
+            return;
+        }
+
+        this.data.isMultiMemberFlow = true;
+        this.data.verifiedMembersList = verifiedMembers;
+        this.data.settledMembersData = {}; 
+
+        this.showSeveralMembersSummary(decodedGroupName, verifiedMembers);
+    },
+    showSeveralMembersSummary(groupName, members) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const settledCount = Object.keys(this.data.settledMembersData || {}).length;
+        const totalCount = members.length;
+
+        let html = '<div style="text-align:left;">';
+        
+        if (settledCount === totalCount) {
+             this.renderFinalBulkSummary(decodedGroupName);
+             return;
+        }
+
+        html += `<p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Settle accounts for each member (${settledCount}/${totalCount} verified):</p>`;
+        html += '<div style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto; padding-right:5px;">';
+        
+        members.forEach(m => {
+            const isSettled = this.data.settledMembersData && this.data.settledMembersData[m.index];
+            html += `
+                <button class="modal-list-btn" onclick="app.selectOneMemberFromList('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(m.name)}', '${m.index}')" 
+                        style="text-align:left; padding:15px; display:flex; justify-content:space-between; align-items:center; background:${isSettled ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${isSettled ? '#bcf0da' : '#e2e8f0'}; border-radius:12px; margin-bottom:0;">
+                    <div>
+                        <div style="font-weight:600; font-size:14px; color:${isSettled ? '#065f46' : '#1e293b'}; margin-bottom:2px;">${m.name}</div>
+                        <div style="font-size:11px; color:#64748b;">Member A/C: ${m.index}</div>
+                    </div>
+                    <i class="fa-solid ${isSettled ? 'fa-circle-check' : 'fa-chevron-right'}" style="color:${isSettled ? '#10b981' : 'var(--primary)'}; font-size:12px;"></i>
+                </button>
+            `;
+        });
+        
+        html += '</div></div>';
+        this.updateModalContent('Select Recipient', html, () => this.showAddSeveralMembers(decodedGroupName));
+    },
+    selectOneMemberFromList(groupName, memberName, memberIndex) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const decodedMemberName = decodeURIComponent(memberName);
+        this.data.recipientName = decodedMemberName;
+        this.data.selectedMemberIndex = memberIndex;
+        this.data.sendMode = 'other';
+        const group = this.data.userGroups.find(g => g.groupName === decodedGroupName);
+        const accounts = (group.principles && group.principles.otherContributions) ? group.principles.otherContributions : [];
+        this.data.groupAccounts = accounts;
+        this.data.addedAccounts = [];
+        this.data.errorMessage = '';
+        this.renderAccountForm(decodedGroupName);
+    },
+    toggleMemberCollapse(idx) {
+        const target = document.getElementById(`collapse-${idx}`);
+        const icon = document.getElementById(`chevron-${idx}`);
+        if (target) {
+            const isHidden = target.style.display === 'none';
+            target.style.display = isHidden ? 'block' : 'none';
+            if (icon) {
+                icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                icon.style.color = isHidden ? 'var(--primary)' : '#cbd5e1';
+            }
+        }
+    },
+    removeAccountFromSummary(idx, groupName) {
+        if (this.data.addedAccounts) {
+            this.data.addedAccounts.splice(idx, 1);
+            if (this.data.addedAccounts.length === 0) {
+                this.renderAccountForm(decodeURIComponent(groupName));
+            } else {
+                this.showFinalPaymentSummary(decodeURIComponent(groupName));
+            }
+        }
+    },
+    removeBulkAccountFromSummary(memberIdx, accIdx, groupName) {
+        if (this.data.settledMembersData && this.data.settledMembersData[memberIdx]) {
+            this.data.settledMembersData[memberIdx].accounts.splice(accIdx, 1);
+            if (this.data.settledMembersData[memberIdx].accounts.length === 0) {
+                 delete this.data.settledMembersData[memberIdx];
+            }
+            if (Object.keys(this.data.settledMembersData).length === 0) {
+                 this.showSeveralMembersSummary(decodeURIComponent(groupName), this.data.verifiedMembersList);
+            } else {
+                 this.renderFinalBulkSummary(decodeURIComponent(groupName));
+            }
+        }
+    },
+    removeFullMemberFromSummary(memberIdx, groupName) {
+        if (this.data.settledMembersData && this.data.settledMembersData[memberIdx]) {
+            delete this.data.settledMembersData[memberIdx];
+            if (Object.keys(this.data.settledMembersData).length === 0) {
+                 this.showSeveralMembersSummary(decodeURIComponent(groupName), this.data.verifiedMembersList);
+            } else {
+                 this.renderFinalBulkSummary(decodeURIComponent(groupName));
+            }
+        }
+    },
+    verifyMemberIndex(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const input = document.getElementById('memberIndexInput');
+        const index = input ? input.value.trim() : '';
+        const errorDiv = document.getElementById('memberVerifyError');
+        if (errorDiv) errorDiv.classList.add('hidden');
+        if (!index) {
+            if (errorDiv) { errorDiv.innerText = "Please enter an account number"; errorDiv.classList.remove('hidden'); }
+            return;
+        }
+        const group = this.data.userGroups.find(g => g.groupName === decodedGroupName);
+        if (!group) return;
+        let foundMemberName = null;
+        for (const key in group) {
+            if ((key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) && key.endsWith('_' + index)) {
+                foundMemberName = group[key].name || "Member " + index;
+                break;
+            }
+        }
+        if (foundMemberName) {
+            this.data.recipientName = foundMemberName;
+            this.data.selectedMemberIndex = index;
+            this.data.sendMode = 'other';
+            this.data.isMultiMemberFlow = false;
+            const accounts = (group.principles && group.principles.otherContributions) ? group.principles.otherContributions : [];
+            this.data.groupAccounts = accounts;
+            this.data.addedAccounts = [];
+            this.data.errorMessage = '';
+            this.renderAccountForm(decodedGroupName);
+        } else {
+            if (errorDiv) { errorDiv.innerText = "Account number " + index + " not found."; errorDiv.classList.remove('hidden'); }
+        }
     },
     showToast(msg, type) {
         const toast = document.createElement('div');
@@ -669,10 +1587,29 @@ const app = {
         const percentage = index * (100 / total);
         indicator.style.left = `${percentage}%`;
     },
-    updateModalContent(title, html) { document.getElementById('modalTitle').innerText = title; document.getElementById('modalBody').innerHTML = html; }
+    updateModalContent(title, html, backAction) { 
+        document.getElementById('modalTitle').innerText = title; 
+        document.getElementById('modalBody').innerHTML = html; 
+        const backBtn = document.getElementById('modalBackBtn');
+        if (backAction) {
+            this.data.modalBackAction = backAction;
+            if (backBtn) backBtn.classList.remove('hidden');
+        } else {
+            this.data.modalBackAction = null;
+            if (backBtn) backBtn.classList.add('hidden');
+        }
+    },
+    onModalBack() {
+        if (this.data.modalBackAction) {
+            if (typeof this.data.modalBackAction === 'function') {
+                this.data.modalBackAction();
+            } else if (typeof this.data.modalBackAction === 'string') {
+                new Function(this.data.modalBackAction).call(this);
+            }
+        }
+    }
 };
 document.addEventListener('DOMContentLoaded', () => app.init());
 </script>
 </body>
-</html>
 </html>

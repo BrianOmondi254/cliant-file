@@ -87,21 +87,23 @@
       margin-left: auto;
       margin-right: auto;
       background: #ffffff;
-      padding: 12px 5px;
-      border-radius: 12px;
-      margin-top: -15px;
-      margin-bottom: 25px;
-      border: 1px solid #e2e8f0;
+      padding: 0;
+      border-radius: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      border-left: 1px solid #e2e8f0;
+      border-right: 1px solid #e2e8f0;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       position: relative;
       overflow: hidden;
+      text-decoration: none;
     }
 
     .nav-glider {
       position: absolute;
-      bottom: 0;
+      bottom: 4px;
       height: 2px;
-      background: #0f9d58;
+      background: #4285f4;
       box-shadow: none;
       border-radius: 3px 3px 0 0;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -123,8 +125,12 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    .top-nav-container:hover {
+      color: #4285f4;
+    }
+
     .top-nav-container.active {
-      color: #0f9d58;
+      color: #4285f4;
       text-shadow: none;
     }
 
@@ -147,7 +153,7 @@
     }
 
     .top-nav-container span {
-      font-size: 10px;
+      font-size: 11.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -159,11 +165,11 @@
     .top-nav-container:hover span::after {
       content: '';
       position: absolute;
-      bottom: 0;
+      bottom: 4px;
       left: 0;
       width: 100%;
       height: 2px;
-      background: rgba(15, 157, 88, 0.2);
+      background: rgba(66, 133, 244, 0.2);
       border-radius: 2px;
     }
 
@@ -1162,8 +1168,14 @@
         Agent Service Terminal</p>
 
       <h2 id="headerRole"
-        style="font-size: 0.85rem; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.25); padding: 10px 25px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin-left: -20px; margin-right: -20px; margin-bottom: -15px; background: linear-gradient(135deg, #0f9d58, #34d399); position: relative; z-index: 1;">
-        <i class="fas fa-users-cog" style="font-size: 0.9rem;"></i> Agent Portal
+        style="font-size: 0.85rem; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.25); padding: 10px 25px; color: white; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-left: -20px; margin-right: -20px; margin-bottom: -15px; background: linear-gradient(135deg, #0f9d58, #34d399); position: relative; z-index: 1;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i class="fas fa-users-cog" style="font-size: 0.9rem;"></i> Agent Portal
+        </div>
+        <div style="font-size: 0.8rem; font-weight: 800; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
+          <i class="fas fa-shield-halved" style="font-size: 0.85rem;"></i>
+          <%= agent ? agent.ward : 'Agent' %>
+        </div>
       </h2>
 
       <div
@@ -1188,7 +1200,7 @@
         <!-- DASHBOARD -->
 
 
-        <div class="dashboard-topnav" style="padding: 0 20px 10px;">
+        <div class="dashboard-topnav" style="padding: 0;">
           <!-- TOP NAVIGATION BAR -->
           <div id="topNavBar">
 
@@ -1218,22 +1230,10 @@
           </div>
         </div>
 
-        <div class="dashboard-sidebar" style="padding: 20px;">
+        <div class="dashboard-sidebar" style="padding: 0 20px 20px;">
           <!-- BRAND HEADER -->
           <div class="agent-brand-header">
             <div class="brand-logo">
-              <i class="fas fa-shield-halved"></i>
-              <span>
-                <%= agent ? agent.ward : 'Agent' %>
-              </span>
-            </div>
-            <div class="header-actions">
-              <div class="user-badge">
-                <i class="fas fa-user-circle"></i>
-                <span>
-                  <%= agent ? (agent.name.split(' ')[0]) : ' Agent' %>
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -1470,14 +1470,22 @@
           <!-- MAIN DASHBOARD VIEW (Managed Groups Only) -->
           <div id="agentDashboardView" class="hidden">
             <script>window.managedGroups = <%- JSON.stringify(groups || []) %>;</script>
-            <!-- GROUPS SUB-HEADER -->
-            <div class="groups-sub-nav">
-              <div id="subNavPerf" class="sub-nav-item active" onclick="switchGroupsSubView('performance')">Groups</div>
-              <div id="subNavNewPerf" class="sub-nav-item" onclick="switchGroupsSubView('new-performance')">Performance
+            <!-- GROUPS COLLAPSIBLE NAVIGATION -->
+            <div id="groupsAccordionCollapsible" class="accordion-section" style="margin-bottom: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+              <div class="accordion-header active" onclick="toggleAccordion(this)" style="background: #f8fafc; padding: 15px 20px;">
+                <span style="font-size: 13px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 1px;">
+                  <i class="fa-solid fa-users" style="color: #4285f4; margin-right: 10px;"></i>
+                  Group Accounts Management
+                </span>
+                <i class="fas fa-chevron-down" style="font-size: 12px; color: #94a3b8;"></i>
               </div>
-              <div id="subNavSearch" class="sub-nav-item" onclick="switchGroupsSubView('search')">Search</div>
-              <div id="subNavUpdate" class="sub-nav-item" onclick="switchGroupsSubView('update')">Update</div>
-              <div id="subNavCreate" class="sub-nav-item" onclick="switchGroupsSubView('create')">Create</div>
+              <div class="accordion-content" style="display: block; padding: 15px; background: white;">
+                <div class="groups-sub-nav" style="background: transparent; padding: 0; box-shadow: none; border: none; margin: 0; display: flex; gap: 8px;">
+                  <div id="subNavPerf" class="sub-nav-item active" onclick="switchGroupsSubView('performance')" style="border: 1px solid #e2e8f0; padding:10px;">Groups</div>
+                  <div id="subNavNewPerf" class="sub-nav-item" onclick="switchGroupsSubView('new-performance')" style="border: 1px solid #e2e8f0; padding:10px;">Performance</div>
+                  <div id="subNavCreate" class="sub-nav-item" onclick="switchGroupsSubView('create')" style="border: 1px solid #e2e8f0; padding:10px;">Create</div>
+                </div>
+              </div>
             </div>
 
             <!-- Stats Section Removed -->
@@ -1489,112 +1497,60 @@
                 <h4 style="margin:0; font-size:14px; color:#1e293b;">My Managed Groups</h4>
               </div>
 
-              <div id="managedGroupsAccordions">
-                <!-- Active Groups -->
-                <div class="accordion-section">
-                  <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-check-circle" style="color:#059669; margin-right:8px;"></i> Active
-                      Groups</span>
-                    <div>
-                      <span class="count-tag">
-                        <%= groups.filter(g=> g.principles || g.phase == 3).length %>
-                      </span>
-                      <i class="fas fa-chevron-down"></i>
+              <div id="managedGroupsListProfessional">
+                <% 
+                  // Professional mapping of groups
+                  groups.forEach(g => {
+                    let status = "New Request";
+                    let statusColor = "#4285f4"; // Blue
+                    let statusBg = "#ebf5ff";
+                    
+                    if (g.principles || g.phase == 3) {
+                      status = "Active";
+                      statusColor = "#059669"; // Green
+                      statusBg = "#ecfdf5";
+                    } else if (g.trustee_1) {
+                      status = "Pending Setup";
+                      statusColor = "#d97706"; // Amber
+                      statusBg = "#fffbeb";
+                    }
+                %>
+                  <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
+                    style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: white; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>;">
+                    
+                    <div style="flex: 1;">
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="font-weight: 700; color: #1e293b; font-size: 15px;"><%= g.groupName || 'Unnamed Group' %></span>
+                        <span style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: <%= statusBg %>; color: <%= statusColor %>; text-transform: uppercase; letter-spacing: 0.5px;">
+                          <%= status %>
+                        </span>
+                      </div>
+                      <div style="font-size: 12px; color: #64748b; font-weight: 500;">
+                        <i class="fa-solid fa-map-location-dot" style="margin-right: 4px; opacity: 0.7;"></i>
+                        <%= g.ward || 'General' %> · <%= g.constituency || 'Agent' %>
+                      </div>
                     </div>
-                  </div>
-                  <div class="accordion-content hidden" style="padding: 10px 5px;">
-                    <div id="activeGroupsList">
-                      <% const activeGroups=groups.filter(g=> g.principles || g.phase == 3);
-                        if (activeGroups.length > 0) {
-                        activeGroups.forEach(g => {
-                        %>
-                        <div class="group-item-container" data-name="<%= g.groupName %>"
-                          style="border-left: 3px solid #059669;">
-                          <div class="group-item-header" onclick="handleGroupClick('<%= g.groupName %>', this)">
-                            <span class="group-name clickable-name" style="font-weight:600; color:#0288d1; font-size:14px; text-decoration:underline; cursor:pointer;" title="Click to view details">
-                              <%= g.groupName || 'Unnamed Group' %>
-                            </span>
-                            <i class="fas fa-chevron-right" style="color:#94a3b8; font-size:12px;"></i>
-                          </div>
-                          <div class="group-item-content"></div>
-                        </div>
-                        <% }); } else { %>
-                          <p style="text-align:center; padding:15px; font-size:12px; color:#94a3b8;">No active groups.
-                          </p>
-                          <% } %>
-                    </div>
-                  </div>
-                </div>
 
-                <!-- Pending Groups -->
-                <div class="accordion-section">
-                  <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-clock" style="color:#f57c00; margin-right:8px;"></i> Pending Group</span>
-                    <div>
-                      <span class="count-tag">
-                        <%= groups.filter(g=> g.trustee_1 && !g.principles && g.phase != 3).length %>
-                      </span>
-                      <i class="fas fa-chevron-down"></i>
-                    </div>
-                  </div>
-                  <div class="accordion-content hidden" style="padding: 10px 5px;">
-                    <div id="pendingGroupsList">
-                      <% const pendingGroups=groups.filter(g=> g.trustee_1 && !g.principles && g.phase != 3);
-                        if (pendingGroups.length > 0) {
-                        pendingGroups.forEach(g => {
-                        %>
-                        <div class="group-item-container" data-name="<%= g.groupName %>"
-                          style="border-left: 3px solid #f57c00;">
-                          <div class="group-item-header" onclick="handleGroupClick('<%= g.groupName %>', this)">
-                            <span class="group-name clickable-name" style="font-weight:600; color:#0288d1; font-size:14px; text-decoration:underline; cursor:pointer;" title="Click to view details">
-                              <%= g.groupName || 'Unnamed Group' %>
-                            </span>
-                            <i class="fas fa-chevron-right" style="color:#94a3b8; font-size:12px;"></i>
-                          </div>
-                          <div class="group-item-content"></div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <% if (status === 'Active') { %>
+                        <div style="text-align: right; margin-right: 8px;">
+                          <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Growth</div>
+                          <div style="font-size: 13px; color: #059669; font-weight: 700;">Phase 3</div>
                         </div>
-                        <% }); } else { %>
-                          <p style="text-align:center; padding:15px; font-size:12px; color:#94a3b8;">No pending groups.
-                          </p>
-                          <% } %>
+                      <% } %>
+                      <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 14px;"></i>
                     </div>
                   </div>
-                </div>
-
-                <!-- New Groups -->
-                <div class="accordion-section">
-                  <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-plus-circle" style="color:#0288d1; margin-right:8px;"></i> New Group</span>
-                    <div>
-                      <span class="count-tag">
-                        <%= groups.filter(g=> !g.trustee_1).length %>
-                      </span>
-                      <i class="fas fa-chevron-down"></i>
-                    </div>
+                  <div class="group-item-content" id="content-<%= g.groupName.replace(/\s+/g, '-') %>" style="display: none;"></div>
+                <% }); %>
+                
+                <% if (groups.length === 0) { %>
+                  <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 20px; border: 2px dashed #e2e8f0;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"></i>
+                    <h3 style="color: #64748b; font-size: 16px; margin-bottom: 5px;">No Groups Managed</h3>
+                    <p style="color: #94a3b8; font-size: 12px;">You are not currently managing any group accounts.</p>
                   </div>
-                  <div class="accordion-content hidden" style="padding: 10px 5px;">
-                    <div id="newGroupsListMain">
-                      <% const newGrps=groups.filter(g=> !g.trustee_1);
-                        if (newGrps.length > 0) {
-                        newGrps.forEach(g => {
-                        %>
-                        <div class="group-item-container" data-name="<%= g.groupName %>"
-                          style="border-left: 3px solid #0288d1;">
-                          <div class="group-item-header" onclick="handleGroupClick('<%= g.groupName %>', this)">
-                            <span class="group-name clickable-name" style="font-weight:600; color:#0288d1; font-size:14px; text-decoration:underline; cursor:pointer;" title="Click to view details">
-                              <%= g.groupName || 'Unnamed Group' %>
-                            </span>
-                            <i class="fas fa-chevron-right" style="color:#94a3b8; font-size:12px;"></i>
-                          </div>
-                          <div class="group-item-content"></div>
-                        </div>
-                        <% }); } else { %>
-                          <p style="text-align:center; padding:15px; font-size:12px; color:#94a3b8;">No new requests.
-                          </p>
-                          <% } %>
-                    </div>
-                  </div>
-                </div>
+                <% } %>
               </div>
             </div>
 
@@ -1649,204 +1605,72 @@
                       2 or 3.</p>
                     <% } %>
               </div>
-            </div>
-
+            </di
             <!-- 4. CREATE GROUP SECTION -->
             <div id="createGroupSection" class="hidden">
-              <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; font-size:14px; color:#1e293b;">New Group Requests</h4>
-                <button onclick="showCreateGroupForm()"
-                  style="width:auto; margin:0; padding:6px 12px; font-size:11px; background:#0288d1;">
-                  <i class="fas fa-plus"></i> Manual
+              <div style="background:#f8fafc; border-radius:16px; padding:20px; border:1px solid #e2e8f0;">
+
+                <!-- Group Name -->
+                <div style="margin-bottom:14px;">
+                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Group Name</label>
+                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-users"></i></div>
+                    <input type="text" id="newGroupName" placeholder="Enter group name"
+                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
+                  </div>
+                </div>
+
+                <!-- Phone Number -->
+                <div style="margin-bottom:14px;">
+                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Phone Number</label>
+                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
+                    <input type="tel" id="newGroupPhone" placeholder="07XXXXXXXX" maxlength="10"
+                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
+                  </div>
+                </div>
+
+                <!-- Total Members -->
+                <div style="margin-bottom:14px;">
+                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Total Members</label>
+                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-hashtag"></i></div>
+                    <input type="number" id="newGroupMembers" placeholder="e.g. 15" min="1"
+                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;"
+                      oninput="updateGroupFeePreview()">
+                  </div>
+                </div>
+
+                <!-- Fee Preview -->
+                <div id="groupFeePreview" style="display:none;background:#ecfdf5;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #d1fae5;text-align:center;">
+                  <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Estimated Setup Fee</div>
+                  <div id="groupFeeAmt" style="font-size:24px;font-weight:800;color:#065f46;">KES 0.00</div>
+                  <div id="groupFeeNote" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
+                </div>
+
+                <!-- M-Pesa Number -->
+                <div style="margin-bottom:18px;">
+                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">M-Pesa Number</label>
+                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-mobile-alt"></i></div>
+                    <input type="tel" id="newGroupMpesa" placeholder="07XXXXXXXX" maxlength="10"
+                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button onclick="submitNewGroupCreation()"
+                  style="width:100%;padding:15px;background:#4285f4;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                  <i class="fa-solid fa-users-gear"></i> Create Group Account
+                </button>
+                <p id="newGroupMsg" style="text-align:center;font-size:12px;margin-top:12px;font-weight:600;"></p>
+
+                <button onclick="switchGroupsSubView('performance')"
+                  style="width:100%;padding:10px;background:transparent;color:#94a3b8;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;cursor:pointer;margin-top:8px;">
+                  Cancel
                 </button>
               </div>
-              <div id="newGroupsList">
-                <% const newGroups=groups.filter(g=> !g.trustee_1);
-                  if (newGroups.length > 0) {
-                  newGroups.forEach(g => {
-                  %>
-                  <div class="dashboard-card" style="cursor: pointer; border-left: 3px solid #0288d1;"
-                    onclick="handleGroupClick('<%= g.groupName %>')">
-                    <div style="display:flex; justify-content:space-between; align-items:start;">
-                      <div style="font-weight:600; color:#2c3e50;">
-                        <%= g.groupName %>
-                      </div>
-                      <span class="badge badge-new">New</span>
-                    </div>
-                    <div style="font-size:12px; color:#7f8c8d; margin-top:4px;">
-                      <%= g.phone %> • <%= g.ward %>
-                    </div>
-                  </div>
-                  <% }); } else { %>
-                    <div
-                      style="text-align:center; padding:30px; background:#f8fafc; border-radius:12px; border:1px dashed #cbd5e1;">
-                      <p style="font-size:12px; color:#95a5a6; margin-bottom:15px;">No new requests found.</p>
-                      <button onclick="showCreateGroupForm()"
-                        style="width:auto; display:inline-block; font-size:12px;">Start New Registration</button>
-                    </div>
-                    <% } %>
-
-                      <!-- PENDING PHASE 1 -->
-                      <% const p1Groups=groups.filter(g=> g.trustee_1 && g.phase == 1);
-                        if (p1Groups.length > 0) {
-                        %>
-                        <h5
-                          style="margin:20px 0 10px; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:1px;">
-                          In Progress (Phase 1)</h5>
-                        <% p1Groups.forEach(g=> { %>
-                          <div class="dashboard-card" style="cursor: pointer; border-left: 3px solid #f57c00;"
-                            onclick="handleGroupClick('<%= g.groupName %>')">
-                            <div style="display:flex; justify-content:space-between; align-items:start;">
-                              <div style="font-weight:600; color:#2c3e50;">
-                                <%= g.groupName %>
-                              </div>
-                              <span class="badge badge-pending">Pending</span>
-                            </div>
-                            <div style="font-size:12px; color:#7f8c8d; margin-top:4px;">
-                              <%= g.phone %>
-                            </div>
-                          </div>
-                          <% }) %>
-                            <% } %>
-              </div>
-
-              <!-- REGISTRATION STEPS (Nested within Create Group Section) -->
-              <div id="createGroupForm" class="hidden"
-                style="margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
-
-                <!-- HIDDEN STATE INPUTS -->
-                <input type="hidden" id="verifyPhone">
-                <input type="hidden" id="verifyGroup">
-
-                <!-- STEP 2: TOTAL MEMBERS -->
-                <div id="totalMembersStep" class="hidden" style="text-align: center;">
-                  <h4 style="margin: 0 0 10px; font-size: 13px; color: #1e293b;">2. Total Members</h4>
-                  <h3 id="displayGroup" style="color: #34495e; margin-bottom: 15px; font-size: 16px;"></h3>
-
-                  <div style="display: flex; align-items: center; justify-content: center; margin: 20px 0;">
-                    <div
-                      style="background: #1e293b; color: white; padding: 12px 15px; border-radius: 12px 0 0 12px; display: flex; align-items: center; justify-content: center; min-width: 50px; height: 50px;">
-                      <i class="fas fa-users" style="font-size: 20px;"></i>
-                    </div>
-                    <input type="number" id="totalMembersInput" placeholder="15" min="1"
-                      style="height: 50px; border: 2px solid #1e293b; border-left: none; border-radius: 0 12px 12px 0; padding: 10px; font-size: 20px; font-weight: 800; color: #1e293b; width: 120px; text-align: center; background: white; outline: none;">
-                  </div>
-
-                  <button type="button" onclick="validateTotalMembers()"
-                    style="margin-top: 10px; padding: 12px 25px; font-size: 14px; background: #1e293b; color: white; border-radius: 10px; font-weight: 700;">Verify
-                    & Next</button>
-                  <p id="totalMembersMsg" style="margin-top: 15px; font-size: 12px; font-weight: 600;"></p>
-                </div>
-
-                <!-- STEP 3: PAYMENT -->
-                <div id="paymentStep" class="hidden" style="text-align: center;">
-                  <h4
-                    style="margin: 0 0 10px; font-size: 13px; color: #1e293b; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <i class="fas fa-mobile-alt" style="color: #2e7d32;"></i> 3. M-Pesa Integrated Payment
-                  </h4>
-                  <p style="font-size: 10px; color: #64748b; margin-bottom: 15px;">Complete the group registration by
-                    settling the mandatory TBank setup fee.</p>
-                  <div
-                    style="background: #e0f2f1; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1.5px solid #008080;">
-                    <div id="memberCountBlock"
-                      style="display: inline-flex; align-items: center; gap: 10px; background: white; padding: 8px 15px; border-radius: 20px; border: 1px solid #bdf2e9; margin-bottom: 15px; font-weight: 700; color: #00695c;">
-                      <i class="fas fa-users-check" style="color:#008080;"></i>
-                      <span id="displayInputedNumber">0</span> Members
-                    </div>
-                    <h4 style="color: #00695c; margin-bottom: 5px; font-size: 11px; text-transform: uppercase;">Total
-                      fee</h4>
-                    <h2 id="feeDisplay" style="color: #004d40; margin: 0; font-size: 24px; font-weight: 800;">KES 0.00
-                    </h2>
-                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(0,128,128,0.2);">
-                      <p id="feeBreakdown" style="color: #00796b; font-size: 11px; margin: 0; font-weight: 500;"></p>
-                    </div>
-                  </div>
-                  <div class="form-section" style="margin-bottom: 15px; text-align: left;">
-                    <label
-                      style="font-weight: 600; color: #34495e; display: block; margin-bottom: 8px; font-size: 11px;">Payment
-                      Source</label>
-                    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                      <button type="button" class="btn-source" onclick="setPaymentSource('agent')" id="btnAgent"
-                        style="flex:1; background:#f5f5f5; color:#555; border:1px solid #ddd; padding:10px; font-size:11px;">Agent</button>
-                      <button type="button" class="btn-source" onclick="setPaymentSource('phone')" id="btnPhone"
-                        style="flex:1; background:#f5f5f5; color:#555; border:1px solid #ddd; padding:10px; font-size:11px;">Phone</button>
-                    </div>
-                    <div id="phoneInputContainer" class="hidden">
-                      <div class="input-group">
-                        <i class="fas fa-phone"></i>
-                        <input type="number" id="paymentPhoneNumber" placeholder="M-Pesa Number (e.g. 07...)"
-                          style="font-size: 13px;">
-                      </div>
-                      <p style="font-size: 9px; color: #0288d1; margin-top: -8px; text-align: left; padding-left: 5px;">
-                        * An M-Pesa STK Prompt will be sent to this number.</p>
-                    </div>
-                  </div>
-                  <div style="display: flex; gap: 10px;">
-                    <button type="button" onclick="backToTotalMembers()"
-                      style="flex:1; background: #95a5a6; padding: 10px; font-size: 13px;">Back</button>
-                    <button type="button" onclick="approvePayment()"
-                      style="flex:2; background: #008080; padding: 10px; font-size: 13px;">OK</button>
-                  </div>
-                </div>
-
-                <!-- STEP 4: MAIN FORM (used by both NEW and PENDING groups) -->
-                <div id="cAccount" class="hidden"
-                  style="border-left: 3px solid #e2e8f0; padding-left: 12px; margin-top: 10px;">
-                  <div style="text-align:center; margin: 0 0 12px;">
-                    <div style="font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#64748b;">
-                      Group
-                    </div>
-                    <h3 id="displayGroup2" style="margin:4px 0 0; font-size:16px; font-weight:800; color:#1e293b;"></h3>
-                  </div>
-
-                  <h4 class="hidden" style="margin: 0 0 10px; font-size: 13px; color: #1e293b; text-align: center;">Add Group Members
-                  </h4>
-                  <div id="trusteesContainer"></div>
-
-                  <div id="officialsContainer" style="margin-bottom:20px;"></div>
-                  <div id="membersContainer" style="margin-bottom:20px;"></div>
-                  <!-- Inline footer actions: Back (when enabled), Add Member + Review Members -->
-                  <div style="display:flex; gap:10px; margin-top:15px; align-items:center; justify-content:space-between;">
-                    <button type="button" id="cAccountBackBtn" onclick="backFromAddMember()" class="hidden"
-                      style="flex:0 0 auto; padding: 10px 14px; font-size: 12px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; border-radius:999px; font-weight:600; display:flex; align-items:center; gap:6px;">
-                      <i class="fas fa-arrow-left"></i> Back
-                    </button>
-                    <div style="flex:1; display:flex; gap:8px; justify-content:flex-end;">
-                      <button type="button"
-                        onclick="handleDynamicAdd('membersContainer', 'Member', 'fa-user', 1)"
-                        style="padding: 10px 14px; font-size: 12px; border-radius:999px; font-weight:600; background:#f8fafc; color:#475569; border:1px solid #e2e8f0; display:flex; align-items:center; gap:6px;">
-                        <i class="fas fa-user-plus" style="color:#0288d1;"></i> Add Member
-                      </button>
-                      <button type="button" onclick="submitMembers()"
-                        style="padding: 10px 16px; font-size: 12px; border-radius:999px; font-weight:600; background:#0f9d58; color:#ffffff; border:none; display:flex; align-items:center; gap:6px;">
-                        Review Members <i class="fas fa-arrow-right"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- STEP 5: REVIEW -->
-                <div id="reviewStep" class="hidden">
-                  <h4 style="margin: 0 0 10px; font-size: 13px; color: #1e293b; text-align: center;">5. Review &
-                    Finalize</h4>
-                  <div id="reviewList" style="margin-bottom:15px; max-height: 300px; overflow-y: auto;"></div>
-                  <div id="finalizeActionButtons" style="display:flex; gap:10px; margin-top:15px;">
-                    <button type="button" onclick="cancelReview()"
-                      style="flex:1; background:#ef5350; font-size: 12px; padding: 10px;">Edit</button>
-                    <button type="button" onclick="finalizeSubmission()"
-                      style="flex:2; background:#2e7d32; font-size: 12px; padding: 10px;">
-                      Finalize & Save Members <i class="fas fa-check-double"></i>
-                    </button>
-                  </div>
-                  <button type="button" id="continueToConstitutionBtn" class="hidden action-btn" onclick="openConstitutionFromReview()"
-                      style="width: 100%; background: #008080; color: white; border-radius: 10px; padding: 15px; font-weight: 700; font-size: 14px; margin-top: 15px; border: none; cursor: pointer; display: none;">
-                      Continue to Constitution Setup <i class="fas fa-arrow-right"></i>
-                  </button>
-                </div>
-
-              </div>
             </div>
-
             <!-- 5. EMPTY PERFORMANCE SECTION -->
             <div id="emptyPerformanceSection" class="hidden"></div>
 
@@ -1955,133 +1779,141 @@
               <div id="registrationFormPlaceholder" class="hidden"
                 style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;">
               </div>
-            </div>
 
-            <!-- 6. AGENT PROFILE VIEW -->
-            <div id="agentProfileView" class="hidden" style="animation: fadeIn 0.4s ease;">
-              <div class="dashboard-card" style="text-align:center; padding:40px 20px;">
-                <div
-                  style="width:80px; height:80px; background:#f1f5f9; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:20px; border:2px solid #e2e8f0;">
-                  <i class="fas fa-user-circle" style="font-size:50px; color:#94a3b8;"></i>
-                </div>
-                <h3 style="margin-bottom:8px; font-size:22px;">
-                  <%= agent ? agent.name : 'Unknown Agent' %>
-                </h3>
-                <p style="color:#64748b; font-size:14px; margin-bottom:25px;">
-                  <i class="fas fa-phone-alt" style="margin-right:6px; opacity:0.7;"></i>
-                  <%= phoneNumber %>
-                    <br>
-                    <i class="fas fa-map-marker-alt" style="margin-right:6px; opacity:0.7; margin-top:8px;"></i>
-                    <%= agent ? agent.ward : 'N/A' %>
-                </p>
-
-                <div
-                  style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px; text-align:left;">
-                  <h4 style="margin:0 0 12px; font-size:14px; color:#1e293b;">Account Status</h4>
-                  <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;">
-                    <span style="color:#64748b;">Verification Level</span>
-                    <span style="font-weight:700; color:#059669;">Tier 1 Agent</span>
-                  </div>
-                  <div style="display:flex; justify-content:space-between; font-size:13px;">
-                    <span style="color:#64748b;">Assigned Area</span>
-                    <span style="font-weight:700;">
-                      <%= agent ? agent.ward : 'N/A' %>
-                    </span>
-                  </div>
-                </div>
-
-                <button onclick="showAgentDashboard()"
-                  style="width:100%; margin-top:20px; padding:15px; background:#2c3e50; border-radius:12px;">
-                  Back to Dashboard
+              <!-- Main Continue Action (New) -->
+              <div id="detailsContinueAction" class="hidden" style="margin-top: 20px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+                <button id="detailsContinueBtn" onclick="handleDetailsContinue()"
+                  style="width: auto; min-width: 140px; margin: 0 auto; background: #008080; color: white; border-radius: 14px; padding: 11px 22px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(0, 128, 128, 0.15);">
+                  Continue <i class="fas fa-arrow-right" style="font-size: 11px;"></i>
                 </button>
               </div>
-            </div>
 
-            <!-- 7. UNDER CONSTRUCTION VIEW -->
-            <div id="underConstructionView" class="hidden" style="animation: fadeIn 0.4s ease;">
-              <div class="dashboard-card" style="text-align:center; padding:60px 20px; color:#64748b;">
-                <div
-                  style="width:70px; height:70px; background:#fff7ed; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:25px;">
-                  <i class="fas fa-tools" style="font-size:32px; color:#f97316;"></i>
+              <!-- Constitution Step Flow (NOW INLINE) -->
+              <div id="constitutionSetupView" class="hidden" style="margin-top:25px; border-radius:16px; border:1px solid #e2e8f0; background:#fff; overflow:hidden; animation: slideDown 0.4s ease;">
+                <div style="background:#008080; padding:18px; color:white; text-align:center;">
+                  <h3 style="margin:0; font-size:16px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;">
+                    Group Principles / Constitution Set Up
+                  </h3>
+                  <p style="margin:5px 0 0; font-size:10px; opacity:0.9; font-weight:500;">Configure activation rules for this group</p>
                 </div>
-                <h4 style="margin:0; font-size:18px; color:#1e293b;">Feature Under Construction</h4>
-                <p
-                  style="font-size:14px; margin-top:12px; max-width:250px; margin-left:auto; margin-right:auto; line-height:1.5;">
-                  We are currently building this section to provide you with better agent tools.
-                </p>
-                <button onclick="showAgentDashboard()"
-                  style="width:auto; margin-top:25px; padding:10px 25px; font-size:13px; background:#2c3e50; border-radius:10px;">
-                  Return to Hub
-                </button>
-              </div>
-            </div>
+
+                <div style="overflow:hidden; position:relative;">
+                  <div id="constitutionStepFlow" class="step-flow-container">
+                    <!-- Step 0: Verification -->
+                    <div id="constitutionVerifySection" class="step-section">
+                      <!-- Instruction Header -->
+                      <div style="text-align:center; padding: 25px 20px 20px;">
+                        <div style="width:55px; height:55px; background:#e0f2f1; color:#008080; border-radius:16px; display:inline-flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:15px; transform: rotate(-3deg); box-shadow: 0 8px 20px rgba(0, 128, 128, 0.1);">
+                          <i class="fas fa-file-shield"></i>
+                        </div>
+                        <h4 style="color:#1e293b; margin:0 0 8px; font-size:17px; font-weight:800;">Constitution Access</h4>
+                        <p style="color:#64748b; font-size:12px; line-height:1.5; margin:0 auto; max-width:280px;">Enter the <b>Start Key</b> provided by the trustees to activate setup phase.</p>
+                      </div>
+
+                      <div style="padding: 0 25px 30px;">
+                        <!-- Authorized Group Card -->
+                        <div style="background:#f8fafc; padding:15px; border-radius:16px; margin-bottom:25px; text-align:left; border:1px solid #e2e8f0; position:relative;">
+                          <div style="position:absolute; top:0; right:0; padding:3px 8px; background:#e2e8f0; color:#475569; font-size:8px; font-weight:800; border-radius:0 0 0 8px;">AUTHORIZED</div>
+                          <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:36px; height:36px; background:#ffffff; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#008080; border:1px solid #e2e8f0;">
+                              <i class="fas fa-university" style="font-size:14px;"></i>
+                            </div>
+                            <div>
+                              <div id="constGroupNameDisplay" style="font-weight:800; color:#1e293b; font-size:13px; margin-bottom:1px;">-</div>
+                              <div style="font-size:10px; color:#64748b; font-weight:600;"><span id="constChairName">-</span> • <span id="constChairPhone">-</span></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Start Key Input -->
+                        <div class="input-group" style="margin-bottom:25px; text-align:left;">
+                          <label style="display:block; font-size:10px; color:#475569; font-weight:800; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Enter Security Key</label>
+                          <div style="position:relative;">
+                            <input type="text" id="constKeyInput" placeholder="Enter key..."
+                              style="text-align:center; font-size:20px; font-weight:800; letter-spacing:2px; color:#1e293b; border: 2px solid #e2e8f0; padding: 12px; width:100%; border-radius:12px; background:#ffffff; outline:none;">
+                            <i class="fas fa-key" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px;"></i>
+                          </div>
+                          <p id="constKeyError" style="color: #ef4444; font-size: 10px; font-weight: 700; margin-top: 8px; padding-left: 4px; min-height: 12px;"></p>
+                        </div>
+
+                        <div style="display:flex; gap:10px;">
+                          <button onclick="exitConstitutionSetup()"
+                            style="flex:1; background:#f1f5f9; color:#64748b; border-radius:12px; padding:16px; font-weight:700; font-size:14px; border:none; cursor:pointer;">
+                            Cancel
+                          </button>
+                          <button onclick="saveConstitutionKey()"
+                            style="flex:2.5; background: #008080; color: white; border-radius: 12px; padding: 16px; font-weight: 800; font-size: 14px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 8px 15px rgba(0, 128, 128, 0.2);">
+                            Authenticate & Access <i class="fas fa-lock-open"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <!-- Step 1-8 are following below, correctly nested inside constitutionStepFlow -->
+
+                    <!-- Note: Steps 1-8 below are moved from the deleted modal ... -->
+
 
           </div> <!-- End dashboard-main-content -->
 
-        </div>
-
-        <!-- Constitution Key Modal -->
-        <div id="constitutionModal" class="hidden"
-          style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-          <div
-            style="background:white; padding:0; border-radius:12px; width:95%; max-width:450px; text-align:center; box-shadow:0 10px-30px rgba(0,0,0,0.2); overflow:hidden;">
-            <!-- Main Modal Header -->
-            <div style="background:#008080; padding:18px; color:white;">
-              <h3 style="margin:0; font-size:18px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase;">
-                Group Principles / Constitution Set Up
+          <!-- 6. AGENT PROFILE VIEW -->
+          <div id="agentProfileView" class="hidden" style="animation: fadeIn 0.4s ease;">
+            <div class="dashboard-card" style="text-align:center; padding:40px 20px;">
+              <div
+                style="width:80px; height:80px; background:#f1f5f9; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:20px; border:2px solid #e2e8f0;">
+                <i class="fas fa-user-circle" style="font-size:50px; color:#94a3b8;"></i>
+              </div>
+              <h3 style="margin-bottom:8px; font-size:22px;">
+                <%= agent ? agent.name : 'Unknown Agent' %>
               </h3>
-              <p style="margin:5px 0 0; font-size:11px; opacity:0.9; font-weight:500;">Complete all steps to activate
-                the group account</p>
-            </div>
+              <p style="color:#64748b; font-size:14px; margin-bottom:25px;">
+                <i class="fas fa-phone-alt" style="margin-right:6px; opacity:0.7;"></i>
+                <%= phoneNumber %>
+                  <br>
+                  <i class="fas fa-map-marker-alt" style="margin-right:6px; opacity:0.7; margin-top:8px;"></i>
+                  <%= agent ? agent.ward : 'N/A' %>
+              </p>
 
-            <div style="overflow:hidden;">
-              <div id="constitutionStepFlow" class="step-flow-container">
-                <!-- Step 0: Verification -->
-                <div id="constitutionVerifySection" class="step-section">
-                  <div
-                    style="width:50px; height:50px; background:#e0f2f1; color:#00695c; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:15px;">
-                    <i class="fas fa-file-contract"></i>
-                  </div>
-                  <h4 style="color:#2c3e50; margin-bottom:10px; font-size:18px;">Constitution Access</h4>
-                  <p style="color:#666; font-size:14px; margin-bottom:20px; line-height:1.5;">Enter the Start Key
-                    provided by the Trustees<br>to activate constitution access.</p>
-
-                  <div
-                    style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px; text-align:left; border:1px solid #eee;">
-                    <label
-                      style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; color:#95a5a6; margin-bottom:8px;">Group
-                      & Chairperson</label>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                      <div
-                        style="width:32px; height:32px; background:#dfe6e9; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#636e72;">
-                        <i class="fas fa-user"></i>
-                      </div>
-                      <div>
-                        <div id="constGroupNameDisplay"
-                          style="font-weight:700; color:#2c3e50; font-size:13px; margin-bottom:2px;">-</div>
-                        <div style="font-size:12px; color:#5f9ea0;"><span id="constChairName">-</span> (<span
-                            id="constChairPhone">-</span>)</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="input-group" style="margin-bottom:25px;">
-                    <label
-                      style="display:block; text-align:left; font-size:12px; color:#2c3e50; font-weight:600; margin-bottom:5px;">Enter
-                      Start Key</label>
-                    <div style="position:relative;">
-                      <input type="text" id="constKeyInput" placeholder="Enter Key..."
-                        style="text-align:center; font-size:18px; font-weight:600; letter-spacing:1px; color:#2c3e50; border:1px solid #dfe6e9; padding-right:10px; width:100%;">
-                      <i class="fas fa-keyboard" style="left:15px; color:#95a5a6;"></i>
-                    </div>
-                    <p id="constKeyError"
-                      style="color: #ff0000; font-size: 11px; font-weight: 700; margin-top: 5px; text-align: left; min-height: 15px;">
-                    </p>
-                  </div>
-
-                  <button onclick="saveConstitutionKey()"
-                    style="flex:1; background:#008080; margin-top:0; width: auto; font-family:inherit;">Verify</button>
+              <div
+                style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px; text-align:left;">
+                <h4 style="margin:0 0 12px; font-size:14px; color:#1e293b;">Account Status</h4>
+                <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;">
+                  <span style="color:#64748b;">Verification Level</span>
+                  <span style="font-weight:700; color:#059669;">Tier 1 Agent</span>
                 </div>
+                <div style="display:flex; justify-content:space-between; font-size:13px;">
+                  <span style="color:#64748b;">Assigned Area</span>
+                  <span style="font-weight:700;">
+                    <%= agent ? agent.ward : 'N/A' %>
+                  </span>
+                </div>
+              </div>
+
+              <button onclick="showAgentDashboard()"
+                style="width:100%; margin-top:20px; padding:15px; background:#2c3e50; border-radius:12px;">
+                Back to Dashboard
+              </button>
+            </div>
+          </div>
+
+          <!-- 7. UNDER CONSTRUCTION VIEW -->
+          <div id="underConstructionView" class="hidden" style="animation: fadeIn 0.4s ease;">
+            <div class="dashboard-card" style="text-align:center; padding:60px 20px; color:#64748b;">
+              <div
+                style="width:70px; height:70px; background:#fff7ed; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; margin-bottom:25px;">
+                <i class="fas fa-tools" style="font-size:32px; color:#f97316;"></i>
+              </div>
+              <h4 style="margin:0; font-size:18px; color:#1e293b;">Feature Under Construction</h4>
+              <p
+                style="font-size:14px; margin-top:12px; max-width:250px; margin-left:auto; margin-right:auto; line-height:1.5;">
+                We are currently building this section to provide you with better agent tools.
+              </p>
+              <button onclick="showAgentDashboard()"
+                style="width:auto; margin-top:25px; padding:10px 25px; font-size:13px; background:#2c3e50; border-radius:10px;">
+                Return to Hub
+              </button>
+            </div>
+          </div>
+
+
 
                 <!-- Step 1: Duration & Frequency -->
                 <div id="groupSavingPeriodSection" class="step-section hidden" style="text-align:left;">
@@ -2148,7 +1980,7 @@
                   </div>
 
                   <div style="display:flex; gap:10px;">
-                    <button onclick="closeConstitutionModal()"
+                    <button onclick="exitConstitutionSetup()"
                       style="flex:1; background:#95a5a6; margin-top:0; width: auto; font-family:inherit;">Cancel</button>
                     <button onclick="goToGovernanceSetup()"
                       style="flex:2; background:#5f9ea0; margin-top:0; width: auto; font-family:inherit;">
@@ -2889,10 +2721,9 @@
                     </button>
                   </div>
                 </div>
-              </div> <!-- end constitutionStepFlow -->
-            </div> <!-- end modal-content-padding -->
-          </div> <!-- end modal-inner -->
-        </div> <!-- end constitutionModal -->
+                </div> <!-- end constitutionStepFlow -->
+              </div> <!-- end overflow:hidden wrapper -->
+            </div> <!-- end constitutionSetupView -->
   </div>
   </div>
 
@@ -3256,21 +3087,8 @@
 
     function openConstitutionFromReview() {
       const groupName = document.getElementById("displayGroup").innerText;
-      const chairpersonPhone = document.getElementById("verifyPhone").value;
-      const chairName = window.finalMemberData && window.finalMemberData['trustee_1'] ? window.finalMemberData['trustee_1'].name : "Chairperson";
-
-      // Auto-populate modal data without needing reload
-      document.getElementById('constGroupNameDisplay').textContent = groupName;
-      document.getElementById('constChairName').textContent = chairName;
-      document.getElementById('constChairPhone').textContent = chairpersonPhone;
-      document.getElementById('constKeyInput').value = ""; // Clear input
-
-      const modal = document.getElementById('constitutionModal');
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-
-      // Reset slider to step 0
-      scrollToStep(0);
+      window.selectedGroupForDetails = groupName;
+      openConstitutionKeyPrompt();
     }
 
     function showPhoneInput() {
@@ -3839,7 +3657,9 @@
         // Inline view
         placeholder.appendChild(createForm);
         placeholder.classList.remove('hidden');
+        placeholder.style.display = 'block';
         createForm.classList.remove('hidden');
+        createForm.style.display = 'block';
 
         // Ensure steps are reset
         ['cAccount', 'reviewStep', 'paymentStep'].forEach(id => {
@@ -3851,6 +3671,8 @@
 
         // Hide main info to focus on form
         document.getElementById('groupMainInfo').classList.add('hidden');
+        const continueAction = document.getElementById('detailsContinueAction');
+        if (continueAction) continueAction.classList.add('hidden');
       } else {
         // Standard standalone view
         showCreateGroupForm();
@@ -4001,6 +3823,16 @@
       if (membersListSection) membersListSection.classList.remove('hidden');
       const groupMainInfo = document.getElementById('groupMainInfo');
       if (groupMainInfo) groupMainInfo.classList.add('hidden'); // Default hide, show only for active
+
+      const continueAction = document.getElementById('detailsContinueAction');
+      if (continueAction) {
+        // Show for pending groups (Phase 1 or 2)
+        if (group.phase < 3 && !group.principles) {
+          continueAction.classList.remove('hidden');
+        } else {
+          continueAction.classList.add('hidden');
+        }
+      }
 
       if (group.phase == 3 || group.principles) {
         statusText.textContent = "Active";
@@ -4419,6 +4251,8 @@
         if (principlesSection) principlesSection.classList.add('hidden');
         const phaseActions = document.getElementById('phaseActions');
         if (phaseActions) phaseActions.classList.add('hidden');
+        const continueAction = document.getElementById('detailsContinueAction');
+        if (continueAction) continueAction.classList.add('hidden');
       }
 
       // 2. Count existing members from the database group object
@@ -4539,6 +4373,10 @@
         cAccount.style.display = 'block';
       }
 
+      // Hide dashboard Continue button to avoid duplication
+      const continueAction = document.getElementById('detailsContinueAction');
+      if (continueAction) continueAction.classList.add('hidden');
+
       // 4. Reset Tracking
       window.officialsInDb = officials;
       window.membersInDb = members;
@@ -4594,21 +4432,108 @@
     function backFromAddMember() {
       const groupName = window.selectedGroupForDetails;
 
-      // Hide the registration form placeholder
       const placeholder = document.getElementById('registrationFormPlaceholder');
       if (placeholder) placeholder.classList.add('hidden');
 
-      // Hide cAccountBackBtn again
       const backBtn = document.getElementById('cAccountBackBtn');
       if (backBtn) backBtn.classList.add('hidden');
 
-      // Restore the phaseActions buttons
       const phaseActions = document.getElementById('phaseActions');
       if (phaseActions) phaseActions.classList.remove('hidden');
 
-      // Scroll back up to the details header
+      // Re-show continue action if it was hidden
+      const continueAction = document.getElementById('detailsContinueAction');
+      const group = window.managedGroups.find(g => g.groupName === groupName);
+      if (continueAction && group && group.phase < 3) {
+        continueAction.classList.remove('hidden');
+      }
+
       const detailsView = document.getElementById('groupDetailsView');
       if (detailsView) detailsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function handleDetailsContinue() {
+      const groupName = window.selectedGroupForDetails;
+      const group = window.managedGroups.find(g => g.groupName === groupName);
+      if (!group) return;
+
+      const personKeys = Object.keys(group).filter(k => k.match(/^(trustee|official|member)_\d+$/));
+      const total = personKeys.length;
+      const target = group.totalProposedMembers || 15;
+
+      if (total >= target) {
+        // Quorum met: Continue to Constitution Setup
+        openConstitutionKeyPrompt();
+      } else {
+        // Quorum NOT met: Continue with Member Registration
+        showRegistrationFormFromDetails();
+      }
+    }
+
+    function openConstitutionKeyPrompt() {
+      const groupName = window.selectedGroupForDetails;
+      if (!groupName) {
+         console.warn("No group selected for details");
+         return;
+      }
+      const group = window.managedGroups.find(g => g.groupName === groupName);
+      if (!group) return;
+
+      // Ensure the details container itself is visible
+      const detailsView = document.getElementById('groupDetailsView');
+      if (detailsView) detailsView.classList.remove('hidden');
+
+      // Populate inline verification card
+      const groupNameEl = document.getElementById('constGroupNameDisplay');
+      const chairNameEl = document.getElementById('constChairName');
+      const chairPhoneEl = document.getElementById('constChairPhone');
+      const keyInput = document.getElementById('constKeyInput');
+
+      if (groupNameEl) groupNameEl.textContent = group.groupName || groupName;
+      if (chairNameEl) chairNameEl.textContent = group.trustee_1 || "Chairperson";
+      if (chairPhoneEl) chairPhoneEl.textContent = group.phone || "N/A";
+      if (keyInput) keyInput.value = ""; 
+
+      // Show Setup Inline View
+      hideConstitutionSiblings();
+      const setupView = document.getElementById('constitutionSetupView');
+      if (setupView) {
+        setupView.classList.remove('hidden');
+        setupView.style.display = 'block'; // Force display
+      }
+
+      // Scroll to the start of the setup flow
+      if (setupView) {
+        setupView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      // Reset to Step 0 (Verification)
+      scrollToStep(0);
+    }
+
+    function hideConstitutionSiblings() {
+      const ids = [
+        'registrationFormPlaceholder', 
+        'phaseStatusRow', 
+        'existingMembersAccordion', 
+        'groupMainInfo', 
+        'principlesSection', 
+        'phaseActions', 
+        'detailsContinueAction'
+      ];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+
+    function exitConstitutionSetup() {
+      const setupView = document.getElementById('constitutionSetupView');
+      if (setupView) setupView.classList.add('hidden');
+
+      // Re-trigger handleGroupClick to restore normal view
+      const groupName = window.selectedGroupForDetails;
+      if (groupName) handleGroupClick(groupName);
     }
 
     function verifySubmittedMembers() {
@@ -5078,18 +5003,71 @@
       } else if (view === 'create') {
         document.getElementById('createGroupSection').classList.remove('hidden');
         document.getElementById('subNavCreate').classList.add('active');
+        // Reset to Step 1 every time Create is opened
+        const s1 = document.getElementById('verifyGroupStep');
+        const s2 = document.getElementById('totalMembersStep');
+        const s3 = document.getElementById('paymentStep');
+        if (s1) s1.style.display = 'block';
+        if (s2) s2.classList.add('hidden');
+        if (s3) s3.classList.add('hidden');
+        const d1 = document.getElementById('dot1');
+        const d2 = document.getElementById('dot2');
+        const d3 = document.getElementById('dot3');
+        if (d1) { d1.style.background='#4285f4'; d1.style.color='white'; }
+        if (d2) { d2.style.background='#e2e8f0'; d2.style.color='#94a3b8'; }
+        if (d3) { d3.style.background='#e2e8f0'; d3.style.color='#94a3b8'; }
+      }
+    }
 
-        // Default to showing the list, hiding the actual form
-        const reqList = document.getElementById('newGroupsList');
-        if (reqList) reqList.classList.remove('hidden');
-        const createForm = document.getElementById('createGroupForm');
-        if (createForm) createForm.classList.add('hidden');
+    function updateGroupFeePreview() {
+      const count = parseInt(document.getElementById('newGroupMembers').value);
+      const preview = document.getElementById('groupFeePreview');
+      const feeAmt = document.getElementById('groupFeeAmt');
+      const feeNote = document.getElementById('groupFeeNote');
+      if (count && count > 0) {
+        const fee = count * 100;
+        feeAmt.textContent = 'KES ' + fee.toLocaleString() + '.00';
+        feeNote.textContent = count + ' members × KES 100 setup fee';
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    }
 
-        // Ensure specific steps are hidden if they were somehow open
-        ['totalMembersStep', 'paymentStep', 'cAccount', 'reviewStep'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.classList.add('hidden');
+    async function submitNewGroupCreation() {
+      const name = document.getElementById('newGroupName').value.trim();
+      const phone = document.getElementById('newGroupPhone').value.trim();
+      const members = parseInt(document.getElementById('newGroupMembers').value);
+      const mpesa = document.getElementById('newGroupMpesa').value.trim();
+      const msg = document.getElementById('newGroupMsg');
+
+      if (!name) { msg.style.color='#ef4444'; msg.textContent='Enter a group name.'; return; }
+      if (!phone || phone.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid phone number.'; return; }
+      if (!members || members < 1) { msg.style.color='#ef4444'; msg.textContent='Enter a valid member count.'; return; }
+      if (!mpesa || mpesa.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid M-Pesa number.'; return; }
+
+      msg.style.color='#4285f4'; msg.textContent='Creating group & initiating payment...';
+
+      try {
+        const res = await fetch('/agent/create-group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupName: name, phone, totalMembers: members, mpesaPhone: mpesa })
         });
+        const result = await res.json();
+        if (result.success) {
+          msg.style.color='#059669';
+          msg.textContent='Group created! STK push sent to ' + mpesa + '.';
+          document.getElementById('newGroupName').value = '';
+          document.getElementById('newGroupPhone').value = '';
+          document.getElementById('newGroupMembers').value = '';
+          document.getElementById('newGroupMpesa').value = '';
+          document.getElementById('groupFeePreview').style.display = 'none';
+        } else {
+          msg.style.color='#ef4444'; msg.textContent = result.message || 'Failed to create group.';
+        }
+      } catch(e) {
+        msg.style.color='#ef4444'; msg.textContent='Server error. Try again.';
       }
     }
 
@@ -5134,24 +5112,7 @@
 
 
 
-    function openConstitutionKeyPrompt() {
-      const groupName = document.getElementById('detailsGroupName').textContent;
-      if (!groupName) return;
 
-      const group = window.managedGroups.find(g => g.groupName === groupName);
-
-      document.getElementById('constGroupNameDisplay').textContent = groupName;
-      document.getElementById('constChairName').textContent = (group && group.trustee_1_name) || "Unknown";
-      document.getElementById('constChairPhone').textContent = (group && group.trustee_1_phone) || "Unknown";
-      document.getElementById('constKeyInput').value = ""; // Clear
-
-      const modal = document.getElementById('constitutionModal');
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-
-      // Reset slider to step 0
-      scrollToStep(0);
-    }
 
     function scrollToStep(stepIndex) {
       const flow = document.getElementById('constitutionStepFlow');
@@ -6114,9 +6075,7 @@
     }
 
     function closeConstitutionModal() {
-      const modal = document.getElementById('constitutionModal');
-      modal.classList.add('hidden');
-      modal.style.display = 'none';
+      exitConstitutionSetup();
     }
 
     function showAgentDashboardAndReload() {

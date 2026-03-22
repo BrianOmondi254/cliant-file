@@ -213,6 +213,28 @@ router.get("/", (req, res) => {
     // Check if user has a personal PIN in data.json
     const usersFile = path.join(__dirname, "../data.json");
     const users = readJSON(usersFile, []);
+    
+    const getUserName = (phoneNumber) => {
+        if (!phoneNumber) return null;
+        const normalized = norm(phoneNumber);
+        const u = users.find(user => norm(user.phoneNumber) === normalized);
+        if (!u) return null;
+        return `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim();
+    };
+
+    // Augment userGroups with member names
+    userGroups.forEach(group => {
+        Object.keys(group).forEach(key => {
+            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+                const item = group[key];
+                if (item && typeof item === 'object' && item.phone) {
+                    const fetchedName = getUserName(item.phone);
+                    if (fetchedName) item.name = fetchedName;
+                }
+            }
+        });
+    });
+
     const currentUser = users.find(u => norm(u.phoneNumber) === norm(phone));
     const hasPersonalPin = !!(currentUser && currentUser.personalPin);
 
