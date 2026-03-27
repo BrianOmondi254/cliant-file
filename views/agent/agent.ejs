@@ -1483,7 +1483,7 @@
                 <div class="groups-sub-nav" style="background: transparent; padding: 0; box-shadow: none; border: none; margin: 0; display: flex; gap: 8px;">
                   <div id="subNavPerf" class="sub-nav-item active" onclick="switchGroupsSubView('performance')" style="border: 1px solid #e2e8f0; padding:10px;">Groups</div>
                   <div id="subNavNewPerf" class="sub-nav-item" onclick="switchGroupsSubView('new-performance')" style="border: 1px solid #e2e8f0; padding:10px;">Performance</div>
-                  <div id="subNavCreate" class="sub-nav-item" onclick="switchGroupsSubView('create')" style="border: 1px solid #e2e8f0; padding:10px;">Create</div>
+                  <div id="subNavCreate" class="sub-nav-item" onclick="switchGroupsSubView('create')" style="border: 1px solid #e2e8f0; padding:10px;">New Request</div>
                 </div>
               </div>
             </div>
@@ -1608,14 +1608,14 @@
             </di
             <!-- 4. CREATE GROUP SECTION -->
             <div id="createGroupSection" class="hidden">
-              <div style="background:#f8fafc; border-radius:16px; padding:20px; border:1px solid #e2e8f0;">
+              <div id="createGroupForm" style="background:#f8fafc; border-radius:16px; padding:20px; border:1px solid #e2e8f0;">
 
                 <!-- Group Name -->
                 <div style="margin-bottom:14px;">
                   <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Group Name</label>
                   <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
                     <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-users"></i></div>
-                    <input type="text" id="newGroupName" placeholder="Enter group name"
+                      <input type="text" id="verifyGroup" placeholder="Enter group name"
                       style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
                   </div>
                 </div>
@@ -1625,8 +1625,9 @@
                   <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Phone Number</label>
                   <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
                     <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
-                    <input type="tel" id="newGroupPhone" placeholder="07XXXXXXXX" maxlength="10"
+                      <input type="tel" id="verifyPhone" placeholder="07XXXXXXXX" maxlength="10"
                       style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
+                    </div>
                   </div>
                 </div>
 
@@ -3902,30 +3903,14 @@
       if (existingMembersAccordion) existingMembersAccordion.classList.add('hidden');
 
       // Update header
-      nameEl.textContent = 'Group Registration';
-      phaseStatusText.textContent = '';
+      nameEl.textContent = group.groupName || 'Group Registration';
+      phaseStatusText.textContent = 'New Request';
 
-      // Set internal state values normally handled by verification/total steps
-      document.getElementById('verifyPhone').value = group.phone;
-      document.getElementById('verifyGroup').value = group.groupName;
-      document.getElementById("displayGroup").textContent = group.groupName;
+      document.getElementById('verifyPhone').value = group.phone || '';
+      document.getElementById('verifyGroup').value = group.groupName || '';
+      document.getElementById("displayGroup").textContent = group.groupName || '';
 
-      // Initialize mock data for fee calculation (NEW GROUP defaults)
-      // Trustees: 3 (fixed), Officials: allow up to 3, Members: standard 15, Max: 100
-      window.tbankCounts = { trustees: 3, officials: 3, members: 15, maxMembers: 100 };
-      window.tbankFees = { newGroup: 100 };
-
-      // Move form into details view placeholder
-      if (placeholder && createForm) {
-        placeholder.appendChild(createForm);
-        placeholder.classList.remove('hidden');
-        createForm.classList.remove('hidden');
-        // Force visible in case an inline style was previously applied
-        placeholder.style.display = 'block';
-        createForm.style.display = 'block';
-      }
-
-      // Hide other steps within form, show Step 2 (Total Members)
+      // Hide other steps within form, show Step 1 & 2
       ['cAccount', 'reviewStep', 'paymentStep'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
@@ -4969,7 +4954,7 @@
       const tms = document.getElementById('totalMembersStep');
       if (tms) tms.classList.remove('hidden');
 
-      // Set some defaults so validation doesn't fail immediately if they use the dropdown manually
+      // Set defaults for validation/UI
       window.tbankCounts = { trustees: 3, officials: 1, members: 15, maxMembers: 100 };
       window.tbankFees = { newGroup: 100 };
     }
@@ -5001,21 +4986,18 @@
         document.getElementById('updateGroupSection').classList.remove('hidden');
         document.getElementById('subNavUpdate').classList.add('active');
       } else if (view === 'create') {
-        document.getElementById('createGroupSection').classList.remove('hidden');
+        // Keep Performance Section visible (display above as default)
+        document.getElementById('groupsPerformanceSection').classList.remove('hidden');
         document.getElementById('subNavCreate').classList.add('active');
-        // Reset to Step 1 every time Create is opened
-        const s1 = document.getElementById('verifyGroupStep');
-        const s2 = document.getElementById('totalMembersStep');
-        const s3 = document.getElementById('paymentStep');
-        if (s1) s1.style.display = 'block';
-        if (s2) s2.classList.add('hidden');
-        if (s3) s3.classList.add('hidden');
-        const d1 = document.getElementById('dot1');
-        const d2 = document.getElementById('dot2');
-        const d3 = document.getElementById('dot3');
-        if (d1) { d1.style.background='#4285f4'; d1.style.color='white'; }
-        if (d2) { d2.style.background='#e2e8f0'; d2.style.color='#94a3b8'; }
-        if (d3) { d3.style.background='#e2e8f0'; d3.style.color='#94a3b8'; }
+        
+        // Show createGroupSection and initialize its internal flow
+        const createSection = document.getElementById('createGroupSection');
+        if (createSection) createSection.classList.remove('hidden');
+        
+        showCreateGroupForm();
+        
+        // Ensure Fee Preview is updated
+        updateGroupFeePreview();
       }
     }
 
@@ -5035,8 +5017,8 @@
     }
 
     async function submitNewGroupCreation() {
-      const name = document.getElementById('newGroupName').value.trim();
-      const phone = document.getElementById('newGroupPhone').value.trim();
+      const name = document.getElementById('verifyGroup').value.trim();
+      const phone = document.getElementById('verifyPhone').value.trim();
       const members = parseInt(document.getElementById('newGroupMembers').value);
       const mpesa = document.getElementById('newGroupMpesa').value.trim();
       const msg = document.getElementById('newGroupMsg');
