@@ -1015,14 +1015,7 @@
             document.body.removeChild(link);
         }
 
-        // Initialize - show Summary content when page loads
-        document.addEventListener('DOMContentLoaded', function () {
-            // Ensure Summary is shown by default
-            const summaryContent = document.getElementById('summaryContent');
-            if (summaryContent) {
-                summaryContent.style.display = 'block';
-            }
-        });
+
 
         async function verifyConstitutionKey() {
             const input = document.getElementById('constitutionKeyInput').value.trim();
