@@ -10,6 +10,7 @@ const tbankRoutes = require("./routes/tbank");
 const agentRoutes = require("./routes/agent");
 const dealerRoutes = require("./routes/dealer");
 const generalRoutes = require("./routes/general");
+const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
 
 
@@ -95,6 +96,7 @@ const protect = (req, res, next) => {
 app.use("/personal", protect, personalRoutes);
 app.use("/agent", protect, agentRoutes);
 app.use("/dealer", protect, dealerRoutes);
+app.use("/proceedings", protect, proceedingsRoutes);
 
 // 4️⃣ Default root redirect → login page or mobile app
 app.get("/compliance", (req, res) => res.redirect("/hq/compliance"));

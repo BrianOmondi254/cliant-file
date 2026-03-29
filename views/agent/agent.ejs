@@ -3119,20 +3119,6 @@
     // verifyChairperson moved to global scope
 
 
-    function toggleAccordion(header) {
-      const content = header.nextElementSibling;
-      const icon = header.querySelector('.fa-chevron-down');
-
-      header.classList.toggle('active');
-      if (content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        if (icon) icon.style.transform = 'rotate(180deg)';
-      } else {
-        content.classList.add('hidden');
-        if (icon) icon.style.transform = 'rotate(0deg)';
-      }
-    }
-
     function validateTotalMembers() {
       const totalInput = document.getElementById("totalMembersInput");
       const total = parseInt(totalInput.value);
@@ -3695,11 +3681,31 @@
 
       const detailsView = document.getElementById('groupDetailsView');
 
-      hideCurrentGroupDetails();
-      window.selectedGroupForDetails = groupName;
-
+      // Toggle the group-item-content div if headerEl is provided
       if (headerEl) {
-        window.currentActiveGroupContainer = headerEl.parentElement;
+        const container = headerEl.parentElement;
+        const content = container.querySelector('.group-item-content');
+        
+        // If this group is already active, hide it
+        if (container.classList.contains('active')) {
+          hideCurrentGroupDetails();
+          return;
+        }
+        
+        // Hide any previously active group
+        hideCurrentGroupDetails();
+        
+        window.selectedGroupForDetails = groupName;
+        window.currentActiveGroupContainer = container;
+        
+        // Show the content div
+        if (content) {
+          content.style.display = 'block';
+        }
+        container.classList.add('active');
+      } else {
+        hideCurrentGroupDetails();
+        window.selectedGroupForDetails = groupName;
       }
 
       // Always append details to global container and hide everything else

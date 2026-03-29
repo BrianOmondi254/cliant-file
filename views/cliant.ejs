@@ -325,6 +325,83 @@ const app = {
                 </div>
             `;
             this.updateModalContent('Account Statement', h);
+            } else if (action === 'Create Group') {
+                const html = `
+                    <div style="text-align:left;max-height:70vh;overflow-y:auto;padding-right:5px;">
+                        <form id="createGroupForm" onsubmit="return app.handleCreateGroupSubmit(event)">
+                            <div id="cAccountStep">
+                                <h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;">
+                                    <i class="fa-solid fa-users-cog"></i> Create Group Account
+                                </h4>
+                                <div class="form-group">
+                                    <label class="form-label">Group Name</label>
+                                    <input type="text" name="groupName" id="newGroupName" class="form-input" placeholder="e.g. Umoja Savings Group" required>
+                                </div>
+
+                                <div style="border:1px solid #e2e8f0;padding:14px;border-radius:12px;margin-top:14px;background:#f8f9fa;">
+                                    <h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;">
+                                        <i class="fa-solid fa-user-tie"></i> Chairperson Details
+                                    </h4>
+                                    <div class="form-group">
+                                        <label class="form-label">Chairperson Phone</label>
+                                        <input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="07XXXXXXXX" maxlength="10" inputmode="numeric" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Chairperson Full Name</label>
+                                        <input type="text" id="newFullNameInput" class="form-input" placeholder="First Middle Last" required oninput="app.parseNewFullName()">
+                                    </div>
+                                    <small style="color:red;font-size:0.7rem;display:none;" id="newNameError">Please enter at least 2 names.</small>
+                                    <input type="hidden" name="firstName" id="newFirstName">
+                                    <input type="hidden" name="secondName" id="newSecondName">
+                                    <input type="hidden" name="lastName" id="newLastName">
+                                </div>
+
+                                <div style="display:flex;gap:8px;margin-top:14px;">
+                                    <button type="button" class="btn" style="flex:1;background:#e2e8f0;color:#333;" onclick="app.handleGeneralClick()">
+                                        <i class="fa-solid fa-arrow-left"></i> Back
+                                    </button>
+                                    <button type="button" class="btn btn-primary" style="flex:1;" onclick="app.goToRegions()">
+                                        Next <i class="fa-solid fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="gRegionsStep" class="hidden">
+                                <h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;">
+                                    <i class="fa-solid fa-map-marked-alt"></i> Group Location
+                                </h4>
+                                <div class="form-group">
+                                    <label class="form-label">County</label>
+                                    <select name="county" id="newCountySelect" class="form-input" onchange="app.loadNewConstituencies()" required>
+                                        <option value="">-- Select County --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Constituency</label>
+                                    <select name="constituency" id="newConstituencySelect" class="form-input" onchange="app.loadNewWards()" required>
+                                        <option value="">-- Select Constituency --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Ward</label>
+                                    <select name="ward" id="newWardSelect" class="form-input" required>
+                                        <option value="">-- Select Ward --</option>
+                                    </select>
+                                </div>
+                                <div style="display:flex;gap:8px;margin-top:14px;">
+                                    <button type="button" class="btn" style="flex:1;background:#e2e8f0;color:#333;" onclick="app.backToGroupForm()">
+                                        <i class="fa-solid fa-arrow-left"></i> Back
+                                    </button>
+                                    <button type="submit" class="btn btn-primary" style="flex:1;">
+                                        Submit <i class="fa-solid fa-check-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                `;
+                this.updateModalContent('Create Group Account', html, () => this.handleGeneralClick());
+                this.initNewCounties();
         }
     },
     closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
@@ -347,149 +424,7 @@ const app = {
         this.updateBadge();
     },
     renderGeneralView(container) {
-        const headerRole = document.getElementById('headerRole');
-        if (headerRole) headerRole.innerHTML = '<i class="fas fa-users"></i> Create Group';
-        container.innerHTML = `
-            <div style="padding: 5px 0;">
-              <!-- Header -->
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <div>
-                  <h4 style="margin: 0 0 4px; font-size: 15px; font-weight: 800; color: #1e293b;">Register New Group</h4>
-                  <p style="margin: 0; font-size: 12px; color: #94a3b8;">Complete all steps to register a group account</p>
-                </div>
-                <div style="width: 42px; height: 42px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4285f4; font-size: 18px;">
-                  <i class="fa-solid fa-users-gear"></i>
-                </div>
-              </div>
-
-              <!-- STEP INDICATOR -->
-              <div id="gStepIndicator" style="display: flex; align-items: center; gap: 0; margin-bottom: 25px; justify-content: center;">
-                <div id="gDot1" style="width:28px;height:28px;border-radius:50%;background:#4285f4;color:white;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</div>
-                <div style="flex:1;height:2px;background:#e2e8f0;max-width:50px;"></div>
-                <div id="gDot2" style="width:28px;height:28px;border-radius:50%;background:#e2e8f0;color:#94a3b8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</div>
-                <div style="flex:1;height:2px;background:#e2e8f0;max-width:50px;"></div>
-                <div id="gDot3" style="width:28px;height:28px;border-radius:50%;background:#e2e8f0;color:#94a3b8;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</div>
-              </div>
-
-              <!-- STEP 1: LOOKUP -->
-              <div id="gStep1">
-                <div style="background:#f8fafc;border-radius:16px;padding:25px;border:1px solid #e2e8f0;">
-                  <p style="text-align:center;font-size:12px;color:#64748b;margin-bottom:20px;">Enter the group's phone number to look up or create the account</p>
-                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:15px;">
-                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
-                    <input type="tel" id="gGroupPhone" placeholder="07XXXXXXXX" maxlength="10"
-                      style="flex:1;border:none;outline:none;padding:14px 0;font-size:15px;font-weight:600;color:#1e293b;background:transparent;">
-                  </div>
-                  <button onclick="generalCreateStep1()" style="width:100%;padding:14px;background:#4285f4;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
-                    <i class="fas fa-search" style="margin-right:8px;"></i>Look Up Group
-                  </button>
-                  <p id="gVerifyMsg" style="text-align:center;font-size:12px;margin-top:12px;font-weight:600;"></p>
-                </div>
-              </div>
-
-              <!-- STEP 2: MEMBERS -->
-              <div id="gStep2" style="display:none;">
-                <div style="background:#f8fafc;border-radius:16px;padding:25px;border:1px solid #e2e8f0;text-align:center;">
-                  <div style="font-size:13px;font-weight:700;color:#4285f4;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Group Found</div>
-                  <h3 id="gGroupName" style="color:#1e293b;margin:0 0 20px;font-size:18px;font-weight:800;"></h3>
-                  <p style="font-size:12px;color:#64748b;margin-bottom:20px;">How many members will this group start with?</p>
-                  <div style="display:inline-flex;align-items:center;background:white;border:2px solid #4285f4;border-radius:14px;overflow:hidden;margin-bottom:20px;">
-                    <div style="padding:12px 16px;background:#4285f4;color:white;"><i class="fas fa-users" style="font-size:18px;"></i></div>
-                    <input type="number" id="gMemberCount" placeholder="15" min="1"
-                      style="border:none;outline:none;padding:12px 16px;font-size:22px;font-weight:800;color:#1e293b;width:110px;text-align:center;background:transparent;">
-                  </div>
-                  <button onclick="generalCreateStep2()" style="width:100%;padding:14px;background:#1e293b;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
-                    Confirm & Proceed <i class="fas fa-arrow-right" style="margin-left:8px;"></i>
-                  </button>
-                  <p id="gMembersMsg" style="margin-top:12px;font-size:12px;font-weight:600;"></p>
-                </div>
-              </div>
-
-              <!-- STEP 3: PAYMENT -->
-              <div id="gStep3" style="display:none;">
-                <div style="background:#f0fdf4;border-radius:16px;padding:25px;border:1.5px solid #bbf7d0;text-align:center;">
-                  <div style="font-size:13px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
-                    <i class="fas fa-mobile-alt" style="margin-right:6px;"></i>M-Pesa Payment
-                  </div>
-                  <p style="font-size:12px;color:#64748b;margin:8px 0 20px;">Complete registration by settling the TBank setup fee</p>
-                  <div style="background:white;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #d1fae5;">
-                    <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:8px;">Total Setup Fee</div>
-                    <div id="gFeeDisplay" style="font-size:30px;font-weight:800;color:#065f46;">KES 0.00</div>
-                    <div id="gFeeBreakdown" style="font-size:11px;color:#6b7280;margin-top:6px;font-weight:500;"></div>
-                    <div style="display:inline-flex;align-items:center;gap:8px;background:#ecfdf5;padding:6px 14px;border-radius:20px;margin-top:10px;font-size:13px;font-weight:700;color:#059669;">
-                      <i class="fas fa-users"></i>
-                      <span id="gMemberDisplay">0</span> Members
-                    </div>
-                  </div>
-                  <div style="text-align:left;margin-bottom:18px;">
-                    <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">M-Pesa Phone Number</label>
-                    <div style="display:flex;align-items:center;background:white;border:1.5px solid #d1d5db;border-radius:12px;overflow:hidden;">
-                      <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
-                      <input type="tel" id="gMpesaPhone" placeholder="07XXXXXXXX" maxlength="10"
-                        style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
-                    </div>
-                  </div>
-                  <button onclick="generalCreateStep3()" style="width:100%;padding:14px;background:#059669;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
-                    <i class="fas fa-lock" style="margin-right:8px;"></i>Pay & Complete Registration
-                  </button>
-                  <p id="gPaymentMsg" style="text-align:center;font-size:12px;margin-top:12px;font-weight:600;"></p>
-                  <button onclick="app.switchRole('General')" style="width:100%;padding:10px;background:transparent;color:#94a3b8;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;cursor:pointer;margin-top:8px;">Cancel</button>
-                </div>
-              </div>
-            </div>
-        `;
-        // Attach helper functions to window for inline onclick
-        window.generalCreateStep1 = async () => {
-            const phone = document.getElementById('gGroupPhone').value.trim();
-            const msg = document.getElementById('gVerifyMsg');
-            if (!phone || phone.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid 10-digit phone number.'; return; }
-            msg.style.color='#4285f4'; msg.textContent='Looking up group...';
-            try {
-                const res = await fetch('/agent/lookup-group?phone=' + phone);
-                const data = await res.json();
-                if (data.groupName) {
-                    document.getElementById('gGroupName').textContent = data.groupName;
-                    window._gGroupData = data;
-                    document.getElementById('gStep1').style.display = 'none';
-                    document.getElementById('gStep2').style.display = 'block';
-                    document.getElementById('gDot1').style.background = '#22c55e';
-                    document.getElementById('gDot2').style.background = '#4285f4';
-                    document.getElementById('gDot2').style.color = 'white';
-                } else { msg.style.color='#ef4444'; msg.textContent = data.message || 'Group not found.'; }
-            } catch(e) { msg.style.color='#ef4444'; msg.textContent='Server error. Try again.'; }
-        };
-        window.generalCreateStep2 = () => {
-            const count = parseInt(document.getElementById('gMemberCount').value);
-            const msg = document.getElementById('gMembersMsg');
-            if (!count || count < 1) { msg.style.color='#ef4444'; msg.textContent='Enter a valid member count.'; return; }
-            const fee = count * 100;
-            document.getElementById('gFeeDisplay').textContent = 'KES ' + fee.toLocaleString() + '.00';
-            document.getElementById('gFeeBreakdown').textContent = count + ' members × KES 100 setup fee';
-            document.getElementById('gMemberDisplay').textContent = count;
-            document.getElementById('gStep2').style.display = 'none';
-            document.getElementById('gStep3').style.display = 'block';
-            document.getElementById('gDot2').style.background = '#22c55e';
-            document.getElementById('gDot3').style.background = '#4285f4';
-            document.getElementById('gDot3').style.color = 'white';
-        };
-        window.generalCreateStep3 = async () => {
-            const phone = document.getElementById('gMpesaPhone').value.trim();
-            const msg = document.getElementById('gPaymentMsg');
-            if (!phone || phone.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid M-Pesa number.'; return; }
-            msg.style.color='#059669'; msg.textContent='Sending STK push...';
-            try {
-                const res = await fetch('/agent/create-group-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, groupData: window._gGroupData, members: parseInt(document.getElementById('gMemberDisplay').textContent) })
-                });
-                const result = await res.json();
-                if (result.success) {
-                    msg.style.color='#059669'; msg.textContent='Payment initiated! Check your phone.';
-                    app.showToast('STK Push sent successfully!', 'success');
-                } else { msg.style.color='#ef4444'; msg.textContent = result.message || 'Payment failed.'; }
-            } catch(e) { msg.style.color='#ef4444'; msg.textContent='Server error. Try again.'; }
-        };
+        window.location.href = '/general';
     },
     renderPersonalView(container) {
         const headerRole = document.getElementById('headerRole');
@@ -683,6 +618,86 @@ const app = {
             this.showToast('Full statement available in your Inbox soon.', 'success');
         }, 1500);
     },
+    goToRegions() {
+        const name = document.getElementById('newGroupName').value.trim();
+        const phone = document.getElementById('newChairPhone').value.trim();
+        const fullName = document.getElementById('newFullNameInput').value.trim();
+        if (!name) { this.showToast('Please enter a group name.', 'error'); return; }
+        if (!phone || phone.length < 10) { this.showToast('Enter a valid 10-digit phone number.', 'error'); return; }
+        if (fullName.split(/\s+/).length < 2) { document.getElementById('newNameError').style.display = 'block'; return; }
+        document.getElementById('newNameError').style.display = 'none';
+        document.getElementById('cAccountStep').classList.add('hidden');
+        document.getElementById('gRegionsStep').classList.remove('hidden');
+    },
+    backToGroupForm() {
+        document.getElementById('gRegionsStep').classList.add('hidden');
+        document.getElementById('cAccountStep').classList.remove('hidden');
+    },
+    parseNewFullName() {
+        const full = document.getElementById('newFullNameInput').value.trim();
+        const parts = full.split(/\s+/);
+        document.getElementById('newFirstName').value = parts[0] || '';
+        document.getElementById('newSecondName').value = parts[1] || '';
+        document.getElementById('newLastName').value = parts.slice(2).join(' ') || '';
+    },
+    initNewCounties() {
+        const countySelect = document.getElementById('newCountySelect');
+        if (!countySelect) return;
+        countySelect.innerHTML = '<option value="">-- Select County --</option>';
+        fetch('/api/locations/counties').then(r => r.json()).then(list => {
+            list.forEach(county => {
+                const opt = document.createElement('option');
+                opt.value = county; opt.textContent = county;
+                countySelect.appendChild(opt);
+            });
+        }).catch(() => this.showToast("Failed to load counties", "error"));
+    },
+    loadNewConstituencies() {
+        const county = document.getElementById('newCountySelect').value;
+        const constituencySelect = document.getElementById('newConstituencySelect');
+        const wardSelect = document.getElementById('newWardSelect');
+        constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!county) return;
+        fetch(`/api/locations/${encodeURIComponent(county)}/constituencies`).then(r => r.json()).then(list => {
+            list.forEach(c => {
+                const opt = document.createElement('option'); opt.value = c; opt.textContent = c;
+                constituencySelect.appendChild(opt);
+            });
+        });
+    },
+    loadNewWards() {
+        const county = document.getElementById('newCountySelect').value;
+        const constituency = document.getElementById('newConstituencySelect').value;
+        const wardSelect = document.getElementById('newWardSelect');
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!county || !constituency) return;
+        fetch(`/api/locations/${encodeURIComponent(county)}/${encodeURIComponent(constituency)}/wards`).then(r => r.json()).then(list => {
+            list.sort().forEach(ward => {
+                const opt = document.createElement('option'); opt.value = ward; opt.textContent = ward;
+                wardSelect.appendChild(opt);
+            });
+        });
+    },
+    async handleCreateGroupSubmit(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        try {
+            const res = await fetch('/general', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.success) {
+                this.showToast('Group request submitted!', 'success');
+                this.closeModal();
+                setTimeout(() => window.location.reload(), 1500);
+            } else { this.showToast(result.message || 'Error', 'error'); }
+        } catch (e) { this.showToast('Server error', 'error'); }
+        return false;
+    },
     handleDealerClick() { 
         if (!this.data.isDealer) { 
             this.showToast('You are not registered as a dealer.', 'error'); 
@@ -690,7 +705,115 @@ const app = {
         } 
         this.switchRole('Dealer'); 
     },
-    handleGeneralClick() { this.switchRole('General'); },
+    handleGeneralClick() {
+        this.closeModal();
+        this.switchRole('General');
+    },
+
+    goToRegions() {
+        const name = document.getElementById('newGroupName').value.trim();
+        const phone = document.getElementById('newChairPhone').value.trim();
+        const fullName = document.getElementById('newFullNameInput').value.trim();
+        if (!name) { this.showToast('Please enter a group name.', 'error'); return; }
+        if (!phone || phone.length < 10) { this.showToast('Enter a valid 10-digit phone number.', 'error'); return; }
+        if (fullName.split(/\s+/).length < 2) { document.getElementById('newNameError').style.display = 'block'; return; }
+        document.getElementById('newNameError').style.display = 'none';
+        document.getElementById('cAccountStep').classList.add('hidden');
+        document.getElementById('gRegionsStep').classList.remove('hidden');
+    },
+    backToGroupForm() {
+        document.getElementById('gRegionsStep').classList.add('hidden');
+        document.getElementById('cAccountStep').classList.remove('hidden');
+    },
+    parseNewFullName() {
+        const full = document.getElementById('newFullNameInput').value.trim();
+        const parts = full.split(/\s+/);
+        document.getElementById('newFirstName').value = parts[0] || '';
+        document.getElementById('newSecondName').value = parts[1] || '';
+        document.getElementById('newLastName').value = parts.slice(2).join(' ') || '';
+    },
+    initNewCounties() {
+        const countySelect = document.getElementById('newCountySelect');
+        if (!countySelect) return;
+        countySelect.innerHTML = '<option value="">-- Select County --</option>';
+        fetch('/api/locations/counties').then(r => r.json()).then(list => {
+            list.forEach(county => {
+                const opt = document.createElement('option');
+                opt.value = county; opt.textContent = county;
+                countySelect.appendChild(opt);
+            });
+        });
+    },
+    loadNewConstituencies() {
+        const county = document.getElementById('newCountySelect').value;
+        const constituencySelect = document.getElementById('newConstituencySelect');
+        const wardSelect = document.getElementById('newWardSelect');
+        constituencySelect.innerHTML = '<option value="">-- Select Constituency --</option>';
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!county) return;
+        fetch(`/api/locations/${encodeURIComponent(county)}/constituencies`).then(r => r.json()).then(list => {
+            list.forEach(c => {
+                const opt = document.createElement('option'); opt.value = c; opt.textContent = c;
+                constituencySelect.appendChild(opt);
+            });
+        });
+    },
+    loadNewWards() {
+        const county = document.getElementById('newCountySelect').value;
+        const constituency = document.getElementById('newConstituencySelect').value;
+        const wardSelect = document.getElementById('newWardSelect');
+        wardSelect.innerHTML = '<option value="">-- Select Ward --</option>';
+        if (!county || !constituency) return;
+        fetch(`/api/locations/${encodeURIComponent(county)}/${encodeURIComponent(constituency)}/wards`).then(r => r.json()).then(list => {
+            if (!Array.isArray(list) || list.length === 0) {
+                const opt = document.createElement('option'); opt.value = ''; opt.textContent = '(No Wards Listed)'; opt.disabled = true;
+                wardSelect.appendChild(opt); return;
+            }
+            list.sort().forEach(ward => {
+                const opt = document.createElement('option'); opt.value = ward; opt.textContent = ward;
+                wardSelect.appendChild(opt);
+            });
+        });
+    },
+    async handleCreateGroupSubmit(event) {
+        event.preventDefault();
+        const wardSelect = document.getElementById('newWardSelect');
+        if (wardSelect && wardSelect.value === 'OTHER') {
+            const manualWard = prompt('Please enter your ward name:');
+            if (!manualWard || !manualWard.trim()) {
+                this.showToast('Please enter your ward name', 'error');
+                return false;
+            }
+            const opt = document.createElement('option');
+            opt.value = manualWard.trim(); opt.text = manualWard.trim();
+            wardSelect.appendChild(opt); wardSelect.value = manualWard.trim();
+        }
+        
+        const formData = new FormData(event.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+            const res = await fetch('/general', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.success) {
+                this.showToast('Group created successfully!', 'success');
+                this.closeModal();
+                if (result.redirect) {
+                    window.location.href = result.redirect;
+                }
+            } else {
+                this.showToast(result.message || 'Failed to create group', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            this.showToast('Server error occurred', 'error');
+        }
+        return false;
+    },
     selectGroupForSend(groupName) {
         const decodedGroupName = decodeURIComponent(groupName);
         this.data.errorMessage = '';
