@@ -10,6 +10,7 @@ const tbankRoutes = require("./routes/tbank");
 const agentRoutes = require("./routes/agent");
 const dealerRoutes = require("./routes/dealer");
 const generalRoutes = require("./routes/general");
+const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
 const agentPerformanceRoutes = require("./routes/agent-performance");
 
@@ -26,7 +27,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* ================= STATIC FILES FOR MOBILE ================= */
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 /* ================= PWA HEADERS ================= */
 // Service Worker caching
@@ -97,6 +98,7 @@ app.use("/personal", protect, personalRoutes);
 app.use("/agent", protect, agentRoutes);
 app.use("/agent", protect, agentPerformanceRoutes);
 app.use("/dealer", protect, dealerRoutes);
+app.use("/proceedings", protect, proceedingsRoutes);
 
 // 4️⃣ Default root redirect → login page or mobile app
 app.get("/compliance", (req, res) => res.redirect("/hq/compliance"));

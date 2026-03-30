@@ -1263,4 +1263,94 @@ router.post("/user-role", (req, res) => {
   res.json({ role: userRole });
 });
 
+
+// GET /general/group/:groupName -> renders group-details.ejs for an active group
+router.get("/group/:groupName", (req, res) => {
+  const userPhone = req.session?.user?.phoneNumber;
+
+  if (!userPhone) {
+    return res.redirect("/login");
+  }
+
+  const groupName = decodeURIComponent(req.params.groupName);
+
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+    writeJSON(generalFile, accounts);
+  }
+
+  const allGroups = flattenData(accounts);
+  const group = allGroups.find(g => g.groupName === groupName);
+
+  if (!group) {
+    return res.render("group-details", { group: null, userRole: null });
+  }
+
+  // Determine logged-in user's role in this group
+  let userRole = null;
+  for (const key in group) {
+    if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+      const info = group[key];
+      if (info && String(info.phone).trim() === String(userPhone).trim()) {
+        userRole = info.type; // 'trustee' | 'official' | 'member'
+        break;
+      }
+    }
+  }
+
+  // If user is not a member of this group, redirect back
+  if (!userRole) {
+    return res.redirect("/general");
+  }
+
+  // Build flat members array for the view
+  const usersFile = path.join(__dirname, "../data.json");
+  const users = readJSON(usersFile, []);
+  const getUserName = (phone) => {
+    const u = users.find(user => norm(user.phoneNumber) === norm(phone));
+    return u ? `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim() : null;
+  };
+
+  group.members = [];
+  const memberKeys = Object.keys(group).filter(k =>
+    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+  );
+
+  memberKeys.forEach(key => {
+    const item = group[key];
+    if (item && typeof item === 'object' && item.phone) {
+      const name = item.name || getUserName(item.phone) || "Unknown";
+      group.members.push({
+        name,
+        phone: item.phone,
+        role: item.type || 'member',
+        title: item.title || item.type || 'Member',
+        id: item.id || ''
+      });
+    }
+  });
+
+  // Sort: Trustees first, Officials second, Members last
+  const roleOrder = { trustee: 1, official: 2, member: 3 };
+  group.members.sort((a, b) => (roleOrder[a.role] || 4) - (roleOrder[b.role] || 4));
+
+  // Compute summary stats
+  const now = new Date();
+  const created = new Date(group.createdAt || now);
+  const diffDays = Math.ceil(Math.abs(now - created) / (1000 * 60 * 60 * 24));
+
+  group.summaryStats = {
+    activeRound: Math.ceil(diffDays / 7) || 1,
+    daysUntilMeeting: 7 - (diffDays % 7),
+    remainRounds: Math.max(0, 52 - Math.ceil(diffDays / 7)),
+    totalMembers: group.members.length
+  };
+
+  // PIN status for Group Account tab
+  group.pinIsSet = !!group.constitutionStartKey;
+
+  return res.render("group-details", { group, userRole });
+});
+
 module.exports = router;
