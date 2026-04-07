@@ -5,9 +5,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>T-BANK INVESTMENT GROUP — Groups' Members Registration Form</title>
+    <title>T-BANK INVESTMENT — Groups' Members Registration Form</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --bg: #f0ece4;
@@ -35,17 +37,30 @@
 
         /* --- Top toolbar --- */
         .toolbar {
-            position: sticky;
-            top: 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             z-index: 100;
             background: rgba(255,255,255,0.85);
             backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
+            border-top: 1px solid var(--border);
             padding: 12px 32px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
+        }
+        .toolbar button:hover {
+            background: var(--accent);
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(11,110,79,0.3);
+        }
+        .toolbar button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
         .toolbar-brand {
             display: flex;
@@ -431,7 +446,7 @@
         /* Progress bar */
         .progress-bar {
             position: fixed;
-            bottom: 0;
+            bottom: 60px;
             left: 0;
             right: 0;
             height: 4px;
@@ -489,7 +504,7 @@
                 padding: 20px 30px;
             }
             .form-page::before { display: none; }
-            .watermark { display: none; }
+
             .info-value.input-mode,
             td .cell-input,
             .sig-pad-wrapper { border-color: #999 !important; background: transparent !important; box-shadow: none !important; }
@@ -530,21 +545,12 @@
 
 <!-- Toolbar -->
 <nav class="toolbar" role="navigation" aria-label="Form actions">
-    <div class="toolbar-brand">
-        <i class="fas fa-landmark"></i>
-        T-BANK Groups' Members Forms
-    </div>
-    <div class="toolbar-actions">
-        <button class="btn btn-secondary" onclick="resetForm()" aria-label="Reset all fields">
-            <i class="fas fa-rotate-left"></i> Reset
-        </button>
-        <button class="btn btn-secondary" onclick="window.print()" aria-label="Print form">
-            <i class="fas fa-print"></i> Print
-        </button>
-        <button class="btn btn-primary" onclick="simulateDownload()" aria-label="Download PDF">
-            <i class="fas fa-file-pdf"></i> Download PDF
-        </button>
-    </div>
+    <button class="btn btn-secondary" onclick="handlePrint(this)" aria-label="Print form">
+        <i class="fas fa-print"></i> Print
+    </button>
+    <button class="btn btn-primary" onclick="handleDownload(this)" aria-label="Download PDF">
+        <i class="fas fa-file-pdf"></i> Download PDF
+    </button>
 </nav>
 
 <!-- Toast Container -->
@@ -570,7 +576,7 @@
             <div class="header-logo">
                 <i class="fas fa-landmark"></i>
             </div>
-            <h1>T-BANK INVESTMENT GROUP</h1>
+            <h1>T-BANK INVESTMENT</h1>
             <h2>GROUPS' MEMBERS REGISTRATION FORM</h2>
             <div class="header-line"></div>
         </header>
@@ -579,14 +585,14 @@
         <section class="reveal">
             <div class="section-title"><span class="num">1</span> GROUP DETAILS</div>
             <div class="info-grid">
-                <div class="info-label">Group Name:</div>
-                <div class="info-value input-mode" contenteditable="true" data-field="group_name"><%= group.groupName %></div>
-                <div class="info-label">Location:</div>
-                <div class="info-value input-mode" contenteditable="true" data-field="location"><%= group.county %> | <%= group.constituency %> | <%= group.ward %></div>
-                <div class="info-label">Registration Agent:</div>
-                <div class="info-value input-mode" contenteditable="true" data-field="agent"><%= agent.name %></div>
-                <div class="info-label">Agent Contact:</div>
-                <div class="info-value input-mode" contenteditable="true" data-field="agent_contact"><%= agent.phoneNumber %></div>
+                 <div class="info-label">Group Name:</div>
+                 <div class="info-value" data-field="group_name"><%= group.groupName %></div>
+                 <div class="info-label">Location:</div>
+                 <div class="info-value" data-field="location"><%= group.county %> | <%= group.constituency %> | <%= group.ward %></div>
+                 <div class="info-label">Registration Agent:</div>
+                 <div class="info-value" data-field="agent"><%= agent.name %></div>
+                 <div class="info-label">Agent Contact:</div>
+                 <div class="info-value" data-field="agent_contact"><%= agent.phoneNumber %></div>
             </div>
         </section>
 
@@ -604,39 +610,7 @@
                         <th>National ID</th>
                     </tr>
                 </thead>
-                <tbody id="trusteesBody">
-                    <tr>
-                        <td><div class="cell-num">1</div></td>
-                        <td><input class="cell-input" placeholder="e.g. TB-001" aria-label="Trustee 1 membership number"></td>
-                        <td><input class="cell-input title-cell" value="Chairperson" readonly aria-label="Trustee 1 title"></td>
-                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 1 name"></td>
-                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 1 phone"></td>
-                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 1 ID"></td>
-                    </tr>
-                    <tr>
-                        <td><div class="cell-num">2</div></td>
-                        <td><input class="cell-input" placeholder="e.g. TB-002" aria-label="Trustee 2 membership number"></td>
-                        <td><input class="cell-input title-cell" value="Treasurer" readonly aria-label="Trustee 2 title"></td>
-                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 2 name"></td>
-                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 2 phone"></td>
-                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 2 ID"></td>
-                    </tr>
-                    <tr>
-                        <td><div class="cell-num">3</div></td>
-                        <td><input class="cell-input" placeholder="e.g. TB-003" aria-label="Trustee 3 membership number"></td>
-                        <td><input class="cell-input title-cell" value="Secretary" readonly aria-label="Trustee 3 title"></td>
-                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 3 name"></td>
-                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 3 phone"></td>
-                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 3 ID"></td>
-                    </tr>
-                    <tr>
-                        <td><div class="cell-num">4</div></td>
-                        <td><input class="cell-input" placeholder="e.g. TB-004" aria-label="Trustee 4 membership number"></td>
-                        <td><input class="cell-input title-cell" value="Trustee" readonly aria-label="Trustee 4 title"></td>
-                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 4 name"></td>
-                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 4 phone"></td>
-                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 4 ID"></td>
-                    </tr>
+        <tbody id="trusteesBody">
                 </tbody>
             </table>
         </section>
@@ -682,20 +656,20 @@
             <div class="section-title"><span class="num">5</span> PREPARED BY</div>
             <div class="sig-grid">
                 <div>
-                    <div class="sig-field-label">Title / Position</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="e.g. Field Agent" aria-label="Preparer title"></div>
-                </div>
-                <div>
-                    <div class="sig-field-label">Full Name</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="Enter name" aria-label="Preparer name"></div>
-                </div>
-                <div>
-                    <div class="sig-field-label">Phone Number</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="07XXXXXXXX" aria-label="Preparer phone"></div>
-                </div>
-                <div>
-                    <div class="sig-field-label">Date</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Preparer date"></div>
+                     <div class="sig-field-label">Title / Position</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" aria-label="Preparer title"></div>
+                 </div>
+                 <div>
+                     <div class="sig-field-label">Full Name</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" aria-label="Preparer name"></div>
+                 </div>
+                 <div>
+                     <div class="sig-field-label">Phone Number</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" aria-label="Preparer phone"></div>
+                 </div>
+                 <div>
+                     <div class="sig-field-label">Date</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Preparer date"></div>
                 </div>
             </div>
             <div class="sig-field-label">Signature</div>
@@ -710,18 +684,18 @@
         <section class="reveal">
             <div class="section-title"><span class="num">6</span> CHAIRPERSON APPROVAL</div>
             <div class="sig-grid">
-                <div>
-                    <div class="sig-field-label">Full Name</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="Enter name" aria-label="Chairperson name"></div>
-                </div>
-                <div>
-                    <div class="sig-field-label">Phone Number</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="07XXXXXXXX" aria-label="Chairperson phone"></div>
-                </div>
-                <div>
-                    <div class="sig-field-label">Date</div>
-                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Chairperson date"></div>
-                </div>
+                 <div>
+                     <div class="sig-field-label">Full Name</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" aria-label="Chairperson name"></div>
+                 </div>
+                 <div>
+                     <div class="sig-field-label">Phone Number</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" aria-label="Chairperson phone"></div>
+                 </div>
+                 <div>
+                     <div class="sig-field-label">Date</div>
+                     <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Chairperson date"></div>
+                 </div>
                 <div>
                     <div class="sig-field-label">Stamp</div>
                     <div class="sig-line"></div>
@@ -748,7 +722,7 @@
 
         <!-- Page Footer -->
         <footer class="page-footer">
-            <span>T-BANK INVESTMENT GROUP &copy; 2025</span>
+             <span>T-BANK INVESTMENT &copy; 2025</span>
             <span>Form Ref: NL-GROUPS-2025-001 | Page 1 of 1</span>
         </footer>
     </div>
@@ -760,24 +734,61 @@
 </div>
 
 <script>
+    let tbank = <%- JSON.stringify(tbank) %>;
+    const group = <%- JSON.stringify(group) %>;
+    const trusteeTitles = ['Chairperson', 'Treasurer', 'Secretary', 'Trustee'];
     // --- Populate Officials and Members tables ---
+
+    async function loadTbank() {
+        try {
+            const res = await fetch('/tbank.json');
+            const newTbank = await res.json();
+            if (JSON.stringify(newTbank) !== JSON.stringify(tbank)) {
+                tbank = newTbank;
+                // Re-populate tables
+                const trusteesCount = parseInt(tbank.compliance.membership.trustees);
+                const officialsCount = parseInt(tbank.compliance.membership.officials);
+                const regularMembers = parseInt(tbank.compliance.membership.maxMembers) - trusteesCount - officialsCount;
+                document.getElementById('trusteesBody').innerHTML = '';
+                populateTable('trusteesBody', trusteesCount);
+                document.getElementById('officialsBody').innerHTML = '';
+                populateTable('officialsBody', officialsCount);
+                document.getElementById('membersBody').innerHTML = '';
+                populateTable('membersBody', regularMembers);
+                // Update progress and validations
+                updateProgress();
+            }
+        } catch (e) {
+            console.error('Failed to load latest tbank.json', e);
+        }
+    }
+
+    // Load latest data on page load and poll every 30 seconds for real-time updates
+    window.addEventListener('load', loadTbank);
+    setInterval(loadTbank, 30000);
     function populateTable(tbodyId, count) {
         const tbody = document.getElementById(tbodyId);
+        const isMembers = tbodyId === 'membersBody';
+        const isTrustees = tbodyId === 'trusteesBody';
         for (let i = 1; i <= count; i++) {
             const tr = document.createElement('tr');
+            const titleValue = isTrustees ? (trusteeTitles[i-1] || 'Trustee') : (isMembers ? `Member ${i}` : 'Title');
+            const titleReadonly = isMembers || isTrustees ? 'readonly' : '';
             tr.innerHTML = `
                 <td><div class="cell-num">${i}</div></td>
-                <td><input class="cell-input" placeholder="e.g. TB-0${i}" aria-label="Row ${i} membership number"></td>
-                <td><input class="cell-input" placeholder="Title" aria-label="Row ${i} title"></td>
-                <td><input class="cell-input" placeholder="Enter full name" aria-label="Row ${i} name"></td>
-                <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Row ${i} phone"></td>
-                <td><input class="cell-input" placeholder="Enter ID number" aria-label="Row ${i} ID"></td>
+                <td><input class="cell-input" aria-label="Row ${i} membership number"></td>
+                <td><input class="cell-input" value="${titleValue}" ${titleReadonly} aria-label="Row ${i} title"></td>
+                <td><input class="cell-input" aria-label="Row ${i} name"></td>
+                <td><input class="cell-input" aria-label="Row ${i} phone"></td>
+                <td><input class="cell-input" aria-label="Row ${i} ID"></td>
             `;
             tbody.appendChild(tr);
         }
     }
-    populateTable('officialsBody', 4);
-    populateTable('membersBody', 8);
+    populateTable('trusteesBody', parseInt(tbank.compliance.membership.trustees));
+    populateTable('officialsBody', parseInt(tbank.compliance.membership.officials));
+    const regularMembers = parseInt(tbank.compliance.membership.maxMembers) - parseInt(tbank.compliance.membership.trustees) - parseInt(tbank.compliance.membership.officials);
+    populateTable('membersBody', regularMembers);
 
     // --- Signature Pad Logic ---
     function initSigPad(wrapperId) {
@@ -899,31 +910,45 @@
     });
 
     // --- Actions ---
-    function simulateDownload() {
-        // Count filled fields for feedback
-        const allInputs = document.querySelectorAll('.cell-input:not([readonly])');
-        let emptyCount = 0;
-        allInputs.forEach(el => { if (!el.value || el.value.trim().length === 0) emptyCount++; });
+    function handlePrint(button) {
+        button.disabled = true;
+        window.print();
+        setTimeout(() => button.disabled = false, 1000); // Re-enable after 1 second
+    }
 
-        if (emptyCount > 30) {
-            showToast('Form appears mostly empty. Consider filling it in first.', 'error');
+    async function handleDownload(button) {
+        button.disabled = true;
+        try {
+            const { jsPDF } = window.jspdf;
+            const formPage = document.getElementById('formPage');
+            const canvas = await html2canvas(formPage, { scale: 2, allowTaint: true, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const pageHeight = 295;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save('group_registration_form.pdf');
+        } catch (e) {
+            console.error('PDF generation failed', e);
+        } finally {
+            button.disabled = false;
         }
-        openModal();
     }
 
-    function resetForm() {
-        // Clear all inputs
-        document.querySelectorAll('.cell-input:not([readonly])').forEach(el => { el.value = ''; });
-        // Reset contenteditable fields
-        document.querySelectorAll('.info-value.input-mode[contenteditable]').forEach(el => {
-            el.textContent = '';
-        });
-        // Clear signature pads
-        clearSigPad('sigPad1');
-        clearSigPad('sigPad2');
-        updateProgress();
-        showToast('Form has been reset to blank state.');
-    }
+
 
     // --- Scroll Reveal ---
     const observer = new IntersectionObserver((entries) => {
@@ -942,6 +967,151 @@
             el.value = new Date().toISOString().split('T')[0];
         }
     });
+
+    // --- Real-time T-Bank Membership Validation ---
+    const usedMembershipNos = new Set();
+    const usedPhones = new Set();
+    const usedIds = new Set();
+
+    function validateMembershipNo(input) {
+        const value = input.value.trim();
+        const regex = /^TB-\d{3}$/;
+        if (!regex.test(value)) {
+            showFieldError(input, 'Membership No. must be in format TB-XXX');
+            return false;
+        }
+        if (usedMembershipNos.has(value)) {
+            showFieldError(input, 'Membership No. must be unique');
+            return false;
+        }
+        clearFieldError(input);
+        return true;
+    }
+
+    function validatePhone(input) {
+        const value = input.value.trim();
+        const regex = /^07\d{8}$/;
+        if (!regex.test(value)) {
+            showFieldError(input, 'Phone must be 10 digits starting with 07');
+            return false;
+        }
+        if (usedPhones.has(value)) {
+            showFieldError(input, 'Phone number must be unique');
+            return false;
+        }
+        clearFieldError(input);
+        return true;
+    }
+
+    function validateId(input) {
+        const value = input.value.trim();
+        const regex = /^\d{6,9}$/;
+        if (!regex.test(value)) {
+            showFieldError(input, 'National ID must be 6-9 digits');
+            return false;
+        }
+        if (usedIds.has(value)) {
+            showFieldError(input, 'National ID must be unique');
+            return false;
+        }
+        clearFieldError(input);
+        return true;
+    }
+
+    function validateName(input) {
+        const value = input.value.trim();
+        if (value.length < 2) {
+            showFieldError(input, 'Full name is required');
+            return false;
+        }
+        clearFieldError(input);
+        return true;
+    }
+
+    function showFieldError(input, message) {
+        input.style.borderColor = 'var(--danger)';
+        input.style.boxShadow = '0 0 0 1px var(--danger)';
+        if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('error-message')) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.color = 'var(--danger)';
+            errorDiv.style.fontSize = '10px';
+            errorDiv.style.marginTop = '2px';
+            input.parentNode.insertBefore(errorDiv, input.nextSibling);
+        }
+        input.nextElementSibling.textContent = message;
+    }
+
+    function clearFieldError(input) {
+        input.style.borderColor = '';
+        input.style.boxShadow = '';
+        if (input.nextElementSibling && input.nextElementSibling.classList.contains('error-message')) {
+            input.nextElementSibling.remove();
+        }
+    }
+
+    function updateUsedSets() {
+        usedMembershipNos.clear();
+        usedPhones.clear();
+        usedIds.clear();
+        document.querySelectorAll('.cell-input').forEach(input => {
+            const value = input.value.trim();
+            if (input.placeholder && input.placeholder.includes('TB-')) {
+                if (value) usedMembershipNos.add(value);
+            } else if (input.placeholder && input.placeholder.includes('07')) {
+                if (value) usedPhones.add(value);
+            } else if (input.placeholder && input.placeholder.includes('ID')) {
+                if (value) usedIds.add(value);
+            }
+        });
+    }
+
+    // Attach validation listeners
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('cell-input')) {
+            const input = e.target;
+            if (input.placeholder && input.placeholder.includes('TB-')) {
+                validateMembershipNo(input);
+            } else if (input.placeholder && input.placeholder.includes('07')) {
+                validatePhone(input);
+            } else if (input.placeholder && input.placeholder.includes('ID')) {
+                validateId(input);
+            } else if (input.placeholder && input.placeholder.includes('name')) {
+                validateName(input);
+            }
+        }
+    });
+
+    document.addEventListener('blur', function(e) {
+        if (e.target.classList.contains('cell-input')) {
+            updateUsedSets();
+            const input = e.target;
+            if (input.placeholder && input.placeholder.includes('TB-')) {
+                validateMembershipNo(input);
+            } else if (input.placeholder && input.placeholder.includes('07')) {
+                validatePhone(input);
+            } else if (input.placeholder && input.placeholder.includes('ID')) {
+                validateId(input);
+            } else if (input.placeholder && input.placeholder.includes('name')) {
+                validateName(input);
+            }
+        }
+    });
+
+    // Generate membership numbers
+    function generateMembershipNos() {
+        let counter = 1;
+        document.querySelectorAll('#trusteesBody input[placeholder*="TB-"], #officialsBody input[placeholder*="TB-"], #membersBody input[placeholder*="TB-"]').forEach(input => {
+            if (!input.value) {
+                input.value = `TB-${counter.toString().padStart(3, '0')}`;
+                counter++;
+            }
+        });
+        updateUsedSets();
+    }
+
+    // Auto-generate on load
+    generateMembershipNos();
 </script>
 </body>
 </html>

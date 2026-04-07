@@ -474,10 +474,29 @@ router.get("/group-form/:groupName", (req, res) => {
     });
   }
 
+  const tbank = require('../tbank.json');
+  const data = require('../data.json');
+
+  // Function to get name by phone
+  function getNameByPhone(phone) {
+    const user = data.find(u => u.phoneNumber === phone);
+    return user ? `${user.FirstName} ${user.LastName}` : '';
+  }
+
+  // Populate names for trustees, officials, members
+  Object.keys(group).forEach(key => {
+    if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+      if (group[key] && group[key].phone) {
+        group[key].name = getNameByPhone(group[key].phone);
+      }
+    }
+  });
+
   res.render("group_form", {
     agent: agent,
     group: group,
-    user: req.session.user
+    user: req.session.user,
+    tbank: tbank
   });
 });
 
