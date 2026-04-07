@@ -12,7 +12,7 @@ const dealerRoutes = require("./routes/dealer");
 const generalRoutes = require("./routes/general");
 const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
-const agentPerformanceRoutes = require("./routes/agent-performance");
+
 
 
 
@@ -96,7 +96,7 @@ const protect = (req, res, next) => {
 // ✅ Adjustment: personalRoutes must define router.get("/") so this mount works at /personal
 app.use("/personal", protect, personalRoutes);
 app.use("/agent", protect, agentRoutes);
-app.use("/agent", protect, agentPerformanceRoutes);
+
 app.use("/dealer", protect, dealerRoutes);
 app.use("/proceedings", protect, proceedingsRoutes);
 

@@ -1,0 +1,947 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T-BANK INVESTMENT GROUP — Groups' Members Registration Form</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f0ece4;
+            --fg: #1a1a1a;
+            --muted: #6b6560;
+            --accent: #0b6e4f;
+            --accent-light: #e8f5ee;
+            --card: #ffffff;
+            --border: #c8c2b8;
+            --danger: #b91c1c;
+            --danger-bg: #fef2f2;
+            --danger-border: #fca5a5;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 48px rgba(0,0,0,0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+        }
+
+        /* --- Top toolbar --- */
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .toolbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--accent);
+        }
+        .toolbar-brand i { font-size: 20px; }
+        .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover { background: #095c42; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(11,110,79,0.3); }
+        .btn-secondary {
+            background: var(--card);
+            color: var(--fg);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: #f5f3ef; }
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+        .btn-danger:hover { background: #991b1b; }
+
+        /* --- Toast notification --- */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 14px 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastIn 0.35s ease-out;
+            max-width: 360px;
+        }
+        .toast.error { border-left-color: var(--danger); }
+        .toast i { font-size: 16px; color: var(--accent); }
+        .toast.error i { color: var(--danger); }
+        .toast-fade-out { animation: toastOut 0.3s ease-in forwards; }
+        @keyframes toastIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+        @keyframes toastOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(40px); } }
+
+        /* --- Form page (A4 simulation) --- */
+        .page-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px 80px;
+        }
+        .form-page {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--card);
+            box-shadow: var(--shadow-lg);
+            border-radius: 4px;
+            padding: 40px 50px;
+            position: relative;
+            overflow: hidden;
+        }
+        .form-page::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent), #2dd4bf, var(--accent));
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-35deg);
+            font-family: 'Playfair Display', serif;
+            font-size: 100px;
+            font-weight: 900;
+            color: rgba(11,110,79,0.03);
+            pointer-events: none;
+            white-space: nowrap;
+            letter-spacing: 8px;
+            user-select: none;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+            position: relative;
+        }
+        .header-logo {
+            width: 56px;
+            height: 56px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: #fff;
+            font-size: 24px;
+            box-shadow: 0 4px 16px rgba(11,110,79,0.25);
+        }
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--fg);
+            letter-spacing: 2px;
+        }
+        .header h2 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--muted);
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+        .header-line {
+            width: 80px;
+            height: 3px;
+            background: var(--accent);
+            margin: 14px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Section titles */
+        .section-title {
+            font-weight: 700;
+            font-size: 13px;
+            margin-top: 22px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--fg);
+            padding-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Info grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 160px 1fr;
+            gap: 6px 16px;
+            margin-bottom: 16px;
+        }
+        .info-label {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .info-value {
+            font-size: 12px;
+            color: var(--fg);
+            padding-bottom: 2px;
+            border-bottom: 1px dotted var(--border);
+            min-height: 20px;
+        }
+        .info-value.input-mode {
+            border-bottom: 1px solid var(--border);
+            background: #fafaf7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: text;
+            transition: all 0.2s;
+        }
+        .info-value.input-mode:hover { border-color: var(--accent); }
+        .info-value.input-mode:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--accent-light);
+            box-shadow: 0 0 0 3px rgba(11,110,79,0.1);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        th, td {
+            border: 1px solid #d1cdc5;
+            padding: 0;
+            text-align: left;
+            font-size: 12px;
+        }
+        th {
+            background: #eae6de;
+            text-align: center;
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            padding: 8px 6px;
+        }
+        th:first-child { width: 38px; }
+        td:first-child {
+            text-align: center;
+            font-weight: 600;
+            color: var(--muted);
+            padding: 0;
+            background: #f9f7f4;
+        }
+        td:first-child .cell-num {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 32px;
+            font-size: 11px;
+        }
+        td .cell-input {
+            width: 100%;
+            height: 32px;
+            border: none;
+            padding: 0 6px;
+            font-family: inherit;
+            font-size: 12px;
+            background: transparent;
+            color: var(--fg);
+            transition: background 0.15s;
+        }
+        td .cell-input:focus {
+            outline: none;
+            background: var(--accent-light);
+            box-shadow: inset 0 0 0 1px var(--accent);
+        }
+        td .cell-input.title-cell {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        td .cell-input::placeholder {
+            color: #ccc;
+            font-style: italic;
+        }
+
+        /* Signatures */
+        .signatures { margin-top: 32px; }
+        .sig-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 24px;
+            margin-bottom: 14px;
+        }
+        .sig-field-label {
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .sig-line {
+            border-bottom: 1px solid var(--border);
+            height: 28px;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        .sig-line:hover { border-color: var(--accent); }
+        .sig-full { width: 100%; margin-bottom: 24px; }
+
+        /* Signature pad */
+        .sig-pad-wrapper {
+            position: relative;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            height: 60px;
+            background: #fdfcfa;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: border-color 0.2s;
+        }
+        .sig-pad-wrapper:hover { border-color: var(--accent); }
+        .sig-pad-wrapper canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            display: block;
+        }
+        .sig-pad-wrapper .clear-sig {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--muted);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .sig-pad-wrapper:hover .clear-sig { opacity: 1; }
+        .sig-pad-wrapper .clear-sig:hover { color: var(--danger); border-color: var(--danger); }
+        .sig-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ccc;
+            font-size: 11px;
+            pointer-events: none;
+            font-style: italic;
+        }
+
+        /* Instructions */
+        .instructions {
+            margin-top: 32px;
+            padding: 16px 18px;
+            border: 2px solid var(--danger-border);
+            background: var(--danger-bg);
+            border-radius: 8px;
+        }
+        .instructions h3 {
+            margin: 0 0 10px 0;
+            color: var(--danger);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .instructions ul { margin: 0; padding-left: 18px; }
+        .instructions li {
+            margin-bottom: 6px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #44403c;
+        }
+        .instructions li strong { color: var(--danger); }
+
+        /* Footer of the page */
+        .page-footer {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: #bbb;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #e8e4dc;
+            z-index: 100;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #2dd4bf);
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.9);
+            transition: transform 0.25s;
+            text-align: center;
+        }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal i { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
+        .modal h3 { font-size: 18px; margin-bottom: 8px; }
+        .modal p { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+
+        /* Print styles */
+        @media print {
+            body { background: #fff; }
+            .toolbar, .progress-bar, .toast-container, .modal-overlay { display: none !important; }
+            .page-wrapper { padding: 0; }
+            .form-page {
+                box-shadow: none;
+                border-radius: 0;
+                width: 100%;
+                padding: 20px 30px;
+            }
+            .form-page::before { display: none; }
+            .watermark { display: none; }
+            .info-value.input-mode,
+            td .cell-input,
+            .sig-pad-wrapper { border-color: #999 !important; background: transparent !important; box-shadow: none !important; }
+            .sig-pad-wrapper { border-style: solid; }
+            .sig-pad-wrapper .clear-sig,
+            .sig-placeholder { display: none !important; }
+            td .cell-input.title-cell { color: #000; }
+        }
+
+        /* Responsive */
+        @media (max-width: 860px) {
+            .form-page { width: 100%; padding: 24px 20px; }
+            .info-grid { grid-template-columns: 120px 1fr; }
+            .sig-grid { grid-template-columns: 1fr; }
+            .toolbar { padding: 10px 16px; }
+        }
+
+        /* Scroll reveal animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1; transform: none; transition: none; }
+            .toast { animation: none; }
+            .modal { transition: none; }
+            .modal-overlay { transition: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<nav class="toolbar" role="navigation" aria-label="Form actions">
+    <div class="toolbar-brand">
+        <i class="fas fa-landmark"></i>
+        T-BANK Groups' Members Forms
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-secondary" onclick="resetForm()" aria-label="Reset all fields">
+            <i class="fas fa-rotate-left"></i> Reset
+        </button>
+        <button class="btn btn-secondary" onclick="window.print()" aria-label="Print form">
+            <i class="fas fa-print"></i> Print
+        </button>
+        <button class="btn btn-primary" onclick="simulateDownload()" aria-label="Download PDF">
+            <i class="fas fa-file-pdf"></i> Download PDF
+        </button>
+    </div>
+</nav>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">
+    <div class="modal">
+        <i class="fas fa-circle-check"></i>
+        <h3>PDF Ready</h3>
+        <p>In the Node.js server version, this would trigger Puppeteer to generate a pixel-perfect A4 PDF and download it directly to your device.</p>
+        <button class="btn btn-primary" onclick="closeModal()">Got It</button>
+    </div>
+</div>
+
+<!-- Form Page -->
+<main class="page-wrapper">
+    <div class="form-page" id="formPage">
+        <div class="watermark">DRAFT</div>
+
+        <!-- Header -->
+        <header class="header reveal">
+            <div class="header-logo">
+                <i class="fas fa-landmark"></i>
+            </div>
+            <h1>T-BANK INVESTMENT GROUP</h1>
+            <h2>GROUPS' MEMBERS REGISTRATION FORM</h2>
+            <div class="header-line"></div>
+        </header>
+
+        <!-- Section 1: Group Details -->
+        <section class="reveal">
+            <div class="section-title"><span class="num">1</span> GROUP DETAILS</div>
+            <div class="info-grid">
+                <div class="info-label">Group Name:</div>
+                <div class="info-value input-mode" contenteditable="true" data-field="group_name"><%= group.groupName %></div>
+                <div class="info-label">Location:</div>
+                <div class="info-value input-mode" contenteditable="true" data-field="location"><%= group.county %> | <%= group.constituency %> | <%= group.ward %></div>
+                <div class="info-label">Registration Agent:</div>
+                <div class="info-value input-mode" contenteditable="true" data-field="agent"><%= agent.name %></div>
+                <div class="info-label">Agent Contact:</div>
+                <div class="info-value input-mode" contenteditable="true" data-field="agent_contact"><%= agent.phoneNumber %></div>
+            </div>
+        </section>
+
+        <!-- Section 2: Trustees -->
+        <section class="reveal">
+            <div class="section-title"><span class="num">2</span> TRUSTEES SECTION</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Membership No.</th>
+                        <th>Title</th>
+                        <th>Full Name</th>
+                        <th>Phone Number</th>
+                        <th>National ID</th>
+                    </tr>
+                </thead>
+                <tbody id="trusteesBody">
+                    <tr>
+                        <td><div class="cell-num">1</div></td>
+                        <td><input class="cell-input" placeholder="e.g. TB-001" aria-label="Trustee 1 membership number"></td>
+                        <td><input class="cell-input title-cell" value="Chairperson" readonly aria-label="Trustee 1 title"></td>
+                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 1 name"></td>
+                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 1 phone"></td>
+                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 1 ID"></td>
+                    </tr>
+                    <tr>
+                        <td><div class="cell-num">2</div></td>
+                        <td><input class="cell-input" placeholder="e.g. TB-002" aria-label="Trustee 2 membership number"></td>
+                        <td><input class="cell-input title-cell" value="Treasurer" readonly aria-label="Trustee 2 title"></td>
+                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 2 name"></td>
+                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 2 phone"></td>
+                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 2 ID"></td>
+                    </tr>
+                    <tr>
+                        <td><div class="cell-num">3</div></td>
+                        <td><input class="cell-input" placeholder="e.g. TB-003" aria-label="Trustee 3 membership number"></td>
+                        <td><input class="cell-input title-cell" value="Secretary" readonly aria-label="Trustee 3 title"></td>
+                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 3 name"></td>
+                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 3 phone"></td>
+                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 3 ID"></td>
+                    </tr>
+                    <tr>
+                        <td><div class="cell-num">4</div></td>
+                        <td><input class="cell-input" placeholder="e.g. TB-004" aria-label="Trustee 4 membership number"></td>
+                        <td><input class="cell-input title-cell" value="Trustee" readonly aria-label="Trustee 4 title"></td>
+                        <td><input class="cell-input" placeholder="Enter full name" aria-label="Trustee 4 name"></td>
+                        <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Trustee 4 phone"></td>
+                        <td><input class="cell-input" placeholder="Enter ID number" aria-label="Trustee 4 ID"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Section 3: Officials -->
+        <section class="reveal">
+            <div class="section-title"><span class="num">3</span> OFFICIALS SECTION</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Membership No.</th>
+                        <th>Title</th>
+                        <th>Full Name</th>
+                        <th>Phone Number</th>
+                        <th>National ID</th>
+                    </tr>
+                </thead>
+                <tbody id="officialsBody"></tbody>
+            </table>
+        </section>
+
+        <!-- Section 4: Regular Members -->
+        <section class="reveal">
+            <div class="section-title"><span class="num">4</span> REGULAR MEMBERS SECTION</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Membership No.</th>
+                        <th>Title</th>
+                        <th>Full Name</th>
+                        <th>Phone Number</th>
+                        <th>National ID</th>
+                    </tr>
+                </thead>
+                <tbody id="membersBody"></tbody>
+            </table>
+        </section>
+
+        <!-- Section 5: Prepared By -->
+        <section class="signatures reveal">
+            <div class="section-title"><span class="num">5</span> PREPARED BY</div>
+            <div class="sig-grid">
+                <div>
+                    <div class="sig-field-label">Title / Position</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="e.g. Field Agent" aria-label="Preparer title"></div>
+                </div>
+                <div>
+                    <div class="sig-field-label">Full Name</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="Enter name" aria-label="Preparer name"></div>
+                </div>
+                <div>
+                    <div class="sig-field-label">Phone Number</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="07XXXXXXXX" aria-label="Preparer phone"></div>
+                </div>
+                <div>
+                    <div class="sig-field-label">Date</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Preparer date"></div>
+                </div>
+            </div>
+            <div class="sig-field-label">Signature</div>
+            <div class="sig-pad-wrapper" id="sigPad1">
+                <canvas></canvas>
+                <span class="sig-placeholder">Draw signature here</span>
+                <button class="clear-sig" onclick="clearSigPad('sigPad1')" aria-label="Clear signature">Clear</button>
+            </div>
+        </section>
+
+        <!-- Section 6: Chairperson Approval -->
+        <section class="reveal">
+            <div class="section-title"><span class="num">6</span> CHAIRPERSON APPROVAL</div>
+            <div class="sig-grid">
+                <div>
+                    <div class="sig-field-label">Full Name</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="Enter name" aria-label="Chairperson name"></div>
+                </div>
+                <div>
+                    <div class="sig-field-label">Phone Number</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" placeholder="07XXXXXXXX" aria-label="Chairperson phone"></div>
+                </div>
+                <div>
+                    <div class="sig-field-label">Date</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Chairperson date"></div>
+                </div>
+                <div>
+                    <div class="sig-field-label">Stamp</div>
+                    <div class="sig-line"></div>
+                </div>
+            </div>
+            <div class="sig-field-label">Signature</div>
+            <div class="sig-pad-wrapper" id="sigPad2">
+                <canvas></canvas>
+                <span class="sig-placeholder">Draw signature here</span>
+                <button class="clear-sig" onclick="clearSigPad('sigPad2')" aria-label="Clear signature">Clear</button>
+            </div>
+        </section>
+
+        <!-- Instructions -->
+        <div class="instructions reveal">
+            <h3><i class="fas fa-triangle-exclamation"></i> IMPORTANT INSTRUCTIONS</h3>
+            <ul>
+                <li><strong>Pre-population:</strong> The Chairperson's details are pre-populated in the Trustees Section above.</li>
+                <li><strong>Verification:</strong> Please verify and update the Chairperson's Membership Number and National ID if needed.</li>
+                <li><strong>Mandatory Approval:</strong> The Chairperson <strong>must</strong> sign this form to approve all member registrations.</li>
+                <li><strong>Accuracy:</strong> Ensure all phone numbers and ID numbers are accurate before submission.</li>
+            </ul>
+        </div>
+
+        <!-- Page Footer -->
+        <footer class="page-footer">
+            <span>T-BANK INVESTMENT GROUP &copy; 2025</span>
+            <span>Form Ref: NL-GROUPS-2025-001 | Page 1 of 1</span>
+        </footer>
+    </div>
+</main>
+
+<!-- Progress Bar -->
+<div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-fill" id="progressFill"></div>
+</div>
+
+<script>
+    // --- Populate Officials and Members tables ---
+    function populateTable(tbodyId, count) {
+        const tbody = document.getElementById(tbodyId);
+        for (let i = 1; i <= count; i++) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><div class="cell-num">${i}</div></td>
+                <td><input class="cell-input" placeholder="e.g. TB-0${i}" aria-label="Row ${i} membership number"></td>
+                <td><input class="cell-input" placeholder="Title" aria-label="Row ${i} title"></td>
+                <td><input class="cell-input" placeholder="Enter full name" aria-label="Row ${i} name"></td>
+                <td><input class="cell-input" placeholder="07XXXXXXXX" aria-label="Row ${i} phone"></td>
+                <td><input class="cell-input" placeholder="Enter ID number" aria-label="Row ${i} ID"></td>
+            `;
+            tbody.appendChild(tr);
+        }
+    }
+    populateTable('officialsBody', 4);
+    populateTable('membersBody', 8);
+
+    // --- Signature Pad Logic ---
+    function initSigPad(wrapperId) {
+        const wrapper = document.getElementById(wrapperId);
+        const canvas = wrapper.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let hasDrawn = false;
+
+        function resize() {
+            const rect = wrapper.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDraw(e) {
+            e.preventDefault();
+            drawing = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            if (!hasDrawn) {
+                hasDrawn = true;
+                wrapper.querySelector('.sig-placeholder').style.display = 'none';
+            }
+        }
+        function draw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+        function stopDraw() { drawing = false; }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDraw);
+        canvas.addEventListener('mouseleave', stopDraw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDraw);
+
+        wrapper._clear = function() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasDrawn = false;
+            wrapper.querySelector('.sig-placeholder').style.display = '';
+        };
+    }
+
+    initSigPad('sigPad1');
+    initSigPad('sigPad2');
+
+    function clearSigPad(id) {
+        document.getElementById(id)._clear();
+    }
+
+    // --- Progress Tracking ---
+    function updateProgress() {
+        const allInputs = document.querySelectorAll('.cell-input, .info-value.input-mode[contenteditable]');
+        let filled = 0;
+        let total = allInputs.length;
+        allInputs.forEach(el => {
+            if (el.contentEditable === 'true') {
+                if (el.textContent.trim().length > 0) filled++;
+            } else {
+                if (el.value && el.value.trim().length > 0) filled++;
+            }
+        });
+        const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.querySelector('.progress-bar').setAttribute('aria-valuenow', pct);
+    }
+
+    document.addEventListener('input', updateProgress);
+    document.addEventListener('focusout', updateProgress);
+    updateProgress();
+
+    // --- Toast System ---
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast' + (type === 'error' ? ' error' : '');
+        const icon = type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check';
+        toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('toast-fade-out');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // --- Modal ---
+    function openModal() {
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+    function closeModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+    }
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
+    });
+
+    // --- Actions ---
+    function simulateDownload() {
+        // Count filled fields for feedback
+        const allInputs = document.querySelectorAll('.cell-input:not([readonly])');
+        let emptyCount = 0;
+        allInputs.forEach(el => { if (!el.value || el.value.trim().length === 0) emptyCount++; });
+
+        if (emptyCount > 30) {
+            showToast('Form appears mostly empty. Consider filling it in first.', 'error');
+        }
+        openModal();
+    }
+
+    function resetForm() {
+        // Clear all inputs
+        document.querySelectorAll('.cell-input:not([readonly])').forEach(el => { el.value = ''; });
+        // Reset contenteditable fields
+        document.querySelectorAll('.info-value.input-mode[contenteditable]').forEach(el => {
+            el.textContent = '';
+        });
+        // Clear signature pads
+        clearSigPad('sigPad1');
+        clearSigPad('sigPad2');
+        updateProgress();
+        showToast('Form has been reset to blank state.');
+    }
+
+    // --- Scroll Reveal ---
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // --- Set today's date as default for date inputs ---
+    document.querySelectorAll('input[type="date"]').forEach(el => {
+        if (!el.value) {
+            el.value = new Date().toISOString().split('T')[0];
+        }
+    });
+</script>
+</body>
+</html>

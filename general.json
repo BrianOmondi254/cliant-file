@@ -209,7 +209,7 @@
           "membersPopulatedAt": "2026-03-16T19:45:05.375Z",
           "agentProcessed": "0740001141",
           "totalProposedMembers": 15,
-          "phase": 2,
+          "phase": 3,
           "trustee_1": {
             "type": "trustee",
             "title": "Chairperson",
@@ -347,7 +347,96 @@
             }
           ],
           "constitutionStartKey": "5907",
-          "constitutionKeySetByAgentAt": "2026-03-29T18:43:41.574Z"
+          "constitutionKeySetByAgentAt": "2026-04-05T06:03:20.258Z",
+          "principles": {
+            "otherContributions": [
+              {
+                "accountNumber": "001",
+                "accountName": "Saving",
+                "expectedAmount": "100"
+              },
+              {
+                "accountNumber": "002",
+                "accountName": "Registration",
+                "expectedAmount": "1000"
+              },
+              {
+                "accountNumber": "003",
+                "accountName": "welfare",
+                "expectedAmount": "500"
+              },
+              {
+                "accountNumber": "004",
+                "accountName": "fine",
+                "expectedAmount": "400"
+              }
+            ],
+            "distribution": {
+              "model": "performance",
+              "officialPct": 0,
+              "performancePct": "70",
+              "targetAccountName": "Benefit from Loan, Registration, welfare, fine",
+              "targetAccountNumber": "006"
+            },
+            "deductions": {
+              "primarySource": "savings"
+            },
+            "intervals": {
+              "frequency": "daily",
+              "period": "Everyday",
+              "endSavingPeriod": "6-months"
+            },
+            "governance": {
+              "fastNotificationThreshold": "60",
+              "editAccountThreshold": "75",
+              "memberRemovalThreshold": "75",
+              "requireResponseNote": true
+            },
+            "balancing": {
+              "benefitAccounts": [
+                "Loan",
+                "Registration",
+                "welfare",
+                "fine"
+              ]
+            },
+            "loans": {
+              "qualificationType": "duration",
+              "duration": {
+                "days": "30"
+              },
+              "savingTarget": "",
+              "repayment": {
+                "durationDays": "30",
+                "alignment": "complete",
+                "rolloverMethod": "recount",
+                "maxRollovers": "3"
+              },
+              "interestAndLimits": {
+                "interestRate": "3",
+                "maxActiveLoans": "1",
+                "limitBasis": "total",
+                "limitMultiplier": "3"
+              },
+              "type": {
+                "category": "short",
+                "guaranteeMethod": "self"
+              }
+            },
+            "contributionCloser": {
+              "saving": {
+                "duration": "7",
+                "intervalBuffer": "1"
+              },
+              "loan": {
+                "duration": "1",
+                "intervalBuffer": "1"
+              }
+            }
+          },
+          "principlesSetAt": "2026-04-05T06:10:10.670Z",
+          "accountNumber": "2540422491234001",
+          "pin": "5907"
         },
         {
           "groupName": "namla  sacco",
@@ -388,6 +477,42 @@
               "createdAt": "2026-03-13T20:48:10.173Z"
             }
           ]
+        },
+        {
+          "groupName": "olao group",
+          "phone": "0740415992",
+          "firstName": "Brian",
+          "secondName": "Omondi",
+          "lastName": "okeyo",
+          "county": "Siaya",
+          "constituency": "Ugenya",
+          "ward": "East Ugenya",
+          "processorPhone": "0741001141",
+          "createdAt": "2026-04-05T05:50:39.851Z",
+          "messages": [
+            {
+              "to": "0741001141",
+              "type": "security_alert",
+              "title": "Group Creation",
+              "content": "Your application for olao group is pending. Agent available at your location. Contact: 0740001141",
+              "createdAt": "2026-04-05T05:50:39.849Z"
+            },
+            {
+              "to": "0740001141",
+              "type": "security_alert",
+              "title": "Group Creation",
+              "content": "Group Creation Request: olao group. Submitted by Processor: 0741001141. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
+              "createdAt": "2026-04-05T05:50:39.851Z"
+            }
+          ],
+          "totalProposedMembers": 0,
+          "phase": 1,
+          "trustee_1": {
+            "phone": "0740415992",
+            "name": "Brian Omondi okeyo",
+            "type": "trustee",
+            "title": "Chairperson"
+          }
         }
       ]
     }

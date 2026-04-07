@@ -427,10 +427,10 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 15px;
+            padding: 8px 12px;
             background: #f7fafc;
             border-radius: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             transition: all 0.3s ease;
         }
 
@@ -445,8 +445,8 @@
         }
 
         .member-avatar {
-            width: 45px;
-            height: 45px;
+            width: 36px;
+            height: 36px;
             background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
             border-radius: 50%;
             display: flex;
@@ -454,16 +454,17 @@
             justify-content: center;
             color: white;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .member-name {
             font-weight: 600;
             color: #2d3748;
+            font-size: 14px;
         }
 
         .member-position {
-            font-size: 13px;
+            font-size: 11px;
             color: #718096;
         }
 
@@ -473,8 +474,8 @@
         }
 
         .att-btn {
-            width: 38px;
-            height: 38px;
+            width: 34px;
+            height: 34px;
             border: 2px solid #e2e8f0;
             background: white;
             border-radius: 8px;
@@ -503,6 +504,33 @@
             background: #dd6b20;
             border-color: #dd6b20;
             color: white;
+        }
+
+        .apology-options {
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .apology-btn {
+            padding: 8px 12px;
+            font-size: 11px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .apology-btn:hover {
+            background: #f7fafc;
+        }
+
+        .apology-btn.active {
+            background: #e53e3e;
+            color: white;
+            border-color: #e53e3e;
         }
 
         /* Agenda Item */
@@ -912,7 +940,7 @@
             </h1>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openModal('meetingModal')">+ New Meeting</button>
-                <button class="btn btn-secondary" onclick="openModal('memberModal')">+ Add Member</button>
+                <button class="btn btn-secondary" onclick="openModal('projectModal')">+ New Project</button>
             </div>
         </div>
     </header>
@@ -925,8 +953,11 @@
             <select id="meetingSelect" onchange="selectMeeting()">
                 <option value="">-- Select a Meeting --</option>
                 <% if (meetings && meetings.length > 0) { %>
-                    <% meetings.forEach(function(meeting) { %>
-                        <option value="<%= meeting.id %>"><%= meeting.title %> - <%= new Date(meeting.date).toLocaleDateString() %></option>
+                    <% meetings.reverse().forEach(function(meeting) { %>
+                        <option value="<%= meeting.id %>" <%= currentMeeting && currentMeeting.id === meeting.id ? 'selected' : '' %>>
+                            <%= meeting.title %> - <%= new Date(meeting.date).toLocaleDateString() %> 
+                            [<%= meeting.status ? meeting.status.toUpperCase() : 'ACTIVE' %>]
+                        </option>
                     <% }); %>
                 <% } %>
             </select>
@@ -1022,47 +1053,104 @@
             <div class="grid grid-2">
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">✅ Mark Attendance</h3>
-                        <p class="card-subtitle">Click status buttons to mark attendance</p>
+                        <h3 class="card-title">✅ Roll-call: <%= (groupName || '').toUpperCase() %></h3>
+                        <p class="card-subtitle">
+                            <% if (currentMeeting) { %>
+                                Managing attendance for <strong><%= currentMeeting.title %></strong> - <%= new Date(currentMeeting.date).toLocaleDateString() %>
+                            <% } else { %>
+                                Select a meeting above to start roll-call
+                            <% } %>
+                        </p>
                     </div>
                     <div class="card-body">
-                        <div class="member-list" id="memberAttendanceList">
-                            <% if (members && members.length > 0) { %>
+                        <% if (currentMeeting && currentMeeting.status === 'pending') { %>
+                            <div class="text-center" style="padding: 40px;">
+                                <div style="font-size: 40px; margin-bottom: 15px;">⏳</div>
+                                <h3 style="color: #d97706; margin-bottom: 10px;">Meeting is Pending</h3>
+                                <p style="color: #718096; font-size: 14px;">Roll-call and attendance marking will be available once the meeting is set to Active.</p>
+                                <button class="btn btn-primary mt-20" onclick="updateMeetingStatus('<%= currentMeeting.id %>', 'active')">Set as Active</button>
+                            </div>
+                        <% } else if (members && members.length > 0) { %>
+                            <div class="member-list" id="memberAttendanceList">
                                 <% members.forEach(function(member) { %>
                                     <% 
                                         var attendance = attendances.find(a => a.memberId === member.id);
-                                        var status = attendance ? attendance.status : 'absent';
+                                        var status = attendance ? attendance.status : '';
+                                        var apology = attendance ? attendance.apology : '';
                                     %>
-                                    <div class="member-item">
-                                        <div class="member-info">
-                                            <div class="member-avatar"><%= member.name.split(' ').map(n => n[0]).join('').toUpperCase() %></div>
-                                            <div>
-                                                <div class="member-name"><%= member.name %></div>
-                                                <% if (member.position) { %>
-                                                    <div class="member-position"><%= member.position %></div>
-                                                <% } %>
+                                    <div class="member-item-container" style="margin-bottom: 10px;">
+                                        <div class="member-item" style="border-left: 4px solid <%= status === 'present' ? '#38a169' : status === 'absent' ? '#e53e3e' : '#e2e8f0' %>">
+                                            <div class="member-info">
+                                                <div class="member-avatar"><%= member.name.split(' ').map(n => n[0]).join('').toUpperCase() %></div>
+                                                <div>
+                                                    <div class="member-name"><%= member.name %></div>
+                                                    <% if (member.position) { %>
+                                                        <div class="member-position"><%= member.position %></div>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                            <div class="attendance-btns">
+                                                <button class="att-btn present <%= status === 'present' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'present')" title="Present">✓</button>
+                                                <button class="att-btn absent <%= status === 'absent' ? 'active' : '' %>" onclick="toggleApology('<%= member.id %>')" title="Absent">✗</button>
+                                                <button class="att-btn late <%= status === 'late' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'late')" title="Late">◐</button>
                                             </div>
                                         </div>
-                                        <div class="attendance-btns">
-                                            <button class="att-btn present <%= status === 'present' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'present')" title="Present">✓</button>
-                                            <button class="att-btn absent <%= status === 'absent' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'absent')" title="Absent">✗</button>
-                                            <button class="att-btn late <%= status === 'late' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'late')" title="Late">◐</button>
+                                        <div id="apology_<%= member.id %>" class="apology-options" style="display: <%= status === 'absent' ? 'block' : 'none' %>; padding: 12px; background: #fff5f5; border-radius: 0 0 10px 10px; margin-top: -8px; border: 1px solid #fed7d7; border-top: none;">
+                                            <p style="font-size: 12px; font-weight: 600; margin-bottom: 10px; color: #c53030;">Absent with Apology?</p>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button class="apology-btn <%= apology === 'With Apology' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'absent', 'With Apology')">With Apology</button>
+                                                <button class="apology-btn <%= apology === 'Without Apology' ? 'active' : '' %>" onclick="markAttendance('<%= member.id %>', 'absent', 'Without Apology')">No Apology</button>
+                                            </div>
                                         </div>
                                     </div>
                                 <% }); %>
-                            <% } else { %>
-                                <p class="text-center" style="color: #718096; padding: 20px;">No members added yet</p>
-                            <% } %>
-                        </div>
+                                
+                                 <!-- Visitors Section Nested Here -->
+                                <% if (currentMeeting && currentMeeting.status !== 'pending') { %>
+                                    <div style="margin-top: 30px; border-top: 1px dashed #ced4da; padding-top: 15px; margin-bottom: 20px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 12px; color: #4a5568;">👤 Add Visitors / Guests</h4>
+                                        <div class="grid grid-2" style="gap: 8px; margin-bottom: 8px;">
+                                            <input type="text" class="form-input" id="visitorName" placeholder="Visitor Name" style="height: 38px;">
+                                            <input type="text" class="form-input" id="visitorDescription" placeholder="Description/Purpose" style="height: 38px;">
+                                        </div>
+                                        <button class="btn btn-secondary" onclick="addVisitor()" style="width: 100%; justify-content: center; height: 38px; font-size: 13px;">+ Add Visitor</button>
+                                        
+                                        <div id="visitorList" style="margin-top: 10px;">
+                                            <% if (currentMeeting && currentMeeting.visitors && currentMeeting.visitors.length > 0) { %>
+                                                <% currentMeeting.visitors.forEach(function(v) { %>
+                                                    <div class="info-box" style="padding: 8px; margin-bottom: 5px; background: #ebf8ff; border-radius: 8px;">
+                                                        <div class="info-box-icon" style="width: 25px; height: 25px; font-size: 12px;">👤</div>
+                                                        <div class="info-box-content">
+                                                            <p style="font-size: 12px; margin: 0;"><%= v.name %> <span style="font-weight: 400; color: #718096; margin-left: 5px;">- <%= v.description %></span></p>
+                                                        </div>
+                                                    </div>
+                                                <% }); %>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                <% } %>
+
+                                <div class="mt-20" style="position: sticky; bottom: 10px; z-index: 100; padding: 15px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); border-radius: 15px; margin-top: 20px; border-top: 1px solid #e2e8f0; box-shadow: 0 -10px 30px rgba(0,0,0,0.05);">
+                                    <button class="btn btn-primary" onclick="bulkSaveAttendance()" style="width: 100%; justify-content: center; font-weight: 700; height: 50px; font-size: 16px; border-radius: 12px; box-shadow: 0 10px 25px rgba(44, 82, 130, 0.3);">
+                                        💾 Save Complete Attendance & Continue
+                                    </button>
+                                </div>
+                            </div>
+                        <% } else { %>
+                            <p class="text-center" style="color: #718096; padding: 20px;">No members added to this group yet</p>
+                        <% } %>
+
+
                     </div>
                 </div>
 
                 <div>
                     <div class="card">
-                        <div class="card-header success">
+                        <div class="card-header success" onclick="toggleCollapse('presentBody')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                             <h3 class="card-title">✅ Members Present (<%= presentCount %>)</h3>
+                            <span id="arrow_presentBody" style="font-size: 14px; transition: transform 0.3s; transform: rotate(-90deg); color: #2f855a;">▼</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="presentBody" style="display: none;">
                             <% if (presentMembers && presentMembers.length > 0) { %>
                                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                                     <% presentMembers.forEach(function(member) { %>
@@ -1076,14 +1164,24 @@
                     </div>
 
                     <div class="card">
-                        <div class="card-header danger">
+                        <div class="card-header danger" onclick="toggleCollapse('absentBody')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                             <h3 class="card-title">❌ Members Absent (<%= absentCount %>)</h3>
+                            <span id="arrow_absentBody" style="font-size: 14px; transition: transform 0.3s; transform: rotate(-90deg); color: #c53030;">▼</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="absentBody" style="display: none;">
                             <% if (absentMembers && absentMembers.length > 0) { %>
                                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                                     <% absentMembers.forEach(function(member) { %>
-                                        <span class="badge badge-danger"><%= member.name %></span>
+                                        <% 
+                                            var att = attendances.find(a => a.memberId === member.id);
+                                            var apologyInfo = att && att.status === 'absent' ? (att.apology || 'No Apology') : '';
+                                        %>
+                                        <span class="badge badge-danger">
+                                            <%= member.name %>
+                                            <% if (apologyInfo) { %>
+                                                <span style="font-size: 10px; opacity: 0.9; margin-left: 5px;">(<%= apologyInfo %>)</span>
+                                            <% } %>
+                                        </span>
                                     <% }); %>
                                 </div>
                             <% } else { %>
@@ -1101,6 +1199,28 @@
                 <h2 style="font-size: 20px; font-weight: 600;">📄 Meeting Minutes</h2>
                 <button class="btn btn-primary" onclick="openModal('minuteModal')">+ Add Minute</button>
             </div>
+
+            <!-- First Minute: Call to Order -->
+            <% if (currentMeeting && currentMeeting.callToOrderNote) { %>
+                <div class="minute-item" style="border-left: 4px solid #4a5568; background-color: #f8fafc; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div class="minute-header" style="border-bottom: 1px solid #edf2f7; padding-bottom: 12px; margin-bottom: 12px;">
+                        <div class="minute-title" style="font-weight: 700; color: #2d3748;">
+                            <span class="badge" style="background: #4a5568; color: white; padding: 4px 10px; border-radius: 6px;">MIN 1</span>
+                            Call to Order & Opening Remarks
+                        </div>
+                        <div style="font-size: 11px; color: #4a5568; font-weight: 700; background: #e2e8f0; padding: 4px 10px; border-radius: 4px;">
+                            Moderator: <%= currentMeeting.callToOrderModerator || currentMeeting.chairperson %>
+                        </div>
+                    </div>
+                    <div class="minute-body">
+                        <div class="minute-content" style="color: #4a5568; line-height: 1.6; font-size: 14px; white-space: pre-wrap;"><%= currentMeeting.callToOrderNote %></div>
+                        <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <span class="badge badge-success" style="font-size: 10px;">Official Opening Record</span>
+                            <span style="font-size: 10px; color: #a0aec0;"><%= new Date(currentMeeting.date).toLocaleDateString() %></span>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
 
             <% if (minutes && minutes.length > 0) { %>
                 <% minutes.forEach(function(minute, index) { %>
@@ -1316,12 +1436,12 @@
             <!-- Chairperson Comments -->
             <div class="card">
                 <div class="card-header primary">
-                    <h3 class="card-title">⚖️ Chairperson Final Comments</h3>
-                    <p class="card-subtitle">Official closing remarks from the Chairperson</p>
+                    <h3 class="card-title">⚖️ Moderator's Final Comments</h3>
+                    <p class="card-subtitle">Official closing remarks and summary from the Moderator</p>
                 </div>
                 <div class="card-body">
-                    <textarea class="form-textarea" id="chairpersonNote" placeholder="Enter chairperson's final comments and summary of the meeting..."><%= currentMeeting && currentMeeting.chairpersonNote ? currentMeeting.chairpersonNote : '' %></textarea>
-                    <button class="btn btn-primary mt-20" onclick="saveChairpersonNote()">💾 Save Chairperson Comments</button>
+                    <textarea class="form-textarea" id="chairpersonNote" placeholder="Enter moderator's final comments and summary of the meeting..."><%= currentMeeting && currentMeeting.chairpersonNote ? currentMeeting.chairpersonNote : '' %></textarea>
+                    <button class="btn btn-primary mt-20" onclick="saveChairpersonNote()">💾 Save Moderator Comments</button>
                 </div>
             </div>
 
@@ -1432,9 +1552,16 @@
                         <input type="date" class="form-input" id="meetingDate">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Venue</label>
-                        <input type="text" class="form-input" id="meetingVenue" placeholder="e.g., Conference Room A">
+                        <label class="form-label">Initial Status *</label>
+                        <select class="form-select" id="meetingStatus">
+                            <option value="active">Active (Roll-call enabled)</option>
+                            <option value="pending">Pending (Future Meeting)</option>
+                        </select>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Venue</label>
+                    <input type="text" class="form-input" id="meetingVenue" placeholder="e.g., Conference Room A">
                 </div>
                 <div class="grid grid-2">
                     <div class="form-group">
@@ -1448,12 +1575,30 @@
                 </div>
                 <div class="grid grid-2">
                     <div class="form-group">
-                        <label class="form-label">Chairperson</label>
-                        <input type="text" class="form-input" id="meetingChairperson" placeholder="Name">
+                        <label class="form-label">Moderator</label>
+                        <select class="form-select" id="meetingChairpersonSelect" onchange="toggleChairpersonGuest()" style="margin-bottom: 5px;">
+                            <option value="">-- Select Moderator --</option>
+                            <% if (members && members.length > 0) { %>
+                                <% members.forEach(function(m) { %>
+                                    <option value="<%= m.name %>"><%= m.name %></option>
+                                <% }); %>
+                            <% } %>
+                            <option value="guest">👤 External Guest / Other</option>
+                        </select>
+                        <input type="text" class="form-input" id="meetingChairpersonGuest" placeholder="Enter Guest Name" style="display: none;">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Secretary</label>
-                        <input type="text" class="form-input" id="meetingSecretary" placeholder="Name">
+                        <label class="form-label">Secretary / Minute Taker</label>
+                        <select class="form-select" id="meetingSecretarySelect" onchange="toggleSecretaryGuest()" style="margin-bottom: 5px;">
+                            <option value="">-- Select Secretary / Minute Taker --</option>
+                            <% if (members && members.length > 0) { %>
+                                <% members.forEach(function(m) { %>
+                                    <option value="<%= m.name %>"><%= m.name %></option>
+                                <% }); %>
+                            <% } %>
+                            <option value="guest">👤 External Guest / Other</option>
+                        </select>
+                        <input type="text" class="form-input" id="meetingSecretaryGuest" placeholder="Enter Guest Name" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -1464,33 +1609,41 @@
         </div>
     </div>
 
-    <!-- Add Member Modal -->
-    <div id="memberModal" class="modal">
+    <!-- Project Modal -->
+    <div id="projectModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">Add New Member</h3>
-                <p class="modal-subtitle">Add a member to the committee</p>
+                <h3 class="modal-title">📦 Add New Project</h3>
+                <p class="modal-subtitle">Define a new project for this group to track</p>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="form-label">Full Name *</label>
-                    <input type="text" class="form-input" id="memberName">
+                    <label class="form-label">Project Title *</label>
+                    <input type="text" class="form-input" id="projectTitle" placeholder="e.g., Water Tank Installation">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Position</label>
-                    <input type="text" class="form-input" id="memberPosition" placeholder="e.g., Director, Secretary">
+                    <label class="form-label">Objective</label>
+                    <textarea class="form-textarea" id="projectObjective" placeholder="What is the main goal of this project?"></textarea>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="memberEmail">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Budget Allowance</label>
+                        <input type="number" class="form-input" id="projectBudget" placeholder="Amount (optional)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Target Date</label>
+                        <input type="date" class="form-input" id="projectTargetDate">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('memberModal')">Cancel</button>
-                <button class="btn btn-primary" onclick="createMember()">Add Member</button>
+                <button class="btn btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createProject()">Launch Project</button>
             </div>
         </div>
     </div>
+
+    <!-- Agenda Modals -->
 
     <!-- Add Agenda Modal -->
     <div id="agendaModal" class="modal">
@@ -1581,11 +1734,46 @@
 
         // Tab switching
         function openTab(tabName) {
+            // Safely check if event is defined (it's not defined on page load calls)
+            const currentEvent = (typeof event !== 'undefined') ? event : null;
+            
+            // Find the button associated with this tabName
+            const btn = (currentEvent && currentEvent.target && currentEvent.target.classList.contains('tab-btn')) 
+                ? currentEvent.target 
+                : Array.from(document.querySelectorAll('.tab-btn')).find(b => {
+                    const clickAttr = b.getAttribute('onclick') || '';
+                    return clickAttr.includes("'" + tabName + "'") || clickAttr.includes('"' + tabName + '"');
+                  });
+
+            // 1. Remove active state from ALL tabs and buttons
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(btnEl => btnEl.classList.remove('active'));
+            
+            // 2. Set new active tab content
+            const content = document.getElementById(tabName);
+            if (content) {
+                content.classList.add('active');
+            } else {
+                console.error('Tab content not found:', tabName);
+            }
+            
+            // 3. Set new active button
+            if (btn) {
+                btn.classList.add('active');
+            }
         }
+
+        // On Page Load: Check for URL parameters
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam) {
+                // Use a short timeout to ensure EJS rendering is complete
+                setTimeout(() => {
+                    openTab(tabParam);
+                }, 50);
+            }
+        });
 
         // Modal functions
         function openModal(modalId) {
@@ -1596,11 +1784,24 @@
             document.getElementById(modalId).classList.remove('active');
         }
 
+        // Toggles for Guest inputs
+        function toggleChairpersonGuest() {
+            const select = document.getElementById('meetingChairpersonSelect');
+            const guestInput = document.getElementById('meetingChairpersonGuest');
+            guestInput.style.display = select.value === 'guest' ? 'block' : 'none';
+        }
+
+        function toggleSecretaryGuest() {
+            const select = document.getElementById('meetingSecretarySelect');
+            const guestInput = document.getElementById('meetingSecretaryGuest');
+            guestInput.style.display = select.value === 'guest' ? 'block' : 'none';
+        }
+
         // Meeting selection
         function selectMeeting() {
             const select = document.getElementById('meetingSelect');
             if (select.value) {
-                window.location.href = '/?meetingId=' + select.value;
+                window.location.href = '/proceedings/' + encodeURIComponent(groupName) + '?meetingId=' + select.value;
             }
         }
 
@@ -1614,12 +1815,19 @@
                 venue: document.getElementById('meetingVenue').value,
                 startTime: document.getElementById('meetingStartTime').value,
                 endTime: document.getElementById('meetingEndTime').value,
-                chairperson: document.getElementById('meetingChairperson').value,
-                secretary: document.getElementById('meetingSecretary').value
+                endTime: document.getElementById('meetingEndTime').value,
+                chairperson: document.getElementById('meetingChairpersonSelect').value === 'guest' 
+                             ? document.getElementById('meetingChairpersonGuest').value 
+                             : document.getElementById('meetingChairpersonSelect').value,
+                secretary: document.getElementById('meetingSecretarySelect').value === 'guest' 
+                             ? document.getElementById('meetingSecretaryGuest').value 
+                             : document.getElementById('meetingSecretarySelect').value,
+                status: document.getElementById('meetingStatus').value,
+                groupName: groupName
             };
 
-            if (!data.title || !data.date) {
-                alert('Please fill in required fields');
+            if (!data.title || !data.date || !data.chairperson) {
+                alert('Please fill in required fields (Title, Date, and Moderator)');
                 return;
             }
 
@@ -1630,62 +1838,106 @@
                     body: JSON.stringify(data)
                 });
                 if (response.ok) {
-                    window.location.reload();
+                    const result = await response.json();
+                    window.location.href = '/proceedings/' + encodeURIComponent(groupName) + '?meetingId=' + result.meeting.id + '&tab=attendance';
                 }
             } catch (error) {
                 alert('Error creating meeting');
             }
         }
 
-        // Create member
-        async function createMember() {
-            const data = {
-                groupName: groupName,
-                name: document.getElementById('memberName').value,
-                position: document.getElementById('memberPosition').value,
-                email: document.getElementById('memberEmail').value
-            };
-
-            if (!data.name) {
-                alert('Please enter member name');
-                return;
-            }
-
-            try {
-                const response = await fetch('/proceedings/api/members', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if (response.ok) {
-                    window.location.reload();
-                }
-            } catch (error) {
-                alert('Error creating member');
-            }
+        // Toggle apology selection visibility
+        function toggleApology(memberId) {
+            const apologyDiv = document.getElementById('apology_' + memberId);
+            const isVisible = apologyDiv.style.display === 'block';
+            
+            // Hide all other apology divs first (optional)
+            // document.querySelectorAll('.apology-options').forEach(div => div.style.display = 'none');
+            
+            apologyDiv.style.display = isVisible ? 'none' : 'block';
         }
 
-        // Mark attendance
-        async function markAttendance(memberId, status) {
+        // Local state for attendance updates
+        let attendanceState = {};
+        
+        // Mark attendance locally
+        function markAttendance(memberId, status, apology = '') {
+            // Update local state
+            attendanceState[memberId] = {
+                status: status,
+                apology: apology
+            };
+
+            // Find the container for this member
+            const container = document.querySelector(`.member-item-container:has([onclick*="'${memberId}'"])`);
+            if (!container) return;
+
+            const item = container.querySelector('.member-item');
+            const btns = container.querySelectorAll('.att-btn');
+            const apologyDiv = document.getElementById('apology_' + memberId);
+            const apologyBtns = container.querySelectorAll('.apology-btn');
+
+            // Update border color
+            if (status === 'present') item.style.borderLeftColor = '#38a169';
+            else if (status === 'absent') item.style.borderLeftColor = '#e53e3e';
+            else if (status === 'late') item.style.borderLeftColor = '#d69e2e';
+
+            // Update button active classes
+            btns.forEach(btn => {
+                btn.classList.remove('active');
+                if (status === 'present' && btn.classList.contains('present')) btn.classList.add('active');
+                if (status === 'absent' && btn.classList.contains('absent')) btn.classList.add('active');
+                if (status === 'late' && btn.classList.contains('late')) btn.classList.add('active');
+            });
+
+            // Update apology div visibility
+            if (status === 'absent') {
+                apologyDiv.style.display = 'block';
+            } else {
+                apologyDiv.style.display = 'none';
+            }
+
+            // Update apology buttons
+            apologyBtns.forEach(btn => {
+                btn.classList.remove('active');
+                if (apology === 'With Apology' && btn.textContent.includes('With')) btn.classList.add('active');
+                if (apology === 'Without Apology' && btn.textContent.includes('No')) btn.classList.add('active');
+            });
+        }
+
+        // Bulk save attendance
+        async function bulkSaveAttendance() {
             if (!currentMeetingId) {
                 alert('Please select a meeting first');
                 return;
             }
 
+            const updatesCount = Object.keys(attendanceState).length;
+            if (updatesCount === 0) {
+                alert('No changes to save');
+                return;
+            }
+
             try {
-                await fetch('/proceedings/api/attendance', {
+                const response = await fetch('/proceedings/api/attendance/bulk', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         meetingId: currentMeetingId,
-                        memberId: memberId,
-                        status: status,
-                        groupName: groupName
+                        groupName: groupName,
+                        updates: attendanceState
                     })
                 });
-                window.location.reload();
+
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'minutes');
+                    window.location.href = url.href;
+                } else {
+                    alert('Error saving data');
+                }
             } catch (error) {
-                alert('Error marking attendance');
+                alert('Error connecting to server');
             }
         }
 
@@ -1712,12 +1964,16 @@
             }
 
             try {
-                await fetch('/proceedings/api/agenda', {
+                const response = await fetch('/proceedings/api/agenda', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                window.location.reload();
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'agenda');
+                    window.location.href = url.href;
+                }
             } catch (error) {
                 alert('Error creating agenda');
             }
@@ -1726,12 +1982,16 @@
         // Update agenda status
         async function updateAgendaStatus(agendaId, status) {
             try {
-                await fetch('/proceedings/api/agenda/' + agendaId, {
+                const response = await fetch('/proceedings/api/agenda/' + agendaId, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: status })
                 });
-                window.location.reload();
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'agenda');
+                    window.location.href = url.href;
+                }
             } catch (error) {
                 alert('Error updating agenda');
             }
@@ -1740,7 +2000,7 @@
         // Cast vote
         async function castVote(agendaId, memberId, voteType) {
             try {
-                await fetch('/proceedings/api/votes', {
+                const response = await fetch('/proceedings/api/votes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1750,7 +2010,11 @@
                         groupName: groupName
                     })
                 });
-                window.location.reload();
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'voting');
+                    window.location.href = url.href;
+                }
             } catch (error) {
                 alert('Error casting vote');
             }
@@ -1776,7 +2040,7 @@
             }
 
             try {
-                await fetch('/proceedings/api/comments', {
+                const response = await fetch('/proceedings/api/comments', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1787,7 +2051,11 @@
                         groupName: groupName
                     })
                 });
-                window.location.reload();
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'voting');
+                    window.location.href = url.href;
+                }
             } catch (error) {
                 alert('Error adding comment');
             }
@@ -1838,7 +2106,7 @@
             }
         }
 
-        // Save chairperson note
+        // Save Moderator final comments
         async function saveChairpersonNote() {
             if (!currentMeetingId) return;
             
@@ -1849,9 +2117,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ chairpersonNote: note })
                 });
-                alert('Chairperson comments saved');
+                alert('Moderator remarks saved');
             } catch (error) {
-                alert('Error saving comments');
+                alert('Error saving remarks');
             }
         }
 
@@ -1869,6 +2137,99 @@
                 alert('Meeting adjourned successfully');
             } catch (error) {
                 alert('Error saving adjournment');
+            }
+        }
+        // Update meeting status
+        async function updateMeetingStatus(meetingId, status) {
+            try {
+                const response = await fetch('/proceedings/api/meetings/' + meetingId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                });
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'attendance');
+                    window.location.href = url.href;
+                }
+            } catch (error) {
+                alert('Error updating meeting status');
+            }
+        }
+
+        // Add visitor
+        async function addVisitor() {
+            if (!currentMeetingId) return;
+
+            const name = document.getElementById('visitorName').value;
+            const description = document.getElementById('visitorDescription').value;
+
+            if (!name) {
+                alert('Please enter visitor name');
+                return;
+            }
+
+            try {
+                const response = await fetch('/proceedings/api/meetings/' + currentMeetingId + '/visitors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: description
+                    })
+                });
+                if (response.ok) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('tab', 'attendance');
+                    window.location.href = url.href;
+                }
+            } catch (error) {
+                alert('Error adding visitor');
+            }
+        }
+
+        // Create project
+        async function createProject() {
+            const data = {
+                groupName: groupName,
+                title: document.getElementById('projectTitle').value,
+                objective: document.getElementById('projectObjective').value,
+                budget: document.getElementById('projectBudget').value,
+                targetDate: document.getElementById('projectTargetDate').value
+            };
+
+            if (!data.title) {
+                alert('Please enter project title');
+                return;
+            }
+
+            try {
+                const response = await fetch('/proceedings/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    alert('Project launched successfully!');
+                    closeModal('projectModal');
+                    window.location.reload();
+                }
+            } catch (error) {
+                alert('Error creating project');
+            }
+        }
+
+        // Toggle collapse
+        function toggleCollapse(id) {
+            const body = document.getElementById(id);
+            const arrow = document.getElementById('arrow_' + id);
+            
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                body.style.display = 'none';
+                arrow.style.transform = 'rotate(-90deg)';
             }
         }
     </script>

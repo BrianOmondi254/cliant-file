@@ -1493,64 +1493,116 @@
 
             <!-- 1. GROUPS PERFORMANCE SECTION -->
             <div id="groupsPerformanceSection">
-              <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
-                <h4 style="margin:0; font-size:14px; color:#1e293b;">My Managed Groups</h4>
+              <!-- Managed Groups List -->
+              <div id="managedGroupsContainer">
+                <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                  <h4 style="margin:0; font-size:14px; color:#1e293b;">My Managed Groups</h4>
+                </div>
+                <div id="managedGroupsListProfessional">
+                  <% 
+                    const managedGroups = groups; 
+                    managedGroups.forEach(g => {
+                      let status = "Active";
+                      let statusColor = "#059669"; // Green
+                      let statusBg = "#ecfdf5";
+                      
+                      // CONSIDERED "WITHOUT MEMBERS" IF IT ONLY HAS THE CHAIRPERSON (trustee_1) 
+                      // AND HASN'T BEEN POPULATED WITH OTHER TRUSTEES (trustee_2)
+                      const isPopulated = g.trustee_2 || g.member_1 || g.official_1;
+                      
+                      if (!isPopulated) {
+                        status = "New Request";
+                        statusColor = "#4285f4"; // Blue
+                        statusBg = "#ebf5ff";
+                      } else if (!g.principles && g.phase != 3) {
+                        status = "Pending Setup";
+                        statusColor = "#d97706"; // Amber
+                        statusBg = "#fffbeb";
+                      }
+                  %>
+                    <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
+                      style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: white; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>;">
+                      
+                      <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                          <span style="font-weight: 700; color: #1e293b; font-size: 15px;"><%= g.groupName || 'Unnamed Group' %></span>
+                          <span style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: <%= statusBg %>; color: <%= statusColor %>; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <%= status %>
+                          </span>
+                        </div>
+                        <div style="font-size: 12px; color: #64748b; font-weight: 500;">
+                          <i class="fa-solid fa-map-location-dot" style="margin-right: 4px; opacity: 0.7;"></i>
+                          <%= g.ward || 'General' %> · <%= g.constituency || 'Agent' %>
+                        </div>
+                      </div>
+
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <% if (status === 'Active') { %>
+                          <div style="text-align: right; margin-right: 8px;">
+                            <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Growth</div>
+                            <div style="font-size: 13px; color: #059669; font-weight: 700;">Phase 3</div>
+                          </div>
+                        <% } %>
+                        <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 14px;"></i>
+                      </div>
+                    </div>
+                    <div class="group-item-content" id="content-<%= g.groupName.replace(/\s+/g, '-') %>" style="display: none;"></div>
+                  <% }); %>
+                  
+                  <% if (managedGroups.length === 0) { %>
+                    <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 20px; border: 2px dashed #e2e8f0;">
+                      <i class="fa-solid fa-folder-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"></i>
+                      <h3 style="color: #64748b; font-size: 16px; margin-bottom: 5px;">No Groups Managed</h3>
+                      <p style="color: #94a3b8; font-size: 12px;">You are not currently managing any group accounts.</p>
+                    </div>
+                  <% } %>
+                </div>
               </div>
 
-              <div id="managedGroupsListProfessional">
-                <% 
-                  // Professional mapping of groups
-                  groups.forEach(g => {
-                    let status = "New Request";
-                    let statusColor = "#4285f4"; // Blue
-                    let statusBg = "#ebf5ff";
-                    
-                    if (g.principles || g.phase == 3) {
-                      status = "Active";
-                      statusColor = "#059669"; // Green
-                      statusBg = "#ecfdf5";
-                    } else if (g.trustee_1) {
-                      status = "Pending Setup";
-                      statusColor = "#d97706"; // Amber
-                      statusBg = "#fffbeb";
-                    }
-                %>
-                  <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
-                    style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: white; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>;">
-                    
-                    <div style="flex: 1;">
-                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                        <span style="font-weight: 700; color: #1e293b; font-size: 15px;"><%= g.groupName || 'Unnamed Group' %></span>
-                        <span style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: <%= statusBg %>; color: <%= statusColor %>; text-transform: uppercase; letter-spacing: 0.5px;">
-                          <%= status %>
-                        </span>
-                      </div>
-                      <div style="font-size: 12px; color: #64748b; font-weight: 500;">
-                        <i class="fa-solid fa-map-location-dot" style="margin-right: 4px; opacity: 0.7;"></i>
-                        <%= g.ward || 'General' %> · <%= g.constituency || 'Agent' %>
-                      </div>
-                    </div>
-
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                      <% if (status === 'Active') { %>
-                        <div style="text-align: right; margin-right: 8px;">
-                          <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Growth</div>
-                          <div style="font-size: 13px; color: #059669; font-weight: 700;">Phase 3</div>
+              <!-- New Requests List -->
+              <div id="newRequestsContainer" class="hidden">
+                <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                  <h4 style="margin:0; font-size:14px; color:#1e293b;">New Request Groups</h4>
+                </div>
+                <div id="newRequestsListProfessional">
+                  <% 
+                    const newRequests = groups.filter(g => !g.trustee_2 && !g.member_1 && !g.official_1);
+                    newRequests.forEach(g => {
+                      let status = "New Request";
+                      let statusColor = "#4285f4"; // Blue
+                      let statusBg = "#ebf5ff";
+                  %>
+                    <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
+                      style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: white; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>;">
+                      
+                      <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                          <span style="font-weight: 700; color: #1e293b; font-size: 15px;"><%= g.groupName || 'Unnamed Group' %></span>
+                          <span style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: <%= statusBg %>; color: <%= statusColor %>; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <%= status %>
+                          </span>
                         </div>
-                      <% } %>
-                      <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 14px;"></i>
+                        <div style="font-size: 12px; color: #64748b; font-weight: 500;">
+                          <i class="fa-solid fa-map-location-dot" style="margin-right: 4px; opacity: 0.7;"></i>
+                          <%= g.ward || 'General' %> · <%= g.constituency || 'Agent' %>
+                        </div>
+                      </div>
+
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 14px;"></i>
+                      </div>
                     </div>
-                  </div>
-                  <div class="group-item-content" id="content-<%= g.groupName.replace(/\s+/g, '-') %>" style="display: none;"></div>
-                <% }); %>
-                
-                <% if (groups.length === 0) { %>
-                  <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 20px; border: 2px dashed #e2e8f0;">
-                    <i class="fa-solid fa-folder-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"></i>
-                    <h3 style="color: #64748b; font-size: 16px; margin-bottom: 5px;">No Groups Managed</h3>
-                    <p style="color: #94a3b8; font-size: 12px;">You are not currently managing any group accounts.</p>
-                  </div>
-                <% } %>
+                    <div class="group-item-content" id="new-content-<%= g.groupName.replace(/\s+/g, '-') %>" style="display: none;"></div>
+                  <% }); %>
+                  
+                  <% if (newRequests.length === 0) { %>
+                    <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 20px; border: 2px dashed #e2e8f0;">
+                      <i class="fa-solid fa-folder-plus" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"></i>
+                      <h3 style="color: #64748b; font-size: 16px; margin-bottom: 5px;">No New Requests</h3>
+                      <p style="color: #94a3b8; font-size: 12px;">There are no new group requests awaiting action.</p>
+                    </div>
+                  <% } %>
+                </div>
               </div>
             </div>
 
@@ -1605,73 +1657,10 @@
                       2 or 3.</p>
                     <% } %>
               </div>
-            </di
-            <!-- 4. CREATE GROUP SECTION -->
-            <div id="createGroupSection" class="hidden">
-              <div id="createGroupForm" style="background:#f8fafc; border-radius:16px; padding:20px; border:1px solid #e2e8f0;">
-
-                <!-- Group Name -->
-                <div style="margin-bottom:14px;">
-                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Group Name</label>
-                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-users"></i></div>
-                      <input type="text" id="verifyGroup" placeholder="Enter group name"
-                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
-                  </div>
-                </div>
-
-                <!-- Phone Number -->
-                <div style="margin-bottom:14px;">
-                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Phone Number</label>
-                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-phone-alt"></i></div>
-                      <input type="tel" id="verifyPhone" placeholder="07XXXXXXXX" maxlength="10"
-                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Total Members -->
-                <div style="margin-bottom:14px;">
-                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">Total Members</label>
-                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-hashtag"></i></div>
-                    <input type="number" id="newGroupMembers" placeholder="e.g. 15" min="1"
-                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;"
-                      oninput="updateGroupFeePreview()">
-                  </div>
-                </div>
-
-                <!-- Fee Preview -->
-                <div id="groupFeePreview" style="display:none;background:#ecfdf5;border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #d1fae5;text-align:center;">
-                  <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Estimated Setup Fee</div>
-                  <div id="groupFeeAmt" style="font-size:24px;font-weight:800;color:#065f46;">KES 0.00</div>
-                  <div id="groupFeeNote" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
-                </div>
-
-                <!-- M-Pesa Number -->
-                <div style="margin-bottom:18px;">
-                  <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;">M-Pesa Number</label>
-                  <div style="display:flex;align-items:center;background:white;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                    <div style="padding:0 14px;color:#94a3b8;"><i class="fas fa-mobile-alt"></i></div>
-                    <input type="tel" id="newGroupMpesa" placeholder="07XXXXXXXX" maxlength="10"
-                      style="flex:1;border:none;outline:none;padding:13px 0;font-size:14px;font-weight:600;color:#1e293b;background:transparent;">
-                  </div>
-                </div>
-
-                <!-- Submit Button -->
-                <button onclick="submitNewGroupCreation()"
-                  style="width:100%;padding:15px;background:#4285f4;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-                  <i class="fa-solid fa-users-gear"></i> Create Group Account
-                </button>
-                <p id="newGroupMsg" style="text-align:center;font-size:12px;margin-top:12px;font-weight:600;"></p>
-
-                <button onclick="switchGroupsSubView('performance')"
-                  style="width:100%;padding:10px;background:transparent;color:#94a3b8;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;cursor:pointer;margin-top:8px;">
-                  Cancel
-                </button>
-              </div>
             </div>
+            <!-- 4. CREATE GROUP SECTION -->
+            <!-- 4. VOID SECTION (REMOVED) -->
+            <div id="createGroupSection" class="hidden"></div>
             <!-- 5. EMPTY PERFORMANCE SECTION -->
             <div id="emptyPerformanceSection" class="hidden"></div>
 
@@ -1760,7 +1749,7 @@
               <!-- Action Buttons -->
               <div id="phaseActions" class="hidden" style="margin-bottom:20px;">
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                  <button id="newMemberBtn" onclick="showRegistrationFormFromDetails()"
+                  <button id="newMemberBtn" onclick="window.location.href='/agent/new-group?groupName=' + encodeURIComponent(window.selectedGroupForDetails)"
                     style="background:#5f9ea0; margin:0; padding:12px; font-size:12px; border-radius:10px; font-weight:600;">
                     <i class="fas fa-user-plus"></i> New Member
                   </button>
@@ -1776,10 +1765,7 @@
                 </div>
               </div>
 
-              <!-- Registration Flow Container Placeholder -->
-              <div id="registrationFormPlaceholder" class="hidden"
-                style="margin-top: 20px; padding: 15px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;">
-              </div>
+              <!-- Registration logic moved to new_group.ejs portal -->
 
               <!-- Main Continue Action (New) -->
               <div id="detailsContinueAction" class="hidden" style="margin-top: 20px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
@@ -3680,6 +3666,13 @@
       const group = window.managedGroups.find(g => g.groupName === groupName);
       if (!group) return;
 
+      // REDIRECT IF NEW REQUEST (NO POPULATED MEMBERS)
+      const isPopulated = group.trustee_2 || group.member_1 || group.official_1;
+      if (!isPopulated) {
+        window.location.href = `/agent/new-group?groupName=${encodeURIComponent(groupName)}`;
+        return;
+      }
+      
       const detailsView = document.getElementById('groupDetailsView');
 
       // Toggle the group-item-content div if headerEl is provided
@@ -3779,16 +3772,144 @@
       updateNavGlider();
     }
 
+    // Helper to render principles (simplified version for display)
+    function renderPrinciples(group, container) {
+      container.innerHTML = ''; 
+
+      if (!group.principles) {
+        container.innerHTML = '<div style="padding:15px; color:#666;">No principles configured.</div>';
+        return;
+      }
+
+      const scrollDiv = document.createElement('div');
+      scrollDiv.style.cssText = "display:flex; gap:15px; overflow-x:auto; padding:15px 5px; scrollbar-width:thin;";
+
+      const cards = [];
+      const p = group.principles;
+      const inter = p.intervals || {};
+
+      cards.push({
+        title: "Timing",
+        icon: "fa-history",
+        color: "#475569",
+        content: `
+          <div style="font-size:12px;"><b>Freq:</b> ${inter.frequency ? inter.frequency.toUpperCase() : 'N/A'}</div>
+          <div style="font-size:12px;"><b>When:</b> ${inter.period || 'N/A'}</div>
+          <div style="font-size:12px; margin-top:5px; color:#c53030;"><b>Ends:</b> ${inter.endSavingPeriod || 'N/A'}</div>
+        `
+      });
+
+      if (p.governance) {
+        cards.push({
+          title: "Governance",
+          icon: "fa-balance-scale",
+          color: "#856404",
+          bgColor: "#fffbeb",
+          content: `
+              <div style="font-size:11px;">Fast Vote: <b>${p.governance.fastNotificationThreshold}%</b></div>
+              <div style="font-size:11px;">Removal: <b>${p.governance.memberRemovalThreshold}%</b></div>
+              <div style="font-size:11px;">Note Req: <b>${p.governance.requireResponseNote ? 'Yes' : 'No'}</b></div>
+            `
+        });
+      }
+
+      cards.push({
+        title: "Accounts",
+        icon: "fa-coins",
+        color: "#065f46",
+        bgColor: "#f0fdfa",
+        content: `
+            ${p.otherContributions ? p.otherContributions.map(a => `<div style="font-size:11px;"><b>${a.accountName}:</b> ${a.expectedAmount}</div>`).join('') : ''}
+          `
+      });
+
+      if (p.loans) {
+        const l = p.loans;
+        cards.push({
+          title: "Loan Policy",
+          icon: "fa-hand-holding-usd",
+          color: "#1e40af",
+          bgColor: "#eff6ff",
+          content: `
+                <div style="font-size:11px;">Type: <b>${l.type ? l.type.category.toUpperCase() : 'N/A'}</b></div>
+                <div style="font-size:11px;">Int: <b>${l.interestAndLimits ? l.interestAndLimits.interestRate : 0}%</b></div>
+                <div style="font-size:11px;">Repay: <b>${l.repayment ? l.repayment.durationDays : 0} days</b></div>
+              `
+        });
+      }
+
+      cards.forEach(c => {
+        const card = document.createElement('div');
+        card.style.cssText = `min-width:140px; padding:12px; background:${c.bgColor || 'white'}; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.05);`;
+        card.innerHTML = `
+             <div style="font-size:12px; font-weight:700; color:${c.color}; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <i class="fas ${c.icon}"></i> ${c.title}
+             </div>
+             <div style="color:#334155;">${c.content}</div>
+          `;
+        scrollDiv.appendChild(card);
+      });
+
+      container.appendChild(scrollDiv);
+    }
+
+    // Render Group Members List
+    function renderGroupMembers(group) {
+        const container = document.getElementById('membersListContainer');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const list = [];
+
+        // Collect Trustees, Officials, Members
+        Object.keys(group).forEach(k => {
+            const entry = group[k];
+            if (typeof entry !== 'object' || entry === null) return;
+            
+            if (k.startsWith('trustee_') && !k.includes('_id') && !k.includes('_phone')) {
+                list.push({ name: entry.name || 'Trustee', phone: entry.phone || 'N/A', role: entry.title || 'Trustee' });
+            } else if (k.startsWith('official_') && !k.includes('_id') && !k.includes('_phone')) {
+                list.push({ name: entry.name || 'Official', phone: entry.phone || 'N/A', role: 'Official' });
+            } else if (k.startsWith('member_') && !k.includes('_id') && !k.includes('_phone')) {
+                list.push({ name: entry.name || 'Member', phone: entry.phone || 'N/A', role: 'Member' });
+            }
+        });
+
+        if (list.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:#94a3b8; font-size:12px;">No members found.</p>';
+            return;
+        }
+
+        const header = document.createElement('div');
+        header.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1.5fr; gap:10px; padding:10px; background:#f1f5f9; border-radius:8px; margin-bottom:10px; font-size:11px; font-weight:700; color:#475569;';
+        header.innerHTML = `<div>NAME</div><div>ROLE</div><div>NUMBER</div>`;
+        container.appendChild(header);
+
+        list.forEach(m => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1.5fr; gap:10px; padding:12px 10px; border-bottom:1px solid #f1f5f9; font-size:12px; align-items:center;';
+            row.innerHTML = `
+                <div style="font-weight:600; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.name}</div>
+                <div style="color:#64748b; font-weight:500;">${m.role}</div>
+                <div style="color:#0288d1; font-weight:600; font-family:monospace;">${m.phone}</div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function toggleAccordion(header) {
+        const content = header.nextElementSibling;
+        const icon = header.querySelector('.fa-chevron-down');
+        if (content) content.classList.toggle('hidden');
+        if (icon) icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+
     function populateGroupDetails(group) {
       const nameEl = document.getElementById('detailsGroupName');
       const existingMembersAccordion = document.getElementById('existingMembersAccordion');
 
-      // Check if it's a "New Group" (no trustee_1) - show Agent Verification instead of content
-      if (!group.trustee_1) {
-        // Show Agent Verification form for new groups
-        showAgentVerificationForNewGroup(group);
-        return;
-      }
+      // Existing members accordion toggle is handled below based on population
+      if (existingMembersAccordion) existingMembersAccordion.classList.remove('hidden');
 
       // Existing group: ensure the "Existing Members" accordion is visible again
       if (existingMembersAccordion) existingMembersAccordion.classList.remove('hidden');
@@ -3825,11 +3946,13 @@
       statusRow.classList.remove('hidden');
       if (phaseActionsDiv) phaseActionsDiv.classList.remove('hidden');
 
-      // Ensure sections are visible
+      // Ensure sections are hidden by default to honor accordion state
       const membersListSection = document.getElementById('membersListSection');
-      if (membersListSection) membersListSection.classList.remove('hidden');
+      if (membersListSection) membersListSection.classList.add('hidden');
+      const membersListIcon = document.querySelector('#existingMembersAccordion .fa-chevron-down');
+      if (membersListIcon) membersListIcon.style.transform = 'rotate(0deg)';
       const groupMainInfo = document.getElementById('groupMainInfo');
-      if (groupMainInfo) groupMainInfo.classList.add('hidden'); // Default hide, show only for active
+      if (groupMainInfo) groupMainInfo.classList.add('hidden'); 
 
       const continueAction = document.getElementById('detailsContinueAction');
       if (continueAction) {
@@ -3843,605 +3966,57 @@
 
       if (group.phase == 3 || group.principles) {
         statusText.textContent = "Active";
-        statusText.style.color = "#059669"; // Emerald/Green
+        statusText.style.color = "#059669"; 
         statusRow.style.background = "#def7ec";
 
-        if (phaseActionsDiv) phaseActionsDiv.classList.remove('hidden');
+        if (phaseActionsDiv) phaseActionsDiv.classList.add('hidden'); // Hide all registration actions for active groups
         if (principlesWrapper && principlesSlider) {
           renderPrinciples(group, principlesSlider);
           principlesWrapper.classList.remove('hidden');
         }
-        if (groupMainInfo) groupMainInfo.classList.remove('hidden'); // Show stats for active groups
+        if (groupMainInfo) groupMainInfo.classList.remove('hidden'); 
       } else if (group.trustee_1) {
         const isFull = total >= (group.totalProposedMembers || 15);
         statusText.textContent = isFull ? "Pending (Members Submitted)" : "Pending (Phase 1)";
-        statusText.style.color = "#f57c00"; // Orange
+        statusText.style.color = "#f57c00"; 
         statusRow.style.background = "#fff3cd";
 
-        if (phaseActionsDiv) {
-          phaseActionsDiv.classList.remove('hidden');
-          const newMemberBtn = document.getElementById('newMemberBtn');
-          const addOfficialBtn = document.getElementById('addOfficialBtn');
-          const addMemberBtn = document.getElementById('addMemberBtn');
-          const stdOfficials = (window.tbankCounts && window.tbankCounts.officials) || 3;
-          const officialsFull = officials >= stdOfficials;
-
-          if (isFull) {
-            // Quorum met
-            if (newMemberBtn) newMemberBtn.classList.add('hidden');
-            if (addOfficialBtn) addOfficialBtn.classList.add('hidden');
-            if (addMemberBtn) addMemberBtn.classList.add('hidden');
-          } else {
-            // Quorum NOT met — SHOW INPUTS IMMEDIATELY
-            generateUnifiedPendingInputs(group);
-
-            // Hide individual action buttons as they are now redundant
-            if (newMemberBtn) newMemberBtn.classList.add('hidden');
-            if (addOfficialBtn) addOfficialBtn.classList.add('hidden');
-            if (addMemberBtn) addMemberBtn.classList.add('hidden');
-          }
+        if (!isFull && phaseActionsDiv) {
+           // Direct to portal if not full
+           phaseActionsDiv.innerHTML = `
+             <div style="padding:15px; background:#fffbeb; border-radius:12px; border:1px solid #fef3c7; text-align:center;">
+               <p style="font-size:12px; color:#92400e; font-weight:600; margin-bottom:10px;">Membership quorum not yet met.</p>
+               <button onclick="window.location.href='/agent/new-group?groupName=${encodeURIComponent(group.groupName)}'" 
+                       style="background:#f57c00; color:white; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:700;">
+                 Resume Activation Portal
+               </button>
+             </div>
+           `;
         }
         if (principlesWrapper) principlesWrapper.classList.add('hidden');
       } else {
         statusText.textContent = "New Request";
-        statusText.style.color = "#0288d1"; // Blue
+        statusText.style.color = "#0288d1"; 
         statusRow.style.background = "#e1f5fe";
 
-        if (phaseActionsDiv) phaseActionsDiv.classList.remove('hidden');
+        if (phaseActionsDiv) {
+          phaseActionsDiv.innerHTML = `
+            <div style="padding:15px; background:#f0f9ff; border-radius:12px; border:1px solid #e0f2fe; text-align:center;">
+               <button onclick="window.location.href='/agent/new-group?groupName=${encodeURIComponent(group.groupName)}'" 
+                       style="background:#0288d1; color:white; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:700;">
+                 <i class="fas fa-bolt"></i> Start Activation
+               </button>
+            </div>
+          `;
+        }
         if (principlesWrapper) principlesWrapper.classList.add('hidden');
       }
     }
 
-    function showAgentVerificationForNewGroup(group) {
-      const nameEl = document.getElementById('detailsGroupName');
-      const phaseStatusText = document.getElementById('phaseStatusText');
-      const placeholder = document.getElementById('registrationFormPlaceholder');
-      const createForm = document.getElementById('createGroupForm');
-      const existingMembersAccordion = document.getElementById('existingMembersAccordion');
+    // Verification logic moved to /agent/new-group portal.
 
-      // Hide other sections
-      ['groupMainInfo', 'principlesSection', 'phaseActions', 'membersListSection'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-      });
-
-      // Hide the entire existing-members accordion (header + arrow)
-      if (existingMembersAccordion) existingMembersAccordion.classList.add('hidden');
-
-      // Update header
-      nameEl.textContent = group.groupName || 'Group Registration';
-      phaseStatusText.textContent = 'New Request';
-
-      document.getElementById('verifyPhone').value = group.phone || '';
-      document.getElementById('verifyGroup').value = group.groupName || '';
-      document.getElementById("displayGroup").textContent = group.groupName || '';
-
-      // Hide other steps within form, show Step 1 & 2
-      ['cAccount', 'reviewStep', 'paymentStep'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-      });
-      document.getElementById("totalMembersStep").classList.remove("hidden");
-    }
-
-    // Override the existing verifyChairperson to handle new groups flow
-    const originalVerifyChairperson = verifyChairperson;
-    async function verifyChairperson() {
-      const phone = document.getElementById("verifyPhone").value;
-      const group = document.getElementById("verifyGroup").value;
-      const msg = document.getElementById("verifyMsg");
-
-      if (!phone || !group) {
-        msg.textContent = "Please select a group and enter a phone number.";
-        return;
-      }
-
-      // Check if this is a new group (no trustee_1)
-      const selectedGroup = window.managedGroups.find(g => g.groupName === group);
-      if (selectedGroup && !selectedGroup.trustee_1) {
-        // This is a new group - skip to member registration directly
-        window.pendingChairpersonPhone = phone;
-
-        // Hide verification, show member details directly
-        document.getElementById("verificationStep").classList.add("hidden");
-        document.getElementById("cAccount").classList.remove("hidden");
-        document.getElementById("displayGroup2").textContent = group;
-        document.getElementById("displayGroup").textContent = group;
-
-        // Clear and generate member fields
-        document.getElementById('trusteesContainer').innerHTML = '';
-        document.getElementById('officialsContainer').innerHTML = '';
-        document.getElementById('membersContainer').innerHTML = '';
-
-        window.tbankCounts = { trustees: 3, officials: 1 };
-        window.currentTotalMembers = 15;
-
-        // Generate fields
-        generateFields("Trustee", 3, "trusteesContainer");
-        generateFlexibleFields("Official", 1, 1, "officialsContainer");
-        generateFlexibleFields("Member", 5, 15, "membersContainer");
-
-        return;
-      }
-
-      // Original flow for existing groups
-      try {
-        const res = await fetch("/general/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chairpersonalphonenumber: phone,
-            groupName: group
-          })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          window.tbankCounts = data.counts;
-          window.tbankFees = data.fees;
-
-          document.getElementById("verificationStep").classList.add("hidden");
-          document.getElementById("totalMembersStep").classList.remove("hidden");
-          document.getElementById("displayGroup").textContent = group;
-        } else {
-          msg.textContent = data.message || "Verification failed.";
-        }
-      } catch (err) {
-        console.error(err);
-        msg.textContent = "Error verifying details.";
-      }
-    }
-
-    // Helper to render principles (simplified version for display)
-    function renderPrinciples(group, container) {
-      container.innerHTML = ''; // Clear previous content
-
-      if (!group.principles) {
-        container.innerHTML = '<div style="padding:15px; color:#666;">No principles configured.</div>';
-        return;
-      }
-
-      // Create a simple scrollable container for cards
-      const scrollDiv = document.createElement('div');
-      scrollDiv.style.cssText = "display:flex; gap:15px; overflow-x:auto; padding:15px 5px; scrollbar-width:thin;";
-
-      const cards = [];
-
-      // 1. Timing Card
-      const p = group.principles;
-      const inter = p.intervals || {};
-      let timingHtml = `<div style="font-size:12px;"><b>Freq:</b> ${inter.frequency ? inter.frequency.toUpperCase() : 'N/A'}</div>`;
-      timingHtml += `<div style="font-size:12px;"><b>When:</b> ${inter.period || 'N/A'}</div>`;
-      timingHtml += `<div style="font-size:12px; margin-top:5px; color:#c53030;"><b>Ends:</b> ${inter.endSavingPeriod || 'N/A'}</div>`;
-
-      cards.push({
-        title: "Timing",
-        icon: "fa-history",
-        color: "#475569",
-        content: timingHtml
-      });
-
-      // 2. Governance
-      if (p.governance) {
-        cards.push({
-          title: "Governance",
-          icon: "fa-balance-scale",
-          color: "#856404",
-          bgColor: "#fffbeb",
-          content: `
-              <div style="font-size:11px;">Fast Vote: <b>${p.governance.fastNotificationThreshold}%</b></div>
-              <div style="font-size:11px;">Removal: <b>${p.governance.memberRemovalThreshold}%</b></div>
-              <div style="font-size:11px;">Note Req: <b>${p.governance.requireResponseNote ? 'Yes' : 'No'}</b></div>
-            `
-        });
-      }
-
-      // 3. Accounts
-      cards.push({
-        title: "Accounts",
-        icon: "fa-coins",
-        color: "#065f46",
-        bgColor: "#f0fdfa",
-        content: `
-            ${p.otherContributions ? p.otherContributions.map(a => `<div style="font-size:11px;"><b>${a.accountName} (${a.accountNumber}):</b> ${a.expectedAmount}</div>`).join('') : ''}
-          `
-      });
-
-      // 4. Loans
-      if (p.loans) {
-        const l = p.loans;
-        cards.push({
-          title: "Loan Policy",
-          icon: "fa-hand-holding-usd",
-          color: "#1e40af",
-          bgColor: "#eff6ff",
-          content: `
-                <div style="font-size:11px;">Type: <b>${l.type ? l.type.category.toUpperCase() : 'N/A'}</b></div>
-                <div style="font-size:11px;">Int: <b>${l.interestAndLimits ? l.interestAndLimits.interestRate : 0}%</b></div>
-                <div style="font-size:11px;">Repay: <b>${l.repayment ? l.repayment.durationDays : 0} days</b></div>
-              `
-        });
-      }
-
-      // Render Cards
-      cards.forEach(c => {
-        const card = document.createElement('div');
-        card.style.cssText = `min-width:140px; padding:12px; background:${c.bgColor || 'white'}; border-radius:10px; border:1px solid #e2e8f0; box-shadow:0 2px 4px rgba(0,0,0,0.05);`;
-        card.innerHTML = `
-             <div style="font-size:12px; font-weight:700; color:${c.color}; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                <i class="fas ${c.icon}"></i> ${c.title}
-             </div>
-             <div style="color:#334155;">${c.content}</div>
-          `;
-        scrollDiv.appendChild(card);
-      });
-
-      container.appendChild(scrollDiv);
-    }
-
-    // Render Group Members List
-    function renderGroupMembers(group) {
-      const container = document.getElementById('membersListContainer');
-      if (!container) return;
-      container.innerHTML = '';
-
-      const list = [];
-
-      // Collect Trustees
-      Object.keys(group).filter(k => k.startsWith('trustee_') && !k.includes('_id') && !k.includes('_phone')).forEach(k => {
-        const entry = group[k];
-        if (typeof entry !== 'object') return;
-        list.push({
-          name: entry.name || `Trustee`,
-          phone: entry.phone || 'N/A',
-          role: entry.title || 'Trustee',
-          icon: 'fa-user-shield',
-          color: '#1e3a8a'
-        });
-      });
-
-      // Collect Officials
-      Object.keys(group).filter(k => k.startsWith('official_') && !k.includes('_id') && !k.includes('_phone')).forEach(k => {
-        const entry = group[k];
-        if (typeof entry !== 'object') return;
-        list.push({
-          name: entry.name || `Official`,
-          phone: entry.phone || 'N/A',
-          role: 'Official',
-          icon: 'fa-user-tie',
-          color: '#854d0e'
-        });
-      });
-
-      // Collect Members
-      Object.keys(group).filter(k => k.startsWith('member_') && !k.includes('_id') && !k.includes('_phone')).forEach(k => {
-        const entry = group[k];
-        if (typeof entry !== 'object') return;
-        list.push({
-          name: entry.name || `Member`,
-          phone: entry.phone || 'N/A',
-          role: 'Member',
-          icon: 'fa-user',
-          color: '#475569'
-        });
-      });
-
-      if (list.length === 0) {
-        container.innerHTML = '<p style="text-align:center; padding:20px; color:#94a3b8; font-size:12px;">No members found.</p>';
-        return;
-      }
-
-      // List Header
-      const header = document.createElement('div');
-      header.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1.5fr; gap:10px; padding:10px; background:#f1f5f9; border-radius:8px; margin-bottom:10px; font-size:11px; font-weight:700; color:#475569;';
-      header.innerHTML = `
-      <div>NAME</div>
-      <div>ROLE</div>
-      <div>NUMBER</div>
-    `;
-      container.appendChild(header);
-
-      list.forEach(m => {
-        const row = document.createElement('div');
-        row.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1.5fr; gap:10px; padding:12px 10px; border-bottom:1px solid #f1f5f9; font-size:12px; align-items:center;';
-        row.innerHTML = `
-        <div style="font-weight:600; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.name}</div>
-        <div style="color:#64748b; font-weight:500;">${m.role}</div>
-        <div style="color:#0288d1; font-weight:600; font-family:monospace;">${m.phone}</div>
-      `;
-        container.appendChild(row);
-      });
-    }
-
-    function toggleMembersList() {
-      const section = document.getElementById('membersListSection');
-      if (section) section.classList.toggle('hidden');
-    }
-
-    function showRegistrationFormFromDetails() {
-      if (window.selectedGroupForDetails) {
-        showRegistrationFormForGroup(window.selectedGroupForDetails);
-      }
-    }
-
-    function continueRegistrationFromDetails() {
-      const group = window.managedGroups.find(g => g.groupName === window.selectedGroupForDetails);
-      if (!group) return;
-
-      // 1. Identify existing total headcount
-      const existingHeadcount = Object.keys(group).filter(k =>
-        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-      ).length;
-
-      // Existing members (specifically) to determine the next index
-      const existingMemberCount = Object.keys(group).filter(k => k.startsWith('member_')).length;
-
-      const totalTarget = group.totalProposedMembers || 15;
-      const remaining = totalTarget - existingHeadcount;
-
-      if (remaining <= 0) {
-        openConstitutionKeyPrompt();
-        return;
-      }
-
-      // 2. Prepare View (Inline)
-      const placeholder = document.getElementById('registrationFormPlaceholder');
-      const createForm = document.getElementById('createGroupForm');
-
-      if (placeholder && createForm) {
-        placeholder.appendChild(createForm);
-        placeholder.classList.remove('hidden');
-        createForm.classList.remove('hidden');
-
-        // Hide main info
-        document.getElementById('groupMainInfo').classList.add('hidden');
-        document.getElementById('principlesSection').classList.add('hidden');
-        document.getElementById('phaseActions').classList.add('hidden');
-      } else {
-        showCreateGroupForm();
-      }
-
-      document.getElementById('verificationStep').classList.add('hidden');
-      document.getElementById('totalMembersStep').classList.add('hidden');
-      document.getElementById('paymentStep').classList.add('hidden');
-      document.getElementById('cAccount').classList.remove('hidden');
-      document.getElementById('displayGroup2').textContent = group.groupName;
-
-      // Sync identifying fields so submission works
-      document.getElementById('displayGroup').textContent = group.groupName;
-      document.getElementById('verifyPhone').value = group.phone;
-
-      // 3. Clear existing form containers
-      document.getElementById('trusteesContainer').innerHTML = '';
-      document.getElementById('officialsContainer').innerHTML = '';
-      document.getElementById('membersContainer').innerHTML = '';
-
-      // 4. Set state for continuation
-      window.tbankCounts = { trustees: 0, officials: 0 };
-      window.currentTotalMembers = totalTarget;
-
-      // 5. Generate staggered fields for REMAINING people as 'Members' (starting from next member index)
-      generateFlexibleFields("Member", 5, totalTarget - (existingHeadcount - existingMemberCount), "membersContainer", existingMemberCount + 1);
-    }
-    function addSpecificMember(type) {
-      const groupName = window.selectedGroupForDetails;
-      const group = window.managedGroups.find(g => g.groupName === groupName);
-      if (!group) return;
-
-      // 1. Prepare UI — move form into the details placeholder
-      const placeholder = document.getElementById('registrationFormPlaceholder');
-      const createForm = document.getElementById('createGroupForm');
-      if (placeholder && createForm) {
-        placeholder.appendChild(createForm);
-        placeholder.classList.remove('hidden');
-        createForm.classList.remove('hidden');
-        createForm.style.display = 'block'; // Force visible regardless of any inline style
-        const groupMainInfo = document.getElementById('groupMainInfo');
-        if (groupMainInfo) groupMainInfo.classList.add('hidden');
-        const principlesSection = document.getElementById('principlesSection');
-        if (principlesSection) principlesSection.classList.add('hidden');
-        const phaseActions = document.getElementById('phaseActions');
-        if (phaseActions) phaseActions.classList.add('hidden');
-        const continueAction = document.getElementById('detailsContinueAction');
-        if (continueAction) continueAction.classList.add('hidden');
-      }
-
-      // 2. Count existing members from the database group object
-      const personKeys = Object.keys(group).filter(k => k.match(/^(trustee|official|member)_\d+$/));
-      const trustees = personKeys.filter(k => k.startsWith('trustee_')).length;
-      const officials = personKeys.filter(k => k.startsWith('official_')).length;
-      const members = personKeys.filter(k => k.startsWith('member_')).length;
-
-      const totalTarget = group.totalProposedMembers || 15;
-      window.currentTotalMembers = totalTarget;
-
-      // Read compliance standards
-      const stdTrustees = (window.tbankCounts && window.tbankCounts.trustees) || 3;
-      const stdOfficials = (window.tbankCounts && window.tbankCounts.officials) || 3;
-
-      // 3. Hide ALL sub-steps first, then ONLY reveal cAccount (the data entry step)
-      ['verificationStep', 'totalMembersStep', 'paymentStep', 'reviewStep'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-      });
-      const cAccount = document.getElementById('cAccount');
-      if (cAccount) {
-        cAccount.classList.remove('hidden');
-        cAccount.style.display = 'block'; // Force visible
-      }
-
-      // 4. Sync group name labels in the form header
-      const dg = document.getElementById('displayGroup');
-      if (dg) dg.textContent = groupName;
-      const dg2 = document.getElementById('displayGroup2');
-      if (dg2) dg2.textContent = groupName;
-      const verifyPhone = document.getElementById('verifyPhone');
-      if (verifyPhone) verifyPhone.value = group.phone;
-
-      // 5. Clear all role containers and reset internal tracking counters
-      document.getElementById('trusteesContainer').innerHTML = '';
-      document.getElementById('officialsContainer').innerHTML = '';
-      document.getElementById('membersContainer').innerHTML = '';
-
-      // Crucial: Reset tracking variables so generateFlexibleFields can recalculate capacity correctly
-      window.officialsContainerCount = 0;
-      window.membersContainerCount = 0;
-      window.trusteesContainerCount = 0;
-
-      // 6. Generate ONLY the required role fields with correct sequential indexes
-      if (type === 'official') {
-        const remaining = stdOfficials - officials;
-        if (remaining <= 0) {
-          document.getElementById('officialsContainer').innerHTML = `
-                <div style="padding: 20px; text-align: center; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 12px; color: #065f46; margin: 15px 0;">
-                    <i class="fas fa-check-double" style="font-size: 28px; color: #10b981; margin-bottom: 12px; display: block;"></i>
-                    <h4 style="margin: 0 0 5px; font-size: 14px;">Official Quorum Achieved</h4>
-                    <p style="margin: 0; font-size: 11px; font-weight: 400; opacity: 0.8;">This group has fulfilled the standard requirement of ${stdOfficials} officials.</p>
-                </div>
-            `;
-        } else {
-          const startIndex = stdTrustees + officials + 1;
-          generateFlexibleFields("Official", 1, remaining, "officialsContainer", startIndex);
-        }
-      } else {
-        const remaining = totalTarget - (trustees + officials + members);
-        if (remaining <= 0) {
-          document.getElementById('membersContainer').innerHTML = `
-                <div style="padding: 20px; text-align: center; background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 12px; color: #1e3a8a; margin: 15px 0;">
-                    <i class="fas fa-users-check" style="font-size: 28px; color: #3b82f6; margin-bottom: 12px; display: block;"></i>
-                    <h4 style="margin: 0 0 5px; font-size: 14px;">Target Capacity Reached</h4>
-                    <p style="margin: 0; font-size: 11px; font-weight: 400; opacity: 0.8;">All ${totalTarget} proposed member slots have been filled.</p>
-                </div>
-            `;
-          return;
-        }
-        const startIndex = stdTrustees + stdOfficials + members + 1;
-        generateFlexibleFields("Member", 1, remaining, "membersContainer", startIndex);
-      }
-
-      // 7. Show the Back button (only visible when triggered from Add buttons)
-      const backBtn = document.getElementById('cAccountBackBtn');
-      if (backBtn) backBtn.classList.remove('hidden');
-
-      // 8. Scroll to the form
-      if (placeholder) {
-        placeholder.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-
-    function generateUnifiedPendingInputs(group) {
-      const groupName = group.groupName;
-
-      // 1. Prepare UI
-      const placeholder = document.getElementById('registrationFormPlaceholder');
-      const createForm = document.getElementById('createGroupForm');
-      if (placeholder && createForm) {
-        placeholder.appendChild(createForm);
-        placeholder.classList.remove('hidden');
-        createForm.classList.remove('hidden');
-        createForm.style.display = 'block';
-      }
-
-      // 2. State & Counters
-      const personKeys = Object.keys(group).filter(k => k.match(/^(trustee|official|member)_\d+$/));
-      const trustees = personKeys.filter(k => k.startsWith('trustee_')).length;
-      const officials = personKeys.filter(k => k.startsWith('official_')).length;
-      const members = personKeys.filter(k => k.startsWith('member_')).length;
-      const totalTarget = group.totalProposedMembers || 15;
-
-      window.currentTotalMembers = totalTarget;
-      const stdTrustees = (window.tbankCounts && window.tbankCounts.trustees) || 3;
-      const stdOfficials = (window.tbankCounts && window.tbankCounts.officials) || 3;
-
-      // 3. Hide Steps
-      ['verificationStep', 'totalMembersStep', 'paymentStep', 'reviewStep'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-      });
-      const cAccount = document.getElementById('cAccount');
-      if (cAccount) {
-        cAccount.classList.remove('hidden');
-        cAccount.style.display = 'block';
-      }
-
-      // Hide dashboard Continue button to avoid duplication
-      const continueAction = document.getElementById('detailsContinueAction');
-      if (continueAction) continueAction.classList.add('hidden');
-
-      // 4. Reset Tracking
-      window.officialsInDb = officials;
-      window.membersInDb = members;
-      window.officialsContainerCount = 0;
-      window.membersContainerCount = 0;
-      window.trusteesContainerCount = 0;
-      document.getElementById('trusteesContainer').innerHTML = '';
-      document.getElementById('officialsContainer').innerHTML = '';
-      document.getElementById('membersContainer').innerHTML = '';
-
-      // 5. Labels
-      document.getElementById('displayGroup').textContent = groupName;
-      document.getElementById('verifyPhone').value = group.phone;
-
-      // Hide Back Button as this is the default view
-      const backBtn = document.getElementById('cAccountBackBtn');
-      if (backBtn) backBtn.classList.add('hidden');
-
-      // 6. Generate Officials (if needed)
-      const offRemaining = stdOfficials - officials;
-      if (offRemaining > 0) {
-        const offStartIndex = stdTrustees + officials + 1;
-        generateFlexibleFields("Official", offRemaining, offRemaining, "officialsContainer", offStartIndex);
-      } else {
-        document.getElementById('officialsContainer').innerHTML = `
-            <div style="padding: 15px; text-align: center; background: #ecfdf5; border: 1px solid #10b981; border-radius: 10px; color: #065f46; margin: 10px 0; font-size:11px; font-weight:600;">
-                <i class="fas fa-check-circle"></i> Official Quorum Met (${stdOfficials}/${stdOfficials})
-            </div>
-        `;
-      }
-
-      // 7. Generate Members
-      // Note: We subtract existing members and either the standard official count or the actual official count (whichever is higher)
-      const effectiveOfficials = Math.max(stdOfficials, officials);
-      const memRemaining = totalTarget - (stdTrustees + effectiveOfficials + members);
-      if (memRemaining > 0) {
-        const memStartIndex = stdTrustees + effectiveOfficials + members + 1;
-        generateFlexibleFields("Member", memRemaining, memRemaining, "membersContainer", memStartIndex);
-      } else {
-        document.getElementById('membersContainer').innerHTML = `
-            <div style="padding: 15px; text-align: center; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 10px; color: #1e3a8a; margin: 10px 0; font-size:11px; font-weight:600;">
-                <i class="fas fa-info-circle"></i> Member Capacity Full (${totalTarget}/${totalTarget})
-            </div>
-        `;
-      }
-
-      // 8. Scroll to the form for better focus
-      if (placeholder) {
-        placeholder.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-
-    function backFromAddMember() {
-      const groupName = window.selectedGroupForDetails;
-
-      const placeholder = document.getElementById('registrationFormPlaceholder');
-      if (placeholder) placeholder.classList.add('hidden');
-
-      const backBtn = document.getElementById('cAccountBackBtn');
-      if (backBtn) backBtn.classList.add('hidden');
-
-      const phaseActions = document.getElementById('phaseActions');
-      if (phaseActions) phaseActions.classList.remove('hidden');
-
-      // Re-show continue action if it was hidden
-      const continueAction = document.getElementById('detailsContinueAction');
-      const group = window.managedGroups.find(g => g.groupName === groupName);
-      if (continueAction && group && group.phase < 3) {
-        continueAction.classList.remove('hidden');
-      }
-
-      const detailsView = document.getElementById('groupDetailsView');
-      if (detailsView) detailsView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    // Registration and Member Population logic moved to /agent/new-group portal.
+    // The following functions simplified to remove deprecated inline flow.
 
     function handleDetailsContinue() {
       const groupName = window.selectedGroupForDetails;
@@ -4456,8 +4031,7 @@
         // Quorum met: Continue to Constitution Setup
         openConstitutionKeyPrompt();
       } else {
-        // Quorum NOT met: Continue with Member Registration
-        showRegistrationFormFromDetails();
+        alert("This group has not yet reached its target membership quorum. Please complete the activation through the New Request portal.");
       }
     }
 
@@ -4942,35 +4516,18 @@
       setTimeout(initAgentPerformanceChart, 500);
     });
 
-    function showCreateGroupForm() {
-      const reqList = document.getElementById('newGroupsList');
-      if (reqList) reqList.classList.add('hidden');
-
-      const createForm = document.getElementById('createGroupForm');
-      const createSection = document.getElementById('createGroupSection');
-
-      // Ensure form is in its original container
-      if (createForm && createSection) {
-        createSection.appendChild(createForm);
-      }
-
-      if (createForm) createForm.classList.remove('hidden');
-
-      // Start at Step 2 (Total Members)
-      const tms = document.getElementById('totalMembersStep');
-      if (tms) tms.classList.remove('hidden');
-
-      // Set defaults for validation/UI
-      window.tbankCounts = { trustees: 3, officials: 1, members: 15, maxMembers: 100 };
-      window.tbankFees = { newGroup: 100 };
-    }
-
     function switchGroupsSubView(view) {
       // Hide all sub-sections
-      ['groupsPerformanceSection', 'searchGroupSection', 'updateGroupSection', 'createGroupSection', 'emptyPerformanceSection'].forEach(id => {
+      ['groupsPerformanceSection', 'searchGroupSection', 'updateGroupSection', 'emptyPerformanceSection'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
+
+      // Hide both list containers by default
+      const managedContainer = document.getElementById('managedGroupsContainer');
+      const newRequestsContainer = document.getElementById('newRequestsContainer');
+      if (managedContainer) managedContainer.classList.add('hidden');
+      if (newRequestsContainer) newRequestsContainer.classList.add('hidden');
 
       // Remove active from all sub-nav items
       ['subNavPerf', 'subNavNewPerf', 'subNavSearch', 'subNavUpdate', 'subNavCreate'].forEach(id => {
@@ -4981,6 +4538,7 @@
       // Show selected
       if (view === 'performance') {
         document.getElementById('groupsPerformanceSection').classList.remove('hidden');
+        if (managedContainer) managedContainer.classList.remove('hidden');
         document.getElementById('subNavPerf').classList.add('active');
       } else if (view === 'new-performance') {
         document.getElementById('emptyPerformanceSection').classList.remove('hidden');
@@ -4992,70 +4550,9 @@
         document.getElementById('updateGroupSection').classList.remove('hidden');
         document.getElementById('subNavUpdate').classList.add('active');
       } else if (view === 'create') {
-        // Keep Performance Section visible (display above as default)
         document.getElementById('groupsPerformanceSection').classList.remove('hidden');
+        if (newRequestsContainer) newRequestsContainer.classList.remove('hidden');
         document.getElementById('subNavCreate').classList.add('active');
-        
-        // Show createGroupSection and initialize its internal flow
-        const createSection = document.getElementById('createGroupSection');
-        if (createSection) createSection.classList.remove('hidden');
-        
-        showCreateGroupForm();
-        
-        // Ensure Fee Preview is updated
-        updateGroupFeePreview();
-      }
-    }
-
-    function updateGroupFeePreview() {
-      const count = parseInt(document.getElementById('newGroupMembers').value);
-      const preview = document.getElementById('groupFeePreview');
-      const feeAmt = document.getElementById('groupFeeAmt');
-      const feeNote = document.getElementById('groupFeeNote');
-      if (count && count > 0) {
-        const fee = count * 100;
-        feeAmt.textContent = 'KES ' + fee.toLocaleString() + '.00';
-        feeNote.textContent = count + ' members × KES 100 setup fee';
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-      }
-    }
-
-    async function submitNewGroupCreation() {
-      const name = document.getElementById('verifyGroup').value.trim();
-      const phone = document.getElementById('verifyPhone').value.trim();
-      const members = parseInt(document.getElementById('newGroupMembers').value);
-      const mpesa = document.getElementById('newGroupMpesa').value.trim();
-      const msg = document.getElementById('newGroupMsg');
-
-      if (!name) { msg.style.color='#ef4444'; msg.textContent='Enter a group name.'; return; }
-      if (!phone || phone.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid phone number.'; return; }
-      if (!members || members < 1) { msg.style.color='#ef4444'; msg.textContent='Enter a valid member count.'; return; }
-      if (!mpesa || mpesa.length < 10) { msg.style.color='#ef4444'; msg.textContent='Enter a valid M-Pesa number.'; return; }
-
-      msg.style.color='#4285f4'; msg.textContent='Creating group & initiating payment...';
-
-      try {
-        const res = await fetch('/agent/create-group', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ groupName: name, phone, totalMembers: members, mpesaPhone: mpesa })
-        });
-        const result = await res.json();
-        if (result.success) {
-          msg.style.color='#059669';
-          msg.textContent='Group created! STK push sent to ' + mpesa + '.';
-          document.getElementById('newGroupName').value = '';
-          document.getElementById('newGroupPhone').value = '';
-          document.getElementById('newGroupMembers').value = '';
-          document.getElementById('newGroupMpesa').value = '';
-          document.getElementById('groupFeePreview').style.display = 'none';
-        } else {
-          msg.style.color='#ef4444'; msg.textContent = result.message || 'Failed to create group.';
-        }
-      } catch(e) {
-        msg.style.color='#ef4444'; msg.textContent='Server error. Try again.';
       }
     }
 
@@ -5063,38 +4560,31 @@
     function appBackNavigation() {
       const detailsView = document.getElementById('groupDetailsView');
       const profileView = document.getElementById('agentProfileView');
-      const createView = document.getElementById('createGroupForm');
       const detailedPerfView = document.getElementById('detailedPerformanceView');
       const hubView = document.getElementById('agentFinancialHubView');
       const dashboardView = document.getElementById('agentDashboardView');
 
-      // 1. If within detailed performance, go back to account hub
       if (detailedPerfView && !detailedPerfView.classList.contains('hidden')) {
         showMyAccount();
         return;
       }
 
-      // 2. If within group details, detailed back logic applies (eventually goes to groups list)
       if (detailsView && !detailsView.classList.contains('hidden')) {
         handleDetailBack();
         return;
       }
 
-      // 3. If in Profile or Groups List (Dashboard), go back to Account Hub
       if ((profileView && !profileView.classList.contains('hidden')) ||
-        (dashboardView && !dashboardView.classList.contains('hidden')) ||
-        (createView && !createView.classList.contains('hidden'))) {
+        (dashboardView && !dashboardView.classList.contains('hidden'))) {
         showMyAccount();
         return;
       }
 
-      // 4. If already in Account Hub, go back to the external home page
       if (hubView && !hubView.classList.contains('hidden')) {
-        window.location.href = '/personal'; // Adjust this URL if your "home" is different
+        window.location.href = '/personal';
         return;
       }
 
-      // Fallback default
       showMyAccount();
     }
 

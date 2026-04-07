@@ -1353,4 +1353,72 @@ router.get("/group/:groupName", (req, res) => {
   return res.render("group-details", { group, userRole });
 });
 
+/* ================= API: Verify Members Against data.json ================= */
+router.post("/api/verify-members", (req, res) => {
+  try {
+    const { members } = req.body;
+    
+    if (!members || !Array.isArray(members)) {
+      return res.status(400).json({ error: "members array is required" });
+    }
+
+    console.log(`✓ Received ${members.length} members to verify`);
+
+    // Read data.json to get registered users
+    const usersFile = path.join(__dirname, "../data.json");
+    const users = readJSON(usersFile, []);
+    console.log(`✓ Loaded ${users.length} users from data.json`);
+
+    // Verify each member against data.json
+    const results = members.map(member => {
+      const { key, phone, id, role, title, index } = member;
+      
+      // Normalize phone for comparison
+      const normalizedPhone = norm(phone);
+      
+      // Find matching user in data.json by phone number
+      const matchedUser = users.find(u => norm(u.phoneNumber) === normalizedPhone);
+      
+      let verificationResult = {
+        key,
+        phone,
+        id: id || null,
+        role,
+        title,
+        index,
+        name: null,
+        verified: false,
+        notRegistered: true
+      };
+      
+      if (matchedUser) {
+        // Phone found in data.json - get name
+        const fullName = `${matchedUser.FirstName} ${matchedUser.MiddleName || ''} ${matchedUser.LastName}`.replace(/\s+/g, ' ').trim();
+        
+        // Check if ID matches
+        const idMatch = id && String(matchedUser.idNumber || '').trim() === String(id).trim();
+        
+        verificationResult = {
+          ...verificationResult,
+          name: fullName,
+          verified: idMatch,
+          notRegistered: false
+        };
+        
+        console.log(`✓ Match: ${phone} → ${fullName} (ID match: ${idMatch})`);
+      } else {
+        console.log(`✗ Not found: ${phone}`);
+      }
+      
+      return verificationResult;
+    });
+
+    console.log(`✓ Verification complete. Returning ${results.length} results`);
+    return res.json({ success: true, members: results });
+  } catch (err) {
+    console.error("Error in /api/verify-members:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;

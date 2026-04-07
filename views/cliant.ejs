@@ -154,7 +154,8 @@ const app = {
         const badge = document.getElementById('msgBadge');
         if (!badge) return;
         const keyCount = (this.data.constitutionKeys && Array.isArray(this.data.constitutionKeys)) ? this.data.constitutionKeys.length : 0;
-        const total = (this.data.unread || 0) + keyCount;
+        const inboxCount = (this.data.user.inbox && Array.isArray(this.data.user.inbox)) ? this.data.user.inbox.filter(m => m.unread).length : 0;
+        const total = (this.data.unread || 0) + keyCount + inboxCount;
         badge.textContent = total;
         badge.classList.toggle('hidden', total === 0);
     },
@@ -164,7 +165,8 @@ const app = {
         
         const keys = this.data.constitutionKeys || [];
         const txs = this.data.transactions || [];
-        if (keys.length === 0 && txs.length === 0) { alert("No new messages."); return; }
+        const inbox = this.data.user.inbox || [];
+        if (keys.length === 0 && txs.length === 0 && inbox.length === 0) { alert("No new messages."); return; }
         
         let html = '<div style="text-align:left;">';
         
@@ -200,6 +202,20 @@ const app = {
                 }
 
                 html += `</div>`;
+            });
+        }
+        
+        if (inbox.length > 0) {
+            html += '<h5 style="margin-top:20px;margin-bottom:12px;font-size:12px;color:#059669;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #eee;padding-bottom:5px;">Meeting Invitations</h5>';
+            [...inbox].reverse().forEach(msg => {
+                html += `
+                    <div style="background:#f0fdf4;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #dcfce7;border-left:4px solid #10b981;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                            <h4 style="color:#065f46;font-size:13px;font-weight:700;">📅 ${msg.groupName}</h4>
+                            <span style="font-size:10px;color:#059669;font-weight:600;">${new Date(msg.date).toLocaleDateString()}</span>
+                        </div>
+                        <div style="font-size:12.5px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">${msg.content}</div>
+                    </div>`;
             });
         }
         
@@ -429,17 +445,45 @@ const app = {
     renderPersonalView(container) {
         const headerRole = document.getElementById('headerRole');
         if (headerRole) headerRole.innerHTML = '<i class="fas fa-users-cog"></i> Personal Wallet';
-        
+
         if (!this.data.hasPersonalPin) {
             this.renderCreatePinView(container);
         } else {
-            container.innerHTML = `
+            let html = '';
+
+            // Display group registration messages in kinda eteko structure
+            if (this.data.user.groupNotifications && this.data.user.groupNotifications.length > 0) {
+                html += '<div style="margin-bottom:20px;">';
+                this.data.user.groupNotifications.forEach(notification => {
+                    const bgColor = notification.type === 'registration' ? '#dcfce7' : '#fef3c7';
+                    const borderColor = notification.type === 'registration' ? '#22c55e' : '#f59e0b';
+                    const icon = notification.type === 'registration' ? 'fa-check-circle' : 'fa-info-circle';
+                    html += `
+                        <div style="background:${bgColor}; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid ${borderColor}; border-left:4px solid ${borderColor};">
+                            <h4 style="color:#065f46; margin-bottom:8px; font-size:14px; font-weight:700;">
+                                <i class="fas ${icon}" style="color:${borderColor}; margin-right:8px;"></i>
+                                ${notification.groupName}
+                            </h4>
+                            <div style="font-size:13px; color:#1e293b; line-height:1.5; margin-bottom:10px;">
+                                ${notification.message}
+                            </div>
+                            <div style="font-size:11px; color:#64748b;">
+                                Role: ${notification.role} | Index: ${notification.index} | Constitution Key: ${notification.constitutionKey || 'N/A'}
+                            </div>
+                        </div>`;
+                });
+                html += '</div>';
+            }
+
+            html += `
                 <div class="menu">
                     <div class="menu-item" onclick="app.openModal('Send Money')">Send Money <span class="arrow">›</span></div>
                     <div class="menu-item" onclick="app.openModal('Withdraw')">Withdraw Money <span class="arrow">›</span></div>
                     <div class="menu-item" onclick="app.openModal('Change PIN')">Change PIN <span class="arrow">›</span></div>
                     <div class="menu-item" onclick="app.openModal('Statement')">Account Statement <span class="arrow">›</span></div>
                 </div>`;
+
+            container.innerHTML = html;
         }
     },
     renderCreatePinView(container) {

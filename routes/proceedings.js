@@ -24,6 +24,28 @@ const writeJSON = (filePath, data) => {
   }
 };
 
+const norm = (p) => {
+  if (!p) return "";
+  let s = String(p).trim();
+  if (s.startsWith("0")) s = s.substring(1);
+  if (s.startsWith("+254")) s = s.substring(4);
+  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+  return s;
+};
+
+const flattenData = (data) => {
+  if (Array.isArray(data)) return data;
+  const flat = [];
+  for (const county in data) {
+    for (const constituency in data[county]) {
+      for (const ward in data[county][constituency]) {
+        flat.push(...data[county][constituency][ward]);
+      }
+    }
+  }
+  return flat;
+};
+
 // Data file paths
 const proceedingsFile = path.join(__dirname, "../data/proceedings.json");
 const generalFile = path.join(__dirname, "../general.json");
@@ -53,19 +75,58 @@ router.get("/:groupName", (req, res) => {
     return res.redirect("/login");
   }
 
-  const groupName = decodeURIComponent(req.params.groupName);
+  const groupName = decodeURIComponent(req.params.groupName).trim();
   
   // Read proceedings data
   const proceedingsData = readJSON(proceedingsFile, { meetings: [], members: [], agenda: [], minutes: [], votes: [], comments: [], attendance: [] });
   
+  // Import official members from general.json
+  const allGeneralData = readJSON(generalFile, {});
+  const userRegistry = readJSON(path.join(__dirname, "../data.json"), []);
+  const flatGroups = flattenData(allGeneralData);
+  const selectedGroupRecord = flatGroups.find(g => (g.groupName || '').trim() === groupName);
+  
+  let groupMembers = [];
+  if (selectedGroupRecord) {
+      const memberKeys = Object.keys(selectedGroupRecord).filter(k => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_'));
+      memberKeys.forEach(key => {
+          const item = selectedGroupRecord[key];
+          if (item && typeof item === 'object' && item.phone) {
+              const normalizedPhone = norm(item.phone);
+              
+              // Cross-reference with data.json to get the latest name
+              const registryUser = userRegistry.find(u => norm(u.phoneNumber) === normalizedPhone);
+              let displayName = item.name || "Unknown Name";
+              
+              if (registryUser) {
+                  displayName = [
+                      registryUser.FirstName || '',
+                      registryUser.MiddleName || '',
+                      registryUser.LastName || ''
+                  ].filter(n => n.trim() !== '').join(' ');
+              }
+
+              groupMembers.push({
+                  id: item.id || item.phone, 
+                  name: displayName,
+                  position: item.title || item.type || "Member",
+                  groupName: groupName,
+                  phone: item.phone
+              });
+          }
+      });
+  } else {
+      // Fallback to internal members if group doesn't exist in general.json
+      groupMembers = proceedingsData.members.filter(m => (m.groupName || '').trim() === groupName);
+  }
+  
   // Filter data for this group
-  const groupMeetings = proceedingsData.meetings.filter(m => m.groupName === groupName);
-  const groupMembers = proceedingsData.members.filter(m => m.groupName === groupName);
-  const groupAgenda = proceedingsData.agenda.filter(a => a.groupName === groupName);
-  const groupMinutes = proceedingsData.minutes.filter(m => m.groupName === groupName);
-  const groupVotes = proceedingsData.votes.filter(v => v.groupName === groupName);
-  const groupComments = proceedingsData.comments.filter(c => c.groupName === groupName);
-  const groupAttendance = proceedingsData.attendance.filter(a => a.groupName === groupName);
+  const groupMeetings = proceedingsData.meetings.filter(m => (m.groupName || '').trim() === groupName);
+  const groupAgenda = proceedingsData.agenda.filter(a => (a.groupName || '').trim() === groupName);
+  const groupMinutes = proceedingsData.minutes.filter(m => (m.groupName || '').trim() === groupName);
+  const groupVotes = proceedingsData.votes.filter(v => (v.groupName || '').trim() === groupName);
+  const groupComments = proceedingsData.comments.filter(c => (c.groupName || '').trim() === groupName);
+  const groupAttendance = proceedingsData.attendance.filter(a => (a.groupName || '').trim() === groupName);
   
   // Get current meeting (most recent or selected)
   const meetingId = req.query.meetingId;
@@ -185,6 +246,50 @@ router.post("/api/meetings", (req, res) => {
   
   proceedingsData.meetings.push(newMeeting);
   writeJSON(proceedingsFile, proceedingsData);
+
+  // --- AUTOMATED NOTIFICATIONS ---
+  try {
+    const allGroups = readJSON(generalFile, []);
+    const currentGroup = allGroups.find(g => g.groupName === groupName);
+    const proposerPhone = req.session.user ? req.session.user.phoneNumber : 'N/A';
+    
+    if (currentGroup && currentGroup.members) {
+      const allUsers = readJSON(dataFile, []);
+      
+      // Look up Secretary Phone
+      const secMember = currentGroup.members.find(m => {
+        const u = allUsers.find(user => norm(user.phoneNumber) === norm(m.phoneNumber));
+        const fullName = u ? `${u.FirstName} ${u.MiddleName} ${u.LastName}`.trim() : (m.name || '').trim();
+        return fullName.toLowerCase() === (secretary || '').toLowerCase();
+      });
+      const secPhone = secMember ? secMember.phoneNumber : 'N/A';
+
+      // Notify all members
+      currentGroup.members.forEach(member => {
+        const userIdx = allUsers.findIndex(u => norm(u.phoneNumber) === norm(member.phoneNumber));
+        if (userIdx !== -1) {
+          const user = allUsers[userIdx];
+          if (!user.inbox) user.inbox = [];
+          
+          const msg = `${user.FirstName} ${user.LastName} you are invited to group meeting for ${groupName} due ${date} at ${startTime} venue ${venue}. Contact Secretary ${secretary} (${secPhone}) or Proposer (${proposerPhone})`;
+          
+          user.inbox.push({
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            type: 'meeting_invite',
+            groupName: groupName,
+            title: title,
+            content: msg,
+            date: new Date().toISOString(),
+            unread: true
+          });
+        }
+      });
+      writeJSON(dataFile, allUsers);
+    }
+  } catch (err) {
+    console.error("Notification Error:", err);
+  }
+  // --- END NOTIFICATIONS ---
   
   res.json({ success: true, meeting: newMeeting });
 });
@@ -207,34 +312,88 @@ router.put("/api/meetings/:id", (req, res) => {
   res.json({ success: true, meeting: proceedingsData.meetings[meetingIndex] });
 });
 
-// POST /api/proceedings/members - Add a new member
-router.post("/api/members", (req, res) => {
-  const { groupName, name, position, email } = req.body;
+// POST /api/proceedings/meetings - Create a new meeting
+router.post("/api/meetings", (req, res) => {
+  const { title, date, venue, startTime, endTime, chairperson, secretary, groupName, status } = req.body;
   
-  if (!groupName || !name) {
-    return res.status(400).json({ error: "Group name and name are required" });
+  if (!title || !date || !groupName) {
+    return res.status(400).json({ success: false, message: "Title, date, and group name are required" });
   }
   
   const proceedingsData = readJSON(proceedingsFile, { meetings: [], members: [], agenda: [], minutes: [], votes: [], comments: [], attendance: [] });
   
-  const newMember = {
+  const newMeeting = {
     id: Date.now().toString(),
+    title,
+    date,
+    venue,
+    startTime,
+    endTime,
+    chairperson,
+    secretary,
     groupName,
-    name,
-    position: position || '',
-    email: email || '',
+    status: status || 'active',
+    visitors: [],
     createdAt: new Date().toISOString()
   };
   
-  proceedingsData.members.push(newMember);
+  proceedingsData.meetings.push(newMeeting);
   writeJSON(proceedingsFile, proceedingsData);
   
-  res.json({ success: true, member: newMember });
+  res.json({ success: true, meeting: newMeeting });
+});
+
+// PUT /api/proceedings/meetings/:id - Update meeting status
+router.put("/api/meetings/:id", (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const proceedingsData = readJSON(proceedingsFile, { meetings: [] });
+    const meetingIndex = proceedingsData.meetings.findIndex(m => m.id === id);
+    
+    if (meetingIndex === -1) {
+        return res.status(404).json({ success: false, message: "Meeting not found" });
+    }
+    
+    proceedingsData.meetings[meetingIndex].status = status;
+    writeJSON(proceedingsFile, proceedingsData);
+    
+    res.json({ success: true });
+});
+
+// POST /api/proceedings/meetings/:id/visitors - Add a visitor
+router.post("/api/meetings/:id/visitors", (req, res) => {
+    const { id } = req.params;
+    const { name, description } = req.body;
+    
+    if (!name) return res.status(400).json({ success: false, message: "Name required" });
+    
+    const proceedingsData = readJSON(proceedingsFile, { meetings: [] });
+    const meetingIndex = proceedingsData.meetings.findIndex(m => m.id === id);
+    
+    if (meetingIndex === -1) {
+        return res.status(404).json({ success: false, message: "Meeting not found" });
+    }
+    
+    if (!proceedingsData.meetings[meetingIndex].visitors) {
+        proceedingsData.meetings[meetingIndex].visitors = [];
+    }
+    
+    proceedingsData.meetings[meetingIndex].visitors.push({
+        id: Date.now().toString(),
+        name,
+        description,
+        addedAt: new Date().toISOString()
+    });
+    
+    writeJSON(proceedingsFile, proceedingsData);
+    
+    res.json({ success: true });
 });
 
 // POST /api/proceedings/attendance - Mark attendance
 router.post("/api/attendance", (req, res) => {
-  const { meetingId, memberId, status, groupName } = req.body;
+  const { meetingId, memberId, status, groupName, apology } = req.body;
   
   if (!meetingId || !memberId || !status || !groupName) {
     return res.status(400).json({ error: "Meeting ID, member ID, status, and group name are required" });
@@ -253,6 +412,7 @@ router.post("/api/attendance", (req, res) => {
     meetingId,
     memberId,
     status,
+    apology: apology || '',
     groupName,
     createdAt: new Date().toISOString()
   });
@@ -260,6 +420,73 @@ router.post("/api/attendance", (req, res) => {
   writeJSON(proceedingsFile, proceedingsData);
   
   res.json({ success: true });
+});
+
+// POST /api/proceedings/attendance/bulk - Bulk save attendance
+router.post("/api/attendance/bulk", (req, res) => {
+    const { meetingId, groupName, updates } = req.body;
+    
+    if (!meetingId || !updates) {
+        return res.status(400).json({ success: false, message: "Meeting ID and updates required" });
+    }
+    
+    const proceedingsData = readJSON(proceedingsFile, { attendance: [] });
+    
+    Object.keys(updates).forEach(memberId => {
+        const { status, apology } = updates[memberId];
+        
+        // Find existing record for this member in this meeting
+        const index = proceedingsData.attendance.findIndex(a => 
+            a.meetingId === meetingId && a.memberId === memberId
+        );
+        
+        const record = {
+            id: index !== -1 ? proceedingsData.attendance[index].id : Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            meetingId,
+            memberId,
+            groupName,
+            status,
+            apology: apology || '',
+            updatedAt: new Date().toISOString()
+        };
+        
+        if (index !== -1) {
+            proceedingsData.attendance[index] = record;
+        } else {
+            proceedingsData.attendance.push(record);
+        }
+    });
+    
+    writeJSON(proceedingsFile, proceedingsData);
+    res.json({ success: true });
+});
+
+// POST /api/proceedings/projects - Create a new project
+router.post("/api/projects", (req, res) => {
+    const { groupName, title, objective, budget, targetDate } = req.body;
+    
+    if (!title) {
+        return res.status(400).json({ success: false, message: "Project title required" });
+    }
+    
+    const proceedingsData = readJSON(proceedingsFile, { projects: [] });
+    
+    const project = {
+        id: Date.now().toString(),
+        groupName,
+        title,
+        objective,
+        budget,
+        targetDate,
+        createdAt: new Date().toISOString(),
+        status: 'planned'
+    };
+    
+    if (!proceedingsData.projects) proceedingsData.projects = [];
+    proceedingsData.projects.push(project);
+    
+    writeJSON(proceedingsFile, proceedingsData);
+    res.json({ success: true, project });
 });
 
 // POST /api/proceedings/agenda - Create a new agenda item

@@ -1,9 +1,245 @@
 {
-  "meetings": [],
-  "members": [],
+  "meetings": [
+    {
+      "id": "1775301427523",
+      "groupName": "kinda eteko",
+      "title": "fast year",
+      "project": "new year",
+      "date": "2026-04-11",
+      "venue": "mololongo",
+      "startTime": "14:19",
+      "endTime": "17:16",
+      "chairperson": "brian omondi",
+      "secretary": "jusi",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-04T11:17:07.523Z"
+    },
+    {
+      "id": "1775304028795",
+      "groupName": "kinda eteko",
+      "title": "fast year meeting",
+      "project": "seting new stardades",
+      "date": "2026-04-04",
+      "venue": "mololongo",
+      "startTime": "15:00",
+      "endTime": "16:00",
+      "chairperson": "brian omondi",
+      "secretary": "jusii",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-04T12:00:28.795Z"
+    },
+    {
+      "id": "1775305192530",
+      "groupName": "kinda eteko",
+      "title": "fast year meeting 1",
+      "project": "new year w",
+      "date": "2026-04-04",
+      "venue": "mololongo 1",
+      "startTime": "15:20",
+      "endTime": "15:25",
+      "chairperson": "bb",
+      "secretary": "jusi v",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-04T12:19:52.530Z"
+    },
+    {
+      "id": "1775305568384",
+      "groupName": "kinda eteko",
+      "title": "n nm m",
+      "project": "nnj",
+      "date": "2026-04-04",
+      "venue": "mololongo 13",
+      "startTime": "15:31",
+      "endTime": "15:30",
+      "chairperson": "brian omondi",
+      "secretary": "jusi v",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-04T12:26:08.384Z"
+    },
+    {
+      "id": "1775305728444",
+      "groupName": "kinda eteko",
+      "title": "n b,bl",
+      "project": "blbnlknlk",
+      "date": "2026-04-04",
+      "venue": "mololongo 14",
+      "startTime": "15:34",
+      "endTime": "15:32",
+      "chairperson": "brian omondi",
+      "secretary": "jusii",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-04T12:28:48.444Z",
+      "callToOrderNote": "open m with preya",
+      "callToOrderModerator": "brian oma oma"
+    },
+    {
+      "id": "1775368654275",
+      "groupName": "kinda eteko",
+      "title": "fast year",
+      "project": "seting new stardades",
+      "date": "2026-04-05",
+      "venue": "mololongo 14",
+      "startTime": "08:02",
+      "endTime": "08:02",
+      "chairperson": "brian oka oka",
+      "secretary": "brian omolo omolo",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-05T05:57:34.275Z"
+    }
+  ],
+  "members": [
+    {
+      "id": "1775301899751",
+      "groupName": "kinda eteko",
+      "name": "fefev",
+      "position": "cececf",
+      "email": "wefcervbrtbre",
+      "createdAt": "2026-04-04T11:24:59.751Z"
+    }
+  ],
   "agenda": [],
-  "minutes": [],
+  "minutes": [
+    {
+      "id": "1775315377121",
+      "meetingId": "1775305728444",
+      "groupName": "kinda eteko",
+      "title": "group registation ",
+      "content": "group should be registed",
+      "status": "approved",
+      "createdAt": "2026-04-04T15:09:37.121Z"
+    },
+    {
+      "id": "1775315844258",
+      "meetingId": "1775305728444",
+      "groupName": "kinda eteko",
+      "title": "gr ",
+      "content": "fj",
+      "status": "amended",
+      "createdAt": "2026-04-04T15:17:24.258Z"
+    }
+  ],
   "votes": [],
   "comments": [],
-  "attendance": []
+  "attendance": [
+    {
+      "id": "1775304780710",
+      "meetingId": "1775304028795",
+      "memberId": "35951453",
+      "status": "present",
+      "apology": "",
+      "groupName": "kinda eteko",
+      "createdAt": "2026-04-04T12:13:00.711Z"
+    },
+    {
+      "id": "1775305023213",
+      "meetingId": "1775304028795",
+      "memberId": "35951444",
+      "status": "absent",
+      "apology": "Without Apology",
+      "groupName": "kinda eteko",
+      "createdAt": "2026-04-04T12:17:03.213Z"
+    },
+    {
+      "id": "1775306238642",
+      "meetingId": "1775305728444",
+      "memberId": "35951453",
+      "status": "present",
+      "apology": "",
+      "groupName": "kinda eteko",
+      "createdAt": "2026-04-04T12:37:18.642Z"
+    },
+    {
+      "id": "1775306382405",
+      "meetingId": "1775305728444",
+      "memberId": "35951444",
+      "groupName": "kinda eteko",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-04T12:47:13.552Z"
+    },
+    {
+      "id": "1775306549394",
+      "meetingId": "1775305728444",
+      "memberId": "35951449",
+      "status": "present",
+      "apology": "",
+      "groupName": "kinda eteko",
+      "createdAt": "2026-04-04T12:42:29.394Z"
+    },
+    {
+      "id": "1775306564856",
+      "meetingId": "1775305728444",
+      "memberId": "35951450",
+      "status": "present",
+      "apology": "",
+      "groupName": "kinda eteko",
+      "createdAt": "2026-04-04T12:42:44.856Z"
+    },
+    {
+      "id": "1775306833556zccqp",
+      "meetingId": "1775305728444",
+      "memberId": "35951451",
+      "groupName": "kinda eteko",
+      "status": "absent",
+      "apology": "Without Apology",
+      "updatedAt": "2026-04-04T12:47:13.556Z"
+    },
+    {
+      "id": "1775306833556cpzdy",
+      "meetingId": "1775305728444",
+      "memberId": "35951452",
+      "groupName": "kinda eteko",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-04T12:47:13.556Z"
+    },
+    {
+      "id": "1775306833556t3yab",
+      "meetingId": "1775305728444",
+      "memberId": "35951454",
+      "groupName": "kinda eteko",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-04T12:47:13.556Z"
+    },
+    {
+      "id": "1775306833556ve0d0",
+      "meetingId": "1775305728444",
+      "memberId": "35951455",
+      "groupName": "kinda eteko",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-04T12:47:13.556Z"
+    },
+    {
+      "id": "1775306833556az6k4",
+      "meetingId": "1775305728444",
+      "memberId": "35951456",
+      "groupName": "kinda eteko",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-04T12:47:13.556Z"
+    },
+    {
+      "id": "177530683355685s2k",
+      "meetingId": "1775305728444",
+      "memberId": "35951457",
+      "groupName": "kinda eteko",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-04T13:05:28.154Z"
+    }
+  ]
 }
