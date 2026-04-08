@@ -50,18 +50,6 @@
             align-items: center;
             justify-content: space-between;
         }
-        .toolbar button:hover {
-            background: var(--accent);
-            color: #fff;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(11,110,79,0.3);
-        }
-        .toolbar button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
         .toolbar-brand {
             display: flex;
             align-items: center;
@@ -545,10 +533,10 @@
 
 <!-- Toolbar -->
 <nav class="toolbar" role="navigation" aria-label="Form actions">
-    <button class="btn btn-secondary" onclick="handlePrint(this)" aria-label="Print form">
+    <button class="btn btn-secondary" onclick="window.print()" aria-label="Print form">
         <i class="fas fa-print"></i> Print
     </button>
-    <button class="btn btn-primary" onclick="handleDownload(this)" aria-label="Download PDF">
+    <button class="btn btn-primary" onclick="simulateDownload()" aria-label="Download PDF">
         <i class="fas fa-file-pdf"></i> Download PDF
     </button>
 </nav>
@@ -748,13 +736,13 @@
                 // Re-populate tables
                 const trusteesCount = parseInt(tbank.compliance.membership.trustees);
                 const officialsCount = parseInt(tbank.compliance.membership.officials);
-                const regularMembers = parseInt(tbank.compliance.membership.maxMembers) - trusteesCount - officialsCount;
+                const membersCount = parseInt(tbank.compliance.membership.members);
                 document.getElementById('trusteesBody').innerHTML = '';
                 populateTable('trusteesBody', trusteesCount);
                 document.getElementById('officialsBody').innerHTML = '';
                 populateTable('officialsBody', officialsCount);
                 document.getElementById('membersBody').innerHTML = '';
-                populateTable('membersBody', regularMembers);
+                populateTable('membersBody', membersCount);
                 // Update progress and validations
                 updateProgress();
             }
@@ -910,42 +898,29 @@
     });
 
     // --- Actions ---
-    function handlePrint(button) {
-        button.disabled = true;
-        window.print();
-        setTimeout(() => button.disabled = false, 1000); // Re-enable after 1 second
-    }
+    async function simulateDownload() {
+        const { jsPDF } = window.jspdf;
+        const formPage = document.getElementById('formPage');
+        const canvas = await html2canvas(formPage, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const pageHeight = 295;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
 
-    async function handleDownload(button) {
-        button.disabled = true;
-        try {
-            const { jsPDF } = window.jspdf;
-            const formPage = document.getElementById('formPage');
-            const canvas = await html2canvas(formPage, { scale: 2, allowTaint: true, useCORS: true });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const imgWidth = 210;
-            const pageHeight = 295;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
 
+        while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
             heightLeft -= pageHeight;
-
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-            }
-
-            pdf.save('group_registration_form.pdf');
-        } catch (e) {
-            console.error('PDF generation failed', e);
-        } finally {
-            button.disabled = false;
         }
+
+        pdf.save('group_registration_form.pdf');
     }
 
 
