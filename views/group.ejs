@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Management - T-BANK INVESTMENT</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #0b6e4f; }
+        .explanation { background: #f0ece4; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .button-info { margin: 10px 0; }
+        .button-info strong { color: #0b6e4f; }
+    </style>
+</head>
+<body>
+    <h1>Group Management</h1>
+    <p>This page explains the functionality of the buttons below the member registration form in group_form.ejs.</p>
+
+    <div class="explanation">
+        <h2>Buttons Explanation</h2>
+
+        <div class="button-info">
+            <strong>Print Button:</strong>
+            <p>The "Print" button allows users to print the current group registration form directly from the browser. When clicked, it triggers the browser's print dialog, allowing the user to select printing options such as printer, number of copies, and page settings. The form is optimized for A4 printing with proper margins and layout.</p>
+        </div>
+
+        <div class="button-info">
+            <strong>Download PDF Button:</strong>
+            <p>The "Download PDF" button generates a high-quality PDF version of the group registration form using html2canvas and jsPDF libraries. When clicked:</p>
+            <ul>
+                <li>It captures the entire form content as an image</li>
+                <li>Converts it to a PDF format</li>
+                <li>Automatically downloads the file as 'group_registration_form.pdf'</li>
+                <li>Supports multi-page PDFs if the content exceeds one page</li>
+                <li>Displays a confirmation modal when the PDF is ready</li>
+            </ul>
+            <p>Note: In a production Node.js environment with Puppeteer, this would generate pixel-perfect PDFs server-side.</p>
+        </div>
+
+        <div class="button-info">
+            <strong>Additional Notes:</strong>
+            <p>Both buttons are disabled temporarily after use to prevent multiple rapid clicks. The form includes progress tracking that updates as users fill in the fields. Validation ensures unique membership numbers, phone numbers, and national IDs across all entries.</p>
+        </div>
+    </div>
+</body>
+</html></content>
+<parameter name="filePath">views/group.ejs

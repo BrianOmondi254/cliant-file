@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -153,13 +151,21 @@
             left: 50%;
             transform: translate(-50%, -50%) rotate(-35deg);
             font-family: 'Playfair Display', serif;
-            font-size: 100px;
+            font-size: 80px;
             font-weight: 900;
-            color: rgba(11,110,79,0.03);
+            color: rgba(11,110,79,0.08);
             pointer-events: none;
             white-space: nowrap;
             letter-spacing: 8px;
             user-select: none;
+        }
+        .watermark-middle {
+            top: 20% !important;
+            transform: translate(-50%, -50%) rotate(-35deg) !important;
+        }
+        .watermark-bottom {
+            top: 80% !important;
+            transform: translate(-50%, -50%) rotate(-35deg) !important;
         }
 
         /* Header */
@@ -316,10 +322,7 @@
             background: var(--accent-light);
             box-shadow: inset 0 0 0 1px var(--accent);
         }
-        td .cell-input.title-cell {
-            font-weight: 600;
-            color: var(--accent);
-        }
+        /* Removed title-cell specific styling to keep it uniform for manual writing */
         td .cell-input::placeholder {
             color: #ccc;
             font-style: italic;
@@ -346,7 +349,6 @@
             transition: border-color 0.2s;
         }
         .sig-line:hover { border-color: var(--accent); }
-        .sig-full { width: 100%; margin-bottom: 24px; }
 
         /* Signature pad */
         .sig-pad-wrapper {
@@ -419,6 +421,33 @@
         }
         .instructions li strong { color: var(--danger); }
 
+        .terms-conditions .term-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .terms-conditions .term-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .signatures.reveal, .signatures.reveal + section {
+            margin-top: 8px;
+        }
+        .signatures.reveal .section-title, section .section-title {
+            margin-top: 8px;
+            margin-bottom: 6px;
+        }
+        .signatures .sig-grid {
+            margin-bottom: 6px;
+        }
+        .signatures .sig-pad-wrapper {
+            margin-bottom: 8px;
+        }
+        .signatures .sig-field-label {
+            margin-bottom: 2px;
+        }
+
         /* Footer of the page */
         .page-footer {
             margin-top: 30px;
@@ -447,6 +476,150 @@
             width: 0%;
             transition: width 0.4s ease;
             border-radius: 0 2px 2px 0;
+        }
+
+        /* ============= PRINT PREVIEW OVERLAY ============= */
+        .print-preview-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            background: #3a3632;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        .print-preview-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .preview-toolbar {
+            flex-shrink: 0;
+            background: #2a2724;
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .preview-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .preview-toolbar-left .preview-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.08);
+            color: #e2dfda;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+        .preview-toolbar-left .preview-badge i { color: var(--accent); }
+        .preview-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .preview-toolbar-right .btn { font-size: 12px; padding: 8px 18px; }
+        .btn-print-confirm { background: var(--accent); color: #fff; }
+        .btn-print-confirm:hover { background: #095c42; }
+        .btn-preview-close {
+            background: rgba(255,255,255,0.06);
+            color: #bbb;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-preview-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+        .preview-content {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            align-items: flex-start;
+        }
+
+        .preview-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: #bbb;
+            font-size: 14px;
+            align-self: center;
+        }
+        .preview-loading .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .page-info {
+            font-size: 11px;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Print-specific overrides applied ONLY inside the preview overlay */
+        .print-preview-overlay .form-page {
+            box-shadow: 0 8px 60px rgba(0,0,0,0.4);
+            border-radius: 0;
+            overflow: visible;
+            transform-origin: top center;
+        }
+        .print-preview-overlay .form-page::before {
+            display: none;
+        }
+        .print-preview-overlay .reveal {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+        }
+        .print-preview-overlay .info-value.input-mode,
+        .print-preview-overlay td .cell-input,
+        .print-preview-overlay .sig-line input {
+            border-color: transparent !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        .print-preview-overlay .sig-pad-wrapper {
+            border-color: #aaa !important;
+            border-style: solid;
+            background: #fff;
+        }
+        .print-preview-overlay .clear-sig,
+        .print-preview-overlay .sig-placeholder {
+            display: none !important;
+        }
+        .print-preview-overlay td .cell-input.title-cell {
+            color: #1a1a1a;
+        }
+        .print-preview-overlay .sig-line:hover {
+            border-color: var(--border) !important;
+        }
+        .print-preview-overlay .error-message {
+            display: none !important;
+        }
+        .print-preview-overlay .watermark {
+            color: rgba(11,110,79,0.08);
+        }
+        .print-preview-overlay .cell-input:focus {
+            background: transparent !important;
+            box-shadow: none !important;
         }
 
         /* Modal */
@@ -480,26 +653,27 @@
         .modal h3 { font-size: 18px; margin-bottom: 8px; }
         .modal p { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
 
-        /* Print styles */
+        /* Actual print styles */
         @media print {
             body { background: #fff; }
-            .toolbar, .progress-bar, .toast-container, .modal-overlay { display: none !important; }
+            .toolbar, .progress-bar, .toast-container, .modal-overlay, .print-preview-overlay { display: none !important; }
             .page-wrapper { padding: 0; }
             .form-page {
                 box-shadow: none;
                 border-radius: 0;
                 width: 100%;
                 padding: 20px 30px;
+                overflow: visible;
             }
             .form-page::before { display: none; }
-
+            .reveal { opacity: 1 !important; transform: none !important; }
             .info-value.input-mode,
             td .cell-input,
             .sig-pad-wrapper { border-color: #999 !important; background: transparent !important; box-shadow: none !important; }
             .sig-pad-wrapper { border-style: solid; }
-            .sig-pad-wrapper .clear-sig,
-            .sig-placeholder { display: none !important; }
+            .clear-sig, .sig-placeholder { display: none !important; }
             td .cell-input.title-cell { color: #000; }
+            .error-message { display: none !important; }
         }
 
         /* Responsive */
@@ -508,6 +682,9 @@
             .info-grid { grid-template-columns: 120px 1fr; }
             .sig-grid { grid-template-columns: 1fr; }
             .toolbar { padding: 10px 16px; }
+            .preview-toolbar { padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
+            .preview-toolbar-left { gap: 8px; }
+            .preview-toolbar-right { gap: 6px; }
         }
 
         /* Scroll reveal animation */
@@ -524,8 +701,7 @@
         @media (prefers-reduced-motion: reduce) {
             .reveal { opacity: 1; transform: none; transition: none; }
             .toast { animation: none; }
-            .modal { transition: none; }
-            .modal-overlay { transition: none; }
+            .modal, .modal-overlay, .print-preview-overlay { transition: none; }
         }
     </style>
 </head>
@@ -533,8 +709,8 @@
 
 <!-- Toolbar -->
 <nav class="toolbar" role="navigation" aria-label="Form actions">
-    <button class="btn btn-secondary" onclick="window.print()" aria-label="Print form">
-        <i class="fas fa-print"></i> Print
+    <button class="btn btn-secondary" onclick="openPrintPreview()" aria-label="Preview before printing">
+        <i class="fas fa-print"></i> Print Preview
     </button>
     <button class="btn btn-primary" onclick="simulateDownload()" aria-label="Download PDF">
         <i class="fas fa-file-pdf"></i> Download PDF
@@ -544,7 +720,7 @@
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-<!-- Modal -->
+<!-- PDF Modal -->
 <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">
     <div class="modal">
         <i class="fas fa-circle-check"></i>
@@ -554,12 +730,42 @@
     </div>
 </div>
 
+<!-- Print Preview Overlay -->
+<div class="print-preview-overlay" id="printPreviewOverlay" role="dialog" aria-modal="true" aria-label="Print preview">
+    <div class="preview-toolbar">
+        <div class="preview-toolbar-left">
+            <span class="preview-badge">
+                <i class="fas fa-eye"></i> Print Preview
+            </span>
+            <span class="page-info">
+                <i class="fas fa-file-alt"></i>
+                A4 — 210 x 297 mm
+            </span>
+        </div>
+        <div class="preview-toolbar-right">
+            <button class="btn btn-preview-close" onclick="closePrintPreview()" aria-label="Close preview">
+                <i class="fas fa-times"></i> Close
+            </button>
+            <button class="btn btn-print-confirm" onclick="confirmPrint()" aria-label="Send to printer">
+                <i class="fas fa-print"></i> Print
+            </button>
+        </div>
+    </div>
+    <div class="preview-content" id="previewContent">
+        <div class="preview-loading">
+            <div class="spinner"></div>
+            <span>Rendering print preview...</span>
+        </div>
+    </div>
+</div>
+
 <!-- Form Page -->
 <main class="page-wrapper">
     <div class="form-page" id="formPage">
-        <div class="watermark">DRAFT</div>
+        <div class="watermark"><%= group.groupName.toUpperCase() %></div>
+        <div class="watermark watermark-middle"><%= group.groupName.toUpperCase() %></div>
+        <div class="watermark watermark-bottom"><%= group.groupName.toUpperCase() %></div>
 
-        <!-- Header -->
         <header class="header reveal">
             <div class="header-logo">
                 <i class="fas fa-landmark"></i>
@@ -569,22 +775,30 @@
             <div class="header-line"></div>
         </header>
 
-        <!-- Section 1: Group Details -->
+        <!-- Group Details remain pre-filled -->
         <section class="reveal">
             <div class="section-title"><span class="num">1</span> GROUP DETAILS</div>
-            <div class="info-grid">
+             <div class="info-grid">
                  <div class="info-label">Group Name:</div>
-                 <div class="info-value" data-field="group_name"><%= group.groupName %></div>
+                 <div class="info-value" data-field="group_name"><%= group.groupName.toUpperCase() %></div>
                  <div class="info-label">Location:</div>
                  <div class="info-value" data-field="location"><%= group.county %> | <%= group.constituency %> | <%= group.ward %></div>
-                 <div class="info-label">Registration Agent:</div>
-                 <div class="info-value" data-field="agent"><%= agent.name %></div>
-                 <div class="info-label">Agent Contact:</div>
-                 <div class="info-value" data-field="agent_contact"><%= agent.phoneNumber %></div>
-            </div>
+                 <div class="info-label">Group Type:</div>
+                 <div class="info-value" style="display: flex; align-items: center; gap: 15px; flex-wrap: nowrap; white-space: nowrap;">
+                     <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 14px; height: 14px; border: 1px solid #1a1a1a; display: inline-block;"></span> Self Help Group</span>
+                     <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 14px; height: 14px; border: 1px solid #1a1a1a; display: inline-block;"></span> Youth Group</span>
+                     <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 14px; height: 14px; border: 1px solid #1a1a1a; display: inline-block;"></span> CBO</span>
+                     <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 14px; height: 14px; border: 1px solid #1a1a1a; display: inline-block;"></span> Women Group</span>
+                 </div>
+                 <div class="info-label">Member Total:</div>
+                 <div class="info-value"></div>
+                 <div class="info-label">Group Account Number (System):</div>
+                 <div class="info-value"></div>
+                 <div class="info-label">Group Account No (Registration of Society):</div>
+                 <div class="info-value"></div>
+             </div>
         </section>
 
-        <!-- Section 2: Trustees -->
         <section class="reveal">
             <div class="section-title"><span class="num">2</span> TRUSTEES SECTION</div>
             <table>
@@ -596,14 +810,13 @@
                         <th>Full Name</th>
                         <th>Phone Number</th>
                         <th>National ID</th>
+                        <th>Signature</th>
                     </tr>
                 </thead>
-        <tbody id="trusteesBody">
-                </tbody>
+                <tbody id="trusteesBody"></tbody>
             </table>
         </section>
 
-        <!-- Section 3: Officials -->
         <section class="reveal">
             <div class="section-title"><span class="num">3</span> OFFICIALS SECTION</div>
             <table>
@@ -615,13 +828,13 @@
                         <th>Full Name</th>
                         <th>Phone Number</th>
                         <th>National ID</th>
+                        <th>Signature</th>
                     </tr>
                 </thead>
                 <tbody id="officialsBody"></tbody>
             </table>
         </section>
 
-        <!-- Section 4: Regular Members -->
         <section class="reveal">
             <div class="section-title"><span class="num">4</span> REGULAR MEMBERS SECTION</div>
             <table>
@@ -633,15 +846,90 @@
                         <th>Full Name</th>
                         <th>Phone Number</th>
                         <th>National ID</th>
+                        <th>Signature</th>
                     </tr>
                 </thead>
                 <tbody id="membersBody"></tbody>
             </table>
         </section>
 
-        <!-- Section 5: Prepared By -->
+        <section class="reveal">
+            <div class="section-title"><span class="num">9</span> TERMS AND CONDITIONS FOR GROUP FORMATION</div>
+            <div class="terms-conditions" style="font-size: 10px; line-height: 1.6; color: var(--muted); margin-bottom: 16px;">
+                <div class="term-item">
+                    <strong>1. MEMBERSHIP</strong>
+                    <div style="margin-top:4px;">1.1 The group shall consist of not less than ten (10) members at the time of formation.</div>
+                    <div>1.2 All members shall provide full names, national ID numbers, and signatures.</div>
+                    <div>1.3 Membership shall be voluntary and open to individuals who share the group's objectives.</div>
+                </div>
+                <div class="term-item">
+                    <strong>2. PURPOSE AND OBJECTIVES</strong>
+                    <div style="margin-top:4px;">2.1 The group shall be formed for lawful and non-political purposes.</div>
+                    <div>2.2 The group shall have a clearly defined objective, including but not limited to: Economic empowerment, Social development, Savings and investment (chama activities).</div>
+                    <div>2.3 All activities of the group shall align with its stated objectives.</div>
+                </div>
+                <div class="term-item">
+                    <strong>3. LEGAL COMPLIANCE</strong>
+                    <div style="margin-top:4px;">3.1 The group shall comply with all applicable regulations under the Ministry of Labour and Social Protection.</div>
+                    <div>3.2 The group shall not engage in illegal, harmful, or unethical activities.</div>
+                </div>
+                <div class="term-item">
+                    <strong>4. LEADERSHIP STRUCTURE</strong>
+                    <div style="margin-top:4px;">4.1 The group shall elect the following officials: Chairperson, Secretary, Treasurer.</div>
+                    <div>4.2 Elections shall be conducted democratically during the formation meeting.</div>
+                    <div>4.3 Officials shall serve with integrity and accountability.</div>
+                </div>
+                <div class="term-item">
+                    <strong>5. CONSTITUTION</strong>
+                    <div style="margin-top:4px;">5.1 The group shall adopt a written constitution during its formation.</div>
+                    <div>5.2 The constitution shall define: Membership rules, Leadership roles, Meeting procedures, Financial management.</div>
+                </div>
+                <div class="term-item">
+                    <strong>6. GROUP NAME</strong>
+                    <div style="margin-top:4px;">6.1 The group shall adopt a unique and acceptable name.</div>
+                    <div>6.2 The name shall not: Duplicate an existing group in the same area, Be offensive or misleading.</div>
+                </div>
+                <div class="term-item">
+                    <strong>7. FORMATION MEETING RESOLUTION</strong>
+                    <div style="margin-top:4px;">7.1 A formal meeting shall be held to: Approve the formation of the group, Adopt the group name, Elect officials.</div>
+                    <div>7.2 The resolutions shall be recorded in official meeting proceedings (minutes).</div>
+                    <div>7.3 The proceedings shall be signed by the Chairperson, Secretary, and members present.</div>
+                </div>
+                <div class="term-item">
+                    <strong>8. QUORUM</strong>
+                    <div style="margin-top:4px;">8.1 The formation meeting shall only be valid if a minimum required number of members (quorum) is present.</div>
+                    <div>8.2 No decisions shall be made without quorum.</div>
+                </div>
+                <div class="term-item">
+                    <strong>9. AREA OF OPERATION</strong>
+                    <div style="margin-top:4px;">9.1 The group shall operate within a defined geographical area (village, ward, or sub-county).</div>
+                    <div>9.2 Members shall preferably reside within the same locality.</div>
+                </div>
+                <div class="term-item">
+                    <strong>10. FINANCIAL PROVISIONS</strong>
+                    <div style="margin-top:4px;">10.1 Members shall agree on regular contributions.</div>
+                    <div>10.2 The group shall maintain proper financial records.</div>
+                    <div>10.3 A group bank account shall be opened upon registration where applicable.</div>
+                </div>
+                <div class="term-item">
+                    <strong>11. ELIGIBILITY CRITERIA</strong>
+                    <div style="margin-top:4px;">11.1 Members must be adults with valid identification.</div>
+                    <div>11.2 Youth groups shall consist of members within the recognized youth age bracket.</div>
+                </div>
+                <div class="term-item">
+                    <strong>12. ADOPTION OF TERMS</strong>
+                    <div style="margin-top:4px;">12.1 These terms and conditions shall be read, understood, and adopted by all members during the formation meeting.</div>
+                    <div>12.2 Adoption shall be confirmed through signatures of members present.</div>
+                </div>
+            </div>
+            <div style="font-size: 11px; line-height: 1.4; color: var(--muted); margin-top: 20px; padding: 12px; background: var(--accent-light); border-radius: 6px;">
+                <strong>✅ DECLARATION</strong><br>
+                We, the undersigned members, agree to abide by the above terms and conditions for the formation and restructure important instructions with above content.
+            </div>
+        </section>
+
         <section class="signatures reveal">
-            <div class="section-title"><span class="num">5</span> PREPARED BY</div>
+            <div class="section-title"><span class="num">10</span> PREPARED BY</div>
             <div class="sig-grid">
                 <div>
                      <div class="sig-field-label">Title / Position</div>
@@ -663,14 +951,12 @@
             <div class="sig-field-label">Signature</div>
             <div class="sig-pad-wrapper" id="sigPad1">
                 <canvas></canvas>
-                <span class="sig-placeholder">Draw signature here</span>
                 <button class="clear-sig" onclick="clearSigPad('sigPad1')" aria-label="Clear signature">Clear</button>
             </div>
         </section>
 
-        <!-- Section 6: Chairperson Approval -->
         <section class="reveal">
-            <div class="section-title"><span class="num">6</span> CHAIRPERSON APPROVAL</div>
+            <div class="section-title"><span class="num">11</span> CHAIRPERSON APPROVAL</div>
             <div class="sig-grid">
                  <div>
                      <div class="sig-field-label">Full Name</div>
@@ -692,26 +978,34 @@
             <div class="sig-field-label">Signature</div>
             <div class="sig-pad-wrapper" id="sigPad2">
                 <canvas></canvas>
-                <span class="sig-placeholder">Draw signature here</span>
                 <button class="clear-sig" onclick="clearSigPad('sigPad2')" aria-label="Clear signature">Clear</button>
             </div>
         </section>
 
-        <!-- Instructions -->
-        <div class="instructions reveal">
-            <h3><i class="fas fa-triangle-exclamation"></i> IMPORTANT INSTRUCTIONS</h3>
-            <ul>
-                <li><strong>Pre-population:</strong> The Chairperson's details are pre-populated in the Trustees Section above.</li>
-                <li><strong>Verification:</strong> Please verify and update the Chairperson's Membership Number and National ID if needed.</li>
-                <li><strong>Mandatory Approval:</strong> The Chairperson <strong>must</strong> sign this form to approve all member registrations.</li>
-                <li><strong>Accuracy:</strong> Ensure all phone numbers and ID numbers are accurate before submission.</li>
-            </ul>
-        </div>
+        <section class="reveal">
+            <div class="section-title"><span class="num">12</span> REGISTRATION AGENT</div>
+            <div class="info-grid">
+                <div class="info-label">Registration Agent:</div>
+                <div class="info-value" data-field="agent"><%= group.agentName %></div>
+                <div class="info-label">Agent Contact:</div>
+                <div class="info-value" data-field="agent_contact"><%= group.agentContact %></div>
+            </div>
+            <div class="sig-grid">
+                <div>
+                    <div class="sig-field-label">Date</div>
+                    <div class="sig-line"><input class="cell-input" style="border:none;height:28px;" type="date" aria-label="Agent date"></div>
+                </div>
+            </div>
+            <div class="sig-field-label">Signature</div>
+            <div class="sig-pad-wrapper" id="sigPad3">
+                <canvas></canvas>
+                <button class="clear-sig" onclick="clearSigPad('sigPad3')" aria-label="Clear signature">Clear</button>
+            </div>
+        </section>
 
-        <!-- Page Footer -->
         <footer class="page-footer">
-             <span>T-BANK INVESTMENT &copy; 2025</span>
-            <span>Form Ref: NL-GROUPS-2025-001 | Page 1 of 1</span>
+             <span>T-BANK INVESTMENT &copy; <span id="footerYear"><%= new Date().getFullYear() %></span></span>
+             <span>Form Ref: NL-GROUPS-<span id="formRefYear"><%= new Date().getFullYear() %></span>-<span id="formRefNum"><%= formRefNumber || '001' %></span> | Page 1 of 1</span>
         </footer>
     </div>
 </main>
@@ -722,72 +1016,45 @@
 </div>
 
 <script>
-    let tbank = <%- JSON.stringify(tbank) %>;
-    const group = <%- JSON.stringify(group) %>;
-    const trusteeTitles = ['Chairperson', 'Treasurer', 'Secretary', 'Trustee'];
-    // --- Populate Officials and Members tables ---
+    // Load tbank configuration
+    var tbank = <%- JSON.stringify(tbank) %>;
 
-    async function loadTbank() {
-        try {
-            const res = await fetch('/tbank.json');
-            const newTbank = await res.json();
-            if (JSON.stringify(newTbank) !== JSON.stringify(tbank)) {
-                tbank = newTbank;
-                // Re-populate tables
-                const trusteesCount = parseInt(tbank.compliance.membership.trustees);
-                const officialsCount = parseInt(tbank.compliance.membership.officials);
-                const membersCount = parseInt(tbank.compliance.membership.members);
-                document.getElementById('trusteesBody').innerHTML = '';
-                populateTable('trusteesBody', trusteesCount);
-                document.getElementById('officialsBody').innerHTML = '';
-                populateTable('officialsBody', officialsCount);
-                document.getElementById('membersBody').innerHTML = '';
-                populateTable('membersBody', membersCount);
-                // Update progress and validations
-                updateProgress();
-            }
-        } catch (e) {
-            console.error('Failed to load latest tbank.json', e);
-        }
-    }
-
-    // Load latest data on page load and poll every 30 seconds for real-time updates
-    window.addEventListener('load', loadTbank);
-    setInterval(loadTbank, 30000);
+    // --- Populate tables ---
     function populateTable(tbodyId, count) {
-        const tbody = document.getElementById(tbodyId);
-        const isMembers = tbodyId === 'membersBody';
-        const isTrustees = tbodyId === 'trusteesBody';
-        for (let i = 1; i <= count; i++) {
-            const tr = document.createElement('tr');
-            const titleValue = isTrustees ? (trusteeTitles[i-1] || 'Trustee') : (isMembers ? `Member ${i}` : 'Title');
-            const titleReadonly = isMembers || isTrustees ? 'readonly' : '';
-            tr.innerHTML = `
-                <td><div class="cell-num">${i}</div></td>
-                <td><input class="cell-input" aria-label="Row ${i} membership number"></td>
-                <td><input class="cell-input" value="${titleValue}" ${titleReadonly} aria-label="Row ${i} title"></td>
-                <td><input class="cell-input" aria-label="Row ${i} name"></td>
-                <td><input class="cell-input" aria-label="Row ${i} phone"></td>
-                <td><input class="cell-input" aria-label="Row ${i} ID"></td>
-            `;
+        var tbody = document.getElementById(tbodyId);
+        for (var i = 1; i <= count; i++) {
+            var tr = document.createElement('tr');
+            // Removed all placeholder attributes and pre-filled values
+            // Inputs are now blank for manual writing
+            tr.innerHTML =
+                '<td><div class="cell-num">' + i + '</div></td>' +
+                '<td><input class="cell-input" aria-label="Row ' + i + ' membership number"></td>' +
+                '<td><input class="cell-input" aria-label="Row ' + i + ' title"></td>' +
+                '<td><input class="cell-input" aria-label="Row ' + i + ' name"></td>' +
+                '<td><input class="cell-input" aria-label="Row ' + i + ' phone"></td>' +
+                '<td><input class="cell-input" aria-label="Row ' + i + ' ID"></td>' +
+                '<td><input class="cell-input" aria-label="Row ' + i + ' signature"></td>';
             tbody.appendChild(tr);
         }
     }
+
     populateTable('trusteesBody', parseInt(tbank.compliance.membership.trustees));
     populateTable('officialsBody', parseInt(tbank.compliance.membership.officials));
-    const regularMembers = parseInt(tbank.compliance.membership.maxMembers) - parseInt(tbank.compliance.membership.trustees) - parseInt(tbank.compliance.membership.officials);
+    var regularMembers = parseInt(tbank.compliance.membership.maxMembers)
+        - parseInt(tbank.compliance.membership.trustees)
+        - parseInt(tbank.compliance.membership.officials);
     populateTable('membersBody', regularMembers);
 
-    // --- Signature Pad Logic ---
+    // --- Signature Pad ---
     function initSigPad(wrapperId) {
-        const wrapper = document.getElementById(wrapperId);
-        const canvas = wrapper.querySelector('canvas');
-        const ctx = canvas.getContext('2d');
-        let drawing = false;
-        let hasDrawn = false;
+        var wrapper = document.getElementById(wrapperId);
+        var canvas = wrapper.querySelector('canvas');
+        var ctx = canvas.getContext('2d');
+        var drawing = false;
+        var hasDrawn = false;
 
         function resize() {
-            const rect = wrapper.getBoundingClientRect();
+            var rect = wrapper.getBoundingClientRect();
             canvas.width = rect.width * window.devicePixelRatio;
             canvas.height = rect.height * window.devicePixelRatio;
             ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
@@ -800,28 +1067,24 @@
         window.addEventListener('resize', resize);
 
         function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
+            var rect = canvas.getBoundingClientRect();
+            var cx = e.touches ? e.touches[0].clientX : e.clientX;
+            var cy = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: cx - rect.left, y: cy - rect.top };
         }
-
         function startDraw(e) {
             e.preventDefault();
             drawing = true;
-            const pos = getPos(e);
+            var p = getPos(e);
             ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-            if (!hasDrawn) {
-                hasDrawn = true;
-                wrapper.querySelector('.sig-placeholder').style.display = 'none';
-            }
+            ctx.moveTo(p.x, p.y);
+            if (!hasDrawn) { hasDrawn = true; }
         }
         function draw(e) {
             if (!drawing) return;
             e.preventDefault();
-            const pos = getPos(e);
-            ctx.lineTo(pos.x, pos.y);
+            var p = getPos(e);
+            ctx.lineTo(p.x, p.y);
             ctx.stroke();
         }
         function stopDraw() { drawing = false; }
@@ -834,81 +1097,280 @@
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', stopDraw);
 
-        wrapper._clear = function() {
+        wrapper._clear = function () {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             hasDrawn = false;
-            wrapper.querySelector('.sig-placeholder').style.display = '';
         };
     }
 
     initSigPad('sigPad1');
     initSigPad('sigPad2');
 
-    function clearSigPad(id) {
-        document.getElementById(id)._clear();
-    }
+    function clearSigPad(id) { document.getElementById(id)._clear(); }
 
-    // --- Progress Tracking ---
+    // --- Progress ---
     function updateProgress() {
-        const allInputs = document.querySelectorAll('.cell-input, .info-value.input-mode[contenteditable]');
-        let filled = 0;
-        let total = allInputs.length;
-        allInputs.forEach(el => {
-            if (el.contentEditable === 'true') {
-                if (el.textContent.trim().length > 0) filled++;
-            } else {
-                if (el.value && el.value.trim().length > 0) filled++;
-            }
+        var allInputs = document.querySelectorAll('#formPage .cell-input');
+        var filled = 0, total = allInputs.length;
+        allInputs.forEach(function (el) {
+            if (el.value && el.value.trim().length > 0) filled++;
         });
-        const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+        var pct = total > 0 ? Math.round((filled / total) * 100) : 0;
         document.getElementById('progressFill').style.width = pct + '%';
-        document.querySelector('.progress-bar').setAttribute('aria-valuenow', pct);
     }
-
     document.addEventListener('input', updateProgress);
     document.addEventListener('focusout', updateProgress);
     updateProgress();
 
-    // --- Toast System ---
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
+    // --- Toast ---
+    function showToast(message, type) {
+        type = type || 'success';
+        var container = document.getElementById('toastContainer');
+        var toast = document.createElement('div');
         toast.className = 'toast' + (type === 'error' ? ' error' : '');
-        const icon = type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check';
-        toast.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+        var icon = type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check';
+        toast.innerHTML = '<i class="fas ' + icon + '"></i><span>' + message + '</span>';
         container.appendChild(toast);
-        setTimeout(() => {
+        setTimeout(function () {
             toast.classList.add('toast-fade-out');
-            setTimeout(() => toast.remove(), 300);
+            setTimeout(function () { toast.remove(); }, 300);
         }, 3000);
     }
 
-    // --- Modal ---
-    function openModal() {
-        document.getElementById('modalOverlay').classList.add('active');
-    }
-    function closeModal() {
-        document.getElementById('modalOverlay').classList.remove('active');
-    }
-    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    // --- PDF Modal ---
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+    document.getElementById('modalOverlay').addEventListener('click', function (e) {
         if (e.target === this) closeModal();
     });
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeModal();
+
+    // ========== PRINT PREVIEW ==========
+    function openPrintPreview() {
+        var overlay = document.getElementById('printPreviewOverlay');
+        var content = document.getElementById('previewContent');
+
+        // Show loading
+        content.innerHTML = '<div class="preview-loading"><div class="spinner"></div><span>Rendering print preview...</span></div>';
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Delay so overlay fade-in plays first
+        setTimeout(function () {
+            var source = document.getElementById('formPage');
+
+            html2canvas(source, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                onclone: function (clonedDoc) {
+                    var clonedPage = clonedDoc.getElementById('formPage');
+                    if (clonedPage) {
+                        clonedPage.querySelectorAll('.reveal').forEach(function (el) {
+                            el.style.opacity = '1';
+                            el.style.transform = 'none';
+                        });
+                        var beforeStyle = clonedDoc.createElement('style');
+                        beforeStyle.textContent = '#formPage::before { display: none !important; }';
+                        clonedDoc.head.appendChild(beforeStyle);
+                        clonedPage.querySelectorAll('.error-message').forEach(function (el) { el.remove(); });
+                        clonedPage.querySelectorAll('.sig-placeholder').forEach(function (el) { el.remove(); });
+                        clonedPage.querySelectorAll('.clear-sig').forEach(function (el) { el.remove(); });
+                        var sigStyle = clonedDoc.createElement('style');
+                        sigStyle.textContent = '.sig-pad-wrapper { border-style: solid !important; border-color: #aaa !important; }';
+                        clonedDoc.head.appendChild(sigStyle);
+                    }
+                }
+            }).then(function (canvas) {
+                var imgData = canvas.toDataURL('image/png');
+                content.innerHTML = '';
+
+                var wrapper = document.createElement('div');
+                wrapper.style.cssText = 'transform-origin: top center; display: inline-block;';
+
+                var img = document.createElement('img');
+                img.src = imgData;
+                img.style.cssText = 'display: block; width: 210mm; height: auto;';
+                img.alt = 'Print preview of registration form';
+
+                wrapper.appendChild(img);
+                content.appendChild(wrapper);
+
+                scalePreviewToFit();
+            }).catch(function (err) {
+                content.innerHTML = '<div class="preview-loading"><i class="fas fa-exclamation-triangle" style="font-size:32px;color:#b91c1c;"></i><span style="color:#e2dfda;">Failed to render preview. Try using browser Print directly.</span></div>';
+                console.error('Preview render error:', err);
+            });
+        }, 400);
+    }
+
+    function scalePreviewToFit() {
+        var content = document.getElementById('previewContent');
+        var wrapper = content.querySelector('div');
+        var img = content.querySelector('img');
+        if (!wrapper || !img) return;
+
+        var containerWidth = content.clientWidth - 60;
+        var pageNaturalWidth = 793;
+        var scale = Math.min(1, containerWidth / pageNaturalWidth);
+        wrapper.style.transform = 'scale(' + scale + ')';
+
+        if (img.complete) {
+            fixScrollHeight(wrapper, scale);
+        } else {
+            img.onload = function () { fixScrollHeight(wrapper, scale); };
+        }
+    }
+
+    function fixScrollHeight(wrapper, scale) {
+        var realHeight = wrapper.scrollHeight;
+        var visualHeight = realHeight * scale;
+        wrapper.style.marginBottom = (visualHeight - realHeight + 40) + 'px';
+    }
+
+    function closePrintPreview() {
+        document.getElementById('printPreviewOverlay').classList.remove('active');
+        document.body.style.overflow = '';
+        setTimeout(function () {
+            document.getElementById('previewContent').innerHTML = '';
+        }, 400);
+    }
+
+    function confirmPrint() {
+        // Prevent double click - block for 10 seconds
+        if (isDownloading) {
+            showToast('Print in progress, please wait...', 'error');
+            return;
+        }
+        isDownloading = true;
+        
+        // Log download when printing
+        var groupName = document.querySelector('[data-field="group_name"]').textContent.trim();
+        var formRef = document.getElementById('formRefNum').textContent;
+        var year = document.getElementById('formRefYear').textContent;
+        var formRefFull = 'NL-GROUPS-' + year + '-' + formRef;
+        var userPhone = '<%= userPhone || "" %>';
+        
+        formRefCounter++;
+        localStorage.setItem('formRefCounter', formRefCounter);
+        var nextNum = String(formRefCounter).padStart(3, '0');
+        document.getElementById('formRefNum').textContent = nextNum;
+        
+        logFormDownload(groupName, formRefFull, parseInt(year), userPhone);
+        
+        closePrintPreview();
+        setTimeout(function () { 
+            window.print(); 
+            showToast('Form sent to print!', 'success');
+            setTimeout(function() {
+                isDownloading = false;
+            }, 10000);
+        }, 500);
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (document.getElementById('printPreviewOverlay').classList.contains('active')) {
+                closePrintPreview();
+            } else {
+                closeModal();
+            }
+        }
     });
 
-    // --- Actions ---
+    window.addEventListener('resize', function () {
+        if (document.getElementById('printPreviewOverlay').classList.contains('active')) {
+            scalePreviewToFit();
+        }
+    });
+
+    // --- PDF Download ---
+    var formRefCounter = parseInt('<%= formRefNumber || "001" %>') - 1;
+    var isDownloading = false;
+    
+    function logFormDownload(groupName, formRef, year, userPhone) {
+        if (!navigator.geolocation) {
+            callDownloadApi(groupName, formRef, year, userPhone, null, null, null);
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                callDownloadApi(groupName, formRef, year, userPhone,
+                    position.coords.latitude, 
+                    position.coords.longitude, 
+                    null);
+            },
+            function(error) {
+                console.log("Geolocation denied or error:", error.message);
+                callDownloadApi(groupName, formRef, year, userPhone, null, null, null);
+            }
+        );
+    }
+    
+    function callDownloadApi(groupName, formRef, year, userPhone, latitude, longitude, address) {
+        fetch('/general/api/form-download-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                groupName: groupName,
+                formRef: formRef,
+                userPhone: userPhone,
+                latitude: latitude,
+                longitude: longitude,
+                address: address
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                console.log("Download logged:", data.download);
+            }
+        })
+        .catch(err => console.error("Error logging download:", err));
+    }
+    
     async function simulateDownload() {
-        const { jsPDF } = window.jspdf;
-        const formPage = document.getElementById('formPage');
-        const canvas = await html2canvas(formPage, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 210;
-        const pageHeight = 295;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
+        // Prevent double click - block for 10 seconds
+        if (isDownloading) {
+            showToast('Download in progress, please wait...', 'error');
+            return;
+        }
+        isDownloading = true;
+        
+        var groupName = document.querySelector('[data-field="group_name"]').textContent.trim();
+        var formRef = document.getElementById('formRefNum').textContent;
+        var year = document.getElementById('formRefYear').textContent;
+        var formRefFull = 'NL-GROUPS-' + year + '-' + formRef;
+        var userPhone = '<%= userPhone || "" %>';
+        
+        var source = document.getElementById('formPage');
+        var canvas = await html2canvas(source, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            onclone: function (clonedDoc) {
+                var clonedPage = clonedDoc.getElementById('formPage');
+                if (clonedPage) {
+                    clonedPage.querySelectorAll('.reveal').forEach(function (el) {
+                        el.style.opacity = '1';
+                        el.style.transform = 'none';
+                    });
+                    var s = clonedDoc.createElement('style');
+                    s.textContent = '#formPage::before { display: none !important; }';
+                    clonedDoc.head.appendChild(s);
+                    clonedPage.querySelectorAll('.error-message').forEach(function (el) { el.remove(); });
+                    clonedPage.querySelectorAll('.sig-placeholder').forEach(function (el) { el.remove(); });
+                    clonedPage.querySelectorAll('.clear-sig').forEach(function (el) { el.remove(); });
+                }
+            }
+        });
+        var imgData = canvas.toDataURL('image/png');
+        var jsPDF = window.jspdf.jsPDF;
+        var pdf = new jsPDF('p', 'mm', 'a4');
+        var imgWidth = 210;
+        var pageHeight = 295;
+        var imgHeight = (canvas.height * imgWidth) / canvas.width;
+        var heightLeft = imgHeight;
+        var position = 0;
 
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
@@ -920,173 +1382,36 @@
             heightLeft -= pageHeight;
         }
 
+        formRefCounter++;
+        localStorage.setItem('formRefCounter', formRefCounter);
+        var nextNum = String(formRefCounter).padStart(3, '0');
+        document.getElementById('formRefNum').textContent = nextNum;
+        
+        // Log the download with group name, form ref, and location
+        logFormDownload(groupName, formRefFull, parseInt(year), userPhone);
+        
         pdf.save('group_registration_form.pdf');
+        
+        // Show success toast and unblock after 10 seconds
+        showToast('Form downloaded successfully!', 'success');
+        setTimeout(function() {
+            isDownloading = false;
+        }, 10000);
     }
-
-
 
     // --- Scroll Reveal ---
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
+    var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) entry.target.classList.add('visible');
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
 
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-
-    // --- Set today's date as default for date inputs ---
-    document.querySelectorAll('input[type="date"]').forEach(el => {
-        if (!el.value) {
-            el.value = new Date().toISOString().split('T')[0];
-        }
+    // --- Set today's date ---
+    document.querySelectorAll('input[type="date"]').forEach(function (el) {
+        if (!el.value) el.value = new Date().toISOString().split('T')[0];
     });
 
-    // --- Real-time T-Bank Membership Validation ---
-    const usedMembershipNos = new Set();
-    const usedPhones = new Set();
-    const usedIds = new Set();
-
-    function validateMembershipNo(input) {
-        const value = input.value.trim();
-        const regex = /^TB-\d{3}$/;
-        if (!regex.test(value)) {
-            showFieldError(input, 'Membership No. must be in format TB-XXX');
-            return false;
-        }
-        if (usedMembershipNos.has(value)) {
-            showFieldError(input, 'Membership No. must be unique');
-            return false;
-        }
-        clearFieldError(input);
-        return true;
-    }
-
-    function validatePhone(input) {
-        const value = input.value.trim();
-        const regex = /^07\d{8}$/;
-        if (!regex.test(value)) {
-            showFieldError(input, 'Phone must be 10 digits starting with 07');
-            return false;
-        }
-        if (usedPhones.has(value)) {
-            showFieldError(input, 'Phone number must be unique');
-            return false;
-        }
-        clearFieldError(input);
-        return true;
-    }
-
-    function validateId(input) {
-        const value = input.value.trim();
-        const regex = /^\d{6,9}$/;
-        if (!regex.test(value)) {
-            showFieldError(input, 'National ID must be 6-9 digits');
-            return false;
-        }
-        if (usedIds.has(value)) {
-            showFieldError(input, 'National ID must be unique');
-            return false;
-        }
-        clearFieldError(input);
-        return true;
-    }
-
-    function validateName(input) {
-        const value = input.value.trim();
-        if (value.length < 2) {
-            showFieldError(input, 'Full name is required');
-            return false;
-        }
-        clearFieldError(input);
-        return true;
-    }
-
-    function showFieldError(input, message) {
-        input.style.borderColor = 'var(--danger)';
-        input.style.boxShadow = '0 0 0 1px var(--danger)';
-        if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('error-message')) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.style.color = 'var(--danger)';
-            errorDiv.style.fontSize = '10px';
-            errorDiv.style.marginTop = '2px';
-            input.parentNode.insertBefore(errorDiv, input.nextSibling);
-        }
-        input.nextElementSibling.textContent = message;
-    }
-
-    function clearFieldError(input) {
-        input.style.borderColor = '';
-        input.style.boxShadow = '';
-        if (input.nextElementSibling && input.nextElementSibling.classList.contains('error-message')) {
-            input.nextElementSibling.remove();
-        }
-    }
-
-    function updateUsedSets() {
-        usedMembershipNos.clear();
-        usedPhones.clear();
-        usedIds.clear();
-        document.querySelectorAll('.cell-input').forEach(input => {
-            const value = input.value.trim();
-            if (input.placeholder && input.placeholder.includes('TB-')) {
-                if (value) usedMembershipNos.add(value);
-            } else if (input.placeholder && input.placeholder.includes('07')) {
-                if (value) usedPhones.add(value);
-            } else if (input.placeholder && input.placeholder.includes('ID')) {
-                if (value) usedIds.add(value);
-            }
-        });
-    }
-
-    // Attach validation listeners
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('cell-input')) {
-            const input = e.target;
-            if (input.placeholder && input.placeholder.includes('TB-')) {
-                validateMembershipNo(input);
-            } else if (input.placeholder && input.placeholder.includes('07')) {
-                validatePhone(input);
-            } else if (input.placeholder && input.placeholder.includes('ID')) {
-                validateId(input);
-            } else if (input.placeholder && input.placeholder.includes('name')) {
-                validateName(input);
-            }
-        }
-    });
-
-    document.addEventListener('blur', function(e) {
-        if (e.target.classList.contains('cell-input')) {
-            updateUsedSets();
-            const input = e.target;
-            if (input.placeholder && input.placeholder.includes('TB-')) {
-                validateMembershipNo(input);
-            } else if (input.placeholder && input.placeholder.includes('07')) {
-                validatePhone(input);
-            } else if (input.placeholder && input.placeholder.includes('ID')) {
-                validateId(input);
-            } else if (input.placeholder && input.placeholder.includes('name')) {
-                validateName(input);
-            }
-        }
-    });
-
-    // Generate membership numbers
-    function generateMembershipNos() {
-        let counter = 1;
-        document.querySelectorAll('#trusteesBody input[placeholder*="TB-"], #officialsBody input[placeholder*="TB-"], #membersBody input[placeholder*="TB-"]').forEach(input => {
-            if (!input.value) {
-                input.value = `TB-${counter.toString().padStart(3, '0')}`;
-                counter++;
-            }
-        });
-        updateUsedSets();
-    }
-
-    // Auto-generate on load
-    generateMembershipNos();
 </script>
 </body>
 </html>

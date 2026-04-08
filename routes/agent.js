@@ -423,6 +423,85 @@ router.post("/register-new-group", async (req, res) => {
   }
 });
 
+// Activate new group with bypassed payment
+router.post("/activate-group", async (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.json({ success: false, message: "Unauthorized" });
+  }
+
+  const payload = req.body;
+  const { county, constituency, ward, trustees, officials, members, constitutionStartKeyUnhashed, messages } = payload;
+
+  if (!county || !constituency || !ward || !trustees || trustees.length === 0) {
+    return res.json({ success: false, message: "Invalid data" });
+  }
+
+  // Load general.json
+  let general = loadJSON(generalFile, {});
+
+  // Ensure hierarchy exists
+  if (!general[county]) general[county] = {};
+  if (!general[county][constituency]) general[county][constituency] = {};
+  if (!general[county][constituency][ward]) general[county][constituency][ward] = [];
+
+  // Count groups in ward for name generation
+  const wardGroups = general[county][constituency][ward];
+  const groupCount = wardGroups.length + 1;
+  const groupName = `${county.toUpperCase()}_${constituency.toUpperCase()}_${ward.toUpperCase().replace(/\s+/g, '')}_${String(groupCount).padStart(3, '0')}`;
+
+  // Increment regional counts
+  general[county].countyGroupCount = (general[county].countyGroupCount || 0) + 1;
+  general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
+  general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+
+  // Hash constitution key
+  const constitutionStartKey = await bcrypt.hash(String(constitutionStartKeyUnhashed), 10);
+
+  // Build group object
+  const group = {
+    groupName,
+    phone: trustees[0].phone, // Chairperson
+    firstName: 'Chairperson', // Placeholder
+    secondName: '',
+    lastName: '',
+    county,
+    constituency,
+    ward,
+    processorPhone: payload.processorPhone,
+    createdAt: payload.createdAt,
+    membersPopulatedAt: payload.membersPopulatedAt,
+    agentProcessed: payload.agentProcessed,
+    phase: 2,
+    totalProposedMembers: payload.totalProposedMembers,
+    constitutionStartKey,
+    constitutionKeyGeneratedAt: payload.constitutionKeyGeneratedAt,
+    messages
+  };
+
+  // Add trustees/officials/members
+  trustees.forEach((t, i) => {
+    group[`trustee_${i + 1}`] = t;
+  });
+  officials.forEach((o, i) => {
+    group[`official_${trustees.length + i + 1}`] = o;
+  });
+  members.forEach((m, i) => {
+    group[`member_${trustees.length + officials.length + i + 1}`] = m;
+  });
+
+  // Add group to ward
+  wardGroups.push(group);
+
+  // Save
+  try {
+    fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
+    res.json({ success: true, message: "Group activated successfully", groupName });
+  } catch (e) {
+    console.error(e);
+    res.json({ success: false, message: "Failed to save" });
+  }
+});
+
 // POST /agent/verify-user - Verify member exists in data.json
 router.post("/verify-user", (req, res) => {
   if (!req.session || !req.session.user) {
@@ -477,6 +556,26 @@ router.get("/group-form/:groupName", (req, res) => {
   const tbank = require('../tbank.json');
   const data = require('../data.json');
 
+  // Get next form reference number from general.json
+  const generalData = loadJSON(generalFile, {});
+  let totalDownloads = 0;
+  
+  // Search through nested structure
+  for (const county in generalData) {
+    for (const constituency in generalData[county]) {
+      const wards = generalData[county][constituency];
+      if (Array.isArray(wards)) {
+        for (const group of wards) {
+          if (group.groupName && group.groupName.toLowerCase() === decodedGroupName.toLowerCase()) {
+            totalDownloads = group.formDownloads ? group.formDownloads.length : 0;
+            break;
+          }
+        }
+      }
+    }
+  }
+  const nextFormRef = String(totalDownloads + 1).padStart(3, '0');
+
   // Function to get name by phone
   function getNameByPhone(phone) {
     const user = data.find(u => u.phoneNumber === phone);
@@ -496,7 +595,9 @@ router.get("/group-form/:groupName", (req, res) => {
     agent: agent,
     group: group,
     user: req.session.user,
-    tbank: tbank
+    tbank: tbank,
+    userPhone: req.session.user ? req.session.user.phoneNumber : null,
+    formRefNumber: nextFormRef
   });
 });
 

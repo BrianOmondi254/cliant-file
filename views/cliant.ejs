@@ -170,22 +170,44 @@ const app = {
         
         let html = '<div style="text-align:left;">';
         
+        // Group Notifications (from general.json messages)
+        const groupMsgs = this.data.groupMessages || [];
+        if (groupMsgs.length > 0) {
+            html += '<h5 style="margin-bottom:15px;font-size:12px;color:#10b981;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #eee;padding-bottom:5px;">Group Notifications</h5>';
+
+            groupMsgs.forEach(m => {
+                html += `
+                    <div style="background:#f0fdf4;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #dcfce7;border-left:4px solid #10b981;">
+                        <h4 style="color:#065f46;margin-bottom:8px;font-size:14px;font-weight:700;">
+                            <i class="fa-solid fa-users" style="color:#10b981;margin-right:8px;"></i>
+                            ${m.title || 'Group Update'}
+                        </h4>
+                        <div style="font-size:13px;color:#1e293b;line-height:1.5;margin-bottom:10px;white-space:pre-wrap;">
+                            ${m.content}
+                        </div>
+                        <div style="font-size:11px;color:#059669;">
+                            ${new Date(m.createdAt).toLocaleString()}
+                        </div>
+                    </div>`;
+            });
+        }
+
         if (keys.length > 0) {
             html += '<h5 style="margin-bottom:15px;font-size:12px;color:var(--primary);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #eee;padding-bottom:5px;">Security Notifications</h5>';
-            
+
             keys.forEach(k => {
                 const isLegacy = k.type === 'legacy';
                 const isAlert = k.type === 'security_alert';
                 const borderColor = isAlert ? '#f59e0b' : '#4f46e5';
                 const icon = isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved';
-                
+
                 html += `
                     <div style="background:#f8fafc;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #e2e8f0;border-left:4px solid ${borderColor}; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                         <h4 style="color:#1e293b;margin-bottom:8px;font-size:14px;font-weight:700;">
                             <i class="fa-solid ${icon}" style="color:${borderColor};margin-right:8px;"></i>
                             ${k.groupName}
                         </h4>
-                        
+
                         <div style="font-size:13px;color:#475569;line-height:1.5;margin-bottom:10px;white-space:pre-wrap;">
                             ${k.content || (isLegacy ? 'Initial Security Configuration Required' : '')}
                         </div>`;

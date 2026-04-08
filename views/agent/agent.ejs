@@ -1506,19 +1506,24 @@
                       let statusColor = "#059669"; // Green
                       let statusBg = "#ecfdf5";
                       
-                      // CONSIDERED "WITHOUT MEMBERS" IF IT ONLY HAS THE CHAIRPERSON (trustee_1) 
-                      // AND HASN'T BEEN POPULATED WITH OTHER TRUSTEES (trustee_2)
-                      const isPopulated = g.trustee_2 || g.member_1 || g.official_1;
-                      
-                      if (!isPopulated) {
-                        status = "New Request";
-                        statusColor = "#4285f4"; // Blue
-                        statusBg = "#ebf5ff";
-                      } else if (!g.principles && g.phase != 3) {
-                        status = "Pending Setup";
-                        statusColor = "#d97706"; // Amber
-                        statusBg = "#fffbeb";
-                      }
+                       // Status based on phase
+                       if (g.phase === 1) {
+                         status = "New Request";
+                         statusColor = "#4285f4"; // Blue
+                         statusBg = "#ebf5ff";
+                       } else if (g.phase === 2) {
+                         status = "Pending Approval";
+                         statusColor = "#d97706"; // Amber
+                         statusBg = "#fffbeb";
+                       } else if (g.phase === 3) {
+                         status = "Active";
+                         statusColor = "#059669"; // Green
+                         statusBg = "#ecfdf5";
+                       } else {
+                         status = "Unknown";
+                         statusColor = "#6b7280"; // Gray
+                         statusBg = "#f3f4f6";
+                       }
                   %>
                     <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
                       style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: white; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>;">

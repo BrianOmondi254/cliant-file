@@ -1421,4 +1421,122 @@ router.post("/api/verify-members", (req, res) => {
   }
 });
 
+/* 📥 API: Track Form Download */
+router.post("/api/form-download-log", (req, res) => {
+  try {
+    const { groupName, formRef, year, userPhone, latitude, longitude, address } = req.body;
+    
+    if (!groupName || !formRef) {
+      return res.status(400).json({ error: "Missing groupName or formRef" });
+    }
+
+    const allData = readJSON(generalFile, {});
+    
+    // Search through nested structure: County > Constituency > Ward > Groups
+    let groupFound = false;
+    let groupUpdated = false;
+    
+    for (const county in allData) {
+      for (const constituency in allData[county]) {
+        const wards = allData[county][constituency];
+        if (Array.isArray(wards)) {
+          for (let i = 0; i < wards.length; i++) {
+            const group = wards[i];
+            if (group.groupName && group.groupName.toLowerCase() === groupName.toLowerCase()) {
+              groupFound = true;
+              
+              // Initialize formDownloads array if not exists
+              if (!group.formDownloads) {
+                group.formDownloads = [];
+              }
+
+              // Calculate sequence
+              const totalDownloads = group.formDownloads.length;
+              const sequenceByUser = (totalDownloads + 1) + '-' + (userPhone || 'unknown');
+              const newDownload = {
+                downloadId: totalDownloads + 1,
+                timestamp: new Date().toISOString(),
+                formRef: formRef,
+                sequenceNumber: totalDownloads + 1,
+                sequenceByUser: sequenceByUser,
+                totalDownloads: totalDownloads + 1,
+                location: latitude && longitude ? {
+                  latitude: latitude,
+                  longitude: longitude,
+                  address: address || "Unknown"
+                } : null
+              };
+
+              // Add to download history
+              group.formDownloads.push(newDownload);
+              groupUpdated = true;
+              break;
+            }
+          }
+        }
+        if (groupUpdated) break;
+      }
+      if (groupUpdated) break;
+    }
+    
+    if (!groupFound) {
+      return res.status(404).json({ error: "Group not found: " + groupName });
+    }
+
+    // Save back to file
+    writeJSON(generalFile, allData);
+
+    console.log(`✓ Form download logged for ${groupName}: ${formRef}`);
+
+    return res.json({ 
+      success: true, 
+      message: "Download logged successfully",
+      download: newDownload
+    });
+  } catch (err) {
+    console.error("Error in /api/form-download-log:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* 📥 API: Get Form Download History */
+router.get("/api/form-downloads/:groupName", (req, res) => {
+  try {
+    const { groupName } = req.params;
+    const allData = readJSON(generalFile, {});
+    
+    let groupFound = null;
+    
+    // Search through nested structure
+    for (const county in allData) {
+      for (const constituency in allData[county]) {
+        const wards = allData[county][constituency];
+        if (Array.isArray(wards)) {
+          for (const group of wards) {
+            if (group.groupName && group.groupName.toLowerCase() === groupName.toLowerCase()) {
+              groupFound = group;
+              break;
+            }
+          }
+        }
+        if (groupFound) break;
+      }
+      if (groupFound) break;
+    }
+    
+    if (!groupFound) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    return res.json({ 
+      success: true, 
+      formDownloads: groupFound.formDownloads || [],
+      totalDownloads: groupFound.formDownloads ? groupFound.formDownloads.length : 0
+    });
+  } catch (err) {
+    console.error("Error in /api/form-downloads:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;
