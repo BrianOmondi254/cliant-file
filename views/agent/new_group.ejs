@@ -585,6 +585,48 @@
       color: var(--dark);
     }
 
+    /* ─── VERIFICATION DISPLAY STYLES ─── */
+    .header-box {
+      background: #eef2f7;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .header-box h3 {
+      margin: 0 0 10px 0;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #555;
+    }
+
+    .value {
+      color: #222;
+    }
+
+    .success {
+      text-align: center;
+      color: green;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .member-box {
+      margin-top: 15px;
+    }
+
+    .member-box h4 {
+      margin-bottom: 10px;
+    }
+
     /* Scroll for member form */
     #step-members {
       height: auto;
@@ -632,6 +674,11 @@
       .row-2 {
         grid-template-columns: 1fr;
         gap: 10px;
+      }
+
+      .row {
+        flex-direction: column;
+        gap: 8px;
       }
 
       .btn-container button {
@@ -906,16 +953,21 @@
         </div>
 
         <!-- GROUP INFO IN VERIFICATION -->
-        <div id="verificationGroupInfo" style="background:var(--light); border-radius:12px; padding:14px; margin-bottom:16px; border:1px solid #e2e8f0;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <div style="font-size:10px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:0.5px;">Group Type</div>
-              <div id="verifyGroupType" style="font-size:14px; font-weight:800; color:var(--dark); margin-top:2px;">-</div>
-            </div>
-            <div>
-              <div style="font-size:10px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:0.5px;">Certificate Number</div>
-              <div id="verifyCertNumber" style="font-size:14px; font-weight:800; color:var(--dark); margin-top:2px;">-</div>
-            </div>
+        <div id="verificationGroupInfo" class="header-box">
+          <h3 id="verifyRegionalBlock">Regional Block: <%= group.county %></h3>
+
+          <div class="row">
+            <div><span class="label">Group No:</span> <span class="value" id="verifyGroupNo"><%= group.groupName %></span></div>
+            <div><span class="label">Group Type:</span> <span class="value" id="verifyGroupType"><%= group.groupType || '-' %></span></div>
+          </div>
+
+          <div class="row">
+            <div><span class="label">Certificate:</span> <span class="value" id="verifyCertNumber"><%= group.certificateNumber || 'Not provided' %></span></div>
+            <div><span class="label">Agent:</span> <span class="value"><%= group.agentName %></span></div>
+          </div>
+
+          <div class="row">
+            <div><span class="label">Phone:</span> <span class="value"><%= group.agentPhone %></span></div>
           </div>
         </div>
 
@@ -1600,9 +1652,11 @@ function updateTrusteeTitles() {
       // Populate group info for verification step
       const groupType = document.getElementById('groupType').value;
       const groupCertNumber = document.getElementById('groupCertificateNumber').value.trim();
-      
+
+      // Update header box with group info
       document.getElementById('verifyGroupType').textContent = groupType || '-';
       document.getElementById('verifyCertNumber').textContent = groupCertNumber || 'Not provided';
+      // Regional block, group no, agent info are already populated via EJS template
 
       // Collect all member data from form inputs
       const membersToVerify = [];
@@ -1728,21 +1782,12 @@ function updateTrusteeTitles() {
 
       const cardTitle = rolePrefix ? `${rolePrefix}` : '';
 
-      // Determine badge
-      let statusBadge = '';
+      // Determine status text for display
+      let statusText = 'Not Registered';
       if (isVerified) {
-        statusBadge = `<span style="font-size:10px; color:#166534; font-weight:700; background:#dcfce7; padding:3px 8px; border-radius:12px; border:1px solid #166534;">
-          <i class="fas fa-check-circle"></i> Verified
-        </span>`;
+        statusText = 'Verified';
       } else if (!notRegistered) {
-        // Has name but ID doesn't match
-        statusBadge = `<span style="font-size:10px; color:#991b1b; font-weight:700; background:#fee2e2; padding:3px 8px; border-radius:12px; border:1px solid #991b1b;">
-          <i class="fas fa-exclamation-triangle"></i> ID Mismatch
-        </span>`;
-      } else {
-        statusBadge = `<span style="font-size:10px; color:#92400e; font-weight:700; background:#fef3c7; padding:3px 8px; border-radius:12px; border:1px solid #f59e0b;">
-          <i class="fas fa-user-slash"></i> Not Registered
-        </span>`;
+        statusText = 'ID Mismatch';
       }
 
       return `
@@ -1756,42 +1801,32 @@ function updateTrusteeTitles() {
               <span style="font-size:10px; color:${textColor}; font-weight:700; background:white; padding:3px 8px; border-radius:12px; border:1px solid ${textColor};">
                 #${index}
               </span>
-              ${statusBadge}
             </div>
           </div>
 
-          <!-- Member Name (Prominent) -->
-          ${hasName ? `
-            <div style="margin-bottom:10px;">
-              <div style="font-size:16px; font-weight:800; color:${textColor}; margin-bottom:3px;">
-                <i class="fas fa-user"></i> ${displayName}
-              </div>
-              ${title ? `<div style="font-size:11px; color:${textColor}; opacity:0.7; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">${title}</div>` : ''}
-            </div>
-          ` : `
-            <div style="margin-bottom:10px;">
-              <div style="font-size:13px; font-weight:700; color:${textColor}; opacity:0.6;">
-                <i class="fas fa-user-slash"></i> ${displayName}
-              </div>
-              ${title ? `<div style="font-size:11px; color:${textColor}; opacity:0.6; font-weight:600; margin-top:2px;">${title}</div>` : ''}
-            </div>
-          `}
+          <!-- MEMBER DETAILS -->
+          <div class="member-box">
+            <h4>Member Details</h4>
 
-          <!-- Member Number (if provided) -->
-          ${memberNumber ? `
-          <div style="position:relative; margin-bottom:8px;">
-            <i class="fas fa-id-card" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:${textColor}; opacity:0.5; font-size:12px;"></i>
-            <div style="padding:8px 12px 8px 32px; border:1.5px solid ${textColor}; border-radius:10px; font-size:12px; font-weight:600; color:${textColor}; background:white;">
-              Member No: ${memberNumber}
+            <div class="row">
+              <div><span class="label">Member No:</span> <span class="value">${memberNumber || '-'}</span></div>
             </div>
-          </div>
-          ` : ''}
 
-          <!-- Phone Display -->
-          <div style="position:relative;">
-            <i class="fas fa-phone" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:${textColor}; opacity:0.5; font-size:12px;"></i>
-            <div style="padding:10px 12px 10px 32px; border:1.5px solid ${textColor}; border-radius:10px; font-size:13px; font-weight:700; color:${textColor}; background:white;">
-              ${phone}
+            <!-- VERIFIED STATUS BELOW MEMBER NO -->
+            <div class="success">
+              Verified Successfully ✔
+            </div>
+
+            <div class="row">
+              <div><span class="label">Name:</span> <span class="value">${displayName}</span></div>
+            </div>
+
+            <div class="row">
+              <div><span class="label">ID Number:</span> <span class="value">${matchData && matchData.id ? matchData.id : '-'}</span></div>
+            </div>
+
+            <div class="row">
+              <div><span class="label">Status:</span> <span class="value">${statusText}</span></div>
             </div>
           </div>
         </div>
