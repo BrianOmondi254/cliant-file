@@ -473,6 +473,7 @@ router.post("/activate-group", async (req, res) => {
     agentProcessed: payload.agentProcessed,
     phase: 2,
     totalProposedMembers: payload.totalProposedMembers,
+    groupType: payload.groupType || '',
     constitutionStartKey,
     constitutionKeyGeneratedAt: payload.constitutionKeyGeneratedAt,
     messages

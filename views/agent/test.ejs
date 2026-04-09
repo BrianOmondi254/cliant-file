@@ -41,9 +41,8 @@
       justify-content: center;
       align-items: flex-start;
       min-height: 100vh;
-      padding: 20px 20px 20px 20px;
+      padding: 20px;
       color: var(--dark);
-      margin: 0;
     }
 
     .container {
@@ -52,12 +51,11 @@
       max-width: 520px;
       border-radius: 28px;
       box-shadow: var(--shadow-lg);
-      overflow: hidden;
+      overflow: visible;
       position: relative;
       animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 0;
+      margin: auto;
       z-index: 100;
-      padding: 0 2px;
     }
 
     @keyframes slideIn {
@@ -79,8 +77,6 @@
       color: var(--white);
       text-align: center;
       position: relative;
-      z-index: 1000;
-      border-radius: 28px 28px 0 0;
     }
 
     .header h1 {
@@ -113,7 +109,7 @@
 
     /* ─── CONTENT ─── */
     .content {
-      padding: 20px;
+      padding: 28px;
       position: relative;
       z-index: 10;
     }
@@ -121,7 +117,7 @@
     .group-info-stripe {
       background: var(--light);
       border-radius: 16px;
-      padding: 12px 14px;
+      padding: 14px 18px;
       margin-bottom: 24px;
       display: flex;
       justify-content: space-between;
@@ -166,7 +162,7 @@
     }
 
     .input-group {
-      margin-bottom: 14px;
+      margin-bottom: 20px;
     }
 
     .input-group label {
@@ -176,7 +172,7 @@
       color: var(--slate);
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .input-wrapper {
@@ -186,9 +182,9 @@
     .input-wrapper input,
     .input-wrapper select {
       width: 100%;
-      padding: 8px 2px;
+      padding: 14px 18px;
       border: 2px solid #e2e8f0;
-      border-radius: 10px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 600;
       color: var(--dark);
@@ -236,7 +232,7 @@
       background: var(--primary-light);
       border: 1.5px dashed var(--primary);
       border-radius: 20px;
-      padding: 16px;
+      padding: 22px;
       text-align: center;
       margin-bottom: 24px;
       position: relative;
@@ -262,14 +258,14 @@
     .payment-options {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 14px;
       margin-top: 16px;
     }
 
     .payment-option {
       border: 2px solid #e2e8f0;
       border-radius: 16px;
-      padding: 14px 10px;
+      padding: 20px 12px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -316,7 +312,7 @@
       align-items: center;
       gap: 10px;
       padding: 12px 16px;
-      border-radius: 10px;
+      border-radius: 14px;
       margin-bottom: 14px;
       margin-top: 6px;
       font-size: 13px;
@@ -347,8 +343,8 @@
       background: var(--light);
       border-radius: 16px;
       border: 1px solid #e2e8f0;
-      padding: 10px;
-      margin-bottom: 10px;
+      padding: 18px;
+      margin-bottom: 14px;
       transition: box-shadow .2s;
     }
 
@@ -413,7 +409,7 @@
       width: 100%;
       padding: 15px;
       border: none;
-      border-radius: 10px;
+      border-radius: 14px;
       font-size: 15px;
       font-weight: 800;
       cursor: pointer;
@@ -589,7 +585,6 @@
     #step-members {
       height: auto;
       overflow-y: auto;
-      padding: 10px;
       padding-right: 4px;
       position: relative;
       z-index: 5;
@@ -614,7 +609,7 @@
       .container {
         max-width: 100%;
         margin: 0;
-        padding: 0 2px;
+        padding: 10px;
       }
 
       .header {
@@ -626,7 +621,7 @@
       }
 
       .content {
-        padding: 12px 10px;
+        padding: 20px 15px;
       }
 
       .row-2 {
@@ -641,12 +636,12 @@
 
       .input-wrapper input,
       .input-wrapper select {
-        padding: 6px 2px;
+        padding: 12px 16px;
         font-size: 14px;
       }
 
       .member-card {
-        padding: 12px;
+        padding: 14px;
       }
 
       .member-card-head {
@@ -661,7 +656,7 @@
       }
 
       .fee-card {
-        padding: 14px;
+        padding: 18px;
       }
 
       .payment-options {
@@ -698,39 +693,9 @@
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
-      <!-- STEP 1 : GROUP TYPE & MEMBER COUNT          -->
+      <!-- STEP 1 : MEMBER COUNT                       -->
       <!-- ═══════════════════════════════════════════ -->
       <div class="form-step active" id="step1">
-        <div style="text-align:right; margin-bottom:12px;">
-          <button type="button" onclick="showRegulationsModal()" style="background:#4285f4; color:white; border:none; padding:6px 2px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:600; display:flex; align-items:center; gap:3px; white-space:nowrap;">
-            <i class="fas fa-book"></i> Terms
-          </button>
-        </div>
-        <div class="input-group">
-          <label>Group Type</label>
-          <div class="input-wrapper">
-            <select id="groupType" onchange="handleGroupTypeChange()">
-              <option value="">Select Group Type</option>
-              <option value="Women's Group">Women's Group</option>
-              <option value="Youth Group">Youth Group</option>
-              <option value="Farmers Group">Farmers Group</option>
-              <option value="Self Help Group">Self Help Group</option>
-              <option value="Cooperative">Cooperative</option>
-              <option value="Business Group">Business Group</option>
-              <option value="Community Based Organization">Community Based Organization (CBO)</option>
-            </select>
-          </div>
-        </div>
-        <div class="input-group">
-          <label>Group Certificate Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
-          <div class="input-wrapper">
-            <input type="text" id="groupCertificateNumber" placeholder="Certificate number" maxlength="50">
-          </div>
-          <div class="compliance-note">
-            <i class="fas fa-info-circle"></i>
-            From cabinet ministry of labour, register of societies
-          </div>
-        </div>
         <div class="input-group">
           <label>Total Membership Count</label>
           <div class="input-wrapper">
@@ -905,20 +870,6 @@
           <p style="font-size:12px; color:var(--slate);">Review all member details before final submission</p>
         </div>
 
-        <!-- GROUP INFO IN VERIFICATION -->
-        <div id="verificationGroupInfo" style="background:var(--light); border-radius:12px; padding:14px; margin-bottom:16px; border:1px solid #e2e8f0;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <div style="font-size:10px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:0.5px;">Group Type</div>
-              <div id="verifyGroupType" style="font-size:14px; font-weight:800; color:var(--dark); margin-top:2px;">-</div>
-            </div>
-            <div>
-              <div style="font-size:10px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:0.5px;">Certificate Number</div>
-              <div id="verifyCertNumber" style="font-size:14px; font-weight:800; color:var(--dark); margin-top:2px;">-</div>
-            </div>
-          </div>
-        </div>
-
         <div id="verificationList" style="max-height:50vh; overflow-y:auto; padding-right:4px;"></div>
 
          <div class="btn-container" style="padding-top:12px;">
@@ -1007,7 +958,6 @@
     let totalPayableAmount = 0;
     let regularMembersCount = 0;  // total - trustees - officials
     let currentOfficialsCount = 0;  // track how many official forms are shown
-    let termsAccepted = false;  // track if terms have been viewed
 
 
 
@@ -1024,11 +974,6 @@
 
     // ─── STEP 1 → 2 ───────────────────────────────────────────
     function proceedToPayment() {
-      const groupType = document.getElementById('groupType').value;
-      if (!groupType) {
-        showNotification('Please select a group type.');
-        return;
-      }
       totalMembersCount = parseInt(document.getElementById('totalMembers').value);
       if (isNaN(totalMembersCount) || totalMembersCount < MIN_MEMBERS || totalMembersCount > MAX_MEMBERS) {
         showNotification(`Membership count must be between ${MIN_MEMBERS} and ${MAX_MEMBERS}.`);
@@ -1102,7 +1047,7 @@
               <span style="font-size:11px; color:#1d4ed8; font-weight:600; background:#dbeafe; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
             </div>
             <!-- Title full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
+            <div class="input-group" style="margin-bottom:12px;">
               <label>Title</label>
               <div class="input-wrapper">
                 <select id="t${idx}_title" ${isChairperson ? 'class="locked" disabled' : 'onchange="updateTrusteeTitles()"'}>
@@ -1116,15 +1061,8 @@
                 ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
               </div>
             </div>
-            <!-- Member Number full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
-              <label>Member Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
-              <div class="input-wrapper">
-                <input type="text" id="t${idx}_memberNumber" placeholder="Enter member number" maxlength="20">
-              </div>
-            </div>
             <!-- Phone full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
+            <div class="input-group" style="margin-bottom:12px;">
               <label>Phone Number</label>
               <div class="input-wrapper">
                 <input type="tel" id="t${idx}_phone" ${isChairperson ? 'value="<%= group.phone %>" readonly class="locked"' : 'placeholder="Enter phone number"'} maxlength="12">
@@ -1220,7 +1158,7 @@
           </div>
         </div>
         <!-- Title full-width -->
-        <div class="input-group" style="margin-bottom:8px;">
+        <div class="input-group" style="margin-bottom:12px;">
           <label>Title (optional)</label>
           <div class="input-wrapper">
             <input type="text" id="${key}_title"
@@ -1230,15 +1168,8 @@
               oninput="updateOfficialBadge('${key}', this.value)">
           </div>
         </div>
-        <!-- Member Number full-width -->
-        <div class="input-group" style="margin-bottom:8px;">
-          <label>Member Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
-          <div class="input-wrapper">
-            <input type="text" id="${key}_memberNumber" placeholder="Enter member number" maxlength="20">
-          </div>
-        </div>
         <!-- Phone full-width -->
-        <div class="input-group" style="margin-bottom:8px;">
+        <div class="input-group" style="margin-bottom:12px;">
           <label>Phone (optional)</label>
           <div class="input-wrapper">
             <input type="tel" id="${key}_phone" placeholder="Enter phone number" maxlength="12">
@@ -1471,10 +1402,10 @@ function updateTrusteeTitles() {
               <span style="font-size:11px; color:var(--primary-dark); font-weight:600; background:#dcfce7; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
             </div>
             <!-- Member Number full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
-              <label>Member Number <span style="color:#ef4444;">*</span></label>
+            <div class="input-group" style="margin-bottom:12px;">
+              <label>Member Number</label>
               <div class="input-wrapper">
-                <input type="text" id="${key}_memberNumber" placeholder="Enter member number" maxlength="20" required>
+                <input type="text" id="${key}_memberNumber" placeholder="Enter member number" maxlength="20">
               </div>
             </div>
             <div class="row-2">
@@ -1557,15 +1488,7 @@ function updateTrusteeTitles() {
       // Regular Members
       for (let i = 0; i < regularMembersCount; i++) {
         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
         const phone = document.getElementById(`member_${idx}_phone`).value.trim();
-        
-        // Validate member number is required
-        if (!memberNumber) {
-          showNotification(`Member number is required for Member ${i + 1} (Index ${idx}).`);
-          return;
-        }
-        
         if (!isValidPhone(phone)) {
           showNotification(getPhoneErrorMessage(`Member ${i + 1}`));
           return;
@@ -1597,13 +1520,6 @@ function updateTrusteeTitles() {
     function showVerificationForm() {
       const list = document.getElementById('verificationList');
 
-      // Populate group info for verification step
-      const groupType = document.getElementById('groupType').value;
-      const groupCertNumber = document.getElementById('groupCertificateNumber').value.trim();
-      
-      document.getElementById('verifyGroupType').textContent = groupType || '-';
-      document.getElementById('verifyCertNumber').textContent = groupCertNumber || 'Not provided';
-
       // Collect all member data from form inputs
       const membersToVerify = [];
 
@@ -1612,7 +1528,6 @@ function updateTrusteeTitles() {
          const idx = i + 1;
          membersToVerify.push({
            key: `trustee_${idx}`,
-           memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim(),
            phone: document.getElementById(`t${idx}_phone`).value.trim(),
            id: document.getElementById(`t${idx}_id`).value.trim(),
            role: 'trustee',
@@ -1621,26 +1536,24 @@ function updateTrusteeTitles() {
          });
        }
 
-     // Officials
-     for (let i = 0; i < currentOfficialsCount; i++) {
-       const idx = STD_TRUSTEES + i + 1;
-       membersToVerify.push({
-         key: `official_${idx}`,
-         memberNumber: document.getElementById(`official_${idx}_memberNumber`).value.trim(),
-         phone: document.getElementById(`official_${idx}_phone`).value.trim(),
-         id: document.getElementById(`official_${idx}_id`).value.trim(),
-         role: 'official',
-         title: document.getElementById(`official_${idx}_title`).value.trim() || 'No Title',
-         index: String(idx)
-       });
-     }
+      // Officials
+      for (let i = 0; i < currentOfficialsCount; i++) {
+        const idx = STD_TRUSTEES + i + 1;
+        membersToVerify.push({
+          key: `official_${idx}`,
+          phone: document.getElementById(`official_${idx}_phone`).value.trim(),
+          id: document.getElementById(`official_${idx}_id`).value.trim(),
+          role: 'official',
+          title: document.getElementById(`official_${idx}_title`).value.trim() || 'No Title',
+          index: String(idx)
+        });
+      }
 
       // Regular Members
       for (let i = 0; i < regularMembersCount; i++) {
         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
         membersToVerify.push({
           key: `member_${idx}`,
-          memberNumber: document.getElementById(`member_${idx}_memberNumber`).value.trim(),
           phone: document.getElementById(`member_${idx}_phone`).value.trim(),
           id: document.getElementById(`member_${idx}_id`).value.trim(),
           role: 'member',
@@ -1684,8 +1597,7 @@ function updateTrusteeTitles() {
               bgColor,
               textColor,
               member,
-              member.id,
-              member.memberNumber
+              member.id
             );
           });
 
@@ -1713,7 +1625,7 @@ function updateTrusteeTitles() {
        showStep('step4-verify');
     }
 
-    function buildVerificationCard(rolePrefix, title, index, phone, bgColor, textColor, matchData, formIdValue, memberNumber) {
+    function buildVerificationCard(rolePrefix, title, index, phone, bgColor, textColor, matchData, formIdValue) {
       const hasName = matchData && matchData.name;
       const isVerified = matchData && matchData.verified;
       const notRegistered = !hasName;
@@ -1746,7 +1658,7 @@ function updateTrusteeTitles() {
       }
 
       return `
-        <div class="member-card" style="background:${bgColor}; border:1.5px solid ${textColor}; margin-bottom:8px; padding:14px;">
+        <div class="member-card" style="background:${bgColor}; border:1.5px solid ${textColor}; margin-bottom:12px; padding:14px;">
           <!-- Header: Role + Index + Status -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div style="font-weight:700; font-size:13px; color:${textColor}; opacity:0.8;">
@@ -1776,16 +1688,6 @@ function updateTrusteeTitles() {
               ${title ? `<div style="font-size:11px; color:${textColor}; opacity:0.6; font-weight:600; margin-top:2px;">${title}</div>` : ''}
             </div>
           `}
-
-          <!-- Member Number (if provided) -->
-          ${memberNumber ? `
-          <div style="position:relative; margin-bottom:8px;">
-            <i class="fas fa-id-card" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:${textColor}; opacity:0.5; font-size:12px;"></i>
-            <div style="padding:8px 12px 8px 32px; border:1.5px solid ${textColor}; border-radius:10px; font-size:12px; font-weight:600; color:${textColor}; background:white;">
-              Member No: ${memberNumber}
-            </div>
-          </div>
-          ` : ''}
 
           <!-- Phone Display -->
           <div style="position:relative;">
@@ -1825,7 +1727,6 @@ function goBackToForm() {
           index: idx,
           title: title,
           name: `Trustee ${idx}`, // We don't have name field, so use placeholder
-          memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim() || '',
           phone: document.getElementById(`t${idx}_phone`).value.trim() || '',
           id: document.getElementById(`t${idx}_id`).value.trim() || '',
           type: 'trustee'
@@ -1836,14 +1737,12 @@ function goBackToForm() {
       for (let i = 0; i < currentOfficialsCount; i++) {
         const idx = STD_TRUSTEES + i + 1;
         const titleInput = document.getElementById(`official_${idx}_title`);
-        const memberNumberInput = document.getElementById(`official_${idx}_memberNumber`);
         const phoneInput = document.getElementById(`official_${idx}_phone`);
         const idInput = document.getElementById(`official_${idx}_id`);
         members.push({
           index: idx,
           title: titleInput ? titleInput.value.trim() || 'Official' : 'Official',
           name: `Official ${i + 1}`,
-          memberNumber: memberNumberInput ? memberNumberInput.value.trim() : '',
           phone: phoneInput ? phoneInput.value.trim() : '',
           id: idInput ? idInput.value.trim() : '',
           type: 'official'
@@ -1853,14 +1752,12 @@ function goBackToForm() {
       // Collect regular members
       for (let i = 0; i < regularMembersCount; i++) {
         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        const memberNumberInput = document.getElementById(`member_${idx}_memberNumber`);
         const phoneInput = document.getElementById(`member_${idx}_phone`);
         const idInput = document.getElementById(`member_${idx}_id`);
         members.push({
           index: idx,
           title: 'Member',
           name: `Member ${i + 1}`,
-          memberNumber: memberNumberInput ? memberNumberInput.value.trim() : '',
           phone: phoneInput ? phoneInput.value.trim() : '',
           id: idInput ? idInput.value.trim() : '',
           type: 'member'
@@ -1933,12 +1830,11 @@ function goBackToForm() {
       doc.setFillColor(240, 240, 240);
       doc.rect(margin, yPos, 190, 8, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.text('Idx', margin + 3, yPos + 5);
-      doc.text('Title', margin + 15, yPos + 5);
-      doc.text('Name', margin + 45, yPos + 5);
-      doc.text('Member No.', margin + 90, yPos + 5);
-      doc.text('Phone', margin + 135, yPos + 5);
-      doc.text('ID No.', margin + 165, yPos + 5);
+      doc.text('Idx', margin + 5, yPos + 5);
+      doc.text('Title', margin + 20, yPos + 5);
+      doc.text('Name', margin + 50, yPos + 5);
+      doc.text('Phone', margin + 120, yPos + 5);
+      doc.text('ID No.', margin + 155, yPos + 5);
       yPos += 8;
 
       // Table Rows
@@ -1953,12 +1849,11 @@ function goBackToForm() {
           doc.rect(margin, yPos, 190, 7, 'F');
         }
 
-        doc.text(String(member.index), margin + 3, yPos + 5);
-        doc.text(member.title, margin + 15, yPos + 5);
-        doc.text(member.name, margin + 45, yPos + 5);
-        doc.text(member.memberNumber || '-', margin + 90, yPos + 5);
-        doc.text(member.phone || '-', margin + 135, yPos + 5);
-        doc.text(member.id || '-', margin + 165, yPos + 5);
+        doc.text(String(member.index), margin + 5, yPos + 5);
+        doc.text(member.title, margin + 20, yPos + 5);
+        doc.text(member.name, margin + 50, yPos + 5);
+        doc.text(member.phone || '-', margin + 120, yPos + 5);
+        doc.text(member.id || '-', margin + 155, yPos + 5);
         yPos += 7;
       }
 
@@ -2034,7 +1929,6 @@ function goBackToForm() {
         trustees.push({
           index: String(idx), type: 'trustee', 
           title: document.getElementById(`t${idx}_title`).value.trim() || 'Trustee',
-          memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim(),
           phone: phone,
           id: document.getElementById(`t${idx}_id`).value.trim()
         });
@@ -2065,7 +1959,6 @@ function goBackToForm() {
         addedOfficials.push({
           index: String(idx), type: 'official',
           title: title,
-          memberNumber: document.getElementById(`official_${idx}_memberNumber`).value.trim(),
           phone: phone,
           id: document.getElementById(`official_${idx}_id`).value.trim()
         });
@@ -2082,12 +1975,8 @@ function goBackToForm() {
       }
 
        // Build payload
-       const groupType = document.getElementById('groupType').value;
-       const groupCertificateNumber = document.getElementById('groupCertificateNumber').value.trim();
        const payload = {
          groupName: groupData.groupName,
-         groupType: groupType,
-         groupCertificateNumber: groupCertificateNumber,
          county: groupData.county,
          constituency: groupData.constituency,
          ward: groupData.ward,
@@ -2113,7 +2002,7 @@ function goBackToForm() {
        showStep('step5');
 
       // POST to server
-      fetch('/agent/activate-group', {
+      fetch('/general/api/submit-group', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -2135,476 +2024,7 @@ function downloadGroupRegistrationForm() {
   const groupName = <%- JSON.stringify(group.groupName) %>;
   window.location.href = `/agent/group-form/${encodeURIComponent(groupName)}`;
 }
-
-async function downloadWithWatermark() {
-  const { jsPDF } = window.jspdf;
-
-  // Create PDF document with regulations
-  const doc = new jsPDF();
-  const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
-  const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let yPos = margin;
-
-  // Function to add watermark to current page
-  function addWatermark() {
-    // Add subtle watermark in corners instead of center
-    doc.setTextColor(240, 240, 240); // Very light gray
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'normal');
-
-    // Top-left corner
-    doc.text('TBANK', margin, margin + 10, {
-      angle: 0
-    });
-
-    // Bottom-right corner
-    doc.text('TBANK', pageWidth - margin - 30, pageHeight - margin - 10, {
-      angle: 0
-    });
-
-    // Top-right corner
-    doc.text('TBANK', pageWidth - margin - 30, margin + 10, {
-      angle: 0
-    });
-
-    // Bottom-left corner
-    doc.text('TBANK', margin, pageHeight - margin - 10, {
-      angle: 0
-    });
-
-    // Reset text color for content
-    doc.setTextColor(0, 0, 0);
-  }
-
-  // Helper function to add text with word wrap
-  function addWrappedText(text, x, y, maxWidth, lineHeight = 7) {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    doc.text(lines, x, y);
-    return lines.length * lineHeight;
-  }
-
-  // Helper to check if we need a new page
-  function checkPageSpace(requiredHeight) {
-    if (yPos + requiredHeight > pageHeight - margin) {
-      addWatermark(); // Add watermark to current page
-      doc.addPage();
-      yPos = margin;
-      addWatermark(); // Add watermark to new page
-    }
-  }
-
-  // Add watermark to first page
-  addWatermark();
-
-  // Header
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('GROUP FORMATION REGULATIONS', margin, yPos);
-  yPos += 15;
-
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Constitution of Kenya, 2010 - Chapter Four: The Bill of Rights', margin, yPos);
-  yPos += 10;
-
-  doc.setFontSize(10);
-  doc.text(`Downloaded: ${new Date().toLocaleString('en-GB')}`, margin, yPos);
-  yPos += 15;
-
-  // Freedom of Association
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('FREEDOM OF ASSOCIATION (Article 36)', margin, yPos);
-  yPos += 10;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-
-  checkPageSpace(60);
-  const article36 = [
-    'Article 36(1): Every person has the right to freedom of association, which includes the right to form, join or participate in the activities of an association of any kind.',
-    '',
-    'Article 36(2): A person shall not be compelled to join an association of any kind.',
-    '',
-    'Article 36(3): Any association shall have the freedom to acquire and dispose of movable and immovable property for the promotion of its objectives.',
-    '',
-    'This fundamental right is essential for democratic participation and enables citizens to collectively address common interests, promote social welfare, and engage in community development activities through organized groups and associations.'
-  ];
-
-  article36.forEach(line => {
-    if (line.trim()) {
-      yPos += addWrappedText(line, margin, yPos, 170, 6);
-    } else {
-      yPos += 4;
-    }
-  });
-  yPos += 15;
-
-  // Regulatory Framework
-  checkPageSpace(20);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('REGULATORY FRAMEWORK', margin, yPos);
-  yPos += 10;
-
-  // Societies Act
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Societies Act (Chapter 108, Laws of Kenya)', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const societiesAct = [
-    '• Minimum membership requirements for registration (typically 10+ members)',
-    '• Proper constitution and bylaws outlining organizational structure and rules',
-    '• Democratic election of office bearers and leadership positions',
-    '• Mandatory annual general meetings for accountability and decision-making',
-    '• Comprehensive record keeping including minutes, financial records, and membership lists',
-    '• Prohibition of activities contrary to public policy or national security',
-    '• Requirement for proper dissolution procedures and asset distribution'
-  ];
-
-  societiesAct.forEach(item => {
-    checkPageSpace(8);
-    doc.text(item, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 8;
-
-  // Co-operative Societies Act
-  checkPageSpace(30);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Co-operative Societies Act (Chapter 490)', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const coOpAct = [
-    '• Minimum of 10 members for primary societies, higher for secondary societies',
-    '• Democratic control by members through one-member-one-vote principle',
-    '• Economic participation of members through share capital contributions',
-    '• Autonomy and independence from external control or interference',
-    '• Education and training programs for member development',
-    '• Limited interest on share capital to prevent speculative investment',
-    '• Surplus distribution based on patronage rather than capital contribution',
-    '• Cooperative audits and regulatory oversight by Commissioner for Co-operatives'
-  ];
-
-  coOpAct.forEach(item => {
-    checkPageSpace(8);
-    doc.text(item, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 8;
-
-  // Labour Relations Act
-  checkPageSpace(25);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Labour Relations Act, 2007', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const labourAct = [
-    '• Right to form and join trade unions without interference or intimidation',
-    '• Protection against discrimination based on trade union membership',
-    '• Collective bargaining rights for wages, working conditions, and grievances',
-    '• Freedom from employer interference in union activities',
-    '• Protection of union officials from unfair dismissal or victimization',
-    '• Legal framework for industrial action and dispute resolution',
-    '• Requirement for union registration and democratic governance structures'
-  ];
-
-  labourAct.forEach(item => {
-    checkPageSpace(8);
-    doc.text(item, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 15;
-
-  // Registration Requirements
-  checkPageSpace(50);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('REGISTRATION REQUIREMENTS', margin, yPos);
-  yPos += 10;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Mandatory Documentation:', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const requirements = [
-    '1. Constitution: Comprehensive written constitution clearly stating the association\'s objectives, membership rules, rights and obligations, governance structure, decision-making processes, and amendment procedures.',
-    '',
-    '2. Minutes: Certified minutes of the inaugural meeting demonstrating proper quorum, election of office bearers, adoption of constitution, and appointment of key officials with signatures of attendees.',
-    '',
-    '3. Member List: Complete list of founding members including full names, identification numbers, contact information, residential addresses, and signatures confirming voluntary membership.',
-    '',
-    '4. Objectives: Detailed statement of the association\'s specific objectives and planned activities, ensuring they align with legal requirements and public interest.',
-    '',
-    '5. Financial Records: Evidence of financial capability including initial capital contributions, proposed budget, banking arrangements, and financial management procedures.',
-    '',
-    '6. Certificate: Official registration certificate from the relevant ministry or registrar of societies (optional but strongly recommended for legal recognition).'
-  ];
-
-  requirements.forEach(req => {
-    if (req.trim()) {
-      checkPageSpace(12);
-      yPos += addWrappedText(req, margin + 5, yPos, 165, 5);
-      yPos += 2;
-    } else {
-      yPos += 3;
-    }
-  });
-
-  // Additional Requirements Section
-  checkPageSpace(25);
-  yPos += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Additional Legal Requirements:', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const additionalReqs = [
-    '• Compliance with anti-money laundering and counter-terrorism financing regulations',
-    '• Data protection compliance under the Data Protection Act',
-    '• Tax registration and compliance with Kenya Revenue Authority requirements',
-    '• Occupational health and safety compliance for workplace associations',
-    '• Environmental impact assessment for groups involved in resource utilization'
-  ];
-
-  additionalReqs.forEach(req => {
-    checkPageSpace(8);
-    doc.text(req, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 10;
-
-  // Important Note
-  checkPageSpace(35);
-  yPos += 10;
-  doc.setFillColor(255, 247, 237);
-  doc.rect(margin, yPos - 5, 170, 35, 'F');
-  doc.setTextColor(154, 52, 18);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('Important Note', margin + 5, yPos);
-  yPos += 6;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  const note = 'All associations must operate within the framework of the Constitution of Kenya and relevant legislation. Registration provides legal recognition and protection for the association\'s activities. Unregistered associations may face legal restrictions, inability to enter contracts, or challenges in accessing government support programs. Regular compliance reviews and annual filings are mandatory for maintaining registration status.';
-  yPos += addWrappedText(note, margin + 5, yPos, 160, 4);
-
-  // Contact Information
-  checkPageSpace(20);
-  yPos += 15;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-  doc.text('For Registration Assistance:', margin, yPos);
-  yPos += 8;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('• Registrar of Societies: registrar@societies.go.ke', margin + 5, yPos);
-  yPos += 5;
-  doc.text('• Department of Co-operatives: cooperatives@kilimo.go.ke', margin + 5, yPos);
-  yPos += 5;
-  doc.text('• Ministry of Labour: info@labour.go.ke', margin + 5, yPos);
-  yPos += 10;
-
-  // Disclaimer
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
-  doc.text('This document is for informational purposes only. Please consult with legal professionals for specific guidance on your association\'s registration requirements.', margin, yPos);
-  yPos += 8;
-
-  // Copyright and Download Info
-  const downloadDateTime = new Date().toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZoneName: 'short'
-  });
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text(`© ${new Date().getFullYear()} TBANK. All rights reserved.`, margin, yPos);
-  yPos += 4;
-  doc.text(`Downloaded on: ${downloadDateTime}`, margin, yPos);
-
-  // Add watermark to last page
-  addWatermark();
-
-  // Save the PDF
-  const filename = `Group_Formation_Regulations_TBANK_${new Date().getTime()}.pdf`;
-  doc.save(filename);
-  showNotification('Regulations document downloaded successfully!', 'success');
-}
-
-function disableFormElements() {
-  // Disable all inputs and buttons except the Terms, Accept, and Download buttons
-  const inputs = document.querySelectorAll('input, select, button');
-  inputs.forEach(element => {
-    const onclickStr = element.onclick ? element.onclick.toString() : '';
-    if (!onclickStr.includes('showRegulationsModal') &&
-        !onclickStr.includes('closeRegulationsModal') &&
-        !onclickStr.includes('downloadWithWatermark')) {
-      element.disabled = true;
-      element.style.opacity = '0.5';
-      element.style.pointerEvents = 'none';
-    }
-  });
-}
-
-function enableFormElements() {
-  // Enable all inputs and buttons
-  const inputs = document.querySelectorAll('input, select, button');
-  inputs.forEach(element => {
-    element.disabled = false;
-    element.style.opacity = '1';
-    element.style.pointerEvents = 'auto';
-  });
-}
-
-function handleGroupTypeChange() {
-  // Group type selected - form continues without modal
-}
-
   </script>
-
-  <!-- REGULATIONS MODAL -->
-  <div id="regulationsModal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; overflow-y:auto; padding:20px;">
-    <div style="position:relative; max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-height:calc(100vh - 40px); overflow-y:auto;">
-      <div style="padding:24px; border-bottom:1px solid #e2e8f0;">
-        <div style="display:flex; justify-content:center; align-items:flex-start;">
-          <div style="text-align:center;">
-            <h2 style="margin:0; color:#1e293b; font-size:20px; font-weight:800; white-space:nowrap;">
-              <i class="fas fa-gavel" style="color:#0f9d58; margin-right:10px;"></i>
-              Group Formation Regulations
-            </h2>
-            <p style="margin:8px 0 0 0; color:#64748b; font-size:14px;">Constitution of Kenya, 2010 - Chapter Four: The Bill of Rights</p>
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:24px;">
-        <h3 style="color:#0f9d58; font-size:16px; font-weight:700; margin-bottom:16px;">
-          <i class="fas fa-users" style="margin-right:8px;"></i>
-          Freedom of Association (Article 36)
-        </h3>
-
-        <div style="margin-bottom:20px;">
-          <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
-            <strong>Article 36(1):</strong> Every person has the right to freedom of association, which includes the right to form, join or participate in the activities of an association of any kind.
-          </p>
-
-          <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
-            <strong>Article 36(2):</strong> A person shall not be compelled to join an association of any kind.
-          </p>
-
-          <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
-            <strong>Article 36(3):</strong> Any association shall have the freedom to acquire and dispose of movable and immovable property for the promotion of its objectives.
-          </p>
-        </div>
-
-        <h3 style="color:#0f9d58; font-size:16px; font-weight:700; margin-bottom:16px;">
-          <i class="fas fa-balance-scale" style="margin-right:8px;"></i>
-          Regulatory Framework
-        </h3>
-
-        <div style="margin-bottom:20px;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">
-            Societies Act (Chapter 108, Laws of Kenya)
-          </h4>
-          <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0; padding-left:20px;">
-            <li>Minimum membership requirements for registration</li>
-            <li>Proper constitution and bylaws</li>
-            <li>Election of office bearers</li>
-            <li>Annual general meetings</li>
-            <li>Proper record keeping</li>
-          </ul>
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">
-            Co-operative Societies Act (Chapter 490)
-          </h4>
-          <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0; padding-left:20px;">
-            <li>Minimum of 10 members for primary societies</li>
-            <li>Democratic control by members</li>
-            <li>Economic participation of members</li>
-            <li>Autonomy and independence</li>
-            <li>Education and training</li>
-          </ul>
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">
-            Labour Relations Act, 2007
-          </h4>
-          <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0; padding-left:20px;">
-            <li>Right to form and join trade unions</li>
-            <li>Protection against discrimination</li>
-            <li>Collective bargaining rights</li>
-            <li>Freedom from interference</li>
-          </ul>
-        </div>
-
-        <h3 style="color:#0f9d58; font-size:16px; font-weight:700; margin-bottom:16px;">
-          <i class="fas fa-clipboard-check" style="margin-right:8px;"></i>
-          Registration Requirements
-        </h3>
-
-        <div style="background:#f8fafc; padding:16px; border-radius:12px; border-left:4px solid #0f9d58;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:12px;">
-            Mandatory Documentation:
-          </h4>
-          <ol style="color:#374151; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
-            <li><strong>Constitution:</strong> Written constitution stating objectives, membership rules, and governance structure</li>
-            <li><strong>Minutes:</strong> Minutes of the inaugural meeting showing election of office bearers</li>
-            <li><strong>Member List:</strong> List of founding members with signatures and identification</li>
-            <li><strong>Objectives:</strong> Clear statement of the association's objectives and activities</li>
-            <li><strong>Financial Records:</strong> Evidence of financial capability and banking arrangements</li>
-            <li><strong>Certificate:</strong> Registration certificate from relevant ministry (optional but recommended)</li>
-          </ol>
-        </div>
-
-        <div style="margin-top:20px; padding:16px; background:#fff7ed; border-radius:12px; border:1px solid #fed7aa;">
-          <div style="display:flex; align-items:flex-start; gap:12px;">
-            <i class="fas fa-info-circle" style="color:#9a3412; font-size:16px; margin-top:2px;"></i>
-            <div>
-              <p style="color:#9a3412; font-size:13px; font-weight:600; margin:0 0 4px 0;">Important Note</p>
-              <p style="color:#9a3412; font-size:12px; margin:0; line-height:1.4;">
-                All associations must operate within the framework of the Constitution of Kenya and relevant legislation.
-                Registration provides legal recognition and protection for the association's activities.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style="padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; justify-content:center; align-items:center; gap:20px;">
-        <button onclick="downloadWithWatermark()" style="background:#4285f4; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">
-          <i class="fas fa-download" style="margin-right:6px;"></i> Download
-        </button>
-        <button onclick="closeRegulationsModal()" style="background:#0f9d58; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">
-          <i class="fas fa-check" style="margin-right:6px;"></i> Accept
-        </button>
-      </div>
-    </div>
-  </div>
 </body>
 
 </html>

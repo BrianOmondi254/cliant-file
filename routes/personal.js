@@ -132,6 +132,7 @@ router.get("/", (req, res) => {
     let isOfficial = false;
     let isMember = false;
     const constitutionKeys = [];
+    const groupMessages = []; // User's group notifications
 
     // Robust check helper
     const userInThisGroup = (g, phone) => {
@@ -164,7 +165,23 @@ router.get("/", (req, res) => {
               userIsTrusteeInThisGroup = true;
           }
 
-          // 3. Collect Security Messages
+          // 3. Collect Group Messages (for user's inbox display)
+          if (group.messages && Array.isArray(group.messages)) {
+              group.messages.forEach(msg => {
+                  if (msg.to && norm(msg.to) === norm(phone)) {
+                      groupMessages.push({
+                          groupName: group.groupName,
+                          title: msg.title,
+                          content: msg.content,
+                          type: msg.type,
+                          createdAt: msg.createdAt,
+                          isNew: msg.isNew !== false
+                      });
+                  }
+              });
+          }
+
+          // 4. Collect Security Messages (for constitution keys display)
           if (group.messages && Array.isArray(group.messages)) {
               group.messages.forEach(msg => {
                   if (msg.to && norm(msg.to) === norm(phone)) {
@@ -253,6 +270,7 @@ router.get("/", (req, res) => {
       hasPersonalPin, // Pass hasPersonalPin to view
       hasDealerPin: req.session.hasDealerPin || false,
       constitutionKeys, // Pass keys to view
+      groupMessages, // Pass user's group messages to inbox
       userGroups,
       normalizedPhone
     });

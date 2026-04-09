@@ -114,6 +114,7 @@ const app = {
         navLinks: <%- JSON.stringify(navLinks.map(l => l.name)) %>,
         userGroups: <%- JSON.stringify(typeof userGroups !== 'undefined' ? userGroups : []) %>,
         constitutionKeys: <%- JSON.stringify(typeof constitutionKeys !== 'undefined' ? constitutionKeys : []) %>,
+        groupMessages: <%- JSON.stringify(typeof groupMessages !== 'undefined' ? groupMessages : []) %>,
         isAgent: <%- JSON.stringify(showAgent) %>,
         hasAgentPin: <%- JSON.stringify(hasAgentPin) %>,
         hasPersonalPin: <%- JSON.stringify(typeof hasPersonalPin !== 'undefined' ? hasPersonalPin : false) %>,
