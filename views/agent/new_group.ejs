@@ -166,17 +166,21 @@
     }
 
     .input-group {
-      margin-bottom: 14px;
+      margin-bottom: 18px;
     }
 
     .input-group label {
       display: block;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
-      color: var(--slate);
+      color: var(--dark);
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--primary);
     }
 
     .input-wrapper {
@@ -186,7 +190,7 @@
     .input-wrapper input,
     .input-wrapper select {
       width: 100%;
-      padding: 8px 2px;
+      padding: 10px 12px;
       border: 2px solid #e2e8f0;
       border-radius: 10px;
       font-size: 15px;
@@ -945,45 +949,52 @@
       <!-- STEP 4 : VERIFICATION FORM                  -->
       <!-- ═══════════════════════════════════════════ -->
       <div class="form-step" id="step4-verify">
-        <div style="margin-bottom:20px; text-align:center;">
+        <div style="margin-bottom:15px; text-align:center;">
           <h3 style="font-size:18px; font-weight:800; color:var(--primary-dark); margin-bottom:8px;">
             <i class="fas fa-clipboard-check"></i> Member Verification
           </h3>
           <p style="font-size:12px; color:var(--slate);">Review all member details before final submission</p>
         </div>
 
-        <!-- GROUP INFO IN VERIFICATION -->
-        <div id="verificationGroupInfo" class="header-box">
-          <h3 id="verifyRegionalBlock">Regional Block: <%= group.county %></h3>
+        <!-- SCROLLABLE VERIFICATION SECTION -->
+        <div id="verificationScrollArea" style="max-height:70vh; overflow-y:auto; padding-right:4px; margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">
+          <!-- GROUP INFO IN VERIFICATION -->
+          <div id="verificationGroupInfo" class="header-box">
+            <div style="margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <span style="background:var(--primary-light); padding:4px 10px; border-radius:6px; border:1px solid var(--primary); font-weight:700; color:var(--primary-dark); font-size:13px;"><%= group.county %></span>
+              <span style="background:#fef9c3; padding:4px 10px; border-radius:6px; border:1px solid #d97706; font-weight:700; color:#92400e; font-size:13px;"><%= group.constituency %></span>
+              <span style="background:#eff6ff; padding:4px 10px; border-radius:6px; border:1px solid #3b82f6; font-weight:700; color:#1d4ed8; font-size:13px;"><%= group.ward %></span>
+            </div>
 
-          <div class="row">
-            <div><span class="label">Group No:</span> <span class="value" id="verifyGroupNo"><%= group.groupName %></span></div>
-            <div><span class="label">Group Type:</span> <span class="value" id="verifyGroupType"><%= group.groupType || '-' %></span></div>
+            <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
+              <div><span class="label">Group:</span> <span class="value" id="verifyGroupNo" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= group.groupName %></span></div>
+              <div><span class="label">Type:</span> <span class="value" id="verifyGroupType" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= group.groupType || '-' %></span></div>
+            </div>
+
+            <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
+              <div><span class="label">Cert:</span> <span class="value" id="verifyCertNumber" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= group.certificateNumber || '-' %></span></div>
+              <div><span class="label">Agent:</span> <span class="value" id="verifyAgentName" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;">Loading...</span></div>
+            </div>
+
+            <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
+              <div><span class="label">Phone:</span> <span class="value" id="verifyAgentPhone" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= agent.phoneNumber %></span><i class="fas fa-spinner fa-spin" id="verifyAgentPhoneIcon" style="color:#64748b; margin-left:3px;"></i></div>
+            </div>
           </div>
 
-          <div class="row">
-            <div><span class="label">Certificate:</span> <span class="value" id="verifyCertNumber"><%= group.certificateNumber || 'Not provided' %></span></div>
-            <div><span class="label">Agent:</span> <span class="value"><%= group.agentName %></span></div>
-          </div>
-
-          <div class="row">
-            <div><span class="label">Phone:</span> <span class="value"><%= group.agentPhone %></span></div>
-          </div>
+          <div id="verificationList" style="margin-top:15px;"></div>
         </div>
 
-        <div id="verificationList" style="max-height:50vh; overflow-y:auto; padding-right:4px;"></div>
-
-         <div class="btn-container" style="padding-top:12px;">
-           <button class="btn-primary" onclick="downloadRegistrationForm()" style="background:var(--secondary);">
-             <i class="fas fa-download"></i> Download Registration Form
-           </button>
-           <button class="btn-tbank" onclick="confirmAndSubmit()">
-             <i class="fas fa-check-circle"></i> Confirm & Submit Registration
-           </button>
-           <button class="btn-secondary" onclick="goBackToForm()">
-             <i class="fas fa-chevron-left"></i> Back to Edit
-           </button>
-         </div>
+<div class="btn-container" id="verifyBtnContainer" style="padding-top:12px;">
+            <button class="btn-primary" id="downloadRegFormBtn" onclick="downloadRegistrationForm()" style="background:var(--secondary); display:none;">
+              <i class="fas fa-download"></i> Download Registration Form
+            </button>
+            <button class="btn-tbank" id="confirmSubmitBtn" onclick="confirmAndSubmit()" style="display:none;">
+              <i class="fas fa-check-circle"></i> Confirm & Submit Registration
+            </button>
+            <button class="btn-secondary" onclick="goBackToForm()">
+              <i class="fas fa-chevron-left"></i> Back to Edit
+            </button>
+          </div>
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
@@ -1574,12 +1585,25 @@ function updateTrusteeTitles() {
       // Collect all phone numbers to check for duplicates
       const allPhones = [];
       const phoneErrors = [];
+      let hasEmptyMemberNumber = false;
+      let emptyMemberName = '';
 
        // Validate all trustees dynamically
        for (let i = 0; i < STD_TRUSTEES; i++) {
          const idx = i + 1;
+         const memberNumber = document.getElementById(`t${idx}_memberNumber`).value.trim();
          const phone = document.getElementById(`t${idx}_phone`).value.trim();
-         const title = document.getElementById(`t${idx}_title`).value.trim() || `Trustee ${idx}`;
+         const title = document.getElementById(`t${idx}_title`).value.trim();
+         
+         if (!title) {
+           showNotification(`Title is required for Trustee ${idx}. Please select a title.`);
+           return;
+         }
+         
+         if (!memberNumber) {
+           hasEmptyMemberNumber = true;
+           emptyMemberName = title;
+         }
          
          if (i === 0) {
            // Chairperson phone is pre-filled
@@ -1597,13 +1621,35 @@ function updateTrusteeTitles() {
        }
 
       // Officials
+      let hasOfficialTitle = false;
+      let hasOfficialNumber = false;
+      let missingOfficialInfo = '';
       for (let i = 0; i < currentOfficialsCount; i++) {
         const idx = STD_TRUSTEES + i + 1;
+        const memberNumber = document.getElementById(`official_${idx}_memberNumber`).value.trim();
         const phone = document.getElementById(`official_${idx}_phone`).value.trim();
+        const title = document.getElementById(`official_${idx}_title`).value.trim();
+        
+        if (!title) {
+          hasOfficialTitle = true;
+          missingOfficialInfo = `Official ${i + 1}`;
+        }
+        
+        if (!memberNumber) {
+          hasEmptyMemberNumber = true;
+          hasOfficialNumber = true;
+          if (!missingOfficialInfo) missingOfficialInfo = `Official ${i + 1}`;
+        }
         
         if (phone && isValidPhone(phone)) {
-          allPhones.push({ phone: phone, name: `Official ${i + 1}` });
+          allPhones.push({ phone: phone, name: title || `Official ${i + 1}` });
         }
+      }
+      
+      // Check if all officials have title
+      if (currentOfficialsCount > 0 && hasOfficialTitle) {
+        showNotification(`Title is required for ${missingOfficialInfo}. Please fill all titles.`);
+        return;
       }
 
       // Regular Members
@@ -1612,10 +1658,9 @@ function updateTrusteeTitles() {
         const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
         const phone = document.getElementById(`member_${idx}_phone`).value.trim();
         
-        // Validate member number is required
         if (!memberNumber) {
-          showNotification(`Member number is required for Member ${i + 1} (Index ${idx}).`);
-          return;
+          hasEmptyMemberNumber = true;
+          emptyMemberName = `Member ${i + 1}`;
         }
         
         if (!isValidPhone(phone)) {
@@ -1623,6 +1668,12 @@ function updateTrusteeTitles() {
           return;
         }
         allPhones.push({ phone: phone, name: `Member ${i + 1} (Index ${idx})` });
+      }
+
+      // Check if any member number is empty
+      if (hasEmptyMemberNumber) {
+        showNotification(`Member number is required for ${emptyMemberName}. Please fill all member numbers before verifying.`);
+        return;
       }
 
       // Check for duplicate phone numbers
@@ -1647,6 +1698,16 @@ function updateTrusteeTitles() {
 
     // ─── SHOW VERIFICATION FORM ──────────────────────────────
     function showVerificationForm() {
+      const list = document.getElementById('verificationList');
+      list.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px; color:var(--primary);"></i><p style="margin-top:15px; font-size:14px; color:var(--slate);">Verifying members...</p></div>';
+      showStep('step4-verify');
+
+      setTimeout(() => {
+        verifyMembersProcess();
+      }, 100);
+    }
+
+    function verifyMembersProcess() {
       const list = document.getElementById('verificationList');
 
       // Populate group info for verification step
@@ -1705,6 +1766,43 @@ function updateTrusteeTitles() {
 
       console.log('Sending', membersToVerify.length, 'members for verification');
 
+      // Verify agent phone against data.json
+      let agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
+      // Normalize phone - remove leading 0 or +254
+      if (agentPhone.startsWith('0')) agentPhone = agentPhone.substring(1);
+      if (agentPhone.startsWith('+254')) agentPhone = agentPhone.substring(4);
+      if (agentPhone.startsWith('254') && agentPhone.length > 9) agentPhone = agentPhone.substring(3);
+      console.log('Agent phone for verification:', agentPhone);
+      fetch('/general/api/verify-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: [{ key: 'agent', phone: agentPhone, id: '', role: 'agent', title: 'Agent', index: '0' }] })
+      })
+        .then(r => r.json())
+.then(agentResponse => {
+          console.log('Agent verification response:', agentResponse);
+          if (agentResponse.success && agentResponse.members && agentResponse.members.length > 0) {
+            const agentData = agentResponse.members[0];
+            console.log('Agent data:', agentData);
+            // Verify by phone match only - no ID check needed
+            if (agentData.name) {
+              document.getElementById('verifyAgentName').textContent = agentData.name;
+              document.getElementById('verifyAgentPhoneIcon').className = 'fas fa-check-circle';
+              document.getElementById('verifyAgentPhoneIcon').style.color = '#166534';
+              document.getElementById('verifyAgentPhoneIcon').style.animation = 'none';
+            } else {
+              document.getElementById('verifyAgentName').textContent = '<%= group.agentName %>';
+              document.getElementById('verifyAgentPhoneIcon').className = 'fas fa-times-circle';
+              document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
+            }
+          }
+        })
+        .catch(() => {
+          document.getElementById('verifyAgentName').textContent = '<%= group.agentName %>';
+          document.getElementById('verifyAgentPhoneIcon').className = 'fas fa-times-circle';
+          document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
+        });
+
       // Call API to verify members against data.json
       fetch('/general/api/verify-members', {
         method: 'POST',
@@ -1722,13 +1820,24 @@ function updateTrusteeTitles() {
           const verifiedMembers = apiResponse.members;
           console.log('✓ Verification complete:', verifiedMembers.length, 'members verified');
 
-          // Build verification cards
+          // Build verification cards with member numbers from original form inputs
           let html = '';
-          verifiedMembers.forEach(member => {
+          verifiedMembers.forEach((member, idx) => {
             const bgColor = member.role === 'trustee' ? '#dbeafe' :
                            member.role === 'official' ? '#fef9c3' : '#dcfce7';
             const textColor = member.role === 'trustee' ? '#1d4ed8' :
                              member.role === 'official' ? '#92400e' : 'var(--primary-dark)';
+
+            // Get member number from original form input based on role and index
+            let formMemberNumber = '';
+            const memberIdx = parseInt(member.index);
+            if (member.role === 'trustee') {
+              formMemberNumber = document.getElementById(`t${memberIdx}_memberNumber`)?.value.trim() || '';
+            } else if (member.role === 'official') {
+              formMemberNumber = document.getElementById(`official_${memberIdx}_memberNumber`)?.value.trim() || '';
+            } else {
+              formMemberNumber = document.getElementById(`member_${memberIdx}_memberNumber`)?.value.trim() || '';
+            }
 
             html += buildVerificationCard(
               member.role === 'trustee' ? member.title : '',
@@ -1739,94 +1848,70 @@ function updateTrusteeTitles() {
               textColor,
               member,
               member.id,
-              member.memberNumber
+              formMemberNumber
             );
           });
 
           list.innerHTML = html;
 
-          // Check if all members are valid
-          const hasInvalid = verifiedMembers.some(member => !member.verified || (member.name && !member.verified));
-          const submitBtn = document.querySelector('.btn-tbank[onclick="confirmAndSubmit()"]');
-          if (submitBtn) {
-            if (hasInvalid) {
+          // Check if all members are valid (both member number and verified status)
+          const allValid = verifiedMembers.every((member, idx) => {
+            const formMemberNumber = document.getElementById(`t${member.index}_memberNumber`)?.value.trim() ||
+                              document.getElementById(`official_${member.index}_memberNumber`)?.value.trim() ||
+                              document.getElementById(`member_${member.index}_memberNumber`)?.value.trim();
+            return formMemberNumber && member.verified;
+          });
+          const submitBtn = document.getElementById('confirmSubmitBtn');
+          const downloadBtn = document.getElementById('downloadRegFormBtn');
+          if (submitBtn && downloadBtn) {
+            if (!allValid) {
               submitBtn.style.display = 'none';
-              showNotification('Some members have verification issues. Please review and correct before submitting.', 'error');
+              downloadBtn.style.display = 'none';
+              showNotification('All members must be verified with member numbers before submitting.', 'error');
             } else {
               submitBtn.style.display = 'flex';
+              downloadBtn.style.display = 'flex';
             }
           }
-        })
+})
         .catch(err => {
           console.error('Error verifying members:', err);
           showNotification('Network error. Please check your connection.', 'error');
           goBackToForm();
         });
-
-       // Switch to verification step
-       showStep('step4-verify');
     }
 
     function buildVerificationCard(rolePrefix, title, index, phone, bgColor, textColor, matchData, formIdValue, memberNumber) {
-      const hasName = matchData && matchData.name;
-      const isVerified = matchData && matchData.verified;
-      const notRegistered = !hasName;
-
-      // Determine display name
-      let displayName = '';
-      if (hasName) {
-        displayName = matchData.name;
-      } else {
-        displayName = 'Not registered with T-Bank';
-      }
-
       const cardTitle = rolePrefix ? `${rolePrefix}` : '';
-
-      // Determine status text for display
-      let statusText = 'Not Registered';
-      if (isVerified) {
-        statusText = 'Verified';
-      } else if (!notRegistered) {
-        statusText = 'ID Mismatch';
-      }
+      const isVerified = matchData && matchData.verified;
+      const hasMemberNumber = memberNumber && memberNumber.trim();
+      const isMemberValid = hasMemberNumber && isVerified;
+      const displayName = (matchData && matchData.name) ? matchData.name : 'Not Identified';
+      const idValue = (matchData && matchData.id) ? matchData.id : '-';
+      const idStatusText = isVerified ? '✔' : '✗';
+      const idStatusColor = isVerified ? '#166534' : '#991b1b';
 
       return `
-        <div class="member-card" style="background:${bgColor}; border:1.5px solid ${textColor}; margin-bottom:8px; padding:14px;">
-          <!-- Header: Role + Index + Status -->
+        <div class="member-card" style="background:${bgColor}; border:1.5px solid ${textColor}; margin-bottom:10px; padding:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-weight:700; font-size:13px; color:${textColor}; opacity:0.8;">
-              ${cardTitle ? `<i class="fas fa-shield-alt"></i> ${cardTitle}` : `<i class="fas fa-hashtag"></i> Index ${index}`}
+            <div style="font-weight:700; font-size:15px; color:${textColor}; opacity:0.8;">
+              <span style="background:white; padding:3px 8px; border-radius:4px; border:1px solid ${textColor}; font-size:12px; margin-right:6px;">${index}</span>
+              ${title || (member.role === 'official' ? 'Official' : 'Member')}
             </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span style="font-size:10px; color:${textColor}; font-weight:700; background:white; padding:3px 8px; border-radius:12px; border:1px solid ${textColor};">
-                #${index}
-              </span>
+            <div style="display:flex; gap:4px; align-items:center;">
+              ${isMemberValid ? '<span style="font-size:12px; color:#166534; font-weight:700; background:#dcfce7; padding:3px 8px; border-radius:6px; border:1px solid #166534;">Verified ✔</span>' : '<span style="font-size:12px; color:#991b1b; font-weight:700; background:#fee2e2; padding:3px 8px; border-radius:6px; border:1px solid #991b1b;">Unverified</span>'}
             </div>
           </div>
 
-          <!-- MEMBER DETAILS -->
-          <div class="member-box">
-            <h4>Member Details</h4>
-
-            <div class="row">
-              <div><span class="label">Member No:</span> <span class="value">${memberNumber || '-'}</span></div>
+          <div class="member-box" style="font-size:13px;">
+            <div style="margin-bottom:6px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span class="label" style="display:inline-block; width:35px;">M.No:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${memberNumber || '-'}</span>
+              <span class="label" style="display:inline-block; width:35px;">Name:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${displayName}</span>
             </div>
 
-            <!-- VERIFIED STATUS BELOW MEMBER NO -->
-            <div class="success">
-              Verified Successfully ✔
-            </div>
-
-            <div class="row">
-              <div><span class="label">Name:</span> <span class="value">${displayName}</span></div>
-            </div>
-
-            <div class="row">
-              <div><span class="label">ID Number:</span> <span class="value">${matchData && matchData.id ? matchData.id : '-'}</span></div>
-            </div>
-
-            <div class="row">
-              <div><span class="label">Status:</span> <span class="value">${statusText}</span></div>
+            <div style="margin-bottom:6px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <span class="label" style="display:inline-block; width:35px;">Phone:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${phone || '-'}</span><i class="fas ${isVerified ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${isVerified ? '#166534' : '#991b1b'}; margin-left:3px;"></i>
+              <span class="label" style="display:inline-block; width:35px;">ID:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${idValue}</span><i class="fas ${isVerified ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${idStatusColor}; margin-left:3px;"></i>
             </div>
           </div>
         </div>
@@ -2515,6 +2600,14 @@ function enableFormElements() {
 
 function handleGroupTypeChange() {
   // Group type selected - form continues without modal
+}
+
+function showRegulationsModal() {
+  document.getElementById('regulationsModal').style.display = 'block';
+}
+
+function closeRegulationsModal() {
+  document.getElementById('regulationsModal').style.display = 'none';
 }
 
   </script>
