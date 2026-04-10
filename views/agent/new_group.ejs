@@ -3,14 +3,13 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>New Group Activation | Agent Portal</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-    rel="stylesheet">
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
- 
-   <style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
     :root {
       --primary: #0f9d58;
       --primary-dark: #0b7d46;
@@ -24,14 +23,98 @@
       --white: #ffffff;
       --danger: #ef4444;
       --warning: #f59e0b;
-      --shadow: 0 10px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1);
-      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, .1), 0 10px 10px -5px rgba(0, 0, 0, .1);
+      --shadow: 0 10px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1);
+      --shadow-lg: 0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.1);
+
+      /* ── BOX SIZING TOKENS (edit here to tune all inputs at once) ── */
+      --input-py: 10px;          /* vertical padding inside every input/select */
+      --input-px: 12px;          /* horizontal padding inside every input/select */
+      --input-font: 13px;        /* font size */
+      --input-radius: 8px;      /* corner radius */
+      --input-border: 2px;
+      --label-font: 11px;
+      --card-pad: 14px;          /* member-card internal padding */
+      --card-gap: 10px;          /* vertical gap between stacked input-groups inside a card */
+      --section-radius: 12px;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      min-height: 100vh;
+      padding: 5px 5px 10px 5px;
+      color: var(--dark);
+    }
+
+    .container {
+      background: var(--white);
+      width: 100%;
+      max-width: 545px;
+      min-height: calc(100vh - 10px);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      position: relative;
+      animation: slideIn .5s cubic-bezier(.4,0,.2,1);
+      z-index: 100;
+      padding: 0 2px;
+      margin-bottom: 10px;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── HEADER ─── */
+    .header {
+      background: linear-gradient(135deg, var(--primary), #34d399);
+      padding: 30px 22px;
+      color: var(--white);
+      text-align: center;
+      position: relative;
+      z-index: 1000;
+      border-radius: 20px 20px 0 0;
+    }
+    .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.5px; }
+    .header p  { font-size: 12px; opacity: .9; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+    .header p.subtitle { font-size: 10px; opacity: 0.8; margin-top: 4px; }
+    .header-group-name {
+      border-top: 1px solid rgba(255,255,255,0.3);
+      margin-top: 4px;
+      padding-top: 4px;
+      text-align: left;
+    }
+    .header-group-name p { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+    .back-btn {
+      position: absolute; top: 20px; left: 16px;
+      color: var(--white); text-decoration: none;
+      font-size: 16px; opacity: .8; transition: opacity .2s;
+    }
+    .home-btn {
+      position: absolute; top: 20px; right: 16px;
+      color: var(--white); text-decoration: none;
+      font-size: 16px; opacity: .8; transition: opacity .2s;
+    }
+    .back-btn:hover, .home-btn:hover { opacity: 1; }
+
+    /* ─── CONTENT ─── */
+    .content {
+      padding: 12px 12px 3px 12px;
+      position: relative;
+      z-index: 10;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      overflow-x: hidden;
     }
 
     body {
@@ -39,168 +122,141 @@
       background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
       display: flex;
       justify-content: center;
-      align-items: flex-start;
+      align-items: stretch;
       min-height: 100vh;
-      padding: 20px 20px 20px 20px;
+      padding: 5px 5px 10px 5px;
       color: var(--dark);
-      margin: 0;
     }
 
     .container {
       background: var(--white);
       width: 100%;
-      max-width: 520px;
+      max-width: 545px;
+      min-height: calc(100vh - 10px);
       border-radius: 28px;
       box-shadow: var(--shadow-lg);
       overflow: hidden;
       position: relative;
-      animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      margin: 0;
+      animation: slideIn .5s cubic-bezier(.4,0,.2,1);
       z-index: 100;
       padding: 0 2px;
+      margin-bottom: 10px;
     }
 
     @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     /* ─── HEADER ─── */
     .header {
       background: linear-gradient(135deg, var(--primary), #34d399);
-      padding: 35px 25px;
+      padding: 38px 28px;
       color: var(--white);
       text-align: center;
       position: relative;
       z-index: 1000;
       border-radius: 28px 28px 0 0;
     }
-
-    .header h1 {
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 5px;
-      letter-spacing: -.5px;
+    .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.5px; }
+    .header p  { font-size: 12px; opacity: .9; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+    .header p.subtitle { font-size: 10px; opacity: 0.8; margin-top: 4px; }
+    .header-group-name {
+      border-top: 1px solid rgba(255,255,255,0.3);
+      margin-top: 4px;
+      padding-top: 4px;
+      text-align: left;
     }
-
-    .header p {
-      font-size: 13px;
-      opacity: .9;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+    .header-group-name p { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 
     .back-btn {
-      position: absolute;
-      top: 25px;
-      left: 20px;
-      color: var(--white);
-      text-decoration: none;
-      font-size: 18px;
-      opacity: .8;
-      transition: opacity .2s;
+      position: absolute; top: 25px; left: 20px;
+      color: var(--white); text-decoration: none;
+      font-size: 18px; opacity: .8; transition: opacity .2s;
     }
-
-
+    .home-btn {
+      position: absolute; top: 25px; right: 20px;
+      color: var(--white); text-decoration: none;
+      font-size: 18px; opacity: .8; transition: opacity .2s;
+    }
+    .back-btn:hover, .home-btn:hover { opacity: 1; }
 
     /* ─── CONTENT ─── */
     .content {
-      padding: 20px;
+      padding: 15px;
       position: relative;
       z-index: 10;
     }
 
+    .content.scrollable {
+      max-height: 65vh;
+      overflow-y: auto;
+      padding-bottom: 3px;
+    }
+
+    /* Custom scrollbar for content */
+    .content.scrollable::-webkit-scrollbar { width: 6px; }
+    .content.scrollable::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+    .content.scrollable::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
+    .content.scrollable::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
+
     .group-info-stripe {
       background: var(--light);
       border-radius: 16px;
-      padding: 12px 14px;
-      margin-bottom: 24px;
+      padding: 14px 18px;
+      margin-bottom: 26px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border: 1px solid #e2e8f0;
     }
-
-    .group-name-mini {
-      font-weight: 800;
-      font-size: 15px;
-      color: var(--dark);
-    }
-
-    .group-loc-mini {
-      font-size: 11px;
-      color: var(--slate);
-      font-weight: 600;
-    }
+    .group-name-mini { font-weight: 800; font-size: 15px; color: var(--dark); }
+    .group-loc-mini  { font-size: 11px; color: var(--slate); font-weight: 600; margin-top: 2px; }
 
     /* ─── FORM STEPS ─── */
-    .form-step {
-      display: none;
-      animation: fadeIn .4s ease;
-      position: relative;
-      z-index: 10;
-    }
-
-    .form-step.active {
-      display: block;
-    }
+    .form-step { display: none; animation: fadeIn .4s ease; position: relative; z-index: 10; }
+    .form-step.active { display: block; }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateX(10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
+      from { opacity: 0; transform: translateX(10px); }
+      to   { opacity: 1; transform: translateX(0); }
     }
 
-    .input-group {
-      margin-bottom: 18px;
-    }
+    /* ─── INPUT GROUP ─── */
+    .input-group { margin-bottom: var(--card-gap); }
 
     .input-group label {
       display: block;
-      font-size: 12px;
+      font-size: var(--label-font);
       font-weight: 800;
       color: var(--dark);
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-bottom: 8px;
-      background: #f1f5f9;
-      padding: 4px 10px;
-      border-radius: 4px;
-      border-left: 3px solid var(--primary);
     }
 
-    .input-wrapper {
-      position: relative;
-    }
+    /* ─── INPUTS & SELECTS ─── */
+    .input-wrapper { position: relative; }
 
     .input-wrapper input,
     .input-wrapper select {
       width: 100%;
-      padding: 10px 12px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
-      font-size: 15px;
+      padding: var(--input-py) var(--input-px);
+      border: var(--input-border) solid #e2e8f0;
+      border-radius: var(--input-radius);
+      font-size: var(--input-font);
       font-weight: 600;
       color: var(--dark);
-      transition: all .3s ease;
+      transition: border-color .25s, box-shadow .25s;
       outline: none;
       background: #fcfdfe;
       font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+      /* give selects a little extra height so they breathe */
+      min-height: 50px;
     }
+
+    .input-wrapper select { cursor: pointer; }
 
     .input-wrapper input:focus,
     .input-wrapper select:focus {
@@ -216,23 +272,14 @@
     }
 
     .lock-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
+      position: absolute; right: 16px; top: 50%;
       transform: translateY(-50%);
-      color: var(--slate);
-      font-size: 13px;
-      pointer-events: none;
+      color: var(--slate); font-size: 13px; pointer-events: none;
     }
 
     .compliance-note {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--slate);
-      margin-top: 7px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      font-size: 11px; font-weight: 600; color: var(--slate);
+      margin-top: 8px; display: flex; align-items: center; gap: 6px;
     }
 
     /* ─── FEE CARD ─── */
@@ -240,589 +287,239 @@
       background: var(--primary-light);
       border: 1.5px dashed var(--primary);
       border-radius: 20px;
-      padding: 16px;
+      padding: 20px;
       text-align: center;
-      margin-bottom: 24px;
-      position: relative;
-      z-index: 5;
+      margin-bottom: 26px;
+      position: relative; z-index: 5;
     }
-
-    .fee-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      font-weight: 800;
-      color: var(--primary-dark);
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-
-    .fee-amount {
-      font-size: 30px;
-      font-weight: 900;
-      color: var(--primary-dark);
-    }
+    .fee-label  { font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--primary-dark); letter-spacing: 1px; margin-bottom: 10px; }
+    .fee-amount { font-size: 32px; font-weight: 900; color: var(--primary-dark); }
 
     /* ─── PAYMENT OPTIONS ─── */
     .payment-options {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
       margin-top: 16px;
     }
 
     .payment-option {
       border: 2px solid #e2e8f0;
       border-radius: 16px;
-      padding: 14px 10px;
+      padding: 18px 12px;        /* taller click target */
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       transition: all .3s ease;
       background: var(--white);
-      position: relative;
-      z-index: 1;
+      position: relative; z-index: 1;
     }
+    .payment-option:hover        { border-color: var(--primary); transform: translateY(-2px); }
+    .payment-option.active       { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 4px 12px rgba(15,157,88,.15); }
+    .payment-option.active-tbank { border-color: var(--secondary); background: var(--secondary-light); }
+    .payment-option span         { font-size: 14px; font-weight: 700; color: var(--dark); }
 
-    .payment-option:hover {
-      border-color: var(--primary);
-      transform: translateY(-2px);
-    }
-
-    .payment-option.active {
-      border-color: var(--primary);
-      background: var(--primary-light);
-      box-shadow: 0 4px 12px rgba(15, 157, 88, .15);
-    }
-
-    .payment-option.active-tbank {
-      border-color: var(--secondary);
-      background: var(--secondary-light);
-    }
-
-    .payment-option span {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--dark);
-    }
-
-    .mpesa-color {
-      color: #40c057;
-    }
-
-    .tbank-color {
-      color: var(--secondary);
-    }
-
-    /* ─── SECTION HEADER (trustee / official / member) ─── */
+    /* ─── SECTION HEADER ─── */
     .section-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 18px;
       border-radius: 10px;
-      margin-bottom: 14px;
-      margin-top: 6px;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: .5px;
+      margin-bottom: 14px; margin-top: 8px;
+      font-size: 13px; font-weight: 800; letter-spacing: .5px;
     }
-
-    .section-header.trustee {
-      background: #eff6ff;
-      color: #1d4ed8;
-      border: 1px solid #bfdbfe;
-    }
-
-    .section-header.official {
-      background: #fefce8;
-      color: #92400e;
-      border: 1px solid #fde68a;
-    }
-
-    .section-header.member {
-      background: var(--primary-light);
-      color: var(--primary-dark);
-      border: 1px solid #a7f3d0;
-    }
+    .section-header.trustee { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .section-header.official{ background: #fefce8; color: #92400e; border: 1px solid #fde68a; }
+    .section-header.member  { background: var(--primary-light); color: var(--primary-dark); border: 1px solid #a7f3d0; }
 
     /* ─── MEMBER CARD ─── */
     .member-card {
       background: var(--light);
-      border-radius: 16px;
+      border-radius: var(--section-radius);
       border: 1px solid #e2e8f0;
-      padding: 10px;
-      margin-bottom: 10px;
+      padding: var(--card-pad);
+      margin-bottom: 14px;
       transition: box-shadow .2s;
     }
-
-    .member-card:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, .07);
-    }
+    .member-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
 
     .member-card-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
     }
-
     .member-card-title {
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--dark);
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: 13px; font-weight: 800; color: var(--dark);
+      display: flex; align-items: center; gap: 8px;
     }
+    .member-card-title .badge           { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: #e0e7ff; color: #3730a3; }
+    .member-card-title .badge.trustee   { background: #dbeafe; color: #1d4ed8; }
+    .member-card-title .badge.official  { background: #fef9c3; color: #92400e; }
+    .member-card-title .badge.member    { background: #dcfce7; color: #166534; }
 
-    .member-card-title .badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 20px;
-      background: #e0e7ff;
-      color: #3730a3;
-    }
-
-    .member-card-title .badge.trustee {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-
-    .member-card-title .badge.official {
-      background: #fef9c3;
-      color: #92400e;
-    }
-
-    .member-card-title .badge.member {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
     /* ─── BUTTONS ─── */
-    .btn-container {
-      margin-top: 28px;
-      position: relative;
-      z-index: 10;
-    }
+    .btn-container { margin-top: 12px; position: relative; z-index: 10; }
 
     button {
       width: 100%;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 800;
+      padding: 16px;             /* slightly taller buttons */
+      border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 800;
       cursor: pointer;
       transition: all .3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
       font-family: 'Inter', sans-serif;
-      position: relative;
-      z-index: 20;
+      position: relative; z-index: 20;
     }
-
     button:disabled {
       background: #94a3b8 !important;
-      cursor: not-allowed;
-      opacity: 0.7;
-      pointer-events: auto !important;
-      z-index: 100 !important;
+      cursor: not-allowed; opacity: 0.7;
+      pointer-events: auto !important; z-index: 100 !important;
     }
+    button:disabled:hover { transform: none; box-shadow: none; }
 
-    button:disabled:hover {
-      transform: none;
-      box-shadow: none;
-    }
+    .btn-primary  { background: var(--primary); color: var(--white); box-shadow: 0 8px 15px -3px rgba(15,157,88,.3); }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 16px 20px -5px rgba(15,157,88,.4); }
 
-    .btn-primary {
-      background: var(--primary);
-      color: var(--white);
-      box-shadow: 0 8px 15px -3px rgba(15, 157, 88, .3);
-    }
+    .btn-secondary { background: var(--light); color: var(--dark); border: 2px solid #e2e8f0; margin-top: 10px; }
+    .btn-secondary:hover { background: #f1f5f9; }
 
-    .btn-primary:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: 0 16px 20px -5px rgba(15, 157, 88, .4);
-    }
-
-    .btn-secondary {
-      background: var(--light);
-      color: var(--dark);
-      border: 2px solid #e2e8f0;
-      margin-top: 10px;
-    }
-
-    .btn-secondary:hover {
-      background: #f1f5f9;
-    }
-
-    .btn-tbank {
-      background: var(--secondary);
-      color: var(--white);
-      box-shadow: 0 8px 15px -3px rgba(66, 133, 244, .3);
-    }
-
-    .btn-tbank:hover {
-      background: #3071e8;
-      transform: translateY(-2px);
-    }
+    .btn-tbank { background: var(--secondary); color: var(--white); box-shadow: 0 8px 15px -3px rgba(66,133,244,.3); }
+    .btn-tbank:hover { background: #3071e8; transform: translateY(-2px); }
 
     .waiting-note {
-      background: #fff7ed;
-      border: 1px solid #ffedd5;
-      padding: 14px;
-      border-radius: 12px;
-      font-size: 12px;
-      color: #9a3412;
-      font-weight: 600;
-      margin-top: 18px;
-      display: flex;
-      gap: 10px;
+      background: #fff7ed; border: 1px solid #ffedd5;
+      padding: 14px; border-radius: 12px;
+      font-size: 12px; color: #9a3412; font-weight: 600;
+      margin-top: 18px; display: flex; gap: 10px;
     }
 
     /* ─── PROGRESS RING ─── */
-    .progress-ring-wrap {
-      text-align: center;
-      padding: 30px 0;
-    }
-
-    .progress-ring-wrap i {
-      font-size: 40px;
-      color: var(--secondary);
-      margin-bottom: 16px;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+    .progress-ring-wrap { text-align: center; padding: 30px 0; }
+    .progress-ring-wrap i { font-size: 40px; color: var(--secondary); margin-bottom: 16px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ─── DIVIDER ─── */
-    .divider {
-      border: none;
-      border-top: 1px solid #e2e8f0;
-      margin: 22px 0;
-    }
+    .divider { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
 
     /* ─── MEMBERSHIP SUMMARY CARD ─── */
     .membership-summary {
-      border-radius: 18px;
-      border: 1.5px solid #e2e8f0;
-      overflow: hidden;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, .05);
+      border-radius: 18px; border: 1.5px solid #e2e8f0;
+      overflow: hidden; margin-bottom: 22px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
     }
-
-    .summary-rows {
-      display: flex;
-    }
-
+    .summary-rows { display: flex; }
     .summary-col {
-      flex: 1;
-      padding: 14px 10px;
-      text-align: center;
-      border-right: 1px solid #e2e8f0;
-      transition: background .2s;
+      flex: 1; padding: 16px 10px; text-align: center;
+      border-right: 1px solid #e2e8f0; transition: background .2s;
     }
+    .summary-col:last-child { border-right: none; }
+    .summary-col-val  { font-size: 24px; font-weight: 900; line-height: 1; }
+    .summary-col-lbl  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-top: 4px; color: var(--slate); }
+    .summary-col.c-trustee  { background: #eff6ff; }
+    .summary-col.c-official { background: #fefce8; }
+    .summary-col.c-member   { background: var(--primary-light); }
+    .summary-col.c-total    { background: #f1f5f9; }
+    .summary-col.c-trustee  .summary-col-val { color: #1d4ed8; }
+    .summary-col.c-official .summary-col-val { color: #92400e; }
+    .summary-col.c-member   .summary-col-val { color: var(--primary-dark); }
+    .summary-col.c-total    .summary-col-val { color: var(--dark); }
 
-    .summary-col:last-child {
-      border-right: none;
-    }
+    /* ─── VERIFICATION STYLES ─── */
+    .top    { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .name   { font-size: 16px; font-weight: 700; color: var(--dark); }
+    .role-text { font-size: 12px; color: var(--slate); margin-bottom: 5px; font-weight: 600; }
+    .badges { display: flex; gap: 6px; }
+    .badge  { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; text-transform: uppercase; }
+    .mno           { background: #dbeafe; color: #1d4ed8; }
+    .verified      { background: #dcfce7; color: #166534; }
+    .error-badge   { background: #fee2e2; color: #991b1b; }
 
-    .summary-col-val {
-      font-size: 22px;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .summary-col-lbl {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      margin-top: 4px;
-      color: var(--slate);
-    }
-
-    .summary-col.c-trustee {
-      background: #eff6ff;
-    }
-
-    .summary-col.c-official {
-      background: #fefce8;
-    }
-
-    .summary-col.c-member {
-      background: var(--primary-light);
-    }
-
-    .summary-col.c-total {
-      background: #f1f5f9;
-    }
-
-    .summary-col.c-trustee .summary-col-val {
-      color: #1d4ed8;
-    }
-
-    .summary-col.c-official .summary-col-val {
-      color: #92400e;
-    }
-
-    .summary-col.c-member .summary-col-val {
-      color: var(--primary-dark);
-    }
-
-    .summary-col.c-total .summary-col-val {
-      color: var(--dark);
-    }
-
-    /* ─── NEW VERIFICATION COMPONENT STYLES ─── */
-    .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .name {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--dark);
-    }
-    .role-text {
-      font-size: 12px;
-      color: var(--slate);
-      margin-bottom: 5px;
-      font-weight: 600;
-    }
-    .badges {
-      display: flex;
-      gap: 6px;
-    }
-    .badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-      text-transform: uppercase;
-    }
-    .mno {
-      background: #dbeafe;
-      color: #1d4ed8;
-    }
-    .verified {
-      background: #dcfce7;
-      color: #166534;
-    }
-    .error-badge {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    /* ─── VERIFICATION DISPLAY STYLES ─── */
     .header-box {
-      background: var(--white);
-      padding: 18px;
-      border-radius: 16px;
-      margin-bottom: 24px;
-      border: 1px solid #e2e8f0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      background: var(--white); padding: 20px; border-radius: 16px;
+      margin-bottom: 24px; border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 4px rgba(0,0,0,.02);
     }
-
     .row {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
+      display: flex; justify-content: space-between;
+      margin-bottom: 10px; padding-bottom: 8px;
       border-bottom: 1px solid #f1f5f9;
     }
-
-    .row:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .label {
-      font-weight: 700;
-      color: var(--slate);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .value {
-      color: var(--dark);
-      font-weight: 600;
-      font-size: 14px;
-    }
+    .row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .label { font-weight: 700; color: var(--slate); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+    .value { color: var(--dark); font-weight: 600; font-size: 14px; }
 
     .success-pill {
-      color: #166534;
-      background: #dcfce7;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+      color: #166534; background: #dcfce7;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 4px;
     }
+    .success { text-align: center; color: green; font-weight: bold; margin-top: 10px; }
+    .member-box { margin-top: 15px; }
+    .member-box h4 { margin-bottom: 10px; }
 
-    .success {
-      text-align: center;
-      color: green;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-
-    .member-box {
-      margin-top: 15px;
-    }
-
-    .member-box h4 {
-      margin-bottom: 10px;
-    }
-
-    /* Scroll for member form */
+    /* ─── STEP MEMBERS SCROLL ─── */
     #step-members {
-      height: auto;
-      overflow-y: auto;
-      padding: 10px;
-      padding-right: 4px;
-      position: relative;
-      z-index: 5;
+      height: auto; overflow-y: auto;
+      padding: 12px 4px 12px 12px;
+      position: relative; z-index: 5;
     }
+    #step-members::-webkit-scrollbar       { width: 5px; }
+    #step-members::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+    #step-members::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
 
-    #step-members::-webkit-scrollbar {
-      width: 5px;
-    }
-
-    #step-members::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 10px;
-    }
-
-    #step-members::-webkit-scrollbar-thumb {
-      background: var(--primary);
-      border-radius: 10px;
-    }
-
-    /* Mobile responsiveness */
+    /* ─── MOBILE ─── */
     @media (max-width: 600px) {
-      .container {
-        max-width: 100%;
-        margin: 0;
-        padding: 0 2px;
+      .container   { max-width: 100%; margin: 0; padding: 0 2px; }
+      .header      { padding: 26px 16px; }
+      .header h1   { font-size: 18px; }
+      .content     { padding: 14px 12px; }
+      .row-2       { grid-template-columns: 1fr; gap: 10px; }
+      .row         { flex-direction: column; gap: 8px; }
+
+      /* On mobile, keep a comfortable but not over-large input */
+      :root {
+        --input-py: 11px;
+        --input-px: 13px;
+        --input-font: 14px;
+        --card-pad: 14px;
       }
 
-      .header {
-        padding: 25px 15px;
-      }
-
-      .header h1 {
-        font-size: 18px;
-      }
-
-      .content {
-        padding: 12px 10px;
-      }
-
-      .row-2 {
-        grid-template-columns: 1fr;
-        gap: 10px;
-      }
-
-      .row {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .btn-container button {
-        padding: 12px;
-        font-size: 14px;
-      }
-
-      .input-wrapper input,
-      .input-wrapper select {
-        padding: 6px 2px;
-        font-size: 14px;
-      }
-
-      .member-card {
-        padding: 12px;
-      }
-
-      .member-card-head {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-
-      .section-header {
-        padding: 10px 12px;
-        font-size: 12px;
-      }
-
-      .fee-card {
-        padding: 14px;
-      }
-
-      .payment-options {
-        grid-template-columns: 1fr;
-      }
+      .btn-container button { padding: 13px; font-size: 14px; }
+      .member-card-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .section-header   { padding: 10px 12px; font-size: 12px; }
+      .payment-options  { grid-template-columns: 1fr; }
     }
-
   </style>
 </head>
 
-  <body>
+<body>
   <div class="container">
     <!-- HEADER -->
     <div class="header">
       <a href="/agent" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-      <h1>Members Payment and Registration</h1>
-      <p>Group Activation Process</p>
+      <a href="/personal" class="home-btn"><i class="fas fa-home"></i></a>
+      <h1>Members Registration</h1>
+      <p class="subtitle">Group Activation Process</p>
+      <div class="header-group-name">
+        <p><%= group.groupName %></p>
+      </div>
     </div>
 
     <div class="content">
-      <!-- GROUP INFO STRIPE -->
-      <div class="group-info-stripe">
-        <div>
-          <div class="group-name-mini">
-            <%= group.groupName %>
-          </div>
-          <div class="group-loc-mini">
-            <%= group.ward %> · <%= group.constituency %>
-          </div>
-        </div>
-        <div style="font-size:14px; font-weight:800; color:var(--primary);">
-          <i class="fas fa-shield-halved"></i>
-        </div>
-      </div>
-
       <!-- ═══════════════════════════════════════════ -->
       <!-- STEP 1 : GROUP TYPE & MEMBER COUNT          -->
       <!-- ═══════════════════════════════════════════ -->
       <div class="form-step active" id="step1">
-        <div style="text-align:right; margin-bottom:12px;">
-          <button type="button" onclick="showRegulationsModal()" style="background:#4285f4; color:white; border:none; padding:6px 2px; border-radius:6px; cursor:pointer; font-size:10px; font-weight:600; display:flex; align-items:center; gap:3px; white-space:nowrap;">
+        <div style="text-align:right; margin-bottom:14px;">
+          <button type="button" onclick="showRegulationsModal()"
+            style="background:#4285f4; color:white; border:none; padding:8px 14px; border-radius:8px;
+                   cursor:pointer; font-size:11px; font-weight:700; display:inline-flex;
+                   align-items:center; gap:5px; width:auto;">
             <i class="fas fa-book"></i> Terms
           </button>
         </div>
+
         <div class="input-group">
           <label>Group Type</label>
           <div class="input-wrapper">
@@ -838,8 +535,11 @@
             </select>
           </div>
         </div>
+
         <div class="input-group">
-          <label>Group Certificate Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
+          <label>Group Certificate Number
+            <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span>
+          </label>
           <div class="input-wrapper">
             <input type="text" id="groupCertificateNumber" placeholder="Certificate number" maxlength="50">
           </div>
@@ -848,18 +548,23 @@
             From cabinet ministry of labour, register of societies
           </div>
         </div>
+
         <div class="input-group">
           <label>Total Membership Count</label>
           <div class="input-wrapper">
-            <input type="number" id="totalMembers" placeholder="Minimum <%= registrationConfig.members %> members"
-              min="<%= registrationConfig.members %>" max="<%= registrationConfig.maxMembers %>">
+            <input type="number" id="totalMembers"
+              placeholder="Minimum <%= registrationConfig.members %> members"
+              min="<%= registrationConfig.members %>"
+              max="<%= registrationConfig.maxMembers %>">
           </div>
           <div class="compliance-note">
             <i class="fas fa-info-circle"></i>
             Compliance: Min <%= registrationConfig.members %> – Max <%= registrationConfig.maxMembers %> Members
           </div>
         </div>
+
         <div id="step1Notification" style="min-height:20px; margin-bottom:8px;"></div>
+
         <div class="btn-container">
           <button class="btn-primary" onclick="proceedToPayment()">
             Proceed to Payment <i class="fas fa-chevron-right"></i>
@@ -874,7 +579,7 @@
         <div class="fee-card">
           <div class="fee-label">Group Registration Fee (<span id="countDisplay">0</span> members)</div>
           <div class="fee-amount" id="totalFeeDisplay">KES 0.00</div>
-          <div style="font-size:11px; font-weight:700; color:var(--primary-dark); margin-top:5px; opacity:.8;"
+          <div style="font-size:11px; font-weight:700; color:var(--primary-dark); margin-top:6px; opacity:.8;"
             id="feeRateDisplay">KES 50 per member</div>
         </div>
 
@@ -940,7 +645,7 @@
       <!-- STEP 3b : T-BANK MEMBER REGISTRATION FORM  -->
       <!-- ═══════════════════════════════════════════ -->
       <div class="form-step" id="step3-tbank">
-         <div id="step-members">
+        <div id="step-members">
 
           <!-- ── MEMBERSHIP BREAKDOWN SUMMARY ── -->
           <div class="membership-summary">
@@ -964,28 +669,34 @@
             </div>
           </div>
 
-           <!-- ── TRUSTEES ── -->
-           <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
-             <button onclick="downloadGroupRegistrationForm()" style="background: #8b5cf6; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; font-weight: 600; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);">
-               <i class="fas fa-file-pdf" style="margin-right: 5px;"></i> Download Form
-             </button>
-           </div>
-           <div class="section-header trustee">
-             <i class="fas fa-user-shield"></i> Trustees
-             <span style="background: #dbeafe; color: #1d4ed8; padding: 3px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: 700; margin-left: 8px; display: inline-block; white-space: nowrap;">
-               <span id="trusteesCountLabel"><%= registrationConfig.trustees %></span> Required
-             </span>
-           </div>
+          <!-- ── TRUSTEES ── -->
+          <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+            <button onclick="downloadGroupRegistrationForm()"
+              style="background:#8b5cf6; color:white; border:none; padding:9px 16px;
+                     border-radius:8px; font-size:0.85rem; cursor:pointer; font-weight:600;
+                     box-shadow:0 2px 4px rgba(139,92,246,.2); width:auto;">
+              <i class="fas fa-file-pdf" style="margin-right:5px;"></i> Download Form
+            </button>
+          </div>
+
+          <div class="section-header trustee">
+            <i class="fas fa-user-shield"></i> Trustees
+            <span style="background:#dbeafe; color:#1d4ed8; padding:3px 10px; border-radius:15px;
+                         font-size:0.8rem; font-weight:700; margin-left:8px; display:inline-block; white-space:nowrap;">
+              <span id="trusteesCountLabel"><%= registrationConfig.trustees %></span> Required
+            </span>
+          </div>
           <div id="trusteesContainer"></div>
 
-           <hr class="divider">
+          <hr class="divider">
 
           <!-- ── OFFICIALS ── -->
           <div class="section-header official">
-            <i class="fas fa-user-tie"></i> Officials (<span id="officialsCountLabel">0</span> / <span id="officialsMaxLabel"><%= registrationConfig.officials %></span>)
+            <i class="fas fa-user-tie"></i>
+            Officials (<span id="officialsCountLabel">0</span> / <span id="officialsMaxLabel"><%= registrationConfig.officials %></span>)
           </div>
           <div id="officialsContainer"></div>
-          <button class="btn-secondary" id="addOfficialBtn" onclick="addOfficial()" style="margin-top: 12px;">
+          <button class="btn-secondary" id="addOfficialBtn" onclick="addOfficial()" style="margin-top:12px;">
             <i class="fas fa-plus"></i> Add Official
           </button>
 
@@ -999,16 +710,16 @@
 
         </div><!-- end #step-members -->
 
-         <div id="verifyNotification" style="min-height:20px; margin-bottom:8px;"></div>
+        <div id="verifyNotification" style="min-height:20px; margin-bottom:8px;"></div>
 
-          <div class="btn-container" style="padding-top:8px; display:none; position:relative;" id="memberButtons">
-           <button class="btn-tbank" onclick="verifyMembers()">
-             <i class="fas fa-clipboard-check"></i> Verify Members
-           </button>
-           <button class="btn-secondary" onclick="goBack(0,2,'step3-tbank')">
-             <i class="fas fa-chevron-left"></i> Back
-           </button>
-         </div>
+        <div class="btn-container" style="padding-top:4px; display:none; position:relative;" id="memberButtons">
+          <button class="btn-tbank" onclick="verifyMembers()">
+            <i class="fas fa-clipboard-check"></i> Verify Members
+          </button>
+          <button class="btn-secondary" onclick="goBack(0,2,'step3-tbank')">
+            <i class="fas fa-chevron-left"></i> Back
+          </button>
+        </div>
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
@@ -1022,45 +733,48 @@
           <p style="font-size:12px; color:var(--slate);">Review all member details before final submission</p>
         </div>
 
-        <!-- SCROLLABLE VERIFICATION SECTION -->
-        <div id="verificationScrollArea" style="max-height:70vh; overflow-y:auto; padding-right:4px; margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">
-           <!-- GROUP INFO IN VERIFICATION -->
-           <div id="verificationGroupInfo" class="header-box" style="border: none; border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; background: none;">
-             <div class="row" style="align-items: center; margin-bottom: 0; border-bottom: none;">
-               <span class="label">Regional Block</span>
-               <div class="badges" style="flex-wrap: wrap; justify-content: flex-end;">
-                 <span class="badge" style="background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary);"><%= group.county %></span>
-                 <span class="badge" style="background:#fef9c3; color:#92400e; border:1px solid #d97706;"><%= group.constituency %></span>
-                 <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #3b82f6;"><%= group.ward %></span>
-               </div>
-             </div>
-             <div class="row" style="margin-bottom: 0; border-bottom: none;">
-               <div><span class="label">Group No:</span> <span class="value" id="verifyGroupNo"><%= group.groupName %></span></div>
-               <div><span class="label">Group Type:</span> <span class="value" id="verifyGroupType"><%= group.groupType || '-' %></span></div>
-             </div>
-             <div class="row" style="margin-bottom: 0; border-bottom: none;">
-               <div style="width: 100%;"><span class="label">Certificate:</span> <span class="value" id="verifyCertNumber"><%= group.certificateNumber || '-' %></span></div>
-             </div>
-             <div class="row" style="margin-bottom: 0; border-bottom: none;">
-               <div><span class="label">Agent:</span> <span class="value" id="verifyAgentName"><%= group.agentName %></span></div>
-               <div><span class="label">Agent Phone:</span> <span class="value" id="verifyAgentPhone"><%= agent.phoneNumber %></span></div>
-             </div>
+        <div id="verificationScrollArea"
+          style="margin-bottom:15px; padding-right:4px; border:1px solid #e2e8f0; border-radius:8px; padding:14px; background:#f8fafc;">
+
+          <!-- GROUP INFO IN VERIFICATION -->
+          <div id="verificationGroupInfo" class="header-box"
+            style="border:none; border-top:2px solid #e2e8f0; border-bottom:2px solid #e2e8f0; background:none;">
+            <div class="row" style="align-items:center; margin-bottom:0; border-bottom:none;">
+              <span class="label">Regional Block</span>
+              <div class="badges" style="flex-wrap:wrap; justify-content:flex-end;">
+                <span class="badge" style="background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary);"><%= group.county %></span>
+                <span class="badge" style="background:#fef9c3; color:#92400e; border:1px solid #d97706;"><%= group.constituency %></span>
+                <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #3b82f6;"><%= group.ward %></span>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom:0; border-bottom:none;">
+              <div><span class="label">Group No:</span> <span class="value" id="verifyGroupNo"><%= group.groupName %></span></div>
+              <div><span class="label">Group Type:</span> <span class="value" id="verifyGroupType"><%= group.groupType || '-' %></span></div>
+            </div>
+            <div class="row" style="margin-bottom:0; border-bottom:none;">
+              <div style="width:100%;"><span class="label">Certificate:</span> <span class="value" id="verifyCertNumber"><%= group.certificateNumber || '-' %></span></div>
+            </div>
+            <div class="row" style="margin-bottom:0; border-bottom:none;">
+              <div><span class="label">Agent:</span> <span class="value" id="verifyAgentName"><%= group.agentName %></span></div>
+              <div><span class="label">Agent Phone:</span> <span class="value" id="verifyAgentPhone"><%= agent.phoneNumber %></span></div>
+            </div>
           </div>
 
           <div id="verificationList" style="margin-top:15px;"></div>
         </div>
 
-<div class="btn-container" id="verifyBtnContainer" style="padding-top:12px;">
-            <button class="btn-primary" id="downloadRegFormBtn" onclick="downloadRegistrationForm()" style="background:var(--secondary); display:none;">
-              <i class="fas fa-download"></i> Download Registration Form
-            </button>
-            <button class="btn-tbank" id="confirmSubmitBtn" onclick="confirmAndSubmit()" style="display:none;">
-              <i class="fas fa-check-circle"></i> Confirm & Submit Registration
-            </button>
-            <button class="btn-secondary" onclick="goBackToForm()">
-              <i class="fas fa-chevron-left"></i> Back to Edit
-            </button>
-          </div>
+        <div class="btn-container" id="verifyBtnContainer" style="padding-top:12px;">
+          <button class="btn-primary" id="downloadRegFormBtn" onclick="downloadRegistrationForm()"
+            style="background:var(--secondary); display:none;">
+            <i class="fas fa-download"></i> Download Registration Form
+          </button>
+          <button class="btn-tbank" id="confirmSubmitBtn" onclick="confirmAndSubmit()" style="display:none;">
+            <i class="fas fa-check-circle"></i> Confirm & Submit Registration
+          </button>
+          <button class="btn-secondary" onclick="goBackToForm()">
+            <i class="fas fa-chevron-left"></i> Back to Edit
+          </button>
+        </div>
       </div>
 
       <!-- ═══════════════════════════════════════════ -->
@@ -1068,11 +782,9 @@
       <!-- ═══════════════════════════════════════════ -->
       <div class="form-step" id="step5">
         <div style="text-align:center; padding:40px 0;">
-          <i class="fas fa-circle-notch fa-spin"
-            style="font-size:42px; color:var(--secondary); margin-bottom:20px;"></i>
+          <i class="fas fa-circle-notch fa-spin" style="font-size:42px; color:var(--secondary); margin-bottom:20px;"></i>
           <h3 style="font-size:18px; font-weight:800;">Submitting Registration...</h3>
-          <p style="font-size:13px; color:var(--slate); margin-top:10px;">T-Bank is processing the group
-            payment.<br>Please wait.</p>
+          <p style="font-size:13px; color:var(--slate); margin-top:10px;">T-Bank is processing the group payment.<br>Please wait.</p>
           <div class="waiting-note" style="margin-top:22px;">
             <i class="fas fa-university"></i>
             <span id="submitStatusMsg">Connecting to T-Bank and saving members...</span>
@@ -1090,290 +802,244 @@
   <script>
     // ─── NOTIFICATION HELPER ──────────────────────────────────
     function showNotification(message, type = 'error') {
-      // Determine the notification container based on current step
-      let notificationId = 'verifyNotification'; // default for step3-tbank
+      let notificationId = 'verifyNotification';
       const activeStep = document.querySelector('.form-step.active');
-      if (activeStep && activeStep.id === 'step1') {
-        notificationId = 'step1Notification';
-      }
+      if (activeStep && activeStep.id === 'step1') notificationId = 'step1Notification';
 
       const inlineNotif = document.getElementById(notificationId);
       if (inlineNotif) {
-        const icon = type === 'error' ? 'fa-exclamation-circle' :
-                      type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
-        const bgColor = type === 'error' ? '#fee2e2' :
-                        type === 'success' ? '#dcfce7' : '#fef3c7';
-        const textColor = type === 'error' ? '#991b1b' :
-                          type === 'success' ? '#166534' : '#92400e';
-
+        const icon     = type === 'error'   ? 'fa-exclamation-circle' :
+                         type === 'success' ? 'fa-check-circle'       : 'fa-exclamation-triangle';
+        const bgColor  = type === 'error'   ? '#fee2e2' :
+                         type === 'success' ? '#dcfce7'               : '#fef3c7';
+        const txtColor = type === 'error'   ? '#991b1b' :
+                         type === 'success' ? '#166534'               : '#92400e';
         inlineNotif.innerHTML = `
-          <div style="background:${bgColor}; color:${textColor}; padding:12px 16px; border-radius:10px;
+          <div style="background:${bgColor}; color:${txtColor}; padding:13px 16px; border-radius:10px;
                       font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px;
-                      border-left:4px solid ${textColor}; animation:fadeIn .3s ease;">
+                      border-left:4px solid ${txtColor}; animation:fadeIn .3s ease;">
             <i class="fas ${icon}" style="font-size:16px;"></i>
             <span>${message}</span>
-          </div>
-        `;
-
-        // Clear after 5 seconds
-        setTimeout(() => {
-          inlineNotif.innerHTML = '';
-        }, 5000);
+          </div>`;
+        setTimeout(() => { inlineNotif.innerHTML = ''; }, 5000);
       }
     }
 
     // ─── CONFIG ───────────────────────────────────────────────
     const groupData = <%- JSON.stringify(group) %>;
-    const config = <%- JSON.stringify(registrationConfig) %>;
-    const STD_TRUSTEES = Math.min(3, parseInt(config.trustees) || 3);
+    const config    = <%- JSON.stringify(registrationConfig) %>;
+    const STD_TRUSTEES  = Math.min(3, parseInt(config.trustees)  || 3);
     const STD_OFFICIALS = parseInt(config.officials) || 4;
-    const MIN_MEMBERS = parseInt(config.members) || 10;
-    const MAX_MEMBERS = parseInt(config.maxMembers) || 40;
-    const BASE_FEE = parseFloat(config.newGroupFee) || 50;
+    const MIN_MEMBERS   = parseInt(config.members)   || 10;
+    const MAX_MEMBERS   = parseInt(config.maxMembers) || 40;
+    const BASE_FEE      = parseFloat(config.newGroupFee) || 50;
 
-    let selectedMethod = null;
-    let totalMembersCount = 0;
-    let totalPayableAmount = 0;
-    let regularMembersCount = 0;  // total - trustees - officials
-    let currentOfficialsCount = 0;  // track how many official forms are shown
-    let termsAccepted = false;  // track if terms have been viewed
-
-
+    let selectedMethod       = null;
+    let totalMembersCount    = 0;
+    let totalPayableAmount   = 0;
+    let regularMembersCount  = 0;
+    let currentOfficialsCount= 0;
+    let termsAccepted        = false;
 
     function showStep(id) {
       document.querySelectorAll('.form-step').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      
+      const content = document.querySelector('.content');
+      if (id === 'step3-tbank' || id === 'step4-verify') {
+        content.classList.add('scrollable');
+      } else {
+        content.classList.remove('scrollable');
+      }
     }
 
     function showMemberForm() {
       document.getElementById('step-members').style.display = 'block';
-      // Also show the buttons
       document.getElementById('memberButtons').style.display = 'flex';
     }
 
     // ─── STEP 1 → 2 ───────────────────────────────────────────
     function proceedToPayment() {
       const groupType = document.getElementById('groupType').value;
-      if (!groupType) {
-        showNotification('Please select a group type.');
-        return;
-      }
+      if (!groupType) { showNotification('Please select a group type.'); return; }
       totalMembersCount = parseInt(document.getElementById('totalMembers').value);
       if (isNaN(totalMembersCount) || totalMembersCount < MIN_MEMBERS || totalMembersCount > MAX_MEMBERS) {
-        showNotification(`Membership count must be between ${MIN_MEMBERS} and ${MAX_MEMBERS}.`);
-        return;
+        showNotification(`Membership count must be between ${MIN_MEMBERS} and ${MAX_MEMBERS}.`); return;
       }
       totalPayableAmount = totalMembersCount * BASE_FEE;
-      document.getElementById('countDisplay').textContent = totalMembersCount;
+      document.getElementById('countDisplay').textContent    = totalMembersCount;
       document.getElementById('totalFeeDisplay').textContent = `KES ${totalPayableAmount.toLocaleString()}.00`;
-      document.getElementById('feeRateDisplay').textContent = `KES ${BASE_FEE.toLocaleString()} per member`;
-       document.getElementById('stkAmountDisplay').textContent = `KES ${totalPayableAmount.toLocaleString()}.00`;
-       showStep('step2');
+      document.getElementById('feeRateDisplay').textContent  = `KES ${BASE_FEE.toLocaleString()} per member`;
+      document.getElementById('stkAmountDisplay').textContent= `KES ${totalPayableAmount.toLocaleString()}.00`;
+      showStep('step2');
     }
 
     // ─── PAYMENT SELECTION ────────────────────────────────────
     function selectPayment(method) {
       selectedMethod = method;
-      document.querySelectorAll('.payment-option').forEach(o => {
-        o.classList.remove('active', 'active-tbank');
-      });
-      if (method === 'tbank') {
-        document.getElementById('optTbank').classList.add('active-tbank');
-      } else {
-        document.getElementById('optMpesa').classList.add('active');
-      }
-      // Enable continue button after selection
+      document.querySelectorAll('.payment-option').forEach(o => o.classList.remove('active','active-tbank'));
+      if (method === 'tbank') document.getElementById('optTbank').classList.add('active-tbank');
+      else                     document.getElementById('optMpesa').classList.add('active');
       document.getElementById('continueBtn').disabled = false;
     }
 
-     // ─── STEP 2 → 3 ───────────────────────────────────────────
-     function proceedToFinal() {
-       if (!selectedMethod) { showNotification('Please select a payment method.'); return; }
+    // ─── STEP 2 → 3 ───────────────────────────────────────────
+    function proceedToFinal() {
+      if (!selectedMethod) { showNotification('Please select a payment method.'); return; }
       if (selectedMethod === 'mpesa') {
         showStep('step3-mpesa');
-       } else {
-         buildMemberForm();
-         showMemberForm();
-         showStep('step3-tbank');
-       }
+      } else {
+        buildMemberForm();
+        showMemberForm();
+        showStep('step3-tbank');
+      }
     }
 
     // ─── BACK ─────────────────────────────────────────────────
     function goBack(fromStepNum, toStepNum, fromStepId) {
-      const fromId = fromStepId || `step${fromStepNum}`;
-      const toId = `step${toStepNum}`;
-      showStep(toId);
-      // Hide member buttons when going back
-      if (toId === 'step2') {
-        document.getElementById('memberButtons').style.display = 'none';
-      }
+      showStep(`step${toStepNum}`);
+      if (`step${toStepNum}` === 'step2') document.getElementById('memberButtons').style.display = 'none';
     }
 
-    // ─── BUILD TRUSTEE FIELDS DYNAMICALLY ─────────────────────
+    // ─── BUILD TRUSTEE FIELDS ─────────────────────────────────
     function buildTrustees() {
-      const container = document.getElementById('trusteesContainer');
+      const container    = document.getElementById('trusteesContainer');
       container.innerHTML = '';
-      
-      const trusteeIcons = ['fa-crown', 'fa-coins', 'fa-pen-nib', 'fa-user-shield'];
-      const defaultTitles = ['Chairperson', 'Treasurer', 'Secretary', 'Trustee'];
+      const trusteeIcons = ['fa-crown','fa-coins','fa-pen-nib','fa-user-shield'];
 
       for (let i = 0; i < STD_TRUSTEES; i++) {
-        const idx = i + 1;
-        const isChairperson = i === 0;
-        const div = document.createElement('div');
-        div.className = 'member-card';
+        const idx          = i + 1;
+        const isChairperson= i === 0;
+        const div          = document.createElement('div');
+        div.className      = 'member-card';
         div.innerHTML = `
-            <div class="member-card-head">
-              <div class="member-card-title">
-                <i class="fas ${trusteeIcons[i] || 'fa-user-shield'}" style="color:#1d4ed8;"></i>
-                Trustee ${idx}
-              </div>
-              <span style="font-size:11px; color:#1d4ed8; font-weight:600; background:#dbeafe; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
+          <div class="member-card-head">
+            <div class="member-card-title">
+              <i class="fas ${trusteeIcons[i]||'fa-user-shield'}" style="color:#1d4ed8;"></i>
+              Trustee ${idx}
             </div>
-            <!-- Title full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
-              <label>Title</label>
-              <div class="input-wrapper">
-                <select id="t${idx}_title" ${isChairperson ? 'class="locked" disabled' : 'onchange="updateTrusteeTitles()"'}>
-                  <option value="" disabled>Select Title</option>
-                  <option value="Chairperson" ${isChairperson ? 'selected' : ''}>Chairperson</option>
-                  <option value="Treasurer" ${idx === 2 && !isChairperson ? 'selected' : ''}>Treasurer</option>
-                  <option value="Secretary" ${idx === 3 && !isChairperson ? 'selected' : ''}>Secretary</option>
-                  <option value="Auditor">Auditor</option>
-                  <option value="Trustee">Trustee</option>
-                </select>
-                ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
-              </div>
+            <span style="font-size:11px; color:#1d4ed8; font-weight:600; background:#dbeafe; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
+          </div>
+          <div class="input-group" style="margin-bottom:var(--card-gap);">
+            <label>Title</label>
+            <div class="input-wrapper">
+              <select id="t${idx}_title" ${isChairperson ? 'class="locked" disabled' : 'onchange="updateTrusteeTitles()"'}>
+                <option value="" disabled>Select Title</option>
+                <option value="Chairperson" ${isChairperson ? 'selected' : ''}>Chairperson</option>
+                <option value="Treasurer"   ${idx===2 && !isChairperson ? 'selected' : ''}>Treasurer</option>
+                <option value="Secretary"   ${idx===3 && !isChairperson ? 'selected' : ''}>Secretary</option>
+                <option value="Auditor">Auditor</option>
+                <option value="Trustee">Trustee</option>
+              </select>
+              ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
             </div>
-            <!-- Member Number full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
-              <label>Member Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
-              <div class="input-wrapper">
-                <input type="text" id="t${idx}_memberNumber" placeholder="Enter member number" maxlength="20">
-              </div>
+          </div>
+          <div class="input-group" style="margin-bottom:var(--card-gap);">
+            <label>Member Number <span style="color:#ef4444;">*</span></label>
+            <div class="input-wrapper">
+              <input type="text" id="t${idx}_memberNumber" placeholder="Enter member number" maxlength="20" required>
             </div>
-            <!-- Phone full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
-              <label>Phone Number</label>
-              <div class="input-wrapper">
-                <input type="tel" id="t${idx}_phone" ${isChairperson ? 'value="<%= group.phone %>" readonly class="locked"' : 'placeholder="Enter phone number"'} maxlength="12">
-                ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
-              </div>
-              ${isChairperson ? '<div class="compliance-note"><i class="fas fa-info-circle"></i> Chairperson phone pre-filled</div>' : ''}
+          </div>
+          <div class="input-group" style="margin-bottom:var(--card-gap);">
+            <label>Phone Number</label>
+            <div class="input-wrapper">
+              <input type="tel" id="t${idx}_phone"
+                ${isChairperson ? 'value="<%= group.phone %>" readonly class="locked"' : 'placeholder="Enter phone number"'}
+                maxlength="12">
+              ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
             </div>
-            <!-- ID full-width -->
-            <div class="input-group">
-              <label>ID Number <span
-                  style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
-              <div class="input-wrapper">
-                <input type="text" id="t${idx}_id" placeholder="National ID" maxlength="10">
-              </div>
+            ${isChairperson ? '<div class="compliance-note"><i class="fas fa-info-circle"></i> Chairperson phone pre-filled</div>' : ''}
+          </div>
+          <div class="input-group">
+            <label>ID Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
+            <div class="input-wrapper">
+              <input type="text" id="t${idx}_id" placeholder="National ID" maxlength="10">
             </div>
+          </div>
         `;
         container.appendChild(div);
       }
-      // Update title dropdowns to hide already selected titles
       updateTrusteeTitles();
     }
 
-    // ─── BUILD MEMBER FORM (officials + regular members) ──────
+    // ─── BUILD MEMBER FORM ────────────────────────────────────
     function buildMemberForm() {
-      regularMembersCount = totalMembersCount - STD_TRUSTEES;  // don't subtract officials since they're optional
+      regularMembersCount = totalMembersCount - STD_TRUSTEES;
       if (regularMembersCount < 0) regularMembersCount = 0;
 
-      // ── Populate summary card ──
-      document.getElementById('sumTrustees').textContent = STD_TRUSTEES;
-      document.getElementById('sumOfficials').textContent = '0';  // will update as officials are added
-      document.getElementById('sumMembers').textContent = regularMembersCount;
-      document.getElementById('sumTotal').textContent = totalMembersCount;
-
-      document.getElementById('officialsMaxLabel').textContent = STD_OFFICIALS;
-      document.getElementById('membersCountLabel').textContent = regularMembersCount;
+      document.getElementById('sumTrustees').textContent  = STD_TRUSTEES;
+      document.getElementById('sumOfficials').textContent = '0';
+      document.getElementById('sumMembers').textContent   = regularMembersCount;
+      document.getElementById('sumTotal').textContent     = totalMembersCount;
+      document.getElementById('officialsMaxLabel').textContent  = STD_OFFICIALS;
+      document.getElementById('membersCountLabel').textContent  = regularMembersCount;
       document.getElementById('trusteesCountLabel').textContent = STD_TRUSTEES;
-      
+
       buildTrustees();
       buildOfficials();
       buildMembers();
-    }
-
-    function officialTitles() {
-      return ['Auditor', 'Ass. Chairperson', 'Committee Member', 'Vice Secretary'];
     }
 
     function buildOfficials() {
       const container = document.getElementById('officialsContainer');
       container.innerHTML = '';
       currentOfficialsCount = 0;
-
-      // Build datalist once
       if (!document.getElementById('officialTitleList')) {
         const dl = document.createElement('datalist');
-        dl.id = 'officialTitleList';
-        ['Auditor', 'Ass. Chairperson', 'Ass. Secretary', 'Committee Member', 'Advisor'].forEach(t => {
-          const opt = document.createElement('option');
-          opt.value = t; dl.appendChild(opt);
+        dl.id    = 'officialTitleList';
+        ['Auditor','Ass. Chairperson','Ass. Secretary','Committee Member','Advisor'].forEach(t => {
+          const opt = document.createElement('option'); opt.value = t; dl.appendChild(opt);
         });
         document.body.appendChild(dl);
       }
-
-      // Show only 1 official form by default
       addOfficial();
-
-      // Update the button visibility
       updateAddOfficialButton();
     }
 
     function addOfficial() {
       if (currentOfficialsCount >= STD_OFFICIALS) return;
-
       const container = document.getElementById('officialsContainer');
-      const i = currentOfficialsCount;
-      const idx = STD_TRUSTEES + i + 1;
-      const key = `official_${idx}`;
-
-      const div = document.createElement('div');
-      div.className = 'member-card';
-      div.id = `official_card_${i}`;
-      div.innerHTML = `
+      const i         = currentOfficialsCount;
+      const idx       = STD_TRUSTEES + i + 1;
+      const key       = `official_${idx}`;
+      const div       = document.createElement('div');
+      div.className   = 'member-card';
+      div.id          = `official_card_${i}`;
+      div.innerHTML   = `
         <div class="member-card-head">
           <div class="member-card-title">
             <i class="fas fa-user-tie" style="color:#92400e;"></i>
-            Official ${i + 1}
-            <span class="badge official" id="${key}_badge">${i === 0 ? 'Required' : 'Optional'}</span>
+            Official ${i+1}
+            <span class="badge official" id="${key}_badge">${i===0 ? 'Required' : 'Optional'}</span>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:11px; color:#92400e; font-weight:600; background:#fef9c3; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
-            <button onclick="removeOfficial(${i})" style="width:auto; padding:6px 10px; font-size:11px; background:#fee2e2; color:#991b1b; border-radius:8px; border:none; cursor:pointer;${i === 0 ? ' display:none;' : ''}">
+            <button onclick="removeOfficial(${i})" style="width:auto; padding:7px 11px; font-size:11px;
+              background:#fee2e2; color:#991b1b; border-radius:8px; border:none; cursor:pointer;${i===0 ? ' display:none;' : ''}">
               <i class="fas fa-times"></i>
             </button>
           </div>
         </div>
-        <!-- Title full-width -->
-        <div class="input-group" style="margin-bottom:8px;">
+        <div class="input-group" style="margin-bottom:var(--card-gap);">
           <label>Title (optional)</label>
           <div class="input-wrapper">
-            <input type="text" id="${key}_title"
-              placeholder="Select or type title"
-              list="officialTitleList"
-              autocomplete="off"
+            <input type="text" id="${key}_title" placeholder="Select or type title"
+              list="officialTitleList" autocomplete="off"
               oninput="updateOfficialBadge('${key}', this.value)">
           </div>
         </div>
-        <!-- Member Number full-width -->
-        <div class="input-group" style="margin-bottom:8px;">
-          <label>Member Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <div class="input-group" style="margin-bottom:var(--card-gap);">
+          <label>Member Number <span style="color:#ef4444;">*</span></label>
           <div class="input-wrapper">
-            <input type="text" id="${key}_memberNumber" placeholder="Enter member number" maxlength="20">
+            <input type="text" id="${key}_memberNumber" placeholder="Enter member number" maxlength="20" required>
           </div>
         </div>
-        <!-- Phone full-width -->
-        <div class="input-group" style="margin-bottom:8px;">
+        <div class="input-group" style="margin-bottom:var(--card-gap);">
           <label>Phone (optional)</label>
           <div class="input-wrapper">
             <input type="tel" id="${key}_phone" placeholder="Enter phone number" maxlength="12">
           </div>
         </div>
-        <!-- ID full-width -->
         <div class="input-group">
           <label>ID Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
           <div class="input-wrapper">
@@ -1381,97 +1047,53 @@
           </div>
         </div>
       `;
-
       container.appendChild(div);
       currentOfficialsCount++;
-
-      // Recalculate regular members (total - trustees - current officials)
       regularMembersCount = totalMembersCount - STD_TRUSTEES - currentOfficialsCount;
       if (regularMembersCount < 0) regularMembersCount = 0;
-
-       // Update summary card
-        document.getElementById('sumOfficials').textContent = currentOfficialsCount;
-        document.getElementById('sumMembers').textContent = regularMembersCount;
-        document.getElementById('officialsCountLabel').textContent = currentOfficialsCount;
-        document.getElementById('membersCountLabel').textContent = regularMembersCount;
-
-        buildMembers();
-
-       // Show the buttons after building the member form
-       document.getElementById('memberButtons').style.display = 'flex';
-
-      // Update button visibility and remove buttons
+      document.getElementById('sumOfficials').textContent       = currentOfficialsCount;
+      document.getElementById('sumMembers').textContent         = regularMembersCount;
+      document.getElementById('officialsCountLabel').textContent = currentOfficialsCount;
+      document.getElementById('membersCountLabel').textContent  = regularMembersCount;
+      buildMembers();
+      document.getElementById('memberButtons').style.display = 'flex';
       updateAddOfficialButton();
       updateRemoveButtons();
     }
 
     function removeOfficial(index) {
-      // Prevent removing the last official (minimum 1 required)
-      if (currentOfficialsCount <= 1) {
-        showNotification('At least 1 official is required.');
-        return;
-      }
-
+      if (currentOfficialsCount <= 1) { showNotification('At least 1 official is required.'); return; }
       const card = document.getElementById(`official_card_${index}`);
       if (card) {
         card.remove();
         currentOfficialsCount--;
-
-        // Recalculate regular members (total - trustees - current officials)
         regularMembersCount = totalMembersCount - STD_TRUSTEES - currentOfficialsCount;
         if (regularMembersCount < 0) regularMembersCount = 0;
-
-        // Update summary card
-        document.getElementById('sumOfficials').textContent = currentOfficialsCount;
-        document.getElementById('sumMembers').textContent = regularMembersCount;
+        document.getElementById('sumOfficials').textContent      = currentOfficialsCount;
+        document.getElementById('sumMembers').textContent        = regularMembersCount;
         document.getElementById('membersCountLabel').textContent = regularMembersCount;
 
-        // Re-index remaining officials
         const cards = document.querySelectorAll('#officialsContainer .member-card');
         cards.forEach((card, newIndex) => {
           const newIdx = STD_TRUSTEES + newIndex + 1;
           const newKey = `official_${newIdx}`;
-          const badge = card.querySelector('.badge');
-          if (badge) {
-            badge.textContent = newIndex === 0 ? 'Required' : 'Optional';
-            badge.id = `${newKey}_badge`;
-          }
-          const title = card.querySelector('.member-card-title');
-          if (title) {
-            const textNode = title.childNodes[2];
-            if (textNode) textNode.textContent = ` Official ${newIndex + 1} `;
-          }
-          // Update index display
+          const badge  = card.querySelector('.badge');
+          if (badge) { badge.textContent = newIndex === 0 ? 'Required' : 'Optional'; badge.id = `${newKey}_badge`; }
+          const title  = card.querySelector('.member-card-title');
+          if (title) { const t = title.childNodes[2]; if (t) t.textContent = ` Official ${newIndex+1} `; }
           const headDiv = card.querySelector('.member-card-head > div:last-child');
-          if (headDiv) {
-            const indexSpan = headDiv.querySelector('span');
-            if (indexSpan) {
-              indexSpan.textContent = `Index ${newIdx}`;
-            }
-          }
-          // Update input IDs
-          const inputs = card.querySelectorAll('input');
-          inputs.forEach(input => {
-            if (input.id.includes('_title')) {
-              input.id = `${newKey}_title`;
-              input.setAttribute('oninput', `updateOfficialBadge('${newKey}', this.value)`);
-            } else if (input.id.includes('_id')) {
-              input.id = `${newKey}_id`;
-            } else if (input.id.includes('_phone')) {
-              input.id = `${newKey}_phone`;
-            }
+          if (headDiv) { const sp = headDiv.querySelector('span'); if (sp) sp.textContent = `Index ${newIdx}`; }
+          card.querySelectorAll('input').forEach(input => {
+            if (input.id.includes('_title'))  { input.id = `${newKey}_title`;  input.setAttribute('oninput', `updateOfficialBadge('${newKey}', this.value)`); }
+            else if (input.id.includes('_id')) input.id = `${newKey}_id`;
+            else if (input.id.includes('_phone')) input.id = `${newKey}_phone`;
+            else if (input.id.includes('_memberNumber')) input.id = `${newKey}_memberNumber`;
           });
-          // Update remove button onclick and visibility
-          const removeBtn = card.querySelector('button[onclick^="removeOfficial"]');
-          if (removeBtn) {
-            removeBtn.setAttribute('onclick', `removeOfficial(${newIndex})`);
-          }
+          const rb = card.querySelector('button[onclick^="removeOfficial"]');
+          if (rb) rb.setAttribute('onclick', `removeOfficial(${newIndex})`);
         });
 
-        // Rebuild members section with new count
         buildMembers();
-
-        // Update label and buttons
         document.getElementById('officialsCountLabel').textContent = currentOfficialsCount;
         updateAddOfficialButton();
         updateRemoveButtons();
@@ -1481,78 +1103,33 @@
 
     function updateAddOfficialButton() {
       const btn = document.getElementById('addOfficialBtn');
-      if (btn) {
-        if (currentOfficialsCount >= STD_OFFICIALS) {
-          btn.style.display = 'none';
-        } else {
-          btn.style.display = 'flex';
-        }
-      }
+      if (btn) btn.style.display = currentOfficialsCount >= STD_OFFICIALS ? 'none' : 'flex';
     }
 
     function updateRemoveButtons() {
-      const cards = document.querySelectorAll('#officialsContainer .member-card');
-      cards.forEach((card, index) => {
-        const removeBtn = card.querySelector('button[onclick^="removeOfficial"]');
-        if (removeBtn) {
-          // Hide remove button if it's the only official (mandatory minimum of 1)
-          if (currentOfficialsCount <= 1) {
-            removeBtn.style.display = 'none';
-          } else {
-            removeBtn.style.display = 'block';
-          }
-        }
+      document.querySelectorAll('#officialsContainer .member-card').forEach(card => {
+        const rb = card.querySelector('button[onclick^="removeOfficial"]');
+        if (rb) rb.style.display = currentOfficialsCount <= 1 ? 'none' : 'block';
       });
     }
 
     function updateOfficialBadge(key, title) {
-      const badge = document.getElementById(key + '_badge');
-      if (badge) {
-        // Don't override "Required" label for first official
-        if (!badge.textContent.includes('Required')) {
-          badge.textContent = title.trim() || 'Optional';
-        }
-      }
-      // Update datalist to hide selected titles
+      const badge = document.getElementById(key+'_badge');
+      if (badge && !badge.textContent.includes('Required')) badge.textContent = title.trim() || 'Optional';
       updateOfficialTitleDatalist();
     }
 
-function updateTrusteeTitles() {
-      const allTitles = ['Chairperson', 'Treasurer', 'Secretary', 'Auditor', 'Trustee'];
+    function updateTrusteeTitles() {
       const takenTitles = new Set();
-
-      // Collect all currently selected titles from ALL trustees (including chairperson)
-      for (let i = 1; i <= STD_TRUSTEES; i++) {
-        const select = document.getElementById(`t${i}_title`);
-        if (select) {
-          const selectedValue = select.value;
-          if (selectedValue) {
-            takenTitles.add(selectedValue);
-          }
-        }
+      for (let i=1; i<=STD_TRUSTEES; i++) {
+        const sel = document.getElementById(`t${i}_title`);
+        if (sel && sel.value) takenTitles.add(sel.value);
       }
-
-      // Update each trustee dropdown (excluding chairperson if locked)
-      for (let i = 1; i <= STD_TRUSTEES; i++) {
-        const select = document.getElementById(`t${i}_title`);
-        if (!select) continue;
-
-        const isChairperson = (i === 1);
-        if (isChairperson && select.disabled) {
-          continue; // Skip chairperson - their title is locked
-        }
-
-        // Update options in this dropdown
-        const options = select.querySelectorAll('option');
-        options.forEach(option => {
-          if (option.value) {
-            // Hide this option if the title is already taken by someone else
-            if (takenTitles.has(option.value) && option.value !== select.value) {
-              option.style.display = 'none';
-            } else {
-              option.style.display = 'block';
-            }
-          }
+      for (let i=1; i<=STD_TRUSTEES; i++) {
+        const sel = document.getElementById(`t${i}_title`);
+        if (!sel || (i===1 && sel.disabled)) continue;
+        sel.querySelectorAll('option').forEach(opt => {
+          if (opt.value) opt.style.display = (takenTitles.has(opt.value) && opt.value !== sel.value) ? 'none' : 'block';
         });
       }
     }
@@ -1560,25 +1137,16 @@ function updateTrusteeTitles() {
     function updateOfficialTitleDatalist() {
       const dl = document.getElementById('officialTitleList');
       if (!dl) return;
-
-      // Collect all currently selected titles
-      const selectedTitles = new Set();
-      for (let i = 0; i < currentOfficialsCount; i++) {
-        const idx = STD_TRUSTEES + i + 1;
-        const titleInput = document.getElementById(`official_${idx}_title`);
-        if (titleInput && titleInput.value.trim()) {
-          selectedTitles.add(titleInput.value.trim().toLowerCase());
-        }
+      const selected = new Set();
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx  = STD_TRUSTEES + i + 1;
+        const inp  = document.getElementById(`official_${idx}_title`);
+        if (inp && inp.value.trim()) selected.add(inp.value.trim().toLowerCase());
       }
-
-      // Update datalist options - hide selected ones
-      const allTitles = ['Auditor', 'Ass. Chairperson', 'Ass. Secretary', 'Committee Member', 'Advisor'];
       dl.innerHTML = '';
-      allTitles.forEach(title => {
-        if (!selectedTitles.has(title.toLowerCase())) {
-          const opt = document.createElement('option');
-          opt.value = title;
-          dl.appendChild(opt);
+      ['Auditor','Ass. Chairperson','Ass. Secretary','Committee Member','Advisor'].forEach(t => {
+        if (!selected.has(t.toLowerCase())) {
+          const opt = document.createElement('option'); opt.value = t; dl.appendChild(opt);
         }
       });
     }
@@ -1586,7 +1154,7 @@ function updateTrusteeTitles() {
     function buildMembers() {
       const container = document.getElementById('membersContainer');
       container.innerHTML = '';
-      for (let i = 0; i < regularMembersCount; i++) {
+      for (let i=0; i<regularMembersCount; i++) {
         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
         const key = `member_${idx}`;
         container.innerHTML += `
@@ -1594,13 +1162,13 @@ function updateTrusteeTitles() {
             <div class="member-card-head">
               <div class="member-card-title">
                 <i class="fas fa-person" style="color:var(--primary-dark);"></i>
-                Member ${i + 1}
+                Member ${i+1}
                 <span class="badge member">Member</span>
               </div>
-              <span style="font-size:11px; color:var(--primary-dark); font-weight:600; background:#dcfce7; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
+              <span style="font-size:11px; color:var(--primary-dark); font-weight:600;
+                           background:#dcfce7; padding:3px 9px; border-radius:20px;">Index ${idx}</span>
             </div>
-            <!-- Member Number full-width -->
-            <div class="input-group" style="margin-bottom:8px;">
+            <div class="input-group" style="margin-bottom:var(--card-gap);">
               <label>Member Number <span style="color:#ef4444;">*</span></label>
               <div class="input-wrapper">
                 <input type="text" id="${key}_memberNumber" placeholder="Enter member number" maxlength="20" required>
@@ -1620,8 +1188,7 @@ function updateTrusteeTitles() {
                 </div>
               </div>
             </div>
-          </div>
-        `;
+          </div>`;
       }
     }
 
@@ -1632,195 +1199,110 @@ function updateTrusteeTitles() {
         showNotification('Invalid M-Pesa phone number. Use 254XXXXXXXXX (12 digits) or 07/01XXXXXXXX (10 digits).');
         return;
       }
-      document.getElementById('mpesaPrompt').style.display = 'none';
+      document.getElementById('mpesaPrompt').style.display   = 'none';
       document.getElementById('loadingStatus').style.display = 'block';
     }
 
-    // ─── PHONE VALIDATION HELPER ──────────────────────────────
+    // ─── PHONE VALIDATION ─────────────────────────────────────
     function isValidPhone(phone) {
-      // Accepts: 254XXXXXXXXX (12 digits), 07XXXXXXXX (10 digits), 01XXXXXXXX (10 digits)
       return /^254[0-9]{9}$/.test(phone) || /^0[17][0-9]{8}$/.test(phone);
     }
-
     function getPhoneErrorMessage(field) {
       return `Invalid phone format for ${field}. Use 254XXXXXXXXX (12 digits) or 07/01XXXXXXXX (10 digits).`;
     }
 
     // ─── VERIFY MEMBERS ───────────────────────────────────────
     function verifyMembers() {
-      // Collect all phone numbers to check for duplicates
-      const allPhones = [];
-      const phoneErrors = [];
-      let hasEmptyMemberNumber = false;
-      let emptyMemberName = '';
+      const allPhones = [], phoneErrors = [];
+      let hasEmptyMemberNumber = false, emptyMemberName = '';
 
-       // Validate all trustees dynamically
-       for (let i = 0; i < STD_TRUSTEES; i++) {
-         const idx = i + 1;
-         const memberNumber = document.getElementById(`t${idx}_memberNumber`).value.trim();
-         const phone = document.getElementById(`t${idx}_phone`).value.trim();
-         const title = document.getElementById(`t${idx}_title`).value.trim();
-         
-         if (!title) {
-           showNotification(`Title is required for Trustee ${idx}. Please select a title.`);
-           return;
-         }
-         
-         if (!memberNumber) {
-           hasEmptyMemberNumber = true;
-           emptyMemberName = title;
-         }
-         
-         if (i === 0) {
-           // Chairperson phone is pre-filled
-           if (isValidPhone(phone)) {
-             allPhones.push({ phone: phone, name: `Trustee ${idx} (${title})` });
-           }
-         } else {
-           // All other trustees require valid phone
-           if (!isValidPhone(phone)) { 
-             showNotification(getPhoneErrorMessage(`Trustee ${idx} (${title})`)); 
-             return; 
-           }
-           allPhones.push({ phone: phone, name: `Trustee ${idx} (${title})` });
-         }
-       }
-
-      // Officials
-      let hasOfficialTitle = false;
-      let hasOfficialNumber = false;
-      let missingOfficialInfo = '';
-      for (let i = 0; i < currentOfficialsCount; i++) {
-        const idx = STD_TRUSTEES + i + 1;
-        const memberNumber = document.getElementById(`official_${idx}_memberNumber`).value.trim();
-        const phone = document.getElementById(`official_${idx}_phone`).value.trim();
-        const title = document.getElementById(`official_${idx}_title`).value.trim();
-        
-        if (!title) {
-          hasOfficialTitle = true;
-          missingOfficialInfo = `Official ${i + 1}`;
-        }
-        
-        if (!memberNumber) {
-          hasEmptyMemberNumber = true;
-          hasOfficialNumber = true;
-          if (!missingOfficialInfo) missingOfficialInfo = `Official ${i + 1}`;
-        }
-        
-        if (phone && isValidPhone(phone)) {
-          allPhones.push({ phone: phone, name: title || `Official ${i + 1}` });
+      for (let i=0; i<STD_TRUSTEES; i++) {
+        const idx         = i+1;
+        const memberNumber= document.getElementById(`t${idx}_memberNumber`).value.trim();
+        const phone       = document.getElementById(`t${idx}_phone`).value.trim();
+        const title       = document.getElementById(`t${idx}_title`).value.trim();
+        if (!title)        { showNotification(`Title is required for Trustee ${idx}. Please select a title.`); return; }
+        if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = title; }
+        if (i===0) { if (isValidPhone(phone)) allPhones.push({ phone, name:`Trustee ${idx} (${title})` }); }
+        else {
+          if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Trustee ${idx} (${title})`)); return; }
+          allPhones.push({ phone, name:`Trustee ${idx} (${title})` });
         }
       }
-      
-      // Check if all officials have title
+
+      let hasOfficialTitle = false, hasOfficialNumber = false, missingOfficialInfo = '';
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx         = STD_TRUSTEES + i + 1;
+        const memberNumber= document.getElementById(`official_${idx}_memberNumber`).value.trim();
+        const phone       = document.getElementById(`official_${idx}_phone`).value.trim();
+        const title       = document.getElementById(`official_${idx}_title`).value.trim();
+        if (!title)        { hasOfficialTitle = true; missingOfficialInfo = `Official ${i+1}`; }
+        if (!memberNumber) { hasEmptyMemberNumber = true; hasOfficialNumber = true; if (!missingOfficialInfo) missingOfficialInfo = `Official ${i+1}`; }
+        if (phone && isValidPhone(phone)) allPhones.push({ phone, name: title || `Official ${i+1}` });
+      }
       if (currentOfficialsCount > 0 && hasOfficialTitle) {
-        showNotification(`Title is required for ${missingOfficialInfo}. Please fill all titles.`);
-        return;
+        showNotification(`Title is required for ${missingOfficialInfo}. Please fill all titles.`); return;
       }
 
-      // Regular Members
-      for (let i = 0; i < regularMembersCount; i++) {
-        const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
-        const phone = document.getElementById(`member_${idx}_phone`).value.trim();
-        
-        if (!memberNumber) {
-          hasEmptyMemberNumber = true;
-          emptyMemberName = `Member ${i + 1}`;
-        }
-        
-        if (!isValidPhone(phone)) {
-          showNotification(getPhoneErrorMessage(`Member ${i + 1}`));
-          return;
-        }
-        allPhones.push({ phone: phone, name: `Member ${i + 1} (Index ${idx})` });
+      for (let i=0; i<regularMembersCount; i++) {
+        const idx         = STD_TRUSTEES + currentOfficialsCount + i + 1;
+        const memberNumber= document.getElementById(`member_${idx}_memberNumber`).value.trim();
+        const phone       = document.getElementById(`member_${idx}_phone`).value.trim();
+        if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = `Member ${i+1}`; }
+        if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Member ${i+1}`)); return; }
+        allPhones.push({ phone, name:`Member ${i+1} (Index ${idx})` });
       }
 
-      // Check if any member number is empty
       if (hasEmptyMemberNumber) {
-        showNotification(`Member number is required for ${emptyMemberName}. Please fill all member numbers before verifying.`);
-        return;
+        showNotification(`Member number is required for ${emptyMemberName}. Please fill all member numbers before verifying.`); return;
       }
 
-       // Collect all membership numbers for validation
-       const allMemberNumbers = [];
-       const memberNumberErrors = [];
+      const allMemberNumbers = [], memberNumberErrors = [];
+      for (let i=0; i<STD_TRUSTEES; i++) {
+        const idx = i+1;
+        const mn  = document.getElementById(`t${idx}_memberNumber`).value.trim();
+        if (mn) allMemberNumbers.push({ value: mn, name:`Trustee ${idx}` });
+      }
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx = STD_TRUSTEES + i + 1;
+        const mn  = document.getElementById(`official_${idx}_memberNumber`).value.trim();
+        if (mn) allMemberNumbers.push({ value: mn, name:`Official ${i+1}` });
+      }
+      for (let i=0; i<regularMembersCount; i++) {
+        const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
+        const mn  = document.getElementById(`member_${idx}_memberNumber`).value.trim();
+        if (mn) allMemberNumbers.push({ value: mn, name:`Member ${i+1}` });
+      }
 
-       // Add trustees
-       for (let i = 0; i < STD_TRUSTEES; i++) {
-         const idx = i + 1;
-         const memberNumber = document.getElementById(`t${idx}_memberNumber`).value.trim();
-         if (memberNumber) {
-           allMemberNumbers.push({ value: memberNumber, name: `Trustee ${idx}` });
-         }
-       }
+      const mnMap = new Map();
+      for (const entry of allMemberNumbers) {
+        if (mnMap.has(entry.value)) memberNumberErrors.push(`${entry.value} is used by both ${mnMap.get(entry.value)} and ${entry.name}`);
+        else mnMap.set(entry.value, entry.name);
+      }
+      if (memberNumberErrors.length > 0) {
+        showNotification('Duplicate membership numbers found:\n\n' + memberNumberErrors.join('\n') + '\n\nEach member must have a unique membership number.'); return;
+      }
 
-       // Add officials
-       for (let i = 0; i < currentOfficialsCount; i++) {
-         const idx = STD_TRUSTEES + i + 1;
-         const memberNumber = document.getElementById(`official_${idx}_memberNumber`).value.trim();
-         if (memberNumber) {
-           allMemberNumbers.push({ value: memberNumber, name: `Official ${i + 1}` });
-         }
-       }
+      if (allMemberNumbers.length > 1) {
+        const first        = allMemberNumbers[0].value;
+        const prefixMatch  = first.match(/^([a-zA-Z-]+)?/);
+        const reqPrefix    = prefixMatch ? prefixMatch[0] : '';
+        for (let i=1; i<allMemberNumbers.length; i++) {
+          if (!allMemberNumbers[i].value.startsWith(reqPrefix)) {
+            showNotification(`Membership number format inconsistency: "${allMemberNumbers[i].value}" does not match the required prefix "${reqPrefix}" from the first entry.`); return;
+          }
+        }
+      }
 
-       // Add members
-       for (let i = 0; i < regularMembersCount; i++) {
-         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-         const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
-         if (memberNumber) {
-           allMemberNumbers.push({ value: memberNumber, name: `Member ${i + 1}` });
-         }
-       }
+      const phoneMap = new Map();
+      for (const entry of allPhones) {
+        if (phoneMap.has(entry.phone)) phoneErrors.push(`${entry.phone} is used by both ${phoneMap.get(entry.phone)} and ${entry.name}`);
+        else phoneMap.set(entry.phone, entry.name);
+      }
+      if (phoneErrors.length > 0) {
+        showNotification('Duplicate phone numbers found:\n\n' + phoneErrors.join('\n') + '\n\nEach member must have a unique phone number.'); return;
+      }
 
-       // Check for duplicate membership numbers
-       const memberNumberMap = new Map();
-       for (const entry of allMemberNumbers) {
-         if (memberNumberMap.has(entry.value)) {
-           memberNumberErrors.push(`${entry.value} is used by both ${memberNumberMap.get(entry.value)} and ${entry.name}`);
-         } else {
-           memberNumberMap.set(entry.value, entry.name);
-         }
-       }
-
-       // If duplicates found, show error and stop
-       if (memberNumberErrors.length > 0) {
-         showNotification('Duplicate membership numbers found:\n\n' + memberNumberErrors.join('\n') + '\n\nEach member must have a unique membership number.');
-         return;
-       }
-
-       // Check prefix consistency
-       if (allMemberNumbers.length > 1) {
-         const firstMemberNumber = allMemberNumbers[0].value;
-         const prefixMatch = firstMemberNumber.match(/^([a-zA-Z-]+)?/);
-         const requiredPrefix = prefixMatch ? prefixMatch[0] : '';
-
-         for (let i = 1; i < allMemberNumbers.length; i++) {
-           const current = allMemberNumbers[i].value;
-           if (!current.startsWith(requiredPrefix)) {
-             showNotification(`Membership number format inconsistency: "${current}" does not match the required prefix "${requiredPrefix}" from the first entry. All membership numbers must start with the same letters/prefix.`);
-             return;
-           }
-         }
-       }
-
-       // Check for duplicate phone numbers
-       const phoneMap = new Map();
-       for (const entry of allPhones) {
-         if (phoneMap.has(entry.phone)) {
-           phoneErrors.push(`${entry.phone} is used by both ${phoneMap.get(entry.phone)} and ${entry.name}`);
-         } else {
-           phoneMap.set(entry.phone, entry.name);
-         }
-       }
-
-       // If duplicates found, show error and stop
-       if (phoneErrors.length > 0) {
-         showNotification('Duplicate phone numbers found:\n\n' + phoneErrors.join('\n') + '\n\nEach member must have a unique phone number.');
-         return;
-       }
-
-      // All validations passed - show verification form
       showVerificationForm();
     }
 
@@ -1829,199 +1311,126 @@ function updateTrusteeTitles() {
       const list = document.getElementById('verificationList');
       list.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:30px; color:var(--primary);"></i><p style="margin-top:15px; font-size:14px; color:var(--slate);">Verifying members...</p></div>';
       showStep('step4-verify');
-
-      setTimeout(() => {
-        verifyMembersProcess();
-      }, 100);
+      setTimeout(() => { verifyMembersProcess(); }, 100);
     }
 
     function verifyMembersProcess() {
-      const list = document.getElementById('verificationList');
+      const list        = document.getElementById('verificationList');
+      const groupType   = document.getElementById('groupType').value;
+      const groupCertNo = document.getElementById('groupCertificateNumber').value.trim();
+      document.getElementById('verifyGroupType').textContent   = groupType   || '-';
+      document.getElementById('verifyCertNumber').textContent  = groupCertNo || 'Not provided';
 
-      // Populate group info for verification step
-      const groupType = document.getElementById('groupType').value;
-      const groupCertNumber = document.getElementById('groupCertificateNumber').value.trim();
-
-      // Update header box with group info
-      document.getElementById('verifyGroupType').textContent = groupType || '-';
-      document.getElementById('verifyCertNumber').textContent = groupCertNumber || 'Not provided';
-      // Regional block, group no, agent info are already populated via EJS template
-
-      // Collect all member data from form inputs
       const membersToVerify = [];
-
-       // Add all trustees dynamically
-       for (let i = 0; i < STD_TRUSTEES; i++) {
-         const idx = i + 1;
-         membersToVerify.push({
-           key: `trustee_${idx}`,
-           memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim(),
-           phone: document.getElementById(`t${idx}_phone`).value.trim(),
-           id: document.getElementById(`t${idx}_id`).value.trim(),
-           role: 'trustee',
-           title: document.getElementById(`t${idx}_title`).value.trim() || 'Trustee',
-           index: String(idx)
-         });
-       }
-
-     // Officials
-     for (let i = 0; i < currentOfficialsCount; i++) {
-       const idx = STD_TRUSTEES + i + 1;
-       membersToVerify.push({
-         key: `official_${idx}`,
-         memberNumber: document.getElementById(`official_${idx}_memberNumber`).value.trim(),
-         phone: document.getElementById(`official_${idx}_phone`).value.trim(),
-         id: document.getElementById(`official_${idx}_id`).value.trim(),
-         role: 'official',
-         title: document.getElementById(`official_${idx}_title`).value.trim() || 'No Title',
-         index: String(idx)
-       });
-     }
-
-      // Regular Members
-      for (let i = 0; i < regularMembersCount; i++) {
+      for (let i=0; i<STD_TRUSTEES; i++) {
+        const idx = i+1;
+        membersToVerify.push({
+          key:`trustee_${idx}`, memberNumber:document.getElementById(`t${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`t${idx}_phone`).value.trim(), id:document.getElementById(`t${idx}_id`).value.trim(),
+          role:'trustee', title:document.getElementById(`t${idx}_title`).value.trim()||'Trustee', index:String(idx)
+        });
+      }
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx = STD_TRUSTEES + i + 1;
+        membersToVerify.push({
+          key:`official_${idx}`, memberNumber:document.getElementById(`official_${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`official_${idx}_phone`).value.trim(), id:document.getElementById(`official_${idx}_id`).value.trim(),
+          role:'official', title:document.getElementById(`official_${idx}_title`).value.trim()||'No Title', index:String(idx)
+        });
+      }
+      for (let i=0; i<regularMembersCount; i++) {
         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
         membersToVerify.push({
-          key: `member_${idx}`,
-          memberNumber: document.getElementById(`member_${idx}_memberNumber`).value.trim(),
-          phone: document.getElementById(`member_${idx}_phone`).value.trim(),
-          id: document.getElementById(`member_${idx}_id`).value.trim(),
-          role: 'member',
-          title: 'Member',
-          index: String(idx)
+          key:`member_${idx}`, memberNumber:document.getElementById(`member_${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`member_${idx}_phone`).value.trim(), id:document.getElementById(`member_${idx}_id`).value.trim(),
+          role:'member', title:'Member', index:String(idx)
         });
       }
 
-      console.log('Sending', membersToVerify.length, 'members for verification');
-
-      // Verify agent phone against data.json
       let agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
-      // Normalize phone - remove leading 0 or +254
-      if (agentPhone.startsWith('0')) agentPhone = agentPhone.substring(1);
+      if (agentPhone.startsWith('0'))    agentPhone = agentPhone.substring(1);
       if (agentPhone.startsWith('+254')) agentPhone = agentPhone.substring(4);
       if (agentPhone.startsWith('254') && agentPhone.length > 9) agentPhone = agentPhone.substring(3);
-      console.log('Agent phone for verification:', agentPhone);
-      fetch('/general/api/verify-members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: [{ key: 'agent', phone: agentPhone, id: '', role: 'agent', title: 'Agent', index: '0' }] })
-      })
-        .then(r => r.json())
-.then(agentResponse => {
-          console.log('Agent verification response:', agentResponse);
-          if (agentResponse.success && agentResponse.members && agentResponse.members.length > 0) {
-            const agentData = agentResponse.members[0];
-            console.log('Agent data:', agentData);
-            // Verify by phone match only - no ID check needed
-            if (agentData.name) {
-              document.getElementById('verifyAgentName').textContent = agentData.name;
-              document.getElementById('verifyAgentPhoneIcon').className = 'fas fa-check-circle';
-              document.getElementById('verifyAgentPhoneIcon').style.color = '#166534';
-              document.getElementById('verifyAgentPhoneIcon').style.animation = 'none';
-            } else {
-              document.getElementById('verifyAgentName').textContent = '<%= group.agentName %>';
-              document.getElementById('verifyAgentPhoneIcon').className = 'fas fa-times-circle';
-              document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
-            }
-          }
-        })
-        .catch(() => {
-          document.getElementById('verifyAgentName').textContent = '<%= group.agentName %>';
-          document.getElementById('verifyAgentPhoneIcon').className = 'fas fa-times-circle';
-          document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
-        });
 
-      // Call API to verify members against data.json
       fetch('/general/api/verify-members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: [{ key:'agent', phone:agentPhone, id:'', role:'agent', title:'Agent', index:'0' }] })
+      }).then(r => r.json()).then(agentResponse => {
+        if (agentResponse.success && agentResponse.members && agentResponse.members.length > 0) {
+          const agentData = agentResponse.members[0];
+          if (agentData.name) {
+            document.getElementById('verifyAgentName').textContent      = agentData.name;
+            document.getElementById('verifyAgentPhoneIcon').className   = 'fas fa-check-circle';
+            document.getElementById('verifyAgentPhoneIcon').style.color = '#166534';
+            document.getElementById('verifyAgentPhoneIcon').style.animation = 'none';
+          } else {
+            document.getElementById('verifyAgentName').textContent      = '<%= group.agentName %>';
+            document.getElementById('verifyAgentPhoneIcon').className   = 'fas fa-times-circle';
+            document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
+          }
+        }
+      }).catch(() => {
+        document.getElementById('verifyAgentName').textContent      = '<%= group.agentName %>';
+        document.getElementById('verifyAgentPhoneIcon').className   = 'fas fa-times-circle';
+        document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
+      });
+
+      fetch('/general/api/verify-members', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ members: membersToVerify })
-      })
-        .then(r => r.json())
-        .then(apiResponse => {
-          if (!apiResponse.success) {
-            console.warn('⚠ API returned error:', apiResponse.error);
-            showNotification('Failed to verify members. Please try again.', 'error');
-            return;
-          }
+      }).then(r => r.json()).then(apiResponse => {
+        if (!apiResponse.success) { showNotification('Failed to verify members. Please try again.', 'error'); return; }
+        const verifiedMembers = apiResponse.members;
 
-          const verifiedMembers = apiResponse.members;
-          console.log('✓ Verification complete:', verifiedMembers.length, 'members verified');
-
-          // Build verification cards with member numbers from original form inputs
-          let html = '';
-          verifiedMembers.forEach((member, idx) => {
-            const bgColor = member.role === 'trustee' ? '#dbeafe' :
-                           member.role === 'official' ? '#fef9c3' : '#dcfce7';
-            const textColor = member.role === 'trustee' ? '#1d4ed8' :
-                             member.role === 'official' ? '#92400e' : 'var(--primary-dark)';
-
-            // Get member number from original form input based on role and index
-            let formMemberNumber = '';
-            const memberIdx = parseInt(member.index);
-            if (member.role === 'trustee') {
-              formMemberNumber = document.getElementById(`t${memberIdx}_memberNumber`)?.value.trim() || '';
-            } else if (member.role === 'official') {
-              formMemberNumber = document.getElementById(`official_${memberIdx}_memberNumber`)?.value.trim() || '';
-            } else {
-              formMemberNumber = document.getElementById(`member_${memberIdx}_memberNumber`)?.value.trim() || '';
-            }
-
-            html += buildVerificationCard(
-              member.role === 'trustee' ? member.title : '',
-              member.title,
-              member.index,
-              member.phone,
-              bgColor,
-              textColor,
-              member,
-              member.id,
-              formMemberNumber
-            );
-          });
-
-          list.innerHTML = html;
-
-          // Check if all members are valid (both member number and verified status)
-          const allValid = verifiedMembers.every((member, idx) => {
-            const formMemberNumber = document.getElementById(`t${member.index}_memberNumber`)?.value.trim() ||
-                              document.getElementById(`official_${member.index}_memberNumber`)?.value.trim() ||
-                              document.getElementById(`member_${member.index}_memberNumber`)?.value.trim();
-            return formMemberNumber && member.verified;
-          });
-          const submitBtn = document.getElementById('confirmSubmitBtn');
-          const downloadBtn = document.getElementById('downloadRegFormBtn');
-          if (submitBtn && downloadBtn) {
-            if (!allValid) {
-              submitBtn.style.display = 'none';
-              downloadBtn.style.display = 'none';
-              showNotification('All members must be verified with member numbers before submitting.', 'error');
-            } else {
-              submitBtn.style.display = 'flex';
-              downloadBtn.style.display = 'flex';
-            }
-          }
-})
-        .catch(err => {
-          console.error('Error verifying members:', err);
-          showNotification('Network error. Please check your connection.', 'error');
-          goBackToForm();
+        let html = '';
+        verifiedMembers.forEach((member) => {
+          const bgColor   = member.role==='trustee' ? '#dbeafe' : member.role==='official' ? '#fef9c3' : '#dcfce7';
+          const textColor = member.role==='trustee' ? '#1d4ed8' : member.role==='official' ? '#92400e' : 'var(--primary-dark)';
+          let formMemberNumber = '';
+          const memberIdx = parseInt(member.index);
+          if      (member.role === 'trustee')  formMemberNumber = document.getElementById(`t${memberIdx}_memberNumber`)?.value.trim()       || '';
+          else if (member.role === 'official') formMemberNumber = document.getElementById(`official_${memberIdx}_memberNumber`)?.value.trim()|| '';
+          else                                 formMemberNumber = document.getElementById(`member_${memberIdx}_memberNumber`)?.value.trim()  || '';
+          html += buildVerificationCard(
+            member.role === 'trustee' ? member.title : '',
+            member.title, member.index, member.phone, bgColor, textColor, member, member.id, formMemberNumber
+          );
         });
+        list.innerHTML = html;
+
+        const allValid = verifiedMembers.every(member => {
+          const mn = document.getElementById(`t${member.index}_memberNumber`)?.value.trim()       ||
+                     document.getElementById(`official_${member.index}_memberNumber`)?.value.trim()||
+                     document.getElementById(`member_${member.index}_memberNumber`)?.value.trim();
+          return mn && member.verified;
+        });
+        const submitBtn  = document.getElementById('confirmSubmitBtn');
+        const downloadBtn= document.getElementById('downloadRegFormBtn');
+        if (submitBtn && downloadBtn) {
+          if (!allValid) {
+            submitBtn.style.display  = 'none';
+            downloadBtn.style.display= 'none';
+            showNotification('All members must be verified with member numbers before submitting.', 'error');
+          } else {
+            submitBtn.style.display  = 'flex';
+            downloadBtn.style.display= 'flex';
+          }
+        }
+      }).catch(err => {
+        console.error('Error verifying members:', err);
+        showNotification('Network error. Please check your connection.', 'error');
+        goBackToForm();
+      });
     }
 
     function buildVerificationCard(rolePrefix, title, index, phone, bgColor, textColor, matchData, formIdValue, memberNumber) {
-      const cardTitle = rolePrefix ? `${rolePrefix}` : '';
-      const isVerified = matchData && matchData.verified;
-      const hasMemberNumber = memberNumber && memberNumber.trim();
-      const isMemberValid = hasMemberNumber && isVerified;
-      const displayName = (matchData && matchData.name) ? matchData.name : 'Not Identified';
-      const idValue = (matchData && matchData.id) ? matchData.id : '-';
-      const idStatusText = isVerified ? '✔' : '✗';
-      const idStatusColor = isVerified ? '#166534' : '#991b1b';
-
+      const isVerified   = matchData && matchData.verified;
+      const displayName  = (matchData && matchData.name) ? matchData.name : 'Not Identified';
+      const idValue      = (matchData && matchData.id)   ? matchData.id   : '-';
       return `
-        <div class="member-card" style="margin-bottom: 0; border: none; background: none; box-shadow: none; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; border-radius: 0;">
-          <div class="top" style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="member-card" style="margin-bottom:0; border:none; background:none; box-shadow:none;
+          border-bottom:2px solid #e2e8f0; padding-bottom:10px; border-radius:0;">
+          <div class="top">
             <div>
               <div class="name">${index}. ${displayName}</div>
               <div class="role-text" style="color:${textColor};">${title}</div>
@@ -2032,782 +1441,356 @@ function updateTrusteeTitles() {
                 : '<div class="badge error-badge">Pending <i class="fas fa-clock"></i></div>'}
             </div>
           </div>
-
-          <div style="display: flex; gap: 16px; margin-top: 12px;">
-            <div style="display: flex; gap: 8px; align-items: center;">
+          <div style="display:flex; gap:16px; margin-top:12px;">
+            <div style="display:flex; gap:8px; align-items:center;">
               <span class="label">Phone:</span>
-              <span class="value">${phone || '-'}</span>
-              ${isVerified ? '<i class="fas fa-check-circle" style="color: #166534; font-size: 12px;"></i>' : ''}
+              <span class="value">${phone||'-'}</span>
+              ${isVerified ? '<i class="fas fa-check-circle" style="color:#166534; font-size:12px;"></i>' : ''}
             </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="display:flex; gap:8px; align-items:center;">
               <span class="label">ID:</span>
               <span class="value">${idValue}</span>
-              ${isVerified ? '<i class="fas fa-check-circle" style="color: #166534; font-size: 12px;"></i>' : ''}
+              ${isVerified ? '<i class="fas fa-check-circle" style="color:#166634; font-size:12px;"></i>' : ''}
             </div>
           </div>
-
-          <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-            <div class="badge mno">Member-${memberNumber || 'N/A'}</div>
+          <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+            <div class="badge mno">Member-${memberNumber||'N/A'}</div>
           </div>
-        </div>
-      `;
+        </div>`;
     }
 
-
-
-function goBackToForm() {
-       showStep('step3-tbank');
-       // Refresh trustee title dropdowns to hide already selected titles
-       updateTrusteeTitles();
+    function goBackToForm() {
+      showStep('step3-tbank');
+      updateTrusteeTitles();
     }
 
-    function confirmAndSubmit() {
-      submitTbankRegistration();
-    }
+    function confirmAndSubmit() { submitTbankRegistration(); }
 
-     // ─── DOWNLOAD REGISTRATION FORM ────────────────────────────────────
+    // ─── DOWNLOAD REGISTRATION FORM ────────────────────────────────────
     async function downloadRegistrationForm() {
       const { jsPDF } = window.jspdf;
-
-      // 1. COLLECT ALL MEMBER DATA
-      const members = [];
-
-      // Collect trustees
-      for (let i = 0; i < STD_TRUSTEES; i++) {
-        const idx = i + 1;
-        const title = document.getElementById(`t${idx}_title`).value.trim() || 'Trustee';
-        members.push({
-          index: idx,
-          title: title,
-          name: `Trustee ${idx}`, // We don't have name field, so use placeholder
-          memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim() || '',
-          phone: document.getElementById(`t${idx}_phone`).value.trim() || '',
-          id: document.getElementById(`t${idx}_id`).value.trim() || '',
-          type: 'trustee'
-        });
+      const members   = [];
+      for (let i=0; i<STD_TRUSTEES; i++) {
+        const idx = i+1;
+        members.push({ index:idx, title:document.getElementById(`t${idx}_title`).value.trim()||'Trustee',
+          name:`Trustee ${idx}`, memberNumber:document.getElementById(`t${idx}_memberNumber`).value.trim()||'',
+          phone:document.getElementById(`t${idx}_phone`).value.trim()||'', id:document.getElementById(`t${idx}_id`).value.trim()||'', type:'trustee' });
+      }
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx = STD_TRUSTEES+i+1;
+        members.push({ index:idx, title:document.getElementById(`official_${idx}_title`)?.value.trim()||'Official',
+          name:`Official ${i+1}`, memberNumber:document.getElementById(`official_${idx}_memberNumber`)?.value.trim()||'',
+          phone:document.getElementById(`official_${idx}_phone`)?.value.trim()||'', id:document.getElementById(`official_${idx}_id`)?.value.trim()||'', type:'official' });
+      }
+      for (let i=0; i<regularMembersCount; i++) {
+        const idx = STD_TRUSTEES+currentOfficialsCount+i+1;
+        members.push({ index:idx, title:'Member', name:`Member ${i+1}`,
+          memberNumber:document.getElementById(`member_${idx}_memberNumber`)?.value.trim()||'',
+          phone:document.getElementById(`member_${idx}_phone`)?.value.trim()||'',
+          id:document.getElementById(`member_${idx}_id`)?.value.trim()||'', type:'member' });
       }
 
-      // Collect officials
-      for (let i = 0; i < currentOfficialsCount; i++) {
-        const idx = STD_TRUSTEES + i + 1;
-        const titleInput = document.getElementById(`official_${idx}_title`);
-        const memberNumberInput = document.getElementById(`official_${idx}_memberNumber`);
-        const phoneInput = document.getElementById(`official_${idx}_phone`);
-        const idInput = document.getElementById(`official_${idx}_id`);
-        members.push({
-          index: idx,
-          title: titleInput ? titleInput.value.trim() || 'Official' : 'Official',
-          name: `Official ${i + 1}`,
-          memberNumber: memberNumberInput ? memberNumberInput.value.trim() : '',
-          phone: phoneInput ? phoneInput.value.trim() : '',
-          id: idInput ? idInput.value.trim() : '',
-          type: 'official'
-        });
-      }
+      const groupName = groupData.groupName||'';
+      const location  = `${groupData.ward||''}, ${groupData.constituency||''}, ${groupData.county||''}`;
+      const agentName = groupData.agentName||'Unknown Agent';
+      const agentPhone= groupData.agentPhone||'';
+      const downloadDateTime = new Date().toLocaleString('en-GB',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
-      // Collect regular members
-      for (let i = 0; i < regularMembersCount; i++) {
-        const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        const memberNumberInput = document.getElementById(`member_${idx}_memberNumber`);
-        const phoneInput = document.getElementById(`member_${idx}_phone`);
-        const idInput = document.getElementById(`member_${idx}_id`);
-        members.push({
-          index: idx,
-          title: 'Member',
-          name: `Member ${i + 1}`,
-          memberNumber: memberNumberInput ? memberNumberInput.value.trim() : '',
-          phone: phoneInput ? phoneInput.value.trim() : '',
-          id: idInput ? idInput.value.trim() : '',
-          type: 'member'
-        });
-      }
+      const doc        = new jsPDF();
+      const pageHeight = doc.internal.pageSize.height||doc.internal.pageSize.getHeight();
+      const margin     = 15;
+      let yPos         = margin;
 
-      // Get metadata
-      const groupName = groupData.groupName || '';
-      const location = `${groupData.ward || ''}, ${groupData.constituency || ''}, ${groupData.county || ''}`;
-      const agentName = groupData.agentName || agent?.name || 'Unknown Agent';
-      const agentPhone = groupData.agentPhone || agent?.phoneNumber || '';
-      const downloadDateTime = new Date().toLocaleString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
-      // 2. CREATE PDF
-      const doc = new jsPDF();
-      const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
-      const margin = 15;
-      let yPos = margin;
-
-      // Helper function to add text with word wrap
-      function addWrappedText(text, x, y, maxWidth, lineHeight = 7) {
+      function addWrappedText(text, x, y, maxWidth, lineHeight=7) {
         const lines = doc.splitTextToSize(text, maxWidth);
         doc.text(lines, x, y);
         return lines.length * lineHeight;
       }
+      function checkPageSpace(h) { if (yPos+h > pageHeight-margin) { doc.addPage(); yPos=margin; } }
 
-      // Helper to check if we need a new page
-      function checkPageSpace(requiredHeight) {
-        if (yPos + requiredHeight > pageHeight - margin) {
-          doc.addPage();
-          yPos = margin;
-        }
-      }
-
-      // Header - Title
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('GROUP REGISTRATION FORM', margin, yPos);
-      yPos += 10;
-
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Downloaded: ${downloadDateTime}`, margin, yPos);
-      yPos += 7;
-
-      // Group Information
-      doc.setFont('helvetica', 'bold');
-      doc.text('Group Information:', margin, yPos);
-      yPos += 7;
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Group Name: ${groupName}`, margin + 5, yPos);
-      yPos += 6;
-      doc.text(`Location: ${location}`, margin + 5, yPos);
-      yPos += 6;
-      doc.text(`Agent: ${agentName} (${agentPhone})`, margin + 5, yPos);
-      yPos += 10;
-
-      // Member List Header
-      doc.setFont('helvetica', 'bold');
-      doc.text('Registered Members', margin, yPos);
-      yPos += 7;
-
-      // Table Header
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, yPos, 190, 8, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.text('Idx', margin + 3, yPos + 5);
-      doc.text('Title', margin + 15, yPos + 5);
-      doc.text('Name', margin + 45, yPos + 5);
-      doc.text('Member No.', margin + 90, yPos + 5);
-      doc.text('Phone', margin + 135, yPos + 5);
-      doc.text('ID No.', margin + 165, yPos + 5);
-      yPos += 8;
-
-      // Table Rows
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-
+      doc.setFontSize(16); doc.setFont('helvetica','bold');
+      doc.text('GROUP REGISTRATION FORM', margin, yPos); yPos+=10;
+      doc.setFontSize(12); doc.setFont('helvetica','normal');
+      doc.text(`Downloaded: ${downloadDateTime}`, margin, yPos); yPos+=7;
+      doc.setFont('helvetica','bold'); doc.text('Group Information:', margin, yPos); yPos+=7;
+      doc.setFont('helvetica','normal');
+      doc.text(`Group Name: ${groupName}`, margin+5, yPos); yPos+=6;
+      doc.text(`Location: ${location}`, margin+5, yPos); yPos+=6;
+      doc.text(`Agent: ${agentName} (${agentPhone})`, margin+5, yPos); yPos+=10;
+      doc.setFont('helvetica','bold'); doc.text('Registered Members', margin, yPos); yPos+=7;
+      doc.setFillColor(240,240,240); doc.rect(margin, yPos, 190, 8, 'F');
+      doc.setFont('helvetica','bold');
+      doc.text('Idx', margin+3, yPos+5); doc.text('Title', margin+15, yPos+5);
+      doc.text('Name', margin+45, yPos+5); doc.text('Member No.', margin+90, yPos+5);
+      doc.text('Phone', margin+135, yPos+5); doc.text('ID No.', margin+165, yPos+5); yPos+=8;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
       for (let member of members) {
         checkPageSpace(15);
-        // Alternate row colors
-        if (members.indexOf(member) % 2 === 0) {
-          doc.setFillColor(250, 250, 250);
-          doc.rect(margin, yPos, 190, 7, 'F');
-        }
-
-        doc.text(String(member.index), margin + 3, yPos + 5);
-        doc.text(member.title, margin + 15, yPos + 5);
-        doc.text(member.name, margin + 45, yPos + 5);
-        doc.text(member.memberNumber || '-', margin + 90, yPos + 5);
-        doc.text(member.phone || '-', margin + 135, yPos + 5);
-        doc.text(member.id || '-', margin + 165, yPos + 5);
-        yPos += 7;
+        if (members.indexOf(member)%2===0) { doc.setFillColor(250,250,250); doc.rect(margin, yPos, 190, 7, 'F'); }
+        doc.text(String(member.index), margin+3, yPos+5); doc.text(member.title, margin+15, yPos+5);
+        doc.text(member.name, margin+45, yPos+5); doc.text(member.memberNumber||'-', margin+90, yPos+5);
+        doc.text(member.phone||'-', margin+135, yPos+5); doc.text(member.id||'-', margin+165, yPos+5); yPos+=7;
       }
-
-      yPos += 5;
-
-      // Summary line
-      const totalMembers = members.length;
-      checkPageSpace(20);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Total Members: ${totalMembers}`, margin, yPos);
-      yPos += 15;
-
-      // Prepared By Section
-      doc.setFont('helvetica', 'bold');
-      doc.text('Prepared By:', margin, yPos);
-      yPos += 7;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text(`Name: ${agentName}`, margin + 5, yPos);
-      yPos += 5;
-      doc.text(`Phone: ${agentPhone}`, margin + 5, yPos);
-      yPos += 5;
-      doc.text(`Signature: _____________________________`, margin + 5, yPos);
-      yPos += 12;
-
-      // Chairperson Section
-      doc.setFont('helvetica', 'bold');
-      doc.text('Chairperson Confirmation:', margin, yPos);
-      yPos += 7;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-
-      // Find chairperson data
-      const chairperson = members.find(m => m.type === 'trustee' && m.title.toLowerCase() === 'chairperson');
-      const chairName = chairperson ? chairperson.name : '_________________';
-      const chairPhone = chairperson ? chairperson.phone : '_________________';
-
-      doc.text(`Name: ${chairName}`, margin + 5, yPos);
-      yPos += 5;
-      doc.text(`Phone: ${chairPhone}`, margin + 5, yPos);
-      yPos += 5;
-      doc.text(`Signature: _____________________________`, margin + 5, yPos);
-      yPos += 12;
-
-      // Footer
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'italic');
+      yPos+=5; checkPageSpace(20);
+      doc.setFontSize(11); doc.setFont('helvetica','bold');
+      doc.text(`Total Members: ${members.length}`, margin, yPos); yPos+=15;
+      doc.setFont('helvetica','bold'); doc.text('Prepared By:', margin, yPos); yPos+=7;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      doc.text(`Name: ${agentName}`, margin+5, yPos); yPos+=5;
+      doc.text(`Phone: ${agentPhone}`, margin+5, yPos); yPos+=5;
+      doc.text('Signature: _____________________________', margin+5, yPos); yPos+=12;
+      doc.setFont('helvetica','bold'); doc.text('Chairperson Confirmation:', margin, yPos); yPos+=7;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      const chair      = members.find(m => m.type==='trustee' && m.title.toLowerCase()==='chairperson');
+      const chairName  = chair ? chair.name  : '_________________';
+      const chairPhone = chair ? chair.phone : '_________________';
+      doc.text(`Name: ${chairName}`, margin+5, yPos); yPos+=5;
+      doc.text(`Phone: ${chairPhone}`, margin+5, yPos); yPos+=5;
+      doc.text('Signature: _____________________________', margin+5, yPos); yPos+=12;
+      doc.setFontSize(8); doc.setFont('helvetica','italic');
       doc.text('This form was automatically generated from the registration system.', margin, yPos);
-
-      // Save the PDF
-      const filename = `Group_Registration_${groupName.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+      const filename = `Group_Registration_${groupName.replace(/\s+/g,'_')}_${new Date().getTime()}.pdf`;
       doc.save(filename);
       showNotification('Registration form downloaded successfully!', 'success');
     }
 
-     // ─── T-BANK SUBMISSION ────────────────────────────────────
+    // ─── T-BANK SUBMISSION ────────────────────────────────────
     function submitTbankRegistration() {
       const trustees = [];
-      
-      // Validate all trustees dynamically
-      for (let i = 0; i < STD_TRUSTEES; i++) {
-        const idx = i + 1;
+      for (let i=0; i<STD_TRUSTEES; i++) {
+        const idx   = i+1;
         const phone = document.getElementById(`t${idx}_phone`).value.trim();
-        
-        if (i > 0) { // Skip chairperson validation
-          if (!phone.match(/^07[0-9]{8}$/)) { 
-            showNotification(`Please enter a valid phone for Trustee ${idx}.`); 
-            return; 
-          }
-        }
-        
-        trustees.push({
-          index: String(idx), type: 'trustee', 
-          title: document.getElementById(`t${idx}_title`).value.trim() || 'Trustee',
-          memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim(),
-          phone: phone,
-          id: document.getElementById(`t${idx}_id`).value.trim()
-        });
+        const memberNumber = document.getElementById(`t${idx}_memberNumber`).value.trim();
+        if (!memberNumber) { showNotification(`Please enter member number for Trustee ${idx}.`); return; }
+        if (i > 0 && !phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Trustee ${idx}.`); return; }
+        trustees.push({ index:String(idx), type:'trustee',
+          title:document.getElementById(`t${idx}_title`).value.trim()||'Trustee',
+          memberNumber,
+          phone, id:document.getElementById(`t${idx}_id`).value.trim() });
       }
-
-      // Validate officials that have been added (only validate phone if provided)
-      const addedOfficials = [];
-      const officialTitles = new Set();
-      for (let i = 0; i < currentOfficialsCount; i++) {
-        const idx = STD_TRUSTEES + i + 1;
+      const addedOfficials = []; const officialTitlesSet = new Set();
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx   = STD_TRUSTEES+i+1;
         const title = document.getElementById(`official_${idx}_title`).value.trim();
         const phone = document.getElementById(`official_${idx}_phone`).value.trim();
-        
-        // Check for duplicate titles
+        const memberNumber = document.getElementById(`official_${idx}_memberNumber`).value.trim();
+        if (!memberNumber) { showNotification(`Please enter member number for Official ${i+1}.`); return; }
         if (title) {
-          if (officialTitles.has(title.toLowerCase())) {
-            showNotification(`Duplicate title "${title}" found. Each official must have a unique title.`);
-            return;
-          }
-          officialTitles.add(title.toLowerCase());
+          if (officialTitlesSet.has(title.toLowerCase())) { showNotification(`Duplicate title "${title}" found.`); return; }
+          officialTitlesSet.add(title.toLowerCase());
         }
-        
-        // Phone is optional for officials, but if provided must be valid
-        if (phone && !phone.match(/^07[0-9]{8}$/)) {
-          showNotification(`Please enter a valid phone for Official ${i + 1}.`);
-          return;
-        }
-        addedOfficials.push({
-          index: String(idx), type: 'official',
-          title: title,
-          memberNumber: document.getElementById(`official_${idx}_memberNumber`).value.trim(),
-          phone: phone,
-          id: document.getElementById(`official_${idx}_id`).value.trim()
-        });
+        if (phone && !phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Official ${i+1}.`); return; }
+        addedOfficials.push({ index:String(idx), type:'official', title, memberNumber, phone,
+          id:document.getElementById(`official_${idx}_id`).value.trim() });
       }
-
-      // Validate regular member phones
-      for (let i = 0; i < regularMembersCount; i++) {
-        const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
+      for (let i=0; i<regularMembersCount; i++) {
+        const idx   = STD_TRUSTEES+currentOfficialsCount+i+1;
         const phone = document.getElementById(`member_${idx}_phone`).value.trim();
-        if (!phone.match(/^07[0-9]{8}$/)) {
-          showNotification(`Please enter a valid phone for Member ${i + 1}.`);
-          return;
-        }
+        const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
+        if (!memberNumber) { showNotification(`Please enter member number for Member ${i+1}.`); return; }
+        if (!phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Member ${i+1}.`); return; }
       }
-
-       // Build payload
-       const groupType = document.getElementById('groupType').value;
-       const groupCertificateNumber = document.getElementById('groupCertificateNumber').value.trim();
-       const payload = {
-         groupName: groupData.groupName,
-         groupType: groupType,
-         groupCertificateNumber: groupCertificateNumber,
-         county: groupData.county,
-         constituency: groupData.constituency,
-         ward: groupData.ward,
-         totalMembers: totalMembersCount,
-         totalAmount: totalPayableAmount,
-         paymentMethod: 'tbank',
-          trustees: trustees,
-         officials: addedOfficials,
-         members: []
-       };
-
-      for (let i = 0; i < regularMembersCount; i++) {
-        const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        payload.members.push({
-          index: String(idx), type: 'member',
-          memberNumber: document.getElementById(`member_${idx}_memberNumber`).value.trim(),
-          phone: document.getElementById(`member_${idx}_phone`).value.trim(),
-          id: document.getElementById(`member_${idx}_id`).value.trim()
-        });
+      const groupType            = document.getElementById('groupType').value;
+      const groupCertificateNumber = document.getElementById('groupCertificateNumber').value.trim();
+      
+      const constitutionStartKey = String(Math.floor(1000 + Math.random() * 9000));
+      
+      const agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
+      
+      const payload = {
+        groupName: groupData.groupName,
+        groupType,
+        groupCertificateNumber,
+        phone: groupData.phone,
+        totalMembers: totalMembersCount,
+        totalAmount: totalPayableAmount,
+        paymentMethod: 'tbank',
+        constitutionStartKey,
+        phase: 2,
+        createdAt: new Date().toISOString(),
+        processorPhone: 'n/a',
+        agentProcessed: agentPhone || 'n/a',
+        trustees, officials: addedOfficials, members: []
+      };
+      for (let i=0; i<regularMembersCount; i++) {
+        const idx = STD_TRUSTEES+currentOfficialsCount+i+1;
+        payload.members.push({ index:String(idx), type:'member',
+          memberNumber:document.getElementById(`member_${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`member_${idx}_phone`).value.trim(),
+          id:document.getElementById(`member_${idx}_id`).value.trim() });
       }
-
-       // Show processing screen
-       showStep('step5');
-
-      // POST to server
+      showStep('step5');
       fetch('/agent/activate-group', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(r => r.json())
-        .then(res => {
-          document.getElementById('submitStatusMsg').textContent =
-            res.success ? '✓ Group registered successfully!' : `Error: ${res.message || 'Something went wrong.'}`;
-          document.getElementById('backToDashBtn').style.display = 'flex';
-        })
-        .catch(() => {
-          document.getElementById('submitStatusMsg').textContent = 'Network error. Please try again.';
-          document.getElementById('backToDashBtn').style.display = 'flex';
-        });
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      }).then(r => r.json()).then(res => {
+        document.getElementById('submitStatusMsg').textContent =
+          res.success ? '✓ Group registered successfully!' : `Error: ${res.message||'Something went wrong.'}`;
+        document.getElementById('backToDashBtn').style.display = 'flex';
+      }).catch(() => {
+        document.getElementById('submitStatusMsg').textContent = 'Network error. Please try again.';
+        document.getElementById('backToDashBtn').style.display = 'flex';
+      });
     }
 
-// Display Group Registration Form
-function downloadGroupRegistrationForm() {
-  // Collect form data
-  const formData = {
-    groupName: groupData.groupName,
-    groupType: document.getElementById('groupType').value,
-    certificateNumber: document.getElementById('groupCertificateNumber').value.trim(),
-    county: groupData.county,
-    constituency: groupData.constituency,
-    ward: groupData.ward,
-    agentName: groupData.agentName,
-    agentPhone: groupData.agentPhone,
-    members: []
-  };
-
-  // Collect trustees
-  for (let i = 0; i < STD_TRUSTEES; i++) {
-    const idx = i + 1;
-    formData.members.push({
-      index: idx,
-      type: 'trustee',
-      title: document.getElementById(`t${idx}_title`).value.trim(),
-      name: `Trustee ${idx}`, // Placeholder, as name is not in form
-      memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim(),
-      phone: document.getElementById(`t${idx}_phone`).value.trim(),
-      id: document.getElementById(`t${idx}_id`).value.trim()
-    });
-  }
-
-  // Collect officials
-  for (let i = 0; i < currentOfficialsCount; i++) {
-    const idx = STD_TRUSTEES + i + 1;
-    formData.members.push({
-      index: idx,
-      type: 'official',
-      title: document.getElementById(`official_${idx}_title`).value.trim(),
-      name: `Official ${i + 1}`,
-      memberNumber: document.getElementById(`official_${idx}_memberNumber`).value.trim(),
-      phone: document.getElementById(`official_${idx}_phone`).value.trim(),
-      id: document.getElementById(`official_${idx}_id`).value.trim()
-    });
-  }
-
-  // Collect members
-  for (let i = 0; i < regularMembersCount; i++) {
-    const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-    formData.members.push({
-      index: idx,
-      type: 'member',
-      title: 'Member',
-      name: `Member ${i + 1}`,
-      memberNumber: document.getElementById(`member_${idx}_memberNumber`).value.trim(),
-      phone: document.getElementById(`member_${idx}_phone`).value.trim(),
-      id: document.getElementById(`member_${idx}_id`).value.trim()
-    });
-  }
-
-  // Store data in localStorage for the preview page
-  localStorage.setItem('groupFormData', JSON.stringify(formData));
-
-  // Redirect to the form preview
-  window.location.href = `/agent/group-form/${encodeURIComponent(formData.groupName)}`;
-}
-
-async function downloadWithWatermark() {
-  const { jsPDF } = window.jspdf;
-
-  // Create PDF document with regulations
-  const doc = new jsPDF();
-  const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
-  const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let yPos = margin;
-
-  // Function to add watermark to current page
-  function addWatermark() {
-    // Add subtle watermark in corners instead of center
-    doc.setTextColor(240, 240, 240); // Very light gray
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'normal');
-
-    // Top-left corner
-    doc.text('TBANK', margin, margin + 10, {
-      angle: 0
-    });
-
-    // Bottom-right corner
-    doc.text('TBANK', pageWidth - margin - 30, pageHeight - margin - 10, {
-      angle: 0
-    });
-
-    // Top-right corner
-    doc.text('TBANK', pageWidth - margin - 30, margin + 10, {
-      angle: 0
-    });
-
-    // Bottom-left corner
-    doc.text('TBANK', margin, pageHeight - margin - 10, {
-      angle: 0
-    });
-
-    // Reset text color for content
-    doc.setTextColor(0, 0, 0);
-  }
-
-  // Helper function to add text with word wrap
-  function addWrappedText(text, x, y, maxWidth, lineHeight = 7) {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    doc.text(lines, x, y);
-    return lines.length * lineHeight;
-  }
-
-  // Helper to check if we need a new page
-  function checkPageSpace(requiredHeight) {
-    if (yPos + requiredHeight > pageHeight - margin) {
-      addWatermark(); // Add watermark to current page
-      doc.addPage();
-      yPos = margin;
-      addWatermark(); // Add watermark to new page
+    // ─── DOWNLOAD GROUP REGISTRATION FORM ─────────────────────
+    function downloadGroupRegistrationForm() {
+      const formData = {
+        groupName: groupData.groupName, groupType: document.getElementById('groupType').value,
+        certificateNumber: document.getElementById('groupCertificateNumber').value.trim(),
+        county: groupData.county, constituency: groupData.constituency, ward: groupData.ward,
+        agentName: groupData.agentName, agentPhone: groupData.agentPhone, members: []
+      };
+      for (let i=0; i<STD_TRUSTEES; i++) {
+        const idx = i+1;
+        formData.members.push({ index:idx, type:'trustee', title:document.getElementById(`t${idx}_title`).value.trim(),
+          name:`Trustee ${idx}`, memberNumber:document.getElementById(`t${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`t${idx}_phone`).value.trim(), id:document.getElementById(`t${idx}_id`).value.trim() });
+      }
+      for (let i=0; i<currentOfficialsCount; i++) {
+        const idx = STD_TRUSTEES+i+1;
+        formData.members.push({ index:idx, type:'official', title:document.getElementById(`official_${idx}_title`).value.trim(),
+          name:`Official ${i+1}`, memberNumber:document.getElementById(`official_${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`official_${idx}_phone`).value.trim(), id:document.getElementById(`official_${idx}_id`).value.trim() });
+      }
+      for (let i=0; i<regularMembersCount; i++) {
+        const idx = STD_TRUSTEES+currentOfficialsCount+i+1;
+        formData.members.push({ index:idx, type:'member', title:'Member', name:`Member ${i+1}`,
+          memberNumber:document.getElementById(`member_${idx}_memberNumber`).value.trim(),
+          phone:document.getElementById(`member_${idx}_phone`).value.trim(),
+          id:document.getElementById(`member_${idx}_id`).value.trim() });
+      }
+      localStorage.setItem('groupFormData', JSON.stringify(formData));
+      window.location.href = `/agent/group-form/${encodeURIComponent(formData.groupName)}`;
     }
-  }
 
-  // Add watermark to first page
-  addWatermark();
+    // ─── DOWNLOAD WITH WATERMARK (REGULATIONS) ───────────────
+    async function downloadWithWatermark() {
+      const { jsPDF } = window.jspdf;
+      const doc        = new jsPDF();
+      const pageHeight = doc.internal.pageSize.height||doc.internal.pageSize.getHeight();
+      const pageWidth  = doc.internal.pageSize.width ||doc.internal.pageSize.getWidth();
+      const margin     = 20;
+      let yPos         = margin;
 
-  // Header
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('GROUP FORMATION REGULATIONS', margin, yPos);
-  yPos += 15;
+      function addWatermark() {
+        doc.setTextColor(240,240,240); doc.setFontSize(20); doc.setFont('helvetica','normal');
+        doc.text('TBANK', margin, margin+10, {angle:0});
+        doc.text('TBANK', pageWidth-margin-30, pageHeight-margin-10, {angle:0});
+        doc.text('TBANK', pageWidth-margin-30, margin+10, {angle:0});
+        doc.text('TBANK', margin, pageHeight-margin-10, {angle:0});
+        doc.setTextColor(0,0,0);
+      }
+      function addWrappedText(text, x, y, maxWidth, lineHeight=7) {
+        const lines = doc.splitTextToSize(text, maxWidth); doc.text(lines, x, y); return lines.length*lineHeight;
+      }
+      function checkPageSpace(h) {
+        if (yPos+h > pageHeight-margin) { addWatermark(); doc.addPage(); yPos=margin; addWatermark(); }
+      }
 
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Constitution of Kenya, 2010 - Chapter Four: The Bill of Rights', margin, yPos);
-  yPos += 10;
+      addWatermark();
+      doc.setFontSize(18); doc.setFont('helvetica','bold');
+      doc.text('GROUP FORMATION REGULATIONS', margin, yPos); yPos+=15;
+      doc.setFontSize(12); doc.setFont('helvetica','normal');
+      doc.text('Constitution of Kenya, 2010 - Chapter Four: The Bill of Rights', margin, yPos); yPos+=10;
+      doc.setFontSize(10); doc.text(`Downloaded: ${new Date().toLocaleString('en-GB')}`, margin, yPos); yPos+=15;
 
-  doc.setFontSize(10);
-  doc.text(`Downloaded: ${new Date().toLocaleString('en-GB')}`, margin, yPos);
-  yPos += 15;
+      doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text('FREEDOM OF ASSOCIATION (Article 36)', margin, yPos); yPos+=10;
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
 
-  // Freedom of Association
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('FREEDOM OF ASSOCIATION (Article 36)', margin, yPos);
-  yPos += 10;
+      checkPageSpace(60);
+      ['Article 36(1): Every person has the right to freedom of association, which includes the right to form, join or participate in the activities of an association of any kind.',
+       '','Article 36(2): A person shall not be compelled to join an association of any kind.',
+       '','Article 36(3): Any association shall have the freedom to acquire and dispose of movable and immovable property for the promotion of its objectives.',
+       '','This fundamental right is essential for democratic participation and enables citizens to collectively address common interests, promote social welfare, and engage in community development activities through organized groups and associations.'
+      ].forEach(line => { if (line.trim()) { yPos += addWrappedText(line, margin, yPos, 170, 6); } else { yPos+=4; } });
+      yPos+=15;
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+      checkPageSpace(20);
+      doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text('REGULATORY FRAMEWORK', margin, yPos); yPos+=10;
 
-  checkPageSpace(60);
-  const article36 = [
-    'Article 36(1): Every person has the right to freedom of association, which includes the right to form, join or participate in the activities of an association of any kind.',
-    '',
-    'Article 36(2): A person shall not be compelled to join an association of any kind.',
-    '',
-    'Article 36(3): Any association shall have the freedom to acquire and dispose of movable and immovable property for the promotion of its objectives.',
-    '',
-    'This fundamental right is essential for democratic participation and enables citizens to collectively address common interests, promote social welfare, and engage in community development activities through organized groups and associations.'
-  ];
+      [
+        { title:'Societies Act (Chapter 108, Laws of Kenya)',
+          items:['• Minimum membership requirements for registration (typically 10+ members)','• Proper constitution and bylaws outlining organizational structure and rules','• Democratic election of office bearers and leadership positions','• Mandatory annual general meetings for accountability and decision-making','• Comprehensive record keeping including minutes, financial records, and membership lists','• Prohibition of activities contrary to public policy or national security','• Requirement for proper dissolution procedures and asset distribution'] },
+        { title:'Co-operative Societies Act (Chapter 490)',
+          items:['• Minimum of 10 members for primary societies, higher for secondary societies','• Democratic control by members through one-member-one-vote principle','• Economic participation of members through share capital contributions','• Autonomy and independence from external control or interference','• Education and training programs for member development','• Limited interest on share capital to prevent speculative investment','• Surplus distribution based on patronage rather than capital contribution','• Cooperative audits and regulatory oversight by Commissioner for Co-operatives'] },
+        { title:'Labour Relations Act, 2007',
+          items:['• Right to form and join trade unions without interference or intimidation','• Protection against discrimination based on trade union membership','• Collective bargaining rights for wages, working conditions, and grievances','• Freedom from employer interference in union activities','• Protection of union officials from unfair dismissal or victimization','• Legal framework for industrial action and dispute resolution','• Requirement for union registration and democratic governance structures'] }
+      ].forEach(section => {
+        checkPageSpace(30);
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(section.title, margin, yPos); yPos+=8;
+        doc.setFont('helvetica','normal'); doc.setFontSize(10);
+        section.items.forEach(item => { checkPageSpace(8); doc.text(item, margin+5, yPos); yPos+=6; });
+        yPos+=8;
+      });
 
-  article36.forEach(line => {
-    if (line.trim()) {
-      yPos += addWrappedText(line, margin, yPos, 170, 6);
-    } else {
-      yPos += 4;
+      checkPageSpace(50);
+      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('REGISTRATION REQUIREMENTS', margin, yPos); yPos+=10;
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Mandatory Documentation:', margin, yPos); yPos+=8;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      [
+        "1. Constitution: Written constitution clearly stating the association's objectives, membership rules, rights and obligations.",
+        '', "2. Minutes: Certified minutes of the inaugural meeting with signatures of attendees.",
+        '', "3. Member List: Complete list of founding members including full names and identification numbers.",
+        '', "4. Objectives: Detailed statement of the association's specific objectives and planned activities.",
+        '', "5. Financial Records: Evidence of financial capability including initial capital contributions.",
+        '', "6. Certificate: Official registration certificate from the relevant ministry (optional but recommended)."
+      ].forEach(req => {
+        if (req.trim()) { checkPageSpace(12); yPos += addWrappedText(req, margin+5, yPos, 165, 5); yPos+=2; } else { yPos+=3; }
+      });
+
+      checkPageSpace(25); yPos+=10;
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Additional Legal Requirements:', margin, yPos); yPos+=8;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      ['• Compliance with anti-money laundering and counter-terrorism financing regulations',
+       '• Data protection compliance under the Data Protection Act',
+       '• Tax registration and compliance with Kenya Revenue Authority requirements',
+       '• Occupational health and safety compliance for workplace associations',
+       '• Environmental impact assessment for groups involved in resource utilization'
+      ].forEach(req => { checkPageSpace(8); doc.text(req, margin+5, yPos); yPos+=6; });
+      yPos+=10;
+
+      checkPageSpace(35); yPos+=10;
+      doc.setFillColor(255,247,237); doc.rect(margin, yPos-5, 170, 35, 'F');
+      doc.setTextColor(154,52,18); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text('Important Note', margin+5, yPos); yPos+=6;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      yPos += addWrappedText("All associations must operate within the framework of the Constitution of Kenya and relevant legislation. Registration provides legal recognition and protection for the association's activities.", margin+5, yPos, 160, 4);
+
+      checkPageSpace(20); yPos+=15;
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+      doc.text('For Registration Assistance:', margin, yPos); yPos+=8;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.text('• Registrar of Societies: registrar@societies.go.ke', margin+5, yPos); yPos+=5;
+      doc.text('• Department of Co-operatives: cooperatives@kilimo.go.ke', margin+5, yPos); yPos+=5;
+      doc.text('• Ministry of Labour: info@labour.go.ke', margin+5, yPos); yPos+=10;
+      doc.setFont('helvetica','italic'); doc.setFontSize(8);
+      doc.text("This document is for informational purposes only. Please consult with legal professionals for specific guidance.", margin, yPos); yPos+=8;
+
+      const ddt = new Date().toLocaleString('en-GB',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', timeZoneName:'short' });
+      doc.setFont('helvetica','normal'); doc.setFontSize(7);
+      doc.text(`© ${new Date().getFullYear()} TBANK. All rights reserved.`, margin, yPos); yPos+=4;
+      doc.text(`Downloaded on: ${ddt}`, margin, yPos);
+      addWatermark();
+
+      doc.save(`Group_Formation_Regulations_TBANK_${new Date().getTime()}.pdf`);
+      showNotification('Regulations document downloaded successfully!', 'success');
     }
-  });
-  yPos += 15;
 
-  // Regulatory Framework
-  checkPageSpace(20);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('REGULATORY FRAMEWORK', margin, yPos);
-  yPos += 10;
+    function handleGroupTypeChange() { /* Group type selected - form continues normally */ }
 
-  // Societies Act
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Societies Act (Chapter 108, Laws of Kenya)', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const societiesAct = [
-    '• Minimum membership requirements for registration (typically 10+ members)',
-    '• Proper constitution and bylaws outlining organizational structure and rules',
-    '• Democratic election of office bearers and leadership positions',
-    '• Mandatory annual general meetings for accountability and decision-making',
-    '• Comprehensive record keeping including minutes, financial records, and membership lists',
-    '• Prohibition of activities contrary to public policy or national security',
-    '• Requirement for proper dissolution procedures and asset distribution'
-  ];
-
-  societiesAct.forEach(item => {
-    checkPageSpace(8);
-    doc.text(item, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 8;
-
-  // Co-operative Societies Act
-  checkPageSpace(30);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Co-operative Societies Act (Chapter 490)', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const coOpAct = [
-    '• Minimum of 10 members for primary societies, higher for secondary societies',
-    '• Democratic control by members through one-member-one-vote principle',
-    '• Economic participation of members through share capital contributions',
-    '• Autonomy and independence from external control or interference',
-    '• Education and training programs for member development',
-    '• Limited interest on share capital to prevent speculative investment',
-    '• Surplus distribution based on patronage rather than capital contribution',
-    '• Cooperative audits and regulatory oversight by Commissioner for Co-operatives'
-  ];
-
-  coOpAct.forEach(item => {
-    checkPageSpace(8);
-    doc.text(item, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 8;
-
-  // Labour Relations Act
-  checkPageSpace(25);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Labour Relations Act, 2007', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const labourAct = [
-    '• Right to form and join trade unions without interference or intimidation',
-    '• Protection against discrimination based on trade union membership',
-    '• Collective bargaining rights for wages, working conditions, and grievances',
-    '• Freedom from employer interference in union activities',
-    '• Protection of union officials from unfair dismissal or victimization',
-    '• Legal framework for industrial action and dispute resolution',
-    '• Requirement for union registration and democratic governance structures'
-  ];
-
-  labourAct.forEach(item => {
-    checkPageSpace(8);
-    doc.text(item, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 15;
-
-  // Registration Requirements
-  checkPageSpace(50);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('REGISTRATION REQUIREMENTS', margin, yPos);
-  yPos += 10;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Mandatory Documentation:', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const requirements = [
-    '1. Constitution: Comprehensive written constitution clearly stating the association\'s objectives, membership rules, rights and obligations, governance structure, decision-making processes, and amendment procedures.',
-    '',
-    '2. Minutes: Certified minutes of the inaugural meeting demonstrating proper quorum, election of office bearers, adoption of constitution, and appointment of key officials with signatures of attendees.',
-    '',
-    '3. Member List: Complete list of founding members including full names, identification numbers, contact information, residential addresses, and signatures confirming voluntary membership.',
-    '',
-    '4. Objectives: Detailed statement of the association\'s specific objectives and planned activities, ensuring they align with legal requirements and public interest.',
-    '',
-    '5. Financial Records: Evidence of financial capability including initial capital contributions, proposed budget, banking arrangements, and financial management procedures.',
-    '',
-    '6. Certificate: Official registration certificate from the relevant ministry or registrar of societies (optional but strongly recommended for legal recognition).'
-  ];
-
-  requirements.forEach(req => {
-    if (req.trim()) {
-      checkPageSpace(12);
-      yPos += addWrappedText(req, margin + 5, yPos, 165, 5);
-      yPos += 2;
-    } else {
-      yPos += 3;
-    }
-  });
-
-  // Additional Requirements Section
-  checkPageSpace(25);
-  yPos += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Additional Legal Requirements:', margin, yPos);
-  yPos += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  const additionalReqs = [
-    '• Compliance with anti-money laundering and counter-terrorism financing regulations',
-    '• Data protection compliance under the Data Protection Act',
-    '• Tax registration and compliance with Kenya Revenue Authority requirements',
-    '• Occupational health and safety compliance for workplace associations',
-    '• Environmental impact assessment for groups involved in resource utilization'
-  ];
-
-  additionalReqs.forEach(req => {
-    checkPageSpace(8);
-    doc.text(req, margin + 5, yPos);
-    yPos += 6;
-  });
-  yPos += 10;
-
-  // Important Note
-  checkPageSpace(35);
-  yPos += 10;
-  doc.setFillColor(255, 247, 237);
-  doc.rect(margin, yPos - 5, 170, 35, 'F');
-  doc.setTextColor(154, 52, 18);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('Important Note', margin + 5, yPos);
-  yPos += 6;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  const note = 'All associations must operate within the framework of the Constitution of Kenya and relevant legislation. Registration provides legal recognition and protection for the association\'s activities. Unregistered associations may face legal restrictions, inability to enter contracts, or challenges in accessing government support programs. Regular compliance reviews and annual filings are mandatory for maintaining registration status.';
-  yPos += addWrappedText(note, margin + 5, yPos, 160, 4);
-
-  // Contact Information
-  checkPageSpace(20);
-  yPos += 15;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-  doc.text('For Registration Assistance:', margin, yPos);
-  yPos += 8;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('• Registrar of Societies: registrar@societies.go.ke', margin + 5, yPos);
-  yPos += 5;
-  doc.text('• Department of Co-operatives: cooperatives@kilimo.go.ke', margin + 5, yPos);
-  yPos += 5;
-  doc.text('• Ministry of Labour: info@labour.go.ke', margin + 5, yPos);
-  yPos += 10;
-
-  // Disclaimer
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
-  doc.text('This document is for informational purposes only. Please consult with legal professionals for specific guidance on your association\'s registration requirements.', margin, yPos);
-  yPos += 8;
-
-  // Copyright and Download Info
-  const downloadDateTime = new Date().toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZoneName: 'short'
-  });
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text(`© ${new Date().getFullYear()} TBANK. All rights reserved.`, margin, yPos);
-  yPos += 4;
-  doc.text(`Downloaded on: ${downloadDateTime}`, margin, yPos);
-
-  // Add watermark to last page
-  addWatermark();
-
-  // Save the PDF
-  const filename = `Group_Formation_Regulations_TBANK_${new Date().getTime()}.pdf`;
-  doc.save(filename);
-  showNotification('Regulations document downloaded successfully!', 'success');
-}
-
-function disableFormElements() {
-  // Disable all inputs and buttons except the Terms, Accept, and Download buttons
-  const inputs = document.querySelectorAll('input, select, button');
-  inputs.forEach(element => {
-    const onclickStr = element.onclick ? element.onclick.toString() : '';
-    if (!onclickStr.includes('showRegulationsModal') &&
-        !onclickStr.includes('closeRegulationsModal') &&
-        !onclickStr.includes('downloadWithWatermark')) {
-      element.disabled = true;
-      element.style.opacity = '0.5';
-      element.style.pointerEvents = 'none';
-    }
-  });
-}
-
-function enableFormElements() {
-  // Enable all inputs and buttons
-  const inputs = document.querySelectorAll('input, select, button');
-  inputs.forEach(element => {
-    element.disabled = false;
-    element.style.opacity = '1';
-    element.style.pointerEvents = 'auto';
-  });
-}
-
-function handleGroupTypeChange() {
-  // Group type selected - form continues without modal
-}
-
-function showRegulationsModal() {
-  document.getElementById('regulationsModal').style.display = 'block';
-}
-
-function closeRegulationsModal() {
-  document.getElementById('regulationsModal').style.display = 'none';
-}
-
+    function showRegulationsModal() { document.getElementById('regulationsModal').style.display = 'block'; }
+    function closeRegulationsModal(){ document.getElementById('regulationsModal').style.display = 'none'; }
   </script>
 
-  <!-- REGULATIONS MODAL -->
-  <div id="regulationsModal" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; overflow-y:auto; padding:20px;">
-    <div style="position:relative; max-width:600px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,0.3); max-height:calc(100vh - 40px); overflow-y:auto;">
+  <!-- ─── REGULATIONS MODAL ─── -->
+  <div id="regulationsModal"
+    style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;
+           background:rgba(0,0,0,0.7); z-index:10000; overflow-y:auto; padding:20px;">
+    <div style="position:relative; max-width:600px; margin:0 auto; background:white;
+                border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,.3);
+                max-height:calc(100vh - 40px); overflow-y:auto;">
       <div style="padding:24px; border-bottom:1px solid #e2e8f0;">
         <div style="display:flex; justify-content:center; align-items:flex-start;">
           <div style="text-align:center;">
@@ -2815,83 +1798,59 @@ function closeRegulationsModal() {
               <i class="fas fa-gavel" style="color:#0f9d58; margin-right:10px;"></i>
               Group Formation Regulations
             </h2>
-            <p style="margin:8px 0 0 0; color:#64748b; font-size:14px;">Constitution of Kenya, 2010 - Chapter Four: The Bill of Rights</p>
+            <p style="margin:8px 0 0 0; color:#64748b; font-size:14px;">
+              Constitution of Kenya, 2010 - Chapter Four: The Bill of Rights
+            </p>
           </div>
         </div>
       </div>
 
       <div style="padding:24px;">
         <h3 style="color:#0f9d58; font-size:16px; font-weight:700; margin-bottom:16px;">
-          <i class="fas fa-users" style="margin-right:8px;"></i>
-          Freedom of Association (Article 36)
+          <i class="fas fa-users" style="margin-right:8px;"></i> Freedom of Association (Article 36)
         </h3>
-
-        <div style="margin-bottom:20px;">
-          <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
-            <strong>Article 36(1):</strong> Every person has the right to freedom of association, which includes the right to form, join or participate in the activities of an association of any kind.
-          </p>
-
-          <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
-            <strong>Article 36(2):</strong> A person shall not be compelled to join an association of any kind.
-          </p>
-
-          <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
-            <strong>Article 36(3):</strong> Any association shall have the freedom to acquire and dispose of movable and immovable property for the promotion of its objectives.
-          </p>
-        </div>
+        <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
+          <strong>Article 36(1):</strong> Every person has the right to freedom of association, which includes the right to form, join or participate in the activities of an association of any kind.
+        </p>
+        <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
+          <strong>Article 36(2):</strong> A person shall not be compelled to join an association of any kind.
+        </p>
+        <p style="color:#374151; font-size:14px; line-height:1.6; margin-bottom:16px;">
+          <strong>Article 36(3):</strong> Any association shall have the freedom to acquire and dispose of movable and immovable property for the promotion of its objectives.
+        </p>
 
         <h3 style="color:#0f9d58; font-size:16px; font-weight:700; margin-bottom:16px;">
-          <i class="fas fa-balance-scale" style="margin-right:8px;"></i>
-          Regulatory Framework
+          <i class="fas fa-balance-scale" style="margin-right:8px;"></i> Regulatory Framework
         </h3>
-
-        <div style="margin-bottom:20px;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">
-            Societies Act (Chapter 108, Laws of Kenya)
-          </h4>
-          <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0; padding-left:20px;">
-            <li>Minimum membership requirements for registration</li>
-            <li>Proper constitution and bylaws</li>
-            <li>Election of office bearers</li>
-            <li>Annual general meetings</li>
-            <li>Proper record keeping</li>
-          </ul>
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">
-            Co-operative Societies Act (Chapter 490)
-          </h4>
-          <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0; padding-left:20px;">
-            <li>Minimum of 10 members for primary societies</li>
-            <li>Democratic control by members</li>
-            <li>Economic participation of members</li>
-            <li>Autonomy and independence</li>
-            <li>Education and training</li>
-          </ul>
-        </div>
-
-        <div style="margin-bottom:20px;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">
-            Labour Relations Act, 2007
-          </h4>
-          <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0; padding-left:20px;">
-            <li>Right to form and join trade unions</li>
-            <li>Protection against discrimination</li>
-            <li>Collective bargaining rights</li>
-            <li>Freedom from interference</li>
-          </ul>
-        </div>
+        <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">Societies Act (Chapter 108, Laws of Kenya)</h4>
+        <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0 0 16px 20px; padding-left:0;">
+          <li>Minimum membership requirements for registration</li>
+          <li>Proper constitution and bylaws</li>
+          <li>Election of office bearers</li>
+          <li>Annual general meetings</li>
+          <li>Proper record keeping</li>
+        </ul>
+        <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">Co-operative Societies Act (Chapter 490)</h4>
+        <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0 0 16px 20px; padding-left:0;">
+          <li>Minimum of 10 members for primary societies</li>
+          <li>Democratic control by members</li>
+          <li>Economic participation of members</li>
+          <li>Autonomy and independence</li>
+          <li>Education and training</li>
+        </ul>
+        <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:8px;">Labour Relations Act, 2007</h4>
+        <ul style="color:#374151; font-size:13px; line-height:1.5; margin:0 0 16px 20px; padding-left:0;">
+          <li>Right to form and join trade unions</li>
+          <li>Protection against discrimination</li>
+          <li>Collective bargaining rights</li>
+          <li>Freedom from interference</li>
+        </ul>
 
         <h3 style="color:#0f9d58; font-size:16px; font-weight:700; margin-bottom:16px;">
-          <i class="fas fa-clipboard-check" style="margin-right:8px;"></i>
-          Registration Requirements
+          <i class="fas fa-clipboard-check" style="margin-right:8px;"></i> Registration Requirements
         </h3>
-
         <div style="background:#f8fafc; padding:16px; border-radius:12px; border-left:4px solid #0f9d58;">
-          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:12px;">
-            Mandatory Documentation:
-          </h4>
+          <h4 style="color:#1e293b; font-size:14px; font-weight:600; margin-bottom:12px;">Mandatory Documentation:</h4>
           <ol style="color:#374151; font-size:13px; line-height:1.6; margin:0; padding-left:20px;">
             <li><strong>Constitution:</strong> Written constitution stating objectives, membership rules, and governance structure</li>
             <li><strong>Minutes:</strong> Minutes of the inaugural meeting showing election of office bearers</li>
@@ -2908,24 +1867,28 @@ function closeRegulationsModal() {
             <div>
               <p style="color:#9a3412; font-size:13px; font-weight:600; margin:0 0 4px 0;">Important Note</p>
               <p style="color:#9a3412; font-size:12px; margin:0; line-height:1.4;">
-                All associations must operate within the framework of the Constitution of Kenya and relevant legislation.
-                Registration provides legal recognition and protection for the association's activities.
+                All associations must operate within the framework of the Constitution of Kenya and relevant legislation. Registration provides legal recognition and protection for the association's activities.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div style="padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; justify-content:center; align-items:center; gap:20px;">
-        <button onclick="downloadWithWatermark()" style="background:#4285f4; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">
+      <div style="padding:16px 24px; border-top:1px solid #e2e8f0; display:flex;
+                  justify-content:center; align-items:center; gap:20px;">
+        <button onclick="downloadWithWatermark()"
+          style="background:#4285f4; color:white; border:none; padding:11px 22px;
+                 border-radius:8px; cursor:pointer; font-weight:600; width:auto;">
           <i class="fas fa-download" style="margin-right:6px;"></i> Download
         </button>
-        <button onclick="closeRegulationsModal()" style="background:#0f9d58; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">
+        <button onclick="closeRegulationsModal()"
+          style="background:#0f9d58; color:white; border:none; padding:11px 22px;
+                 border-radius:8px; cursor:pointer; font-weight:600; width:auto;">
           <i class="fas fa-check" style="margin-right:6px;"></i> Accept
         </button>
       </div>
     </div>
   </div>
-</body>
 
+</body>
 </html>

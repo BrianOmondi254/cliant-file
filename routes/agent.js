@@ -430,10 +430,27 @@ router.post("/activate-group", async (req, res) => {
   }
 
   const payload = req.body;
-  const { county, constituency, ward, trustees, officials, members, constitutionStartKeyUnhashed, messages } = payload;
+  const { groupName: displayName, groupType, groupCertificateNumber, phone, totalMembers, totalAmount, paymentMethod, constitutionStartKey, phase, createdAt, processorPhone, agentProcessed, trustees, officials, members, messages } = payload;
 
-  if (!county || !constituency || !ward || !trustees || trustees.length === 0) {
-    return res.json({ success: false, message: "Invalid data" });
+  if (!trustees || trustees.length === 0) {
+    return res.json({ success: false, message: "Invalid data - no trustees" });
+  }
+
+  // Get agent's location from agent.json based on session
+  const agentPhone = req.session.user.phoneNumber;
+  const agents = loadJSON(agentFile, []);
+  const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(agentPhone));
+  
+  if (!agent) {
+    return res.json({ success: false, message: "Agent not found" });
+  }
+
+  const county = agent.county || '';
+  const constituency = agent.constituency || '';
+  const ward = agent.ward || '';
+
+  if (!county) {
+    return res.json({ success: false, message: "Agent location not set" });
   }
 
   // Load general.json
@@ -447,48 +464,54 @@ router.post("/activate-group", async (req, res) => {
   // Count groups in ward for name generation
   const wardGroups = general[county][constituency][ward];
   const groupCount = wardGroups.length + 1;
-  const groupName = `${county.toUpperCase()}_${constituency.toUpperCase()}_${ward.toUpperCase().replace(/\s+/g, '')}_${String(groupCount).padStart(3, '0')}`;
+  const groupName = displayName || `${county.toUpperCase()}_${constituency.toUpperCase()}_${ward.toUpperCase().replace(/\s+/g, '')}_${String(groupCount).padStart(3, '0')}`;
 
   // Increment regional counts
   general[county].countyGroupCount = (general[county].countyGroupCount || 0) + 1;
-  general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
-  general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+  if (constituency) {
+    general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
+    if (ward) {
+      general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+    }
+  }
 
-  // Hash constitution key
-  const constitutionStartKey = await bcrypt.hash(String(constitutionStartKeyUnhashed), 10);
-
-  // Build group object
+  // Build group object - use constitutionStartKey as-is (plain string)
   const group = {
     groupName,
-    phone: trustees[0].phone, // Chairperson
-    firstName: 'Chairperson', // Placeholder
+    phone: phone || trustees[0].phone,
+    firstName: 'Chairperson',
     secondName: '',
     lastName: '',
     county,
     constituency,
     ward,
-    processorPhone: payload.processorPhone,
-    createdAt: payload.createdAt,
-    membersPopulatedAt: payload.membersPopulatedAt,
-    agentProcessed: payload.agentProcessed,
-    phase: 2,
-    totalProposedMembers: payload.totalProposedMembers,
-    groupType: payload.groupType || '',
+    processorPhone: processorPhone || 'n/a',
+    createdAt: createdAt || new Date().toISOString(),
+    agentProcessed: agentProcessed || agentPhone || 'n/a',
+    phase: phase || 2,
+    totalProposedMembers: totalMembers || 0,
+    groupType: groupType || '',
+    groupCertificateNumber: groupCertificateNumber || '',
     constitutionStartKey,
-    constitutionKeyGeneratedAt: payload.constitutionKeyGeneratedAt,
+    constitutionKeyGeneratedAt: new Date().toISOString(),
     messages
   };
 
   // Add trustees/officials/members
   trustees.forEach((t, i) => {
-    group[`trustee_${i + 1}`] = t;
+    group[`trustee_${i + 1}`] = { index: String(i + 1), type: 'trustee', ...t };
   });
-  officials.forEach((o, i) => {
-    group[`official_${trustees.length + i + 1}`] = o;
-  });
-  members.forEach((m, i) => {
-    group[`member_${trustees.length + officials.length + i + 1}`] = m;
-  });
+  if (officials) {
+    officials.forEach((o, i) => {
+      group[`official_${trustees.length + i + 1}`] = { index: String(trustees.length + i + 1), type: 'official', ...o };
+    });
+  }
+  if (members) {
+    members.forEach((m, i) => {
+      const idx = trustees.length + (officials ? officials.length : 0) + i + 1;
+      group[`member_${idx}`] = { index: String(idx), type: 'member', ...m };
+    });
+  }
 
   // Add group to ward
   wardGroups.push(group);
