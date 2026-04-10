@@ -589,31 +589,97 @@
       color: var(--dark);
     }
 
-    /* ─── VERIFICATION DISPLAY STYLES ─── */
-    .header-box {
-      background: #eef2f7;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
+    /* ─── NEW VERIFICATION COMPONENT STYLES ─── */
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+    .role-text {
+      font-size: 12px;
+      color: var(--slate);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    .badges {
+      display: flex;
+      gap: 6px;
+    }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+    .mno {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .verified {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .error-badge {
+      background: #fee2e2;
+      color: #991b1b;
     }
 
-    .header-box h3 {
-      margin: 0 0 10px 0;
+    /* ─── VERIFICATION DISPLAY STYLES ─── */
+    .header-box {
+      background: var(--white);
+      padding: 18px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
 
     .row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .row:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
     }
 
     .label {
-      font-weight: bold;
-      color: #555;
+      font-weight: 700;
+      color: var(--slate);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .value {
-      color: #222;
+      color: var(--dark);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .success-pill {
+      color: #166534;
+      background: #dcfce7;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .success {
@@ -958,27 +1024,27 @@
 
         <!-- SCROLLABLE VERIFICATION SECTION -->
         <div id="verificationScrollArea" style="max-height:70vh; overflow-y:auto; padding-right:4px; margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc;">
-          <!-- GROUP INFO IN VERIFICATION -->
-          <div id="verificationGroupInfo" class="header-box">
-            <div style="margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <span style="background:var(--primary-light); padding:4px 10px; border-radius:6px; border:1px solid var(--primary); font-weight:700; color:var(--primary-dark); font-size:13px;"><%= group.county %></span>
-              <span style="background:#fef9c3; padding:4px 10px; border-radius:6px; border:1px solid #d97706; font-weight:700; color:#92400e; font-size:13px;"><%= group.constituency %></span>
-              <span style="background:#eff6ff; padding:4px 10px; border-radius:6px; border:1px solid #3b82f6; font-weight:700; color:#1d4ed8; font-size:13px;"><%= group.ward %></span>
-            </div>
-
-            <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
-              <div><span class="label">Group:</span> <span class="value" id="verifyGroupNo" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= group.groupName %></span></div>
-              <div><span class="label">Type:</span> <span class="value" id="verifyGroupType" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= group.groupType || '-' %></span></div>
-            </div>
-
-            <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
-              <div><span class="label">Cert:</span> <span class="value" id="verifyCertNumber" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= group.certificateNumber || '-' %></span></div>
-              <div><span class="label">Agent:</span> <span class="value" id="verifyAgentName" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;">Loading...</span></div>
-            </div>
-
-            <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
-              <div><span class="label">Phone:</span> <span class="value" id="verifyAgentPhone" style="background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0; font-weight:600; font-size:13px;"><%= agent.phoneNumber %></span><i class="fas fa-spinner fa-spin" id="verifyAgentPhoneIcon" style="color:#64748b; margin-left:3px;"></i></div>
-            </div>
+           <!-- GROUP INFO IN VERIFICATION -->
+           <div id="verificationGroupInfo" class="header-box" style="border: none; border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; background: none;">
+             <div class="row" style="align-items: center; margin-bottom: 0; border-bottom: none;">
+               <span class="label">Regional Block</span>
+               <div class="badges" style="flex-wrap: wrap; justify-content: flex-end;">
+                 <span class="badge" style="background:var(--primary-light); color:var(--primary-dark); border:1px solid var(--primary);"><%= group.county %></span>
+                 <span class="badge" style="background:#fef9c3; color:#92400e; border:1px solid #d97706;"><%= group.constituency %></span>
+                 <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #3b82f6;"><%= group.ward %></span>
+               </div>
+             </div>
+             <div class="row" style="margin-bottom: 0; border-bottom: none;">
+               <div><span class="label">Group No:</span> <span class="value" id="verifyGroupNo"><%= group.groupName %></span></div>
+               <div><span class="label">Group Type:</span> <span class="value" id="verifyGroupType"><%= group.groupType || '-' %></span></div>
+             </div>
+             <div class="row" style="margin-bottom: 0; border-bottom: none;">
+               <div style="width: 100%;"><span class="label">Certificate:</span> <span class="value" id="verifyCertNumber"><%= group.certificateNumber || '-' %></span></div>
+             </div>
+             <div class="row" style="margin-bottom: 0; border-bottom: none;">
+               <div><span class="label">Agent:</span> <span class="value" id="verifyAgentName"><%= group.agentName %></span></div>
+               <div><span class="label">Agent Phone:</span> <span class="value" id="verifyAgentPhone"><%= agent.phoneNumber %></span></div>
+             </div>
           </div>
 
           <div id="verificationList" style="margin-top:15px;"></div>
@@ -1676,21 +1742,83 @@ function updateTrusteeTitles() {
         return;
       }
 
-      // Check for duplicate phone numbers
-      const phoneMap = new Map();
-      for (const entry of allPhones) {
-        if (phoneMap.has(entry.phone)) {
-          phoneErrors.push(`${entry.phone} is used by both ${phoneMap.get(entry.phone)} and ${entry.name}`);
-        } else {
-          phoneMap.set(entry.phone, entry.name);
-        }
-      }
+       // Collect all membership numbers for validation
+       const allMemberNumbers = [];
+       const memberNumberErrors = [];
 
-      // If duplicates found, show error and stop
-      if (phoneErrors.length > 0) {
-        showNotification('Duplicate phone numbers found:\n\n' + phoneErrors.join('\n') + '\n\nEach member must have a unique phone number.');
-        return;
-      }
+       // Add trustees
+       for (let i = 0; i < STD_TRUSTEES; i++) {
+         const idx = i + 1;
+         const memberNumber = document.getElementById(`t${idx}_memberNumber`).value.trim();
+         if (memberNumber) {
+           allMemberNumbers.push({ value: memberNumber, name: `Trustee ${idx}` });
+         }
+       }
+
+       // Add officials
+       for (let i = 0; i < currentOfficialsCount; i++) {
+         const idx = STD_TRUSTEES + i + 1;
+         const memberNumber = document.getElementById(`official_${idx}_memberNumber`).value.trim();
+         if (memberNumber) {
+           allMemberNumbers.push({ value: memberNumber, name: `Official ${i + 1}` });
+         }
+       }
+
+       // Add members
+       for (let i = 0; i < regularMembersCount; i++) {
+         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
+         const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
+         if (memberNumber) {
+           allMemberNumbers.push({ value: memberNumber, name: `Member ${i + 1}` });
+         }
+       }
+
+       // Check for duplicate membership numbers
+       const memberNumberMap = new Map();
+       for (const entry of allMemberNumbers) {
+         if (memberNumberMap.has(entry.value)) {
+           memberNumberErrors.push(`${entry.value} is used by both ${memberNumberMap.get(entry.value)} and ${entry.name}`);
+         } else {
+           memberNumberMap.set(entry.value, entry.name);
+         }
+       }
+
+       // If duplicates found, show error and stop
+       if (memberNumberErrors.length > 0) {
+         showNotification('Duplicate membership numbers found:\n\n' + memberNumberErrors.join('\n') + '\n\nEach member must have a unique membership number.');
+         return;
+       }
+
+       // Check prefix consistency
+       if (allMemberNumbers.length > 1) {
+         const firstMemberNumber = allMemberNumbers[0].value;
+         const prefixMatch = firstMemberNumber.match(/^([a-zA-Z-]+)?/);
+         const requiredPrefix = prefixMatch ? prefixMatch[0] : '';
+
+         for (let i = 1; i < allMemberNumbers.length; i++) {
+           const current = allMemberNumbers[i].value;
+           if (!current.startsWith(requiredPrefix)) {
+             showNotification(`Membership number format inconsistency: "${current}" does not match the required prefix "${requiredPrefix}" from the first entry. All membership numbers must start with the same letters/prefix.`);
+             return;
+           }
+         }
+       }
+
+       // Check for duplicate phone numbers
+       const phoneMap = new Map();
+       for (const entry of allPhones) {
+         if (phoneMap.has(entry.phone)) {
+           phoneErrors.push(`${entry.phone} is used by both ${phoneMap.get(entry.phone)} and ${entry.name}`);
+         } else {
+           phoneMap.set(entry.phone, entry.name);
+         }
+       }
+
+       // If duplicates found, show error and stop
+       if (phoneErrors.length > 0) {
+         showNotification('Duplicate phone numbers found:\n\n' + phoneErrors.join('\n') + '\n\nEach member must have a unique phone number.');
+         return;
+       }
 
       // All validations passed - show verification form
       showVerificationForm();
@@ -1892,27 +2020,34 @@ function updateTrusteeTitles() {
       const idStatusColor = isVerified ? '#166534' : '#991b1b';
 
       return `
-        <div class="member-card" style="background:${bgColor}; border:1.5px solid ${textColor}; margin-bottom:10px; padding:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-weight:700; font-size:15px; color:${textColor}; opacity:0.8;">
-              <span style="background:white; padding:3px 8px; border-radius:4px; border:1px solid ${textColor}; font-size:12px; margin-right:6px;">${index}</span>
-              ${title || (member.role === 'official' ? 'Official' : 'Member')}
+        <div class="member-card" style="margin-bottom: 0; border: none; background: none; box-shadow: none; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; border-radius: 0;">
+          <div class="top" style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div class="name">${index}. ${displayName}</div>
+              <div class="role-text" style="color:${textColor};">${title}</div>
             </div>
-            <div style="display:flex; gap:4px; align-items:center;">
-              ${isMemberValid ? '<span style="font-size:12px; color:#166534; font-weight:700; background:#dcfce7; padding:3px 8px; border-radius:6px; border:1px solid #166534;">Verified ✔</span>' : '<span style="font-size:12px; color:#991b1b; font-weight:700; background:#fee2e2; padding:3px 8px; border-radius:6px; border:1px solid #991b1b;">Unverified</span>'}
+            <div class="badges">
+              ${isVerified
+                ? '<div class="badge verified">Verified <i class="fas fa-check-circle"></i></div>'
+                : '<div class="badge error-badge">Pending <i class="fas fa-clock"></i></div>'}
             </div>
           </div>
 
-          <div class="member-box" style="font-size:13px;">
-            <div style="margin-bottom:6px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              <span class="label" style="display:inline-block; width:35px;">M.No:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${memberNumber || '-'}</span>
-              <span class="label" style="display:inline-block; width:35px;">Name:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${displayName}</span>
+          <div style="display: flex; gap: 16px; margin-top: 12px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="label">Phone:</span>
+              <span class="value">${phone || '-'}</span>
+              ${isVerified ? '<i class="fas fa-check-circle" style="color: #166534; font-size: 12px;"></i>' : ''}
             </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="label">ID:</span>
+              <span class="value">${idValue}</span>
+              ${isVerified ? '<i class="fas fa-check-circle" style="color: #166534; font-size: 12px;"></i>' : ''}
+            </div>
+          </div>
 
-            <div style="margin-bottom:6px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              <span class="label" style="display:inline-block; width:35px;">Phone:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${phone || '-'}</span><i class="fas ${isVerified ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${isVerified ? '#166534' : '#991b1b'}; margin-left:3px;"></i>
-              <span class="label" style="display:inline-block; width:35px;">ID:</span> <span style="background:white; padding:3px 6px; border-radius:3px; border:1px solid #e2e8f0; font-weight:600;">${idValue}</span><i class="fas ${isVerified ? 'fa-check-circle' : 'fa-times-circle'}" style="color:${idStatusColor}; margin-left:3px;"></i>
-            </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+            <div class="badge mno">Member-${memberNumber || 'N/A'}</div>
           </div>
         </div>
       `;
