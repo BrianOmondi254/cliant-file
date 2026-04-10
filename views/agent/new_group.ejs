@@ -2387,8 +2387,66 @@ function goBackToForm() {
 
 // Display Group Registration Form
 function downloadGroupRegistrationForm() {
-  const groupName = <%- JSON.stringify(group.groupName) %>;
-  window.location.href = `/agent/group-form/${encodeURIComponent(groupName)}`;
+  // Collect form data
+  const formData = {
+    groupName: groupData.groupName,
+    groupType: document.getElementById('groupType').value,
+    certificateNumber: document.getElementById('groupCertificateNumber').value.trim(),
+    county: groupData.county,
+    constituency: groupData.constituency,
+    ward: groupData.ward,
+    agentName: groupData.agentName,
+    agentPhone: groupData.agentPhone,
+    members: []
+  };
+
+  // Collect trustees
+  for (let i = 0; i < STD_TRUSTEES; i++) {
+    const idx = i + 1;
+    formData.members.push({
+      index: idx,
+      type: 'trustee',
+      title: document.getElementById(`t${idx}_title`).value.trim(),
+      name: `Trustee ${idx}`, // Placeholder, as name is not in form
+      memberNumber: document.getElementById(`t${idx}_memberNumber`).value.trim(),
+      phone: document.getElementById(`t${idx}_phone`).value.trim(),
+      id: document.getElementById(`t${idx}_id`).value.trim()
+    });
+  }
+
+  // Collect officials
+  for (let i = 0; i < currentOfficialsCount; i++) {
+    const idx = STD_TRUSTEES + i + 1;
+    formData.members.push({
+      index: idx,
+      type: 'official',
+      title: document.getElementById(`official_${idx}_title`).value.trim(),
+      name: `Official ${i + 1}`,
+      memberNumber: document.getElementById(`official_${idx}_memberNumber`).value.trim(),
+      phone: document.getElementById(`official_${idx}_phone`).value.trim(),
+      id: document.getElementById(`official_${idx}_id`).value.trim()
+    });
+  }
+
+  // Collect members
+  for (let i = 0; i < regularMembersCount; i++) {
+    const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
+    formData.members.push({
+      index: idx,
+      type: 'member',
+      title: 'Member',
+      name: `Member ${i + 1}`,
+      memberNumber: document.getElementById(`member_${idx}_memberNumber`).value.trim(),
+      phone: document.getElementById(`member_${idx}_phone`).value.trim(),
+      id: document.getElementById(`member_${idx}_id`).value.trim()
+    });
+  }
+
+  // Store data in localStorage for the preview page
+  localStorage.setItem('groupFormData', JSON.stringify(formData));
+
+  // Redirect to the form preview
+  window.location.href = `/agent/group-form/${encodeURIComponent(formData.groupName)}`;
 }
 
 async function downloadWithWatermark() {

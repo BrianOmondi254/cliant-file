@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group Registration Form Preview | Agent Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #0f9d58;
+      --primary-dark: #0b7d46;
+      --primary-light: #ecfdf5;
+      --secondary: #4285f4;
+      --secondary-light: #e8f0fe;
+      --accent: #5f9ea0;
+      --dark: #1e293b;
+      --slate: #64748b;
+      --light: #f8fafc;
+      --white: #ffffff;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, .1), 0 8px 10px -6px rgba(0, 0, 0, .1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 20px 20px 20px 20px;
+      color: var(--dark);
+    }
+
+    .container {
+      background: var(--white);
+      width: 100%;
+      max-width: 600px;
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+      animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 4px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .member-section {
+      margin-top: 24px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 16px;
+    }
+
+    .member-card {
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn-container {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--dark);
+    }
+
+    .populated {
+      background: #ecfdf5;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="/agent" style="position: absolute; top: 20px; left: 20px; color: var(--primary);"><i class="fas fa-arrow-left"></i></a>
+      <h1>Group Registration Form Preview</h1>
+      <p>Review and edit before downloading</p>
+    </div>
+
+    <form id="registrationForm">
+      <!-- Group Info -->
+      <div class="form-group">
+        <label>Group Name</label>
+        <input type="text" id="groupName" value="<%= formData ? formData.groupName : '' %>" class="populated">
+      </div>
+
+      <div class="form-group">
+        <label>Group Type</label>
+        <select id="groupType" class="populated">
+          <option value="<%= formData ? formData.groupType : '' %>"><%= formData ? formData.groupType : 'Select Type' %></option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Certificate Number</label>
+        <input type="text" id="certificateNumber" value="<%= formData ? formData.certificateNumber : '' %>" class="populated">
+      </div>
+
+      <div class="form-group">
+        <label>Location</label>
+        <input type="text" id="location" value="<%= formData ? `${formData.county}, ${formData.constituency}, ${formData.ward}` : '' %>" class="populated" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Agent Name</label>
+        <input type="text" id="agentName" value="<%= formData ? formData.agentName : '' %>" class="populated">
+      </div>
+
+      <div class="form-group">
+        <label>Agent Phone</label>
+        <input type="text" id="agentPhone" value="<%= formData ? formData.agentPhone : '' %>" class="populated">
+      </div>
+
+      <!-- Members -->
+      <div class="member-section">
+        <h3>Members</h3>
+        <% if (formData && formData.members) { %>
+          <% formData.members.forEach(member => { %>
+            <div class="member-card">
+              <div class="form-group">
+                <label>Title</label>
+                <input type="text" value="<%= member.title %>" class="populated">
+              </div>
+              <div class="form-group">
+                <label>Name</label>
+                <input type="text" value="<%= member.name %>" class="populated">
+              </div>
+              <div class="form-group">
+                <label>Membership Number</label>
+                <input type="text" value="<%= member.memberNumber %>" class="populated">
+              </div>
+              <div class="form-group">
+                <label>Phone</label>
+                <input type="text" value="<%= member.phone %>" class="populated">
+              </div>
+              <div class="form-group">
+                <label>ID Number</label>
+                <input type="text" value="<%= member.id %>" class="populated">
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+
+      <div class="btn-container">
+        <button type="button" class="btn-secondary" onclick="window.location.href='/agent/new-group'">Edit</button>
+        <button type="button" class="btn-primary" onclick="downloadPDF()">Download PDF</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Form data for PDF generation
+    const formData = <%- JSON.stringify(formData || {}) %>;
+
+    function downloadPDF() {
+      // Use existing PDF generation logic with current form values
+      // For now, alert as placeholder
+      alert('PDF download functionality to be implemented');
+    }
+  </script>
+</body>
+</html>
