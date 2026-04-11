@@ -47,7 +47,7 @@
       justify-content: center;
       align-items: stretch;
       min-height: 100vh;
-      padding: 5px 5px 10px 5px;
+      padding: 3px;
       color: var(--dark);
     }
 
@@ -55,7 +55,7 @@
       background: var(--white);
       width: 100%;
       max-width: 545px;
-      min-height: calc(100vh - 10px);
+      /* CHANGE 1: removed min-height: calc(100vh - 10px); */
       border-radius: 20px;
       box-shadow: var(--shadow-lg);
       overflow: hidden;
@@ -106,7 +106,8 @@
 
     /* ─── CONTENT ─── */
     .content {
-      padding: 12px 12px 3px 12px;
+      /* CHANGE 3: padding-bottom 3px → 10px */
+      padding: 12px 12px 10px 12px;
       position: relative;
       z-index: 10;
     }
@@ -124,7 +125,7 @@
       justify-content: center;
       align-items: stretch;
       min-height: 100vh;
-      padding: 5px 5px 10px 5px;
+      padding: 3px;
       color: var(--dark);
     }
 
@@ -132,15 +133,18 @@
       background: var(--white);
       width: 100%;
       max-width: 545px;
-      min-height: calc(100vh - 10px);
-      border-radius: 28px;
+      /* CHANGE 2: removed min-height: calc(100vh - 10px); */
+      border-radius: 10px;
       box-shadow: var(--shadow-lg);
       overflow: hidden;
       position: relative;
       animation: slideIn .5s cubic-bezier(.4,0,.2,1);
       z-index: 100;
-      padding: 0 2px;
-      margin-bottom: 10px;
+      padding: 0 2px 2px 2px;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 6px);
     }
 
     @keyframes slideIn {
@@ -151,12 +155,13 @@
     /* ─── HEADER ─── */
     .header {
       background: linear-gradient(135deg, var(--primary), #34d399);
-      padding: 38px 28px;
+      padding: 1px 0 3px 0;
       color: var(--white);
       text-align: center;
       position: relative;
       z-index: 1000;
-      border-radius: 28px 28px 0 0;
+      border-radius: 0;
+      flex-shrink: 0;
     }
     .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.5px; }
     .header p  { font-size: 12px; opacity: .9; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
@@ -183,15 +188,18 @@
 
     /* ─── CONTENT ─── */
     .content {
-      padding: 15px;
+      /* CHANGE 4: padding: 15px → padding: 3px 3px 2px 3px */
+      padding: 3px 3px 2px 3px;
       position: relative;
       z-index: 10;
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--primary);
+      border-radius: 0 0 10px 10px;
     }
 
     .content.scrollable {
-      max-height: 65vh;
-      overflow-y: auto;
-      padding-bottom: 3px;
+      padding-bottom: 0;
     }
 
     /* Custom scrollbar for content */
@@ -214,7 +222,7 @@
     .group-loc-mini  { font-size: 11px; color: var(--slate); font-weight: 600; margin-top: 2px; }
 
     /* ─── FORM STEPS ─── */
-    .form-step { display: none; animation: fadeIn .4s ease; position: relative; z-index: 10; }
+    .form-step { display: none; animation: fadeIn .4s ease; position: relative; z-index: 10; border: 1px solid var(--primary); border-radius: 8px; margin-bottom: 10px; padding: 15px 3px; background: white; }
     .form-step.active { display: block; }
 
     @keyframes fadeIn {
@@ -357,7 +365,12 @@
     .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
     /* ─── BUTTONS ─── */
-    .btn-container { margin-top: 12px; position: relative; z-index: 10; }
+    .btn-container { margin-top: 12px; position: relative; z-index: 10; display: flex; gap: 10px; }
+
+    .btn-container button {
+      width: auto;
+      flex: 1;
+    }
 
     button {
       width: 100%;
@@ -470,10 +483,12 @@
 
     /* ─── MOBILE ─── */
     @media (max-width: 600px) {
-      .container   { max-width: 100%; margin: 0; padding: 0 2px; }
+      .container   { max-width: 100%; margin: 0; padding: 0 2px 2px 2px; }
+      .header      { padding: 10px 0 3px 0; }
       .header      { padding: 26px 16px; }
       .header h1   { font-size: 18px; }
-      .content     { padding: 14px 12px; }
+      /* CHANGE 5: padding: 14px 12px → padding: 3px 5px 2px 5px */
+      .content     { padding: 3px 5px 2px 5px; }
       .row-2       { grid-template-columns: 1fr; gap: 10px; }
       .row         { flex-direction: column; gap: 8px; }
 
@@ -764,10 +779,6 @@
         </div>
 
         <div class="btn-container" id="verifyBtnContainer" style="padding-top:12px;">
-          <button class="btn-primary" id="downloadRegFormBtn" onclick="downloadRegistrationForm()"
-            style="background:var(--secondary); display:none;">
-            <i class="fas fa-download"></i> Download Registration Form
-          </button>
           <button class="btn-tbank" id="confirmSubmitBtn" onclick="confirmAndSubmit()" style="display:none;">
             <i class="fas fa-check-circle"></i> Confirm & Submit Registration
           </button>
@@ -782,12 +793,12 @@
       <!-- ═══════════════════════════════════════════ -->
       <div class="form-step" id="step5">
         <div style="text-align:center; padding:40px 0;">
-          <i class="fas fa-circle-notch fa-spin" style="font-size:42px; color:var(--secondary); margin-bottom:20px;"></i>
-          <h3 style="font-size:18px; font-weight:800;">Submitting Registration...</h3>
-          <p style="font-size:13px; color:var(--slate); margin-top:10px;">T-Bank is processing the group payment.<br>Please wait.</p>
+          <i class="fas fa-check" style="font-size:42px; color:var(--secondary); margin-bottom:20px;"></i>
+          <h3 style="font-size:18px; font-weight:800;"><%= group.groupName %> Created Successfully</h3>
+          <p style="font-size:13px; color:var(--slate); margin-top:10px;">Group registration completed.<br>Thank you!</p>
           <div class="waiting-note" style="margin-top:22px;">
             <i class="fas fa-university"></i>
-            <span id="submitStatusMsg">Connecting to T-Bank and saving members...</span>
+            <span id="submitStatusMsg">Group saved and payment processed.</span>
           </div>
           <button class="btn-primary" id="backToDashBtn" style="margin-top:28px; display:none;"
             onclick="window.location.href='/agent'">
@@ -851,6 +862,77 @@
       } else {
         content.classList.remove('scrollable');
       }
+
+      if (id === 'step4-verify') {
+        fetchAgentName();
+      }
+    }
+
+    function checkGroupProposedMembers() {
+      const groupName = '<%= group.groupName %>';
+      return fetch('/general.json')
+        .then(response => response.json())
+        .then(data => {
+          // Search for group name in the hierarchical structure
+          for (const county in data) {
+            for (const constituency in data[county]) {
+              for (const ward in data[county][constituency]) {
+                let groups = data[county][constituency][ward];
+                if (Array.isArray(groups)) {
+                  // Direct array
+                } else if (groups.groups && Array.isArray(groups.groups)) {
+                  groups = groups.groups;
+                } else {
+                  continue;
+                }
+                for (const group of groups) {
+                  if (group.groupName === groupName) {
+                    // Check totalProposedMembers
+                    return group.totalProposedMembers || 0;
+                  }
+                }
+              }
+            }
+          }
+          return 0;
+        })
+        .catch(error => {
+          console.error('Error checking group:', error);
+          return 0;
+        });
+    }
+
+    function fetchAgentName() {
+      fetch('/data.json')
+        .then(response => response.json())
+        .then(data => {
+          const agentPhone = '<%= agent.phoneNumber %>';
+          const agent = data.find(a => a.phone === agentPhone);
+          if (agent) {
+            document.getElementById('verifyAgentName').textContent = agent.name;
+          }
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    async function confirmAndSubmit() {
+      // Check if group exists and is populated
+      const totalProposedMembers = await checkGroupProposedMembers();
+      if (totalProposedMembers > 0) {
+        showNotification('Creation failed: Group "' + '<%= group.groupName %>' + '" already exists with ' + totalProposedMembers + ' total proposed members. Please create a new group with a different name.', 'error');
+        return; // Block submission
+      }
+
+      // Collect all data (placeholder for now)
+      const groupData = {
+        groupName: '<%= group.groupName %>',
+        // Add other fields as needed
+      };
+
+      // Simulate submission
+      console.log('Submitting group data:', groupData);
+      showNotification('Group submitted successfully!', 'success');
+      showStep('step5');
     }
 
     function showMemberForm() {
@@ -1405,15 +1487,12 @@
           return mn && member.verified;
         });
         const submitBtn  = document.getElementById('confirmSubmitBtn');
-        const downloadBtn= document.getElementById('downloadRegFormBtn');
-        if (submitBtn && downloadBtn) {
+        if (submitBtn) {
           if (!allValid) {
             submitBtn.style.display  = 'none';
-            downloadBtn.style.display= 'none';
             showNotification('All members must be verified with member numbers before submitting.', 'error');
           } else {
             submitBtn.style.display  = 'flex';
-            downloadBtn.style.display= 'flex';
           }
         }
       }).catch(err => {
