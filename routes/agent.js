@@ -108,22 +108,8 @@ router.get("/", (req, res) => {
   const managedGroups = general.filter((g) => {
       const groupWard = g.ward ? normStr(g.ward) : "";
       
-      // Geographic Match Logic
-      // 1. Ward must match exactly (and exist for both)
-      const sameWard = groupWard && agentWard && groupWard === agentWard;
-      
-      // 2. County/Constituency must match IF the agent has them defined
-      const groupCounty = g.county ? normStr(g.county) : "";
-      const sameCounty = !agentCounty || (groupCounty && groupCounty === agentCounty);
-      
-      const groupConst = g.constituency ? normStr(g.constituency) : "";
-      const sameConst = !agentConst || (groupConst && groupConst === agentConst);
-      
-      // Direct Assignment Logic
-      const isProcessor = g.processorPhone && normPhone(g.processorPhone) === agentPhoneNormalized;
-      const isAgentProcessed = g.agentProcessed && normPhone(g.agentProcessed) === agentPhoneNormalized;
-
-      return (sameWard && sameCounty && sameConst) || isProcessor || isAgentProcessed;
+      // Geographic Match Logic: Strict Ward Match
+      return groupWard && agentWard && groupWard === agentWard;
   });
 
   // Augment managed groups with a list of members including their full names

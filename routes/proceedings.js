@@ -107,7 +107,7 @@ router.get("/:groupName", (req, res) => {
               }
 
               groupMembers.push({
-                  id: item.id || item.phone, 
+                  id: item.id || item.phone || key, 
                   name: displayName,
                   position: item.title || item.type || "Member",
                   groupName: groupName,
@@ -217,9 +217,9 @@ router.get("/:groupName", (req, res) => {
   });
 });
 
-// POST /api/proceedings/meetings - Create a new meeting
+// POST /api/meetings - Create a new meeting (Merged)
 router.post("/api/meetings", (req, res) => {
-  const { groupName, title, project, date, venue, startTime, endTime, chairperson, secretary } = req.body;
+  const { groupName, title, project, date, venue, startTime, endTime, chairperson, secretary, status } = req.body;
   
   if (!groupName || !title || !date) {
     return res.status(400).json({ error: "Group name, title, and date are required" });
@@ -240,7 +240,8 @@ router.post("/api/meetings", (req, res) => {
     secretary: secretary || '',
     chairpersonNote: '',
     adjournmentNote: '',
-    status: 'active',
+    status: status || 'active',
+    visitors: [],
     createdAt: new Date().toISOString()
   };
   
@@ -250,20 +251,12 @@ router.post("/api/meetings", (req, res) => {
   // --- AUTOMATED NOTIFICATIONS ---
   try {
     const allGroups = readJSON(generalFile, []);
-    const currentGroup = allGroups.find(g => g.groupName === groupName);
-    const proposerPhone = req.session.user ? req.session.user.phoneNumber : 'N/A';
+    const currentGroup = allGroups.find(g => (g.groupName || '').trim() === groupName.trim());
     
     if (currentGroup && currentGroup.members) {
+      const dataFile = path.join(__dirname, "../data.json");
       const allUsers = readJSON(dataFile, []);
       
-      // Look up Secretary Phone
-      const secMember = currentGroup.members.find(m => {
-        const u = allUsers.find(user => norm(user.phoneNumber) === norm(m.phoneNumber));
-        const fullName = u ? `${u.FirstName} ${u.MiddleName} ${u.LastName}`.trim() : (m.name || '').trim();
-        return fullName.toLowerCase() === (secretary || '').toLowerCase();
-      });
-      const secPhone = secMember ? secMember.phoneNumber : 'N/A';
-
       // Notify all members
       currentGroup.members.forEach(member => {
         const userIdx = allUsers.findIndex(u => norm(u.phoneNumber) === norm(member.phoneNumber));
@@ -271,7 +264,7 @@ router.post("/api/meetings", (req, res) => {
           const user = allUsers[userIdx];
           if (!user.inbox) user.inbox = [];
           
-          const msg = `${user.FirstName} ${user.LastName} you are invited to group meeting for ${groupName} due ${date} at ${startTime} venue ${venue}. Contact Secretary ${secretary} (${secPhone}) or Proposer (${proposerPhone})`;
+          const msg = `${user.FirstName} ${user.LastName} you are invited to group meeting for ${groupName} due ${date} at ${startTime}. Contact Secretary ${secretary}`;
           
           user.inbox.push({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
@@ -294,7 +287,7 @@ router.post("/api/meetings", (req, res) => {
   res.json({ success: true, meeting: newMeeting });
 });
 
-// PUT /api/proceedings/meetings/:id - Update a meeting
+// PUT /api/meetings/:id - Update a meeting (Merged)
 router.put("/api/meetings/:id", (req, res) => {
   const { id } = req.params;
   const updates = req.body;
@@ -312,59 +305,12 @@ router.put("/api/meetings/:id", (req, res) => {
   res.json({ success: true, meeting: proceedingsData.meetings[meetingIndex] });
 });
 
-// POST /api/proceedings/meetings - Create a new meeting
-router.post("/api/meetings", (req, res) => {
-  const { title, date, venue, startTime, endTime, chairperson, secretary, groupName, status } = req.body;
-  
-  if (!title || !date || !groupName) {
-    return res.status(400).json({ success: false, message: "Title, date, and group name are required" });
-  }
-  
-  const proceedingsData = readJSON(proceedingsFile, { meetings: [], members: [], agenda: [], minutes: [], votes: [], comments: [], attendance: [] });
-  
-  const newMeeting = {
-    id: Date.now().toString(),
-    title,
-    date,
-    venue,
-    startTime,
-    endTime,
-    chairperson,
-    secretary,
-    groupName,
-    status: status || 'active',
-    visitors: [],
-    createdAt: new Date().toISOString()
-  };
-  
-  proceedingsData.meetings.push(newMeeting);
-  writeJSON(proceedingsFile, proceedingsData);
-  
-  res.json({ success: true, meeting: newMeeting });
-});
+// DELETE /api/meetings/:id/status - Redundant status route (can be removed if PUT /api/meetings/:id handles it)
 
-// PUT /api/proceedings/meetings/:id - Update meeting status
-router.put("/api/meetings/:id", (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    
-    const proceedingsData = readJSON(proceedingsFile, { meetings: [] });
-    const meetingIndex = proceedingsData.meetings.findIndex(m => m.id === id);
-    
-    if (meetingIndex === -1) {
-        return res.status(404).json({ success: false, message: "Meeting not found" });
-    }
-    
-    proceedingsData.meetings[meetingIndex].status = status;
-    writeJSON(proceedingsFile, proceedingsData);
-    
-    res.json({ success: true });
-});
-
-// POST /api/proceedings/meetings/:id/visitors - Add a visitor
+// POST /api/meetings/:id/visitors - Add a visitor
 router.post("/api/meetings/:id/visitors", (req, res) => {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, phone, description } = req.body;
     
     if (!name) return res.status(400).json({ success: false, message: "Name required" });
     
@@ -382,11 +328,32 @@ router.post("/api/meetings/:id/visitors", (req, res) => {
     proceedingsData.meetings[meetingIndex].visitors.push({
         id: Date.now().toString(),
         name,
+        phone: phone || '',
         description,
         addedAt: new Date().toISOString()
     });
     
     writeJSON(proceedingsFile, proceedingsData);
+    
+    res.json({ success: true });
+});
+
+// DELETE /api/meetings/:id/visitors/:name - Remove a visitor
+router.delete("/api/meetings/:id/visitors/:name", (req, res) => {
+    const { id, name } = req.params;
+    const decodedName = decodeURIComponent(name);
+    
+    const proceedingsData = readJSON(proceedingsFile, { meetings: [] });
+    const meetingIndex = proceedingsData.meetings.findIndex(m => m.id === id);
+    
+    if (meetingIndex === -1) {
+        return res.status(404).json({ success: false, message: "Meeting not found" });
+    }
+    
+    if (proceedingsData.meetings[meetingIndex].visitors) {
+        proceedingsData.meetings[meetingIndex].visitors = proceedingsData.meetings[meetingIndex].visitors.filter(v => v.name !== decodedName);
+        writeJSON(proceedingsFile, proceedingsData);
+    }
     
     res.json({ success: true });
 });

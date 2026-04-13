@@ -25,40 +25,34 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
+        html, body {
+            margin: 0;
+            padding: 2px;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
             background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+            font-family: 'Outfit', sans-serif;
+            box-sizing: border-box;
         }
 
         .main-container {
-            width: 95%;
-            max-width: 420px;
+            width: calc(100% - 4px);
             background: var(--card);
-            border-radius: 22px;
+            border-radius: 5px;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
             overflow: hidden;
             animation: slideUp 0.5s ease-out;
+            height: calc(100vh - 4px);
+            display: flex;
+            flex-direction: column;
+            padding: 2px;
         }
 
-        @media (max-width: 480px) {
-            body {
-                padding: 0;
-            }
-
-            .main-container {
-                width: 100%;
-                max-width: 100%;
-                border-radius: 0;
-                min-height: 100vh;
-                box-shadow: none;
-            }
-        }
+        /* Removed @media desktop overrides to maintain consistency */
 
         @keyframes slideUp {
             from {
@@ -79,6 +73,7 @@
             position: relative;
             overflow: hidden;
             text-align: center;
+            flex-shrink: 0;
         }
 
         .header-section::before {
@@ -116,6 +111,7 @@
             border-bottom: 1px solid var(--border);
             padding: 0 5px;
             overflow-x: auto;
+            flex-shrink: 0;
         }
 
         .tab-button {
@@ -157,8 +153,12 @@
         }
 
         .step-box {
-            padding: 20px;
+            padding: 2px;
             animation: fade 0.5s ease-out;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
         }
 
         @keyframes fade {
@@ -195,7 +195,7 @@
         .form-input {
             width: 100%;
             padding: 12px;
-            border-radius: 10px;
+            border-radius: 5px;
             border: 1.5px solid var(--border);
             font-size: 13px;
             outline: none;
@@ -215,7 +215,7 @@
             font-size: 0.9rem;
             font-weight: 600;
             border: none;
-            border-radius: 10px;
+            border-radius: 5px;
             cursor: pointer;
             background: var(--primary);
             color: white;
@@ -561,7 +561,7 @@
 
                         <!-- SUMMARY Content -->
                         <div id="summaryContent" class="proceedings-content"
-                            style="background: #eff6ff; padding: 15px; border-radius: 16px; border: 1px solid #bfdbfe; margin-bottom: 15px; display: block;">
+                            style="background: #eff6ff; padding: 2px; border-radius: 5px; border: 1px solid #bfdbfe; margin-bottom: 15px; display: block;">
                             <% if (group.summaryStats) { %>
                                 <!-- Realtime Statistics (Rounds & Countdown) -->
                                 <div
@@ -684,7 +684,7 @@
 
                         <!-- MEMBERS Content -->
                         <div id="membersContent" class="proceedings-content"
-                            style="background: #f0fdf4; padding: 15px; border-radius: 16px; border: 1px solid #bcf0da; margin-bottom: 15px; display: none;">
+                            style="background: #f0fdf4; padding: 2px; border-radius: 5px; border: 1px solid #bcf0da; margin-bottom: 15px; display: none;">
                             <div
                                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <span style="font-size: 0.75rem; font-weight: 600; color: #047857;">Members List</span>
@@ -753,7 +753,7 @@
 
                         <!-- CONSTITUTION Content -->
                         <div id="constitutionContent" class="proceedings-content"
-                            style="background: #f5f3ff; padding: 15px; border-radius: 16px; border: 1px solid #ddd6fe; margin-bottom: 15px; display: none;">
+                            style="background: #f5f3ff; padding: 2px; border-radius: 5px; border: 1px solid #ddd6fe; margin-bottom: 15px; display: none;">
                             <div
                                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <span style="font-size: 0.75rem; font-weight: 600; color: #6d28d9;">Constitution &

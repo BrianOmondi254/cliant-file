@@ -55,7 +55,7 @@
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: white;
             padding: 12px 16px;
-            box-shadow: var(--shadow-md);
+            box-shadow: 0 4px 12px rgba(15, 157, 88, 0.2);
             z-index: 1000;
         }
 
@@ -71,13 +71,14 @@
             align-items: center;
             gap: 10px;
             font-size: 18px;
-            font-weight: 700;
+            font-weight: 800;
+            color: white;
         }
 
         .header-icon {
             width: 36px;
             height: 36px;
-            background: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.2);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -88,7 +89,7 @@
         .menu-btn {
             width: 40px;
             height: 40px;
-            background: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.2);
             border: none;
             border-radius: 10px;
             color: white;
@@ -100,7 +101,7 @@
         }
 
         .meeting-quick-select {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.2);
             padding: 10px 12px;
             border-radius: 10px;
             font-size: 13px;
@@ -116,7 +117,7 @@
             border: none;
             color: white;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 700;
             outline: none;
             appearance: none;
         }
@@ -890,14 +891,13 @@
         .gap-8 { gap: 8px; }
         .gap-12 { gap: 12px; }
 
-        /* Sticky Save Button */
+        /* End-of-Page Save Button */
         .sticky-action {
-            position: sticky;
-            bottom: 0;
-            padding: 16px;
-            background: linear-gradient(to top, white 0%, white 70%, transparent 100%);
-            margin: 0 -16px;
-            z-index: 10;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
         }
 
         /* Visitor List */
@@ -996,10 +996,30 @@
             border-color: var(--success);
         }
 
-        .comment-item.against {
-            background: #fff5f5;
-            border-color: var(--danger);
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #2d3748;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(-100px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
+        .notification.show {
+            transform: translateY(0);
+        }
+        .notification.error { background: #e53e3e; }
+        .notification.success { background: #38a169; }
 
         .comment-item.neutral {
             background: var(--bg-secondary);
@@ -1181,9 +1201,9 @@
         <!-- Attendance Tab -->
         <div id="attendance" class="tab-content">
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">✅ Roll Call</h3>
-                    <p class="card-subtitle">
+                <div class="card-header" style="background: #f0fff4; border-bottom: 1px solid #c6f6d5;">
+                    <h3 class="card-title" style="color: #276749; font-weight: 700;">✅ Roll Call</h3>
+                    <p class="card-subtitle" style="color: #2f855a;">
                         <% if (currentMeeting) { %>
                             <%= currentMeeting.title %> - <%= new Date(currentMeeting.date).toLocaleDateString() %>
                         <% } else { %>
@@ -1192,159 +1212,225 @@
                     </p>
                 </div>
                 <div class="card-body">
-                    <% if (currentMeeting && currentMeeting.status === 'pending') { %>
-                        <div class="empty-state">
-                            <div class="empty-icon">⏳</div>
-                            <div class="empty-title">Meeting is Pending</div>
-                            <div class="empty-subtitle">Roll-call will be available when meeting is active</div>
-                            <button class="btn btn-primary mt-16" onclick="updateMeetingStatus('<%= currentMeeting.id %>', 'active')">
-                                Set as Active
-                            </button>
-                        </div>
-                    <% } else if (members && members.length > 0) { %>
-                        <div class="member-list">
-                            <% members.forEach(function(member) { %>
-                                <% 
-                                    var attendance = attendances.find(a => a.memberId === member.id);
-                                    var status = attendance ? attendance.status : '';
-                                    var apology = attendance ? attendance.apology : '';
-                                %>
-                                <div class="member-item-wrapper">
-                                    <div class="member-item" style="border-left-color: <%= status === 'present' ? '#38a169' : status === 'absent' ? '#e53e3e' : '#e2e8f0' %>;">
-                                        <div class="member-info">
-                                            <div class="member-avatar">
-                                                <%= member.name.split(' ').map(n => n[0]).join('').toUpperCase() %>
-                                            </div>
-                                            <div class="member-details">
-                                                <div class="member-name"><%= member.name %></div>
-                                                <% if (member.position) { %>
-                                                    <div class="member-position"><%= member.position %></div>
-                                                <% } %>
-                                            </div>
-                                        </div>
-                                        <div class="attendance-btns">
-                                            <button class="att-btn present <%= status === 'present' ? 'active' : '' %>" 
-                                                    onclick="markAttendance('<%= member.id %>', 'present')" 
-                                                    title="Present">✓</button>
-                                            <button class="att-btn absent <%= status === 'absent' ? 'active' : '' %>" 
-                                                    onclick="toggleApology('<%= member.id %>')" 
-                                                    title="Absent">✗</button>
-                                            <button class="att-btn late <%= status === 'late' ? 'active' : '' %>" 
-                                                    onclick="markAttendance('<%= member.id %>', 'late')" 
-                                                    title="Late">◐</button>
-                                        </div>
+                    <% if (currentMeeting && currentMeeting.status !== 'pending') { %>
+                        <% var hasCallToOrder = !!(currentMeeting.callToOrderNote && currentMeeting.calledByOfficial); %>
+                        <!-- Call to Order Section -->
+                        <div id="callToOrderSection" class="card" style="margin-bottom: 25px; background: #f0fff4; border: 1px solid #c6f6d5;">
+                            <div class="card-body">
+                                <h4 style="font-size: 14px; margin-bottom: 12px; color: #276749; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                                    📢 Call to Order
+                                </h4>
+                                
+                                <div class="form-group">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                                        <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin: 0;">Opening Remarks / Description</label>
+                                        <span id="remarksCounter" style="font-size: 10px; color: #718096; font-weight: 600;">0/250</span>
                                     </div>
-                                    
-                                    <div id="apology_<%= member.id %>" class="apology-options <%= status === 'absent' ? 'show' : '' %>">
-                                        <div class="apology-label">Absent with Apology?</div>
-                                        <div class="apology-btns">
-                                            <button class="apology-btn <%= apology === 'With Apology' ? 'active' : '' %>" 
-                                                    onclick="markAttendance('<%= member.id %>', 'absent', 'With Apology')">
-                                                With Apology
-                                            </button>
-                                            <button class="apology-btn <%= apology === 'Without Apology' ? 'active' : '' %>" 
-                                                    onclick="markAttendance('<%= member.id %>', 'absent', 'Without Apology')">
-                                                No Apology
-                                            </button>
-                                        </div>
+                                    <div id="remarksError" style="display: none; color: var(--danger); font-size: 11px; font-weight: 600; margin-bottom: 4px;">Opening remarks are required</div>
+                                    <textarea class="form-textarea" id="openingRemarks" maxlength="250" oninput="updateCounter('openingRemarks', 'remarksCounter')" placeholder="Enter opening remarks..." style="background: var(--bg-secondary); padding: 10px; font-size: 13px; height: 60px;"><%= currentMeeting.callToOrderNote || '' %></textarea>
+                                </div>
+                                
+                                <div class="form-group" style="margin-top: 10px;">
+                                    <label style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block;">Called to Order By</label>
+                                    <div id="officialError" style="display: none; color: var(--danger); font-size: 11px; font-weight: 600; margin-bottom: 4px;">Please select a presiding official</div>
+                                    <select class="form-select" id="calledByOfficial" style="background: var(--bg-secondary); padding: 10px; font-size: 13px; height: auto;" onchange="const n = this.options[this.selectedIndex].getAttribute('data-name'); const d = document.getElementById('officialNameDisplay'); d.innerText = n ? '👤 ' + n : ''; d.style.display = n ? 'inline-block' : 'none';">
+                                        <option value="">Select Official Title</option>
+                                        <option value="Chairperson" data-name="<%= currentMeeting.chairperson %>" <%= currentMeeting.calledByOfficial === currentMeeting.chairperson ? 'selected' : '' %>>Chairperson</option>
+                                        <option value="Secretary" data-name="<%= currentMeeting.secretary %>" <%= currentMeeting.calledByOfficial === currentMeeting.secretary ? 'selected' : '' %>>Secretary</option>
+                                        <option value="Moderator" data-name="Society Moderator" <%= currentMeeting.calledByOfficial === 'Society Moderator' ? 'selected' : '' %>>Moderator</option>
+                                        <option value="Guest" data-name="Guest Speaker" <%= currentMeeting.calledByOfficial === 'Guest Speaker' ? 'selected' : '' %>>Guest Speaker</option>
+                                    </select>
+                                    <div id="officialNameDisplay" style="font-size: 13px; color: #276749; margin-top: 8px; font-weight: 700; padding: 6px 12px; background: #e6fffa; border: 1px solid #c6f6d5; border-radius: 6px; display: <%= currentMeeting.calledByOfficial ? 'inline-block' : 'none' %>;">
+                                        👤 <%= currentMeeting.calledByOfficial || '' %>
                                     </div>
                                 </div>
-                            <% }); %>
-                            
-                            <!-- Visitors Section -->
-                            <% if (currentMeeting && currentMeeting.status !== 'pending') { %>
-                                <div class="visitor-section">
-                                    <h4 style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary); font-weight: 600;">
-                                        👤 Visitors / Guests
+
+                                <!-- Visitors Section -->
+                                <div class="visitor-section" style="margin-top: 30px; margin-bottom: 25px; padding-top: 20px; border-top: 1px dashed #cbd5e0;">
+                                    <h4 id="addVisitorHeader" style="font-size: 14px; margin-bottom: 12px; color: #276749; font-weight: 700; padding: 12px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                                        👤 Add Visitors / Guests
                                     </h4>
                                     
-                                    <div class="form-group">
-                                        <input type="text" class="form-input" id="visitorName" placeholder="Visitor Name">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" class="form-input" id="visitorDescription" placeholder="Description/Purpose">
-                                    </div>
-                                    <button class="btn btn-secondary mb-16" onclick="addVisitor()">+ Add Visitor</button>
-                                    
-                                    <% if (currentMeeting && currentMeeting.visitors && currentMeeting.visitors.length > 0) { %>
-                                        <% currentMeeting.visitors.forEach(function(v) { %>
-                                            <div class="visitor-item">
-                                                <div class="visitor-icon">👤</div>
-                                                <div class="visitor-info">
-                                                    <div class="visitor-name"><%= v.name %></div>
-                                                    <div class="visitor-desc"><%= v.description %></div>
-                                                </div>
+                                    <div id="visitorForm">
+                                        <div class="form-group">
+                                            <input type="text" class="form-input" id="visitorName" placeholder="Visitor Name">
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="tel" class="form-input" id="visitorPhone" placeholder="Phone Number (e.g. 07...)" maxlength="13">
+                                        </div>
+                                        <div class="form-group">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px;">
+                                                <label style="font-size: 11px; font-weight: 700; color: #718096; margin: 0;">Description/Purpose</label>
+                                                <span id="visitorCounter" style="font-size: 10px; color: #718096; font-weight: 600;">0/250</span>
                                             </div>
-                                        <% }); %>
-                                    <% } %>
+                                            <textarea class="form-textarea" id="visitorDescription" maxlength="250" oninput="updateCounter('visitorDescription', 'visitorCounter')" placeholder="Purpose of visit..." style="height: 60px; font-size: 13px;"></textarea>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                            <button class="btn btn-secondary btn-small" id="addVisitorBtn" onclick="addVisitor(true)" style="padding: 0 16px; font-size: 12px; height: 32px; width: 140px; justify-content: center;">+ Save Visitor</button>
+                                            <button class="btn btn-primary btn-small" onclick="handleVisitorOk()" style="padding: 0 16px; font-size: 12px; height: 32px; background: #38a169; width: 140px; justify-content: center;">OK</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="visitorListContainer">
+                                        <% if (currentMeeting && currentMeeting.visitors && currentMeeting.visitors.length > 0) { %>
+                                            <% currentMeeting.visitors.forEach(function(v) { %>
+                                                <div class="visitor-item">
+                                                    <div class="visitor-icon">👤</div>
+                                                    <div class="visitor-info">
+                                                        <div class="visitor-name"><%= v.name %> <%= v.phone ? '(' + v.phone + ')' : '' %></div>
+                                                        <div class="visitor-desc"><%= v.description %></div>
+                                                    </div>
+                                                    <div class="visitor-actions">
+                                                        <button class="btn btn-secondary btn-small" style="font-size: 10px; padding: 2px 8px; height: 24px;" 
+                                                                onclick="editVisitor('<%= (v.name || "").replace(/'/g, "\\'") %>', '<%= (v.phone || "").replace(/'/g, "\\'") %>', '<%= (v.description || "").replace(/'/g, "\\'") %>')">
+                                                            EDIT
+                                                        </button>
+                                                        <button class="btn" style="font-size: 10px; color: #c53030; background: #fff5f5; border: 1px solid #feb2b2; padding: 2px 8px; height: 24px;" 
+                                                                onclick="deleteVisitor('<%= (v.name || "").replace(/'/g, "\\'") %>')">
+                                                            DELETE
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            <% }); %>
+                                        <% } %>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary w-100 mt-16" onclick="confirmCallToOrder()" style="height: 48px; font-weight: 700;">
+                                    Confirm & Start Meeting
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Member List Section -->
+                        <div id="rollCallContent" style="display: none;">
+                            <!-- Call to Order Summary View -->
+                            <div class="card" style="margin-bottom: 15px; background: #f7fafc; border: 1px solid #e2e8f0;">
+                                <div class="card-body" style="padding: 12px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                        <h4 style="font-size: 13px; margin: 0; color: var(--text-secondary); font-weight: 700;">📢 Call to Order Summary</h4>
+                                        <button class="btn btn-secondary btn-small" onclick="goBackToCallToOrder()" style="height: 28px; padding: 0 10px; font-size: 11px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                                            ✏️ Review
+                                        </button>
+                                    </div>
+                                    <div style="font-size: 13px; color: var(--text-primary); margin-bottom: 8px; font-style: italic;">
+                                        "<span id="reviewRemarksText"><%= currentMeeting.callToOrderNote || '' %></span>"
+                                    </div>
+                                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">
+                                        Presiding: <strong id="reviewOfficialName"><%= currentMeeting.calledByOfficial || '' %></strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Visitor Summary View -->
+                            <% if (currentMeeting && currentMeeting.visitors && currentMeeting.visitors.length > 0) { %>
+                                <div class="card" style="margin-bottom: 25px; background: #ebf8ff; border: 1px solid #bee3f8;">
+                                    <div class="card-body" style="padding: 12px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                            <h4 style="font-size: 13px; margin: 0; color: #2b6cb0; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                                                👥 Added Visitors / Guests
+                                            </h4>
+                                            <button class="btn btn-secondary btn-small" onclick="goBackToCallToOrder()" style="height: 28px; padding: 0 10px; font-size: 11px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+                                                ✏️ Review
+                                            </button>
+                                        </div>
+                                        <div style="display: grid; gap: 8px;">
+                                            <% currentMeeting.visitors.forEach(function(v) { %>
+                                                <div style="font-size: 12px; color: var(--text-primary); background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                                    <div style="font-weight: 700;"><%= v.name %> <span style="font-weight: 500; color: var(--text-muted);"><%= v.phone ? '• ' + v.phone : '' %></span></div>
+                                                    <% if (v.description) { %>
+                                                        <div style="color: var(--text-muted); margin-top: 4px; font-size: 11px;"><%= v.description %></div>
+                                                    <% } %>
+                                                </div>
+                                            <% }); %>
+                                        </div>
+                                    </div>
                                 </div>
                             <% } %>
-                        </div>
-                        
-                        <div class="sticky-action">
-                            <button class="btn btn-primary" onclick="bulkSaveAttendance()">
-                                💾 Save Attendance & Continue
-                            </button>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="font-size: 14px; margin: 0; color: #276749; font-weight: 700; padding: 12px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; flex: 1; display: flex; align-items: center; gap: 8px;">
+                                    ✅ Member Roll Call
+                                </h4>
+                            </div>
+                            
+                            <% if (members && members.length > 0) { %>
+                                <div class="member-list">
+                                    <% members.forEach(function(member, index) { %>
+                                        <% 
+                                            var baseId = member.id ? member.id.toString() : 'undef_' + index;
+                                            var safeId = baseId.replace(/[^a-zA-Z0-9]/g, '_') + '_' + index;
+                                            var attendance = attendances.find(a => a.memberId === member.id);
+                                            var status = attendance ? attendance.status : '';
+                                            var apology = attendance ? attendance.apology : '';
+                                        %>
+                                        <div class="member-item-wrapper" id="wrapper_<%= safeId %>">
+                                            <div class="member-item" style="border-left-color: <%= status === 'present' ? '#38a169' : status === 'absent' ? '#e53e3e' : '#e2e8f0' %>;">
+                                                <div class="member-info">
+                                                    <div class="member-avatar">
+                                                        <%= (member.name || 'M').split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2) %>
+                                                    </div>
+                                                    <div class="member-details" style="cursor: pointer; flex: 1;" onclick="markAttendance('<%= member.id %>', 'present', '<%= (member.name || 'Member').replace(/'/g, "\\'") %>', '', '<%= safeId %>')">
+                                                        <div class="member-name"><%= member.name %></div>
+                                                        <% if (member.position) { %>
+                                                            <div class="member-position"><%= member.position %></div>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                                <div class="attendance-btns">
+                                                    <button class="att-btn present <%= status === 'present' ? 'active' : '' %>" 
+                                                            onclick="markAttendance('<%= member.id %>', 'present', '<%= (member.name || 'Member').replace(/'/g, "\\'") %>', '', '<%= safeId %>')" 
+                                                            title="Present">✓</button>
+                                                    <button class="att-btn absent <%= status === 'absent' ? 'active' : '' %>" 
+                                                            onclick="toggleApology('<%= safeId %>')" 
+                                                            title="Absent">✗</button>
+                                                    <button class="att-btn late <%= status === 'late' ? 'active' : '' %>" 
+                                                            onclick="markAttendance('<%= member.id %>', 'late', '<%= (member.name || 'Member').replace(/'/g, "\\'") %>', '', '<%= safeId %>')" 
+                                                            title="Late">◐</button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div id="apology_<%= safeId %>" class="apology-options <%= status === 'absent' ? 'show' : '' %>">
+                                                <div class="apology-label">Absent with Apology?</div>
+                                                <div class="apology-btns">
+                                                    <button class="apology-btn <%= apology === 'With Apology' ? 'active' : '' %>" 
+                                                            onclick="markAttendance('<%= member.id %>', 'absent', '<%= (member.name || 'Member').replace(/'/g, "\\'") %>', 'With Apology', '<%= safeId %>')">
+                                                        With
+                                                    </button>
+                                                    <button class="apology-btn <%= apology === 'Without Apology' ? 'active' : '' %>" 
+                                                            onclick="markAttendance('<%= member.id %>', 'absent', '<%= (member.name || 'Member').replace(/'/g, "\\'") %>', 'Without Apology', '<%= safeId %>')">
+                                                        No
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+
+                                    <div class="sticky-action" id="saveAttendanceAction" style="display: none;">
+                                        <button class="btn btn-primary w-100" onclick="bulkSaveAttendance()" style="background: linear-gradient(135deg, #0f9d58, #34d399); box-shadow: 0 4px 12px rgba(15, 157, 88, 0.2); height: 50px; font-weight: 700;">
+                                            💾 Save Attendance & Continue
+                                        </button>
+                                    </div>
+                                </div>
+                            <% } %>
+
                         </div>
                     <% } else { %>
                         <div class="empty-state">
-                            <div class="empty-icon">👥</div>
-                            <div class="empty-title">No Members Yet</div>
-                            <div class="empty-subtitle">Add members to start taking attendance</div>
+                            <div class="empty-icon">⏳</div>
+                            <div class="empty-title">Meeting is Pending / No Meeting</div>
+                            <div class="empty-subtitle">Roll-call will be available when meeting is active</div>
+                            <% if (currentMeeting) { %>
+                                <button class="btn btn-primary mt-16" onclick="updateMeetingStatus('<%= currentMeeting.id %>', 'active')">
+                                    Set as Active
+                                </button>
+                            <% } %>
                         </div>
                     <% } %>
                 </div>
             </div>
 
-            <!-- Present/Absent Summary -->
-            <div class="card">
-                <div class="card-header success collapsible-header" onclick="toggleCollapse('presentBody')">
-                    <h3 class="card-title">✅ Present (<%= presentCount %>)</h3>
-                    <span class="collapse-arrow" id="arrow_presentBody">▼</span>
-                </div>
-                <div class="card-body" id="presentBody" style="display: none;">
-                    <% if (presentMembers && presentMembers.length > 0) { %>
-                        <div class="badge-wrapper">
-                            <% presentMembers.forEach(function(member) { %>
-                                <span class="badge badge-success"><%= member.name %></span>
-                            <% }); %>
-                        </div>
-                    <% } else { %>
-                        <div class="empty-state">
-                            <div class="empty-subtitle">No members marked present</div>
-                        </div>
-                    <% } %>
-                </div>
-            </div>
 
-            <div class="card">
-                <div class="card-header danger collapsible-header" onclick="toggleCollapse('absentBody')">
-                    <h3 class="card-title">❌ Absent (<%= absentCount %>)</h3>
-                    <span class="collapse-arrow" id="arrow_absentBody">▼</span>
-                </div>
-                <div class="card-body" id="absentBody" style="display: none;">
-                    <% if (absentMembers && absentMembers.length > 0) { %>
-                        <div class="badge-wrapper">
-                            <% absentMembers.forEach(function(member) { %>
-                                <% 
-                                    var att = attendances.find(a => a.memberId === member.id);
-                                    var apologyInfo = att && att.status === 'absent' ? (att.apology || '') : '';
-                                %>
-                                <span class="badge badge-danger">
-                                    <%= member.name %>
-                                    <% if (apologyInfo) { %>
-                                        (<%= apologyInfo %>)
-                                    <% } %>
-                                </span>
-                            <% }); %>
-                        </div>
-                    <% } else { %>
-                        <div class="empty-state">
-                            <div class="empty-subtitle">All members present</div>
-                        </div>
-                    <% } %>
-                </div>
-            </div>
         </div>
 
         <!-- Minutes Tab -->
@@ -2070,58 +2156,112 @@
             }
         }
 
-        // Attendance functions
-        function toggleApology(memberId) {
-            const apologyDiv = document.getElementById('apology_' + memberId);
-            apologyDiv.classList.toggle('show');
+        function goBackToCallToOrder() {
+            document.getElementById('callToOrderSection').style.display = 'block';
+            document.getElementById('rollCallContent').style.display = 'none';
+            document.getElementById('saveAttendanceAction').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showNotification('Editing Meeting Start Details');
         }
 
-        function markAttendance(memberId, status, apology = '') {
-            attendanceState[memberId] = { status, apology };
-
-            const container = document.querySelector(`[id="apology_${memberId}"]`).parentElement;
-            const item = container.querySelector('.member-item');
-            const btns = container.querySelectorAll('.att-btn');
-            const apologyDiv = document.getElementById('apology_' + memberId);
-            const apologyBtns = container.querySelectorAll('.apology-btn');
-
-            // Update border
-            if (status === 'present') item.style.borderLeftColor = '#38a169';
-            else if (status === 'absent') item.style.borderLeftColor = '#e53e3e';
-            else if (status === 'late') item.style.borderLeftColor = '#d69e2e';
-
-            // Update buttons
-            btns.forEach(btn => {
-                btn.classList.remove('active');
-                if (status === 'present' && btn.classList.contains('present')) btn.classList.add('active');
-                if (status === 'absent' && btn.classList.contains('absent')) btn.classList.add('active');
-                if (status === 'late' && btn.classList.contains('late')) btn.classList.add('active');
-            });
-
-            // Show/hide apology
-            if (status === 'absent') {
-                apologyDiv.classList.add('show');
-            } else {
-                apologyDiv.classList.remove('show');
+        async function confirmCallToOrder() {
+            const select = document.getElementById('calledByOfficial');
+            const officialValue = select.value;
+            const officialName = select.options[select.selectedIndex].getAttribute('data-name');
+            const remarks = document.getElementById('openingRemarks').value;
+            
+            if (!remarks || !officialValue) {
+                if (!remarks) document.getElementById('remarksError').style.display = 'block';
+                if (!officialValue) document.getElementById('officialError').style.display = 'block';
+                return;
             }
+            
+            try {
+                const response = await fetch('/proceedings/api/meetings/' + currentMeetingId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        callToOrderNote: remarks,
+                        calledByOfficial: officialName || officialValue,
+                        status: 'active'
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('callToOrderSection').style.display = 'none';
+                    document.getElementById('rollCallContent').style.display = 'block';
+                    document.getElementById('saveAttendanceAction').style.display = 'block';
+                    
+                    document.getElementById('reviewRemarksText').textContent = remarks;
+                    document.getElementById('reviewOfficialName').textContent = officialName || officialValue;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    showNotification('Meeting Activated - Starting Roll Call');
+                }
+            } catch (error) {
+                showNotification('Error starting meeting', 'error');
+            }
+        }
 
-            // Update apology buttons
-            apologyBtns.forEach(btn => {
-                btn.classList.remove('active');
-                if (apology === 'With Apology' && btn.textContent.includes('With')) btn.classList.add('active');
-                if (apology === 'Without Apology' && btn.textContent.includes('No')) btn.classList.add('active');
-            });
+        // Attendance functions
+        const totalMemberCount = <%= members.length %>;
+
+        function toggleApology(safeId) {
+            const apologyDiv = document.getElementById('apology_' + safeId);
+            if (apologyDiv) apologyDiv.classList.toggle('show');
+        }
+
+        function markAttendance(memberId, status, memberName = 'Member', apology = '', safeId = '') {
+            attendanceState[memberId] = { status, apology };
+            
+            showNotification(memberName + ' marked as ' + status + (apology ? ' (' + apology + ')' : ''));
+
+            const targetId = safeId || memberId.toString().replace(/[^a-zA-Z0-9]/g, '_');
+            const wrapper = document.getElementById('wrapper_' + targetId);
+            
+            if (wrapper) {
+                const item = wrapper.querySelector('.member-item');
+                const btns = wrapper.querySelectorAll('.att-btn');
+                const apologyDiv = document.getElementById('apology_' + targetId);
+                const apologyBtns = wrapper.querySelectorAll('.apology-btn');
+
+                // Update border
+                if (status === 'present') item.style.borderLeftColor = '#38a169';
+                else if (status === 'absent') item.style.borderLeftColor = '#e53e3e';
+                else if (status === 'late') item.style.borderLeftColor = '#d69e2e';
+
+                // Update status buttons
+                btns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (status === 'present' && btn.classList.contains('present')) btn.classList.add('active');
+                    if (status === 'absent' && btn.classList.contains('absent')) btn.classList.add('active');
+                    if (status === 'late' && btn.classList.contains('late')) btn.classList.add('active');
+                });
+
+                // Show/hide apology
+                if (status === 'absent' && !apology) {
+                    if (apologyDiv) apologyDiv.classList.add('show');
+                } else {
+                    if (apologyDiv) apologyDiv.classList.remove('show');
+                }
+
+                // Update apology buttons
+                apologyBtns.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (apology === 'With Apology' && btn.textContent.includes('With')) btn.classList.add('active');
+                    if (apology === 'Without Apology' && btn.textContent.includes('No')) btn.classList.add('active');
+                });
+            }
         }
 
         async function bulkSaveAttendance() {
             if (!currentMeetingId) {
-                alert('Please select a meeting first');
+                showNotification('Please select a meeting first', 'error');
                 return;
             }
 
-            const updatesCount = Object.keys(attendanceState).length;
-            if (updatesCount === 0) {
-                alert('No changes to save');
+            const markedCount = Object.keys(attendanceState).length;
+            if (markedCount < totalMemberCount) {
+                showNotification(`Selection required! (${markedCount}/${totalMemberCount} members marked)`, 'error');
                 return;
             }
 
@@ -2137,24 +2277,65 @@
                 });
 
                 if (response.ok) {
-                    window.location.href = window.location.pathname + '?meetingId=' + currentMeetingId + '&tab=minutes';
+                    showNotification('Attendance saved successfully');
+                    window.location.reload();
                 } else {
-                    alert('Error saving data');
+                    showNotification('Error saving data', 'error');
                 }
             } catch (error) {
-                alert('Error connecting to server');
+                showNotification('Connection error', 'error');
             }
         }
 
-        // Visitor
-        async function addVisitor() {
+        // Visitor Management
+        function editVisitor(name, phone, description) {
+            document.getElementById('visitorName').value = name;
+            document.getElementById('visitorPhone').value = phone || '';
+            document.getElementById('visitorDescription').value = description;
+            
+            const btn = document.getElementById('addVisitorBtn');
+            btn.textContent = 'Update Visitor';
+            btn.className = 'btn btn-primary mb-16';
+            
+            document.getElementById('visitorForm').scrollIntoView({ behavior: 'smooth' });
+            showNotification('Loaded ' + name + ' for editing');
+        }
+
+        async function deleteVisitor(name) {
+            if (!currentMeetingId) return;
+            
+            try {
+                const response = await fetch(`/proceedings/api/meetings/${currentMeetingId}/visitors/${encodeURIComponent(name)}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showNotification('Visitor removed');
+                    window.location.reload();
+                }
+            } catch (error) {
+                showNotification('Error deleting visitor', 'error');
+            }
+        }
+
+        function handleVisitorOk() {
+            const name = document.getElementById('visitorName').value;
+            if (name && name.trim() !== '') {
+                addVisitor(false);
+            } else {
+                showNotification('Visitor configuration finished');
+            }
+        }
+
+        async function addVisitor(shouldSlide = true) {
             if (!currentMeetingId) return;
 
             const name = document.getElementById('visitorName').value;
+            const phone = document.getElementById('visitorPhone').value;
             const description = document.getElementById('visitorDescription').value;
 
             if (!name) {
-                alert('Please enter visitor name');
+                showNotification('Please enter visitor name', 'error');
                 return;
             }
 
@@ -2162,14 +2343,64 @@
                 const response = await fetch('/proceedings/api/meetings/' + currentMeetingId + '/visitors', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, description })
+                    body: JSON.stringify({ name, phone, description })
                 });
-                
                 if (response.ok) {
-                    window.location.reload();
+                    showNotification('Visitor added successfully');
+                    
+                    // Clear inputs
+                    document.getElementById('visitorName').value = '';
+                    document.getElementById('visitorPhone').value = '';
+                    document.getElementById('visitorDescription').value = '';
+                    
+                    // Update button back to adding mode if it was in edit mode
+                    const btn = document.getElementById('addVisitorBtn');
+                    btn.textContent = '+ Save Visitor';
+                    btn.className = 'btn btn-secondary btn-small';
+                    
+                    if (shouldSlide) {
+                        // Smoothly scroll back up to the header
+                        document.getElementById('addVisitorHeader').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    
+                    // Dynamically append the visitor to avoid a hard page reload
+                    const visitorList = document.getElementById('visitorListContainer');
+                    const safeName = name.replace(/'/g, "\\'");
+                    const safePhone = phone.replace(/'/g, "\\'");
+                    const safeDesc = description.replace(/'/g, "\\'");
+                    
+                    // Look to remove existing item if it was an update
+                    const items = visitorList.getElementsByClassName('visitor-item');
+                    for (let i = 0; i < items.length; i++) {
+                        if (items[i].innerHTML.includes(name)) {
+                            items[i].remove();
+                            break;
+                        }
+                    }
+
+                    const newItem = document.createElement('div');
+                    newItem.className = 'visitor-item';
+                    newItem.innerHTML = `
+                        <div class="visitor-icon">👤</div>
+                        <div class="visitor-info">
+                            <div class="visitor-name">${name} ${phone ? '(' + phone + ')' : ''}</div>
+                            <div class="visitor-desc">${description}</div>
+                        </div>
+                        <div class="visitor-actions">
+                            <button class="btn btn-secondary btn-small" style="font-size: 10px; padding: 2px 8px; height: 24px;" 
+                                    onclick="editVisitor('${safeName}', '${safePhone}', '${safeDesc}')">
+                                EDIT
+                            </button>
+                            <button class="btn" style="font-size: 10px; color: #c53030; background: #fff5f5; border: 1px solid #feb2b2; padding: 2px 8px; height: 24px;" 
+                                    onclick="deleteVisitor('${safeName}')">
+                                DELETE
+                            </button>
+                        </div>
+                    `;
+                    visitorList.appendChild(newItem);
                 }
             } catch (error) {
-                alert('Error adding visitor');
+                showNotification('Error adding visitor', 'error');
             }
         }
 
@@ -2191,7 +2422,7 @@
             };
 
             if (!data.title) {
-                alert('Please enter agenda title');
+                showNotification('Please enter agenda title', 'error');
                 return;
             }
 
@@ -2203,10 +2434,13 @@
                 });
                 
                 if (response.ok) {
-                    window.location.href = window.location.pathname + '?meetingId=' + currentMeetingId + '&tab=agenda';
+                    showNotification('Agenda item created!');
+                    setTimeout(() => {
+                        window.location.href = window.location.pathname + '?meetingId=' + currentMeetingId + '&tab=agenda';
+                    }, 1000);
                 }
             } catch (error) {
-                alert('Error creating agenda');
+                showNotification('Error creating agenda', 'error');
             }
         }
 
@@ -2219,10 +2453,11 @@
                 });
                 
                 if (response.ok) {
-                    window.location.reload();
+                    showNotification('Agenda status updated');
+                    setTimeout(() => window.location.reload(), 800);
                 }
             } catch (error) {
-                alert('Error updating agenda');
+                showNotification('Error updating agenda', 'error');
             }
         }
 
@@ -2241,17 +2476,18 @@
                 });
                 
                 if (response.ok) {
-                    window.location.reload();
+                    showNotification('Vote recorded');
+                    setTimeout(() => window.location.reload(), 800);
                 }
             } catch (error) {
-                alert('Error casting vote');
+                showNotification('Error casting vote', 'error');
             }
         }
 
         // Minutes
         async function createMinute() {
             if (!currentMeetingId) {
-                alert('Please select a meeting first');
+                showNotification('Please select a meeting first', 'error');
                 return;
             }
 
@@ -2263,32 +2499,38 @@
             };
 
             if (!data.title || !data.content) {
-                alert('Please fill in required fields');
+                showNotification('Please fill in required fields', 'error');
                 return;
             }
 
             try {
-                await fetch('/proceedings/api/minutes', {
+                const response = await fetch('/proceedings/api/minutes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                window.location.reload();
+                if (response.ok) {
+                    showNotification('Minute added');
+                    setTimeout(() => window.location.reload(), 800);
+                }
             } catch (error) {
-                alert('Error creating minute');
+                showNotification('Error creating minute', 'error');
             }
         }
 
         async function updateMinuteStatus(minuteId, status) {
             try {
-                await fetch('/proceedings/api/minutes/' + minuteId, {
+                const response = await fetch('/proceedings/api/minutes/' + minuteId, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status })
                 });
-                window.location.reload();
+                if (response.ok) {
+                    showNotification('Minute ' + status);
+                    setTimeout(() => window.location.reload(), 800);
+                }
             } catch (error) {
-                alert('Error updating minute');
+                showNotification('Error updating minute', 'error');
             }
         }
 
@@ -2298,14 +2540,16 @@
             
             const note = document.getElementById('chairpersonNote').value;
             try {
-                await fetch('/proceedings/api/meetings/' + currentMeetingId, {
+                const response = await fetch('/proceedings/api/meetings/' + currentMeetingId, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ chairpersonNote: note })
                 });
-                alert('Comments saved');
+                if (response.ok) {
+                    showNotification('Comments saved');
+                }
             } catch (error) {
-                alert('Error saving');
+                showNotification('Error saving comments', 'error');
             }
         }
 
@@ -2314,14 +2558,17 @@
             
             const note = document.getElementById('adjournmentNote').value;
             try {
-                await fetch('/proceedings/api/meetings/' + currentMeetingId, {
+                const response = await fetch('/proceedings/api/meetings/' + currentMeetingId, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ adjournmentNote: note, status: 'adjourned' })
                 });
-                alert('Meeting adjourned');
+                if (response.ok) {
+                    showNotification('Meeting adjourned');
+                    setTimeout(() => window.location.reload(), 1000);
+                }
             } catch (error) {
-                alert('Error saving');
+                showNotification('Error saving adjournment', 'error');
             }
         }
 
@@ -2336,7 +2583,7 @@
             };
 
             if (!data.title) {
-                alert('Please enter project title');
+                showNotification('Please enter project title', 'error');
                 return;
             }
 
@@ -2348,16 +2595,15 @@
                 });
                 
                 if (response.ok) {
-                    alert('Project created!');
+                    showNotification('Project created!');
                     closeModal('projectModal');
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 1000);
                 }
             } catch (error) {
-                alert('Error creating project');
+                showNotification('Error creating project', 'error');
             }
         }
 
-        // Meeting status
         async function updateMeetingStatus(meetingId, status) {
             try {
                 const response = await fetch('/proceedings/api/meetings/' + meetingId, {
@@ -2367,10 +2613,11 @@
                 });
                 
                 if (response.ok) {
-                    window.location.reload();
+                    showNotification('Meeting status: ' + status);
+                    setTimeout(() => window.location.reload(), 1000);
                 }
             } catch (error) {
-                alert('Error updating status');
+                showNotification('Error updating status', 'error');
             }
         }
 
@@ -2401,6 +2648,35 @@
                 setTimeout(() => openTab(tabParam), 100);
             }
         });
+
+        // Notifications
+        function showNotification(message, type = 'success') {
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <span>${type === 'error' ? '❌' : '✅'}</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Counter helper
+        function updateCounter(inputId, counterId) {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            if (input && counter) {
+                counter.textContent = `${input.value.length}/${input.maxLength}`;
+            }
+        }
 
         // Prevent double-tap zoom on buttons
         let lastTouchEnd = 0;

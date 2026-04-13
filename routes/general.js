@@ -785,12 +785,32 @@ router.get("/my-groups", (req, res) => {
     for (const key in group) {
       if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
         const memberInfo = group[key];
-        if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+        const memberPhone = memberInfo ? String(memberInfo.phone || "").trim() : "";
+        
+        if (memberPhone && norm(memberPhone) === norm(userPhone)) {
+          // Find assigned agent
+          const agentFile = path.join(__dirname, "../agent.json");
+          const agents = readJSON(agentFile, []);
+          const matchedAgent = agents.find(a => 
+             String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+             String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase() &&
+             String(a.ward || '').trim().toLowerCase() === String(group.ward || '').trim().toLowerCase()
+          ) || agents.find(a => 
+             String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+             String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase()
+          );
+
           userGroups.push({
             groupName: group.groupName,
             phone: group.phone,
-            role: memberInfo.type,
+            role: memberInfo.type || (key.startsWith("trustee_") ? "trustee" : (key.startsWith("official_") ? "official" : "member")),
             roleTitle: memberInfo.title || '',
+            phase: parseInt(group.phase) || 1,
+            totalProposedMembers: group.totalProposedMembers || 0,
+            createdAt: group.createdAt,
+            membersPopulatedAt: group.membersPopulatedAt,
+            assignedAgentName: matchedAgent ? matchedAgent.name : "To be assigned",
+            assignedAgentPhone: matchedAgent ? matchedAgent.phoneNumber : "N/A",
             accountNumber: group.accountNumber || '',
             county: group.county || '',
             constituency: group.constituency || '',
@@ -1190,11 +1210,13 @@ router.get("/user-role-type", (req, res) => {
 
   for (const group of allGroups) {
     let userRoleInGroup = null;
+    let userTitleInGroup = null;
     
     for (const key in group) {
       if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
         const memberInfo = group[key];
         if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+          userTitleInGroup = memberInfo.title || memberInfo.type || "";
           if (key.startsWith("trustee_")) {
             isTrustee = true;
             userRoleInGroup = "trustee";
@@ -1210,11 +1232,36 @@ router.get("/user-role-type", (req, res) => {
     }
 
     if (userRoleInGroup) {
+      // Find assigned agent for this group's location
+      const agentFile = path.join(__dirname, "../agent.json");
+      const agents = readJSON(agentFile, []);
+      const matchedAgent = agents.find(a => 
+         String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+         String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase() &&
+         String(a.ward || '').trim().toLowerCase() === String(group.ward || '').trim().toLowerCase()
+      ) || agents.find(a => 
+         String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+         String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase()
+      );
+
+      // Compute stats
+      const now = new Date();
+      const created = new Date(group.createdAt || now);
+      const diffDays = Math.ceil(Math.abs(now - created) / (1000 * 60 * 60 * 24));
+      const activeRound = Math.ceil(diffDays / 7) || 1;
+
       userGroups.push({
         groupName: group.groupName,
         role: userRoleInGroup,
+        roleTitle: userTitleInGroup,
         phone: group.phone,
-        phase: group.phase || 1, // Added phase tracking
+        phase: group.phase || 1,
+        assignedAgentName: matchedAgent ? matchedAgent.name : "To be assigned",
+        assignedAgentPhone: matchedAgent ? matchedAgent.phoneNumber : "N/A",
+        createdAt: group.createdAt,
+        membersPopulatedAt: group.membersPopulatedAt,
+        activeRound: activeRound,
+        remainRounds: Math.max(0, 52 - activeRound),
         accountNumber: group.accountNumber || '',
         constitutionStartKey: group.constitutionStartKey || ''
       });

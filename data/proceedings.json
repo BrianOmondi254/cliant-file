@@ -97,6 +97,33 @@
       "adjournmentNote": "",
       "status": "active",
       "createdAt": "2026-04-05T05:57:34.275Z"
+    },
+    {
+      "id": "1776080291766",
+      "groupName": "ONE SACCO",
+      "title": "fsd",
+      "project": "dcsc",
+      "date": "2026-04-20",
+      "venue": "cdslsd",
+      "startTime": "14:41",
+      "endTime": "14:42",
+      "chairperson": "brian brian but",
+      "secretary": "brian 0luch oluoch",
+      "chairpersonNote": "",
+      "adjournmentNote": "",
+      "status": "active",
+      "createdAt": "2026-04-13T11:38:11.766Z",
+      "callToOrderNote": "sdd",
+      "calledByOfficial": "brian brian but",
+      "visitors": [
+        {
+          "id": "1776088534731",
+          "name": "gfsgd",
+          "phone": "07",
+          "description": "wee",
+          "addedAt": "2026-04-13T13:55:34.731Z"
+        }
+      ]
     }
   ],
   "members": [
