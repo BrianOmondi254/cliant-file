@@ -794,8 +794,8 @@
       <div class="form-step" id="step5">
         <div style="text-align:center; padding:40px 0;">
           <i class="fas fa-check" style="font-size:42px; color:var(--secondary); margin-bottom:20px;"></i>
-          <h3 style="font-size:18px; font-weight:800;"><%= group.groupName %> Created Successfully</h3>
-          <p style="font-size:13px; color:var(--slate); margin-top:10px;">Group registration completed.<br>Thank you!</p>
+          <h3 style="font-size:18px; font-weight:800;" id="successTitle">Group Registered Successfully</h3>
+          <p style="font-size:13px; color:var(--slate); margin-top:10px;" id="successSubtitle">Group registration completed.<br>Thank you!</p>
           <div class="waiting-note" style="margin-top:22px;">
             <i class="fas fa-university"></i>
             <span id="submitStatusMsg">Group saved and payment processed.</span>
@@ -1295,97 +1295,112 @@
 
     // ─── VERIFY MEMBERS ───────────────────────────────────────
     function verifyMembers() {
-      const allPhones = [], phoneErrors = [];
-      let hasEmptyMemberNumber = false, emptyMemberName = '';
-
-      for (let i=0; i<STD_TRUSTEES; i++) {
-        const idx         = i+1;
-        const memberNumber= document.getElementById(`t${idx}_memberNumber`).value.trim();
-        const phone       = document.getElementById(`t${idx}_phone`).value.trim();
-        const title       = document.getElementById(`t${idx}_title`).value.trim();
-        if (!title)        { showNotification(`Title is required for Trustee ${idx}. Please select a title.`); return; }
-        if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = title; }
-        if (i===0) { if (isValidPhone(phone)) allPhones.push({ phone, name:`Trustee ${idx} (${title})` }); }
-        else {
-          if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Trustee ${idx} (${title})`)); return; }
-          allPhones.push({ phone, name:`Trustee ${idx} (${title})` });
+      // Fast check: block if group already has members
+      checkGroupProposedMembers().then(totalProposedMembers => {
+        if (totalProposedMembers > 0) {
+          showNotification('Group already has ' + totalProposedMembers + ' members. Cannot verify again.', 'error');
+          return;
         }
-      }
+        
+        try {
+          const list = document.getElementById('verificationList');
+          if (list) {
+            list.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--primary);"></i><p style="margin-top:10px; font-size:13px; color:var(--slate);">Preparing verification...</p></div>';
+          }
+        } catch(e) { console.error('Pre-verify prep error:', e); }
+      
+        const allPhones = [], phoneErrors = [];
+        let hasEmptyMemberNumber = false, emptyMemberName = '';
 
-      let hasOfficialTitle = false, hasOfficialNumber = false, missingOfficialInfo = '';
-      for (let i=0; i<currentOfficialsCount; i++) {
-        const idx         = STD_TRUSTEES + i + 1;
-        const memberNumber= document.getElementById(`official_${idx}_memberNumber`).value.trim();
-        const phone       = document.getElementById(`official_${idx}_phone`).value.trim();
-        const title       = document.getElementById(`official_${idx}_title`).value.trim();
-        if (!title)        { hasOfficialTitle = true; missingOfficialInfo = `Official ${i+1}`; }
-        if (!memberNumber) { hasEmptyMemberNumber = true; hasOfficialNumber = true; if (!missingOfficialInfo) missingOfficialInfo = `Official ${i+1}`; }
-        if (phone && isValidPhone(phone)) allPhones.push({ phone, name: title || `Official ${i+1}` });
-      }
-      if (currentOfficialsCount > 0 && hasOfficialTitle) {
-        showNotification(`Title is required for ${missingOfficialInfo}. Please fill all titles.`); return;
-      }
-
-      for (let i=0; i<regularMembersCount; i++) {
-        const idx         = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        const memberNumber= document.getElementById(`member_${idx}_memberNumber`).value.trim();
-        const phone       = document.getElementById(`member_${idx}_phone`).value.trim();
-        if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = `Member ${i+1}`; }
-        if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Member ${i+1}`)); return; }
-        allPhones.push({ phone, name:`Member ${i+1} (Index ${idx})` });
-      }
-
-      if (hasEmptyMemberNumber) {
-        showNotification(`Member number is required for ${emptyMemberName}. Please fill all member numbers before verifying.`); return;
-      }
-
-      const allMemberNumbers = [], memberNumberErrors = [];
-      for (let i=0; i<STD_TRUSTEES; i++) {
-        const idx = i+1;
-        const mn  = document.getElementById(`t${idx}_memberNumber`).value.trim();
-        if (mn) allMemberNumbers.push({ value: mn, name:`Trustee ${idx}` });
-      }
-      for (let i=0; i<currentOfficialsCount; i++) {
-        const idx = STD_TRUSTEES + i + 1;
-        const mn  = document.getElementById(`official_${idx}_memberNumber`).value.trim();
-        if (mn) allMemberNumbers.push({ value: mn, name:`Official ${i+1}` });
-      }
-      for (let i=0; i<regularMembersCount; i++) {
-        const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
-        const mn  = document.getElementById(`member_${idx}_memberNumber`).value.trim();
-        if (mn) allMemberNumbers.push({ value: mn, name:`Member ${i+1}` });
-      }
-
-      const mnMap = new Map();
-      for (const entry of allMemberNumbers) {
-        if (mnMap.has(entry.value)) memberNumberErrors.push(`${entry.value} is used by both ${mnMap.get(entry.value)} and ${entry.name}`);
-        else mnMap.set(entry.value, entry.name);
-      }
-      if (memberNumberErrors.length > 0) {
-        showNotification('Duplicate membership numbers found:\n\n' + memberNumberErrors.join('\n') + '\n\nEach member must have a unique membership number.'); return;
-      }
-
-      if (allMemberNumbers.length > 1) {
-        const first        = allMemberNumbers[0].value;
-        const prefixMatch  = first.match(/^([a-zA-Z-]+)?/);
-        const reqPrefix    = prefixMatch ? prefixMatch[0] : '';
-        for (let i=1; i<allMemberNumbers.length; i++) {
-          if (!allMemberNumbers[i].value.startsWith(reqPrefix)) {
-            showNotification(`Membership number format inconsistency: "${allMemberNumbers[i].value}" does not match the required prefix "${reqPrefix}" from the first entry.`); return;
+        for (let i=0; i<STD_TRUSTEES; i++) {
+          const idx         = i+1;
+          const memberNumber= document.getElementById(`t${idx}_memberNumber`).value.trim();
+          const phone       = document.getElementById(`t${idx}_phone`).value.trim();
+          const title       = document.getElementById(`t${idx}_title`).value.trim();
+          if (!title)        { showNotification(`Title is required for Trustee ${idx}. Please select a title.`); return; }
+          if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = title; }
+          if (i===0) { if (isValidPhone(phone)) allPhones.push({ phone, name:`Trustee ${idx} (${title})` }); }
+          else {
+            if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Trustee ${idx} (${title})`)); return; }
+            allPhones.push({ phone, name:`Trustee ${idx} (${title})` });
           }
         }
-      }
 
-      const phoneMap = new Map();
-      for (const entry of allPhones) {
-        if (phoneMap.has(entry.phone)) phoneErrors.push(`${entry.phone} is used by both ${phoneMap.get(entry.phone)} and ${entry.name}`);
-        else phoneMap.set(entry.phone, entry.name);
-      }
-      if (phoneErrors.length > 0) {
-        showNotification('Duplicate phone numbers found:\n\n' + phoneErrors.join('\n') + '\n\nEach member must have a unique phone number.'); return;
-      }
+        let hasOfficialTitle = false, hasOfficialNumber = false, missingOfficialInfo = '';
+        for (let i=0; i<currentOfficialsCount; i++) {
+          const idx         = STD_TRUSTEES + i + 1;
+          const memberNumber= document.getElementById(`official_${idx}_memberNumber`).value.trim();
+          const phone       = document.getElementById(`official_${idx}_phone`).value.trim();
+          const title       = document.getElementById(`official_${idx}_title`).value.trim();
+          if (!title)        { hasOfficialTitle = true; missingOfficialInfo = `Official ${i+1}`; }
+          if (!memberNumber) { hasEmptyMemberNumber = true; hasOfficialNumber = true; if (!missingOfficialInfo) missingOfficialInfo = `Official ${i+1}`; }
+          if (phone && isValidPhone(phone)) allPhones.push({ phone, name: title || `Official ${i+1}` });
+        }
+        if (currentOfficialsCount > 0 && hasOfficialTitle) {
+          showNotification(`Title is required for ${missingOfficialInfo}. Please fill all titles.`); return;
+        }
 
-      showVerificationForm();
+        for (let i=0; i<regularMembersCount; i++) {
+          const idx         = STD_TRUSTEES + currentOfficialsCount + i + 1;
+          const memberNumber= document.getElementById(`member_${idx}_memberNumber`).value.trim();
+          const phone       = document.getElementById(`member_${idx}_phone`).value.trim();
+          if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = `Member ${i+1}`; }
+          if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Member ${i+1}`)); return; }
+          allPhones.push({ phone, name:`Member ${i+1} (Index ${idx})` });
+        }
+
+        if (hasEmptyMemberNumber) {
+          showNotification(`Member number is required for ${emptyMemberName}. Please fill all member numbers before verifying.`); return;
+        }
+
+        const allMemberNumbers = [], memberNumberErrors = [];
+        for (let i=0; i<STD_TRUSTEES; i++) {
+          const idx = i+1;
+          const mn  = document.getElementById(`t${idx}_memberNumber`).value.trim();
+          if (mn) allMemberNumbers.push({ value: mn, name:`Trustee ${idx}` });
+        }
+        for (let i=0; i<currentOfficialsCount; i++) {
+          const idx = STD_TRUSTEES + i + 1;
+          const mn  = document.getElementById(`official_${idx}_memberNumber`).value.trim();
+          if (mn) allMemberNumbers.push({ value: mn, name:`Official ${i+1}` });
+        }
+        for (let i=0; i<regularMembersCount; i++) {
+          const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
+          const mn  = document.getElementById(`member_${idx}_memberNumber`).value.trim();
+          if (mn) allMemberNumbers.push({ value: mn, name:`Member ${i+1}` });
+        }
+
+        const mnMap = new Map();
+        for (const entry of allMemberNumbers) {
+          if (mnMap.has(entry.value)) memberNumberErrors.push(`${entry.value} is used by both ${mnMap.get(entry.value)} and ${entry.name}`);
+          else mnMap.set(entry.value, entry.name);
+        }
+        if (memberNumberErrors.length > 0) {
+          showNotification('Duplicate membership numbers found:\n\n' + memberNumberErrors.join('\n') + '\n\nEach member must have a unique membership number.'); return;
+        }
+
+        if (allMemberNumbers.length > 1) {
+          const first        = allMemberNumbers[0].value;
+          const prefixMatch  = first.match(/^([a-zA-Z-]+)?/);
+          const reqPrefix    = prefixMatch ? prefixMatch[0] : '';
+          for (let i=1; i<allMemberNumbers.length; i++) {
+            if (!allMemberNumbers[i].value.startsWith(reqPrefix)) {
+              showNotification(`Membership number format inconsistency: "${allMemberNumbers[i].value}" does not match the required prefix "${reqPrefix}" from the first entry.`); return;
+            }
+          }
+        }
+
+        const phoneMap = new Map();
+        for (const entry of allPhones) {
+          if (phoneMap.has(entry.phone)) phoneErrors.push(`${entry.phone} is used by both ${phoneMap.get(entry.phone)} and ${entry.name}`);
+          else phoneMap.set(entry.phone, entry.name);
+        }
+        if (phoneErrors.length > 0) {
+          showNotification('Duplicate phone numbers found:\n\n' + phoneErrors.join('\n') + '\n\nEach member must have a unique phone number.'); return;
+        }
+
+        showVerificationForm();
+      });
     }
 
     // ─── SHOW VERIFICATION FORM ──────────────────────────────
@@ -1463,6 +1478,7 @@
       }).then(r => r.json()).then(apiResponse => {
         if (!apiResponse.success) { showNotification('Failed to verify members. Please try again.', 'error'); return; }
         const verifiedMembers = apiResponse.members;
+        verifiedMembersData = verifiedMembers;
 
         let html = '';
         verifiedMembers.forEach((member) => {
@@ -1543,7 +1559,15 @@
       updateTrusteeTitles();
     }
 
-    function confirmAndSubmit() { submitTbankRegistration(); }
+    function confirmAndSubmit() { 
+      checkGroupProposedMembers().then(totalProposedMembers => {
+        if (totalProposedMembers > 0) {
+          showNotification('Group "' + groupData.groupName + '" already has ' + totalProposedMembers + ' members. Cannot update.', 'error');
+          return;
+        }
+        submitTbankRegistration();
+      });
+    }
 
     // ─── DOWNLOAD REGISTRATION FORM ────────────────────────────────────
     async function downloadRegistrationForm() {
@@ -1640,12 +1664,18 @@
         const idx   = i+1;
         const phone = document.getElementById(`t${idx}_phone`).value.trim();
         const memberNumber = document.getElementById(`t${idx}_memberNumber`).value.trim();
+        const id = document.getElementById(`t${idx}_id`).value.trim();
+        
+        // Get verified name if available
+        const verifiedInfo = verifiedMembersData.find(m => m.index === String(idx) && m.role === 'trustee');
+        const name = verifiedInfo && verifiedInfo.name ? verifiedInfo.name : null;
+        
         if (!memberNumber) { showNotification(`Please enter member number for Trustee ${idx}.`); return; }
-        if (i > 0 && !phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Trustee ${idx}.`); return; }
+        if (i > 0 && phone && !phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Trustee ${idx}.`); return; }
         trustees.push({ index:String(idx), type:'trustee',
           title:document.getElementById(`t${idx}_title`).value.trim()||'Trustee',
           memberNumber,
-          phone, id:document.getElementById(`t${idx}_id`).value.trim() });
+          phone, id, name });
       }
       const addedOfficials = []; const officialTitlesSet = new Set();
       for (let i=0; i<currentOfficialsCount; i++) {
@@ -1653,19 +1683,30 @@
         const title = document.getElementById(`official_${idx}_title`).value.trim();
         const phone = document.getElementById(`official_${idx}_phone`).value.trim();
         const memberNumber = document.getElementById(`official_${idx}_memberNumber`).value.trim();
+        const id = document.getElementById(`official_${idx}_id`).value.trim();
+        
+        // Get verified name if available
+        const verifiedInfo = verifiedMembersData.find(m => m.index === String(idx) && m.role === 'official');
+        const name = verifiedInfo && verifiedInfo.name ? verifiedInfo.name : null;
+        
         if (!memberNumber) { showNotification(`Please enter member number for Official ${i+1}.`); return; }
         if (title) {
           if (officialTitlesSet.has(title.toLowerCase())) { showNotification(`Duplicate title "${title}" found.`); return; }
           officialTitlesSet.add(title.toLowerCase());
         }
         if (phone && !phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Official ${i+1}.`); return; }
-        addedOfficials.push({ index:String(idx), type:'official', title, memberNumber, phone,
-          id:document.getElementById(`official_${idx}_id`).value.trim() });
+        addedOfficials.push({ index:String(idx), type:'official', title, memberNumber, phone, id, name });
       }
       for (let i=0; i<regularMembersCount; i++) {
         const idx   = STD_TRUSTEES+currentOfficialsCount+i+1;
         const phone = document.getElementById(`member_${idx}_phone`).value.trim();
         const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
+        const id = document.getElementById(`member_${idx}_id`).value.trim();
+        
+        // Get verified name if available
+        const verifiedInfo = verifiedMembersData.find(m => m.index === String(idx) && m.role === 'member');
+        const name = verifiedInfo && verifiedInfo.name ? verifiedInfo.name : null;
+        
         if (!memberNumber) { showNotification(`Please enter member number for Member ${i+1}.`); return; }
         if (!phone.match(/^07[0-9]{8}$/)) { showNotification(`Please enter a valid phone for Member ${i+1}.`); return; }
       }
@@ -1693,17 +1734,29 @@
       };
       for (let i=0; i<regularMembersCount; i++) {
         const idx = STD_TRUSTEES+currentOfficialsCount+i+1;
-        payload.members.push({ index:String(idx), type:'member',
-          memberNumber:document.getElementById(`member_${idx}_memberNumber`).value.trim(),
-          phone:document.getElementById(`member_${idx}_phone`).value.trim(),
-          id:document.getElementById(`member_${idx}_id`).value.trim() });
+        const phone = document.getElementById(`member_${idx}_phone`).value.trim();
+        const id = document.getElementById(`member_${idx}_id`).value.trim();
+        const memberNumber = document.getElementById(`member_${idx}_memberNumber`).value.trim();
+        
+        // Get verified name if available
+        const verifiedInfo = verifiedMembersData.find(m => m.index === String(idx) && m.role === 'member');
+        const name = verifiedInfo && verifiedInfo.name ? verifiedInfo.name : null;
+        
+        payload.members.push({ index:String(idx), type:'member', memberNumber, phone, id, name });
       }
       showStep('step5');
       fetch('/agent/activate-group', {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
       }).then(r => r.json()).then(res => {
-        document.getElementById('submitStatusMsg').textContent =
-          res.success ? '✓ Group registered successfully!' : `Error: ${res.message||'Something went wrong.'}`;
+        if (res.success) {
+          document.getElementById('submitStatusMsg').textContent = '✓ Group registered successfully!';
+          document.getElementById('successTitle').textContent = '<%= group.groupName %> Created Successfully';
+          document.getElementById('successSubtitle').innerHTML = 'Group registration completed.<br>Thank you!';
+        } else {
+          document.getElementById('submitStatusMsg').textContent = `Error: ${res.message || 'Something went wrong.'}`;
+          document.getElementById('successTitle').textContent = 'Registration Failed';
+          document.getElementById('successSubtitle').textContent = 'Please try again or contact support.';
+        }
         document.getElementById('backToDashBtn').style.display = 'flex';
       }).catch(() => {
         document.getElementById('submitStatusMsg').textContent = 'Network error. Please try again.';

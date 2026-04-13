@@ -1368,8 +1368,54 @@ router.post("/api/verify-members", (req, res) => {
     const usersFile = path.join(__dirname, "../data.json");
     const users = readJSON(usersFile, []);
     console.log(`✓ Loaded ${users.length} users from data.json`);
+    
+    // Read general.json to get group members
+    const generalData = readJSON(generalFile, {});
+    console.log(`✓ Loaded general.json for group member lookup`);
 
-    // Verify each member against data.json
+    // Build a map of phone numbers from general.json groups (trustees, officials, members)
+    const generalMembersMap = new Map();
+    const flattenForSearch = (obj) => {
+      if (!obj) return;
+      for (const key of Object.keys(obj)) {
+        if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+          const m = obj[key];
+          if (m.phone) {
+            const normPhone = norm(m.phone);
+            if (!generalMembersMap.has(normPhone)) {
+              generalMembersMap.set(normPhone, {
+                name: m.name || m.title || key,
+                id: m.id || null,
+                memberNumber: m.memberNumber || null
+              });
+            }
+          }
+        }
+      }
+    };
+    
+    // Search through all groups in general.json
+    for (const county in generalData) {
+      const countyData = generalData[county];
+      if (countyData && typeof countyData === 'object') {
+        for (const constituency in countyData) {
+          const constData = countyData[constituency];
+          if (constData && typeof constData === 'object') {
+            for (const ward in constData) {
+              const wardData = constData[ward];
+              if (Array.isArray(wardData)) {
+                wardData.forEach(group => flattenForSearch(group));
+              } else {
+                flattenForSearch(wardData);
+              }
+            }
+          }
+        }
+      }
+    }
+    console.log(`✓ Built general members map with ${generalMembersMap.size} entries`);
+
+    // Verify each member against data.json and general.json
     const results = members.map(member => {
       const { key, phone, id, role, title, index } = member;
       
@@ -1405,9 +1451,26 @@ router.post("/api/verify-members", (req, res) => {
           notRegistered: false
         };
         
-        console.log(`✓ Match: ${phone} → ${fullName} (ID match: ${idMatch})`);
+        console.log(`✓ Match in data.json: ${phone} → ${fullName} (ID match: ${idMatch})`);
       } else {
-        console.log(`✗ Not found: ${phone}`);
+        // Check if member exists in general.json (from any group)
+        const generalMember = generalMembersMap.get(normalizedPhone);
+        if (generalMember) {
+          const fullName = generalMember.name || 'Group Member';
+          const idMatch = id && generalMember.id && String(generalMember.id).trim() === String(id).trim();
+          
+          verificationResult = {
+            ...verificationResult,
+            name: fullName,
+            verified: idMatch || false,
+            notRegistered: false,
+            source: 'general'
+          };
+          
+          console.log(`✓ Match in general.json: ${phone} → ${fullName} (ID match: ${idMatch})`);
+        } else {
+          console.log(`✗ Not found: ${phone}`);
+        }
       }
       
       return verificationResult;

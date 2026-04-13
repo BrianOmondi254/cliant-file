@@ -441,42 +441,92 @@
         {
           "groupName": "namla  sacco",
           "phone": "0740415992",
-          "firstName": "Brian",
-          "secondName": "Omondi",
-          "lastName": "okeyo",
+          "firstName": "Chairperson",
+          "secondName": "",
+          "lastName": "",
           "county": "Siaya",
           "constituency": "Ugenya",
           "ward": "East Ugenya",
-          "processorPhone": "0740415992",
-          "createdAt": "2026-03-13T20:24:34.669Z"
+          "processorPhone": "n/a",
+          "createdAt": "2026-04-12T14:59:58.064Z",
+          "agentProcessed": "0740001141",
+          "phase": 2,
+          "totalProposedMembers": 3,
+          "groupType": "Women's Group",
+          "groupCertificateNumber": "",
+          "constitutionStartKey": "2616",
+          "constitutionKeyGeneratedAt": "2026-04-12T14:59:58.307Z",
+          "trustee_1": {
+            "index": "1",
+            "type": "trustee",
+            "title": "Chairperson",
+            "memberNumber": "001",
+            "phone": "0740415992",
+            "id": "35951449",
+            "name": "brian omondi okeyo"
+          },
+          "official_2": {
+            "index": "2",
+            "type": "official",
+            "title": "Auditor",
+            "memberNumber": "002",
+            "phone": "0700051102",
+            "id": "35951444",
+            "name": "brian ba ba"
+          },
+          "member_3": {
+            "index": "3",
+            "type": "member",
+            "memberNumber": "003",
+            "phone": "0746001141",
+            "id": "35951454",
+            "name": "brian omolo omolo"
+          }
         },
         {
           "groupName": " ALIANCE",
           "phone": "0740415992",
-          "firstName": "Brian",
-          "secondName": "Omondi",
-          "lastName": "0m0ndi",
+          "firstName": "Chairperson",
+          "secondName": "",
+          "lastName": "",
           "county": "Siaya",
           "constituency": "Ugenya",
           "ward": "East Ugenya",
-          "processorPhone": "0740415992",
-          "createdAt": "2026-03-13T20:48:10.173Z",
-          "messages": [
-            {
-              "to": "0740415992",
-              "type": "security_alert",
-              "title": "Group Creation",
-              "content": "Your application for ONE SACCO ALIANCE is pending. Agent available at your location. Contact: 0740001141",
-              "createdAt": "2026-03-13T20:48:10.097Z"
-            },
-            {
-              "to": "0740001141",
-              "type": "security_alert",
-              "title": "Group Creation",
-              "content": "Group Creation Request: ONE SACCO ALIANCE. Submitted by Processor: 0740415992. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
-              "createdAt": "2026-03-13T20:48:10.173Z"
-            }
-          ]
+          "processorPhone": "n/a",
+          "createdAt": "2026-04-12T15:39:55.958Z",
+          "agentProcessed": "0740001141",
+          "phase": 2,
+          "totalProposedMembers": 3,
+          "groupType": "Women's Group",
+          "groupCertificateNumber": "",
+          "constitutionStartKey": "2519",
+          "constitutionKeyGeneratedAt": "2026-04-12T15:39:56.230Z",
+          "trustee_1": {
+            "index": "1",
+            "type": "trustee",
+            "title": "Chairperson",
+            "memberNumber": "001",
+            "phone": "0740415992",
+            "id": "35951449",
+            "name": "brian omondi okeyo"
+          },
+          "official_2": {
+            "index": "2",
+            "type": "official",
+            "title": "Auditor",
+            "memberNumber": "002",
+            "phone": "0700051102",
+            "id": "35951444",
+            "name": "brian ba ba"
+          },
+          "member_3": {
+            "index": "3",
+            "type": "member",
+            "memberNumber": "003",
+            "phone": "0746001141",
+            "id": "35951454",
+            "name": "brian omolo omolo"
+          }
         },
         {
           "groupName": "olao group",

@@ -461,17 +461,20 @@ router.post("/activate-group", async (req, res) => {
   if (!general[county][constituency]) general[county][constituency] = {};
   if (!general[county][constituency][ward]) general[county][constituency][ward] = [];
 
-  // Count groups in ward for name generation
   const wardGroups = general[county][constituency][ward];
-  const groupCount = wardGroups.length + 1;
-  const groupName = displayName || `${county.toUpperCase()}_${constituency.toUpperCase()}_${ward.toUpperCase().replace(/\s+/g, '')}_${String(groupCount).padStart(3, '0')}`;
+  const groupName = displayName;
 
-  // Increment regional counts
-  general[county].countyGroupCount = (general[county].countyGroupCount || 0) + 1;
-  if (constituency) {
-    general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
-    if (ward) {
-      general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+  // Check if group already exists
+  let existingGroupIndex = -1;
+  if (groupName) {
+    existingGroupIndex = wardGroups.findIndex(g => g.groupName === groupName);
+  }
+
+  // Block update if group already has members
+  if (existingGroupIndex >= 0) {
+    const existingGroup = wardGroups[existingGroupIndex];
+    if (existingGroup.totalProposedMembers && existingGroup.totalProposedMembers > 0) {
+      return res.json({ success: false, message: "Group already has members registered. Cannot update." });
     }
   }
 
@@ -513,13 +516,29 @@ router.post("/activate-group", async (req, res) => {
     });
   }
 
-  // Add group to ward
-  wardGroups.push(group);
+  // Update existing group or add new one
+  if (existingGroupIndex >= 0) {
+    // Update existing group
+    wardGroups[existingGroupIndex] = group;
+    console.log(`✓ Updated existing group: ${groupName}`);
+  } else {
+    // Add new group
+    wardGroups.push(group);
+    // Increment regional counts only for new groups
+    general[county].countyGroupCount = (general[county].countyGroupCount || 0) + 1;
+    if (constituency) {
+      general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
+      if (ward) {
+        general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+      }
+    }
+    console.log(`✓ Created new group: ${groupName}`);
+  }
 
   // Save
   try {
     fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
-    res.json({ success: true, message: "Group activated successfully", groupName });
+    res.json({ success: true, message: existingGroupIndex >= 0 ? "Group updated successfully" : "Group activated successfully", groupName });
   } catch (e) {
     console.error(e);
     res.json({ success: false, message: "Failed to save" });
