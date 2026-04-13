@@ -172,9 +172,9 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
   </div>
 
   <!-- My Saving Section -->
-  <div id="mySavingSection" class="">
+  <div id="mySavingSection">
     <div class="step-box">
-    <h3><i class="fas fa-piggy-bank"></i> My Saving</h3>
+      <h3><i class="fas fa-piggy-bank"></i> My Saving</h3>
 
     <!-- Loading -->
     <div id="myGroupsLoading" style="text-align: center; padding: 20px;">
@@ -210,15 +210,13 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
         <i class="fas fa-arrow-left"></i> Back to Groups
       </button>
     </div>
-
-    </div>
+  </div>
   </div>
 
   <!-- Create Group Section -->
   <div id="createGroupContentArea" class="content-area hidden">
     <div class="form-wrapper" id="createGroupContent"></div>
   </div>
-
 </div>
 
 <script>
@@ -569,6 +567,7 @@ function loadWards() {
 
 /* ========== INIT ========== */
 document.addEventListener('DOMContentLoaded', () => {
+  switchTab('mySaving');
   loadUserRoleData();
 });
 </script>

@@ -674,7 +674,7 @@ router.get("/general", (req, res) => {
       }
     }
     
-    res.render("general", { 
+    res.render("general_new", { 
       user: req.session.user,
       isCreation: isCreation,
       groups: userGroups, 

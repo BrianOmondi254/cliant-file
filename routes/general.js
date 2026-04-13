@@ -1212,6 +1212,13 @@ router.get("/user-role-type", (req, res) => {
     let userRoleInGroup = null;
     let userTitleInGroup = null;
     
+    // Check if user is the chairperson
+    const chairPhone = group.phone || group.chairpersonalphonenumber;
+    if (!userRoleInGroup && chairPhone && String(chairPhone).trim() === String(userPhone).trim()) {
+      userRoleInGroup = "trustee";
+      userTitleInGroup = "Chairperson";
+    }
+    
     for (const key in group) {
       if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
         const memberInfo = group[key];
