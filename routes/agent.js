@@ -307,6 +307,50 @@ router.post("/set-constitution-key", async (req, res) => {
   }
 });
 
+// POST /agent/verify-constitution-key - Verify the constitution key matches the database
+router.post("/verify-constitution-key", async (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.json({ success: false, message: "Unauthorized" });
+  }
+
+  const { groupName, key } = req.body;
+  if (!key) return res.json({ success: false, message: "Key is required" });
+
+  let general = loadJSON(generalFile);
+  let verified = false;
+
+  const checkKey = (g) => {
+    if (g.constitutionStartKey === key) {
+      verified = true;
+    }
+  };
+
+  if (Array.isArray(general)) {
+    const g = general.find(g => g.groupName === groupName);
+    if (g) checkKey(g);
+  } else {
+    for (const c in general) {
+      if (typeof general[c] !== 'object') continue;
+      for (const co in general[c]) {
+        if (typeof general[c][co] !== 'object') continue;
+        for (const w in general[c][co]) {
+          const list = general[c][co][w];
+          if (Array.isArray(list)) {
+            const g = list.find(g => g.groupName === groupName);
+            if (g) checkKey(g);
+          }
+        }
+      }
+    }
+  }
+
+  if (verified) {
+    return res.json({ success: true });
+  } else {
+    return res.json({ success: false, message: "Incorrect key" });
+  }
+});
+
 // POST /agent/register-new-group - Register new group with members
 router.post("/register-new-group", async (req, res) => {
   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
@@ -951,6 +995,83 @@ doc.y = infoBoxY + 70;
       res.status(500).json({ error: 'Server error', details: error.message });
     }
   }
+});
+
+// GET /agent/con-group - Display specific group details for Phase 2 (Pending Approval) groups
+router.get("/con-group", (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.redirect("/login");
+  }
+
+  const { groupName } = req.query;
+  if (!groupName) {
+    return res.redirect("/agent");
+  }
+
+  const agents = loadJSON(agentFile);
+  const general = flattenData(loadJSON(generalFile, {}));
+  const users = loadJSON(dataFile);
+
+  const currentPhoneNumber = req.session.user.phoneNumber;
+  const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+
+  if (!agent) {
+    return res.redirect("/agent");
+  }
+
+  // Find the specific group
+  const group = general.find(g => g.groupName === groupName);
+  if (!group) {
+    return res.redirect("/agent");
+  }
+
+  // Create user lookup map
+  const userMap = new Map();
+  if (Array.isArray(users)) {
+    users.forEach(u => {
+      const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
+      if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
+    });
+  }
+
+  // Augment group with membersList if populated
+  if (group.membersPopulatedAt || (group.phase && group.phase >= 2)) {
+    group.membersList = [];
+    for (const key in group) {
+      if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+        let member = group[key];
+        let phone = null;
+
+        if (member && typeof member === 'object' && member.phone) {
+          phone = member.phone;
+        } else if (typeof member === 'string') {
+          phone = member;
+        }
+
+        if (phone) {
+          const normalizedPhone = normPhone(phone);
+          const memberName = userMap.get(normalizedPhone) || (typeof member === 'object' && member.name ? member.name : '') || 'Unknown Name';
+
+          const memberObj = typeof member === 'object' ? { ...member } : { phone: phone, type: key.split('_')[0] };
+          memberObj.name = memberName;
+          group.membersList.push(memberObj);
+        }
+      }
+    }
+  }
+
+  const existingKey = group.constitutionStartKey || null;
+  const hasExistingKey = existingKey && !existingKey.startsWith('$2b$');
+  const keyValue = hasExistingKey ? existingKey : null;
+
+  res.render("agent/con_group", {
+    agent: agent,
+    group: group,
+    user: req.session.user,
+    userMap: userMap,
+    existingKey: keyValue,
+    keyRequired: !hasExistingKey
+  });
 });
 
 module.exports = router;

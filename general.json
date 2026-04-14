@@ -450,11 +450,11 @@
           "processorPhone": "n/a",
           "createdAt": "2026-04-12T14:59:58.064Z",
           "agentProcessed": "0740001141",
-          "phase": 2,
+          "phase": 3,
           "totalProposedMembers": 3,
           "groupType": "Women's Group",
           "groupCertificateNumber": "",
-          "constitutionStartKey": "2616",
+          "constitutionStartKey": "1234",
           "constitutionKeyGeneratedAt": "2026-04-12T14:59:58.307Z",
           "trustee_1": {
             "index": "1",
@@ -601,16 +601,12 @@
   },
   "Baringo": {
     "Tiaty": {
-      "Amaya": [
-        
-      ]
+      "Amaya": []
     }
   },
   "Kakamega": {
     "Mumias East": {
-      "Lusheya/Lubinu": [
-      
-      ]
+      "Lusheya/Lubinu": []
     }
   },
   "Kericho": {
