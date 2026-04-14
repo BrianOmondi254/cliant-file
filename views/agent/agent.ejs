@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -24,25 +25,35 @@
       background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: stretch;
       min-height: 100vh;
-      padding: 20px;
+      padding: 3px;
+      color: #1e293b;
     }
 
     .box {
       background: #ffffff;
-      padding: 0;
+      padding: 0 2px 2px 2px;
       width: 100%;
-      max-width: 420px;
-      border-radius: 28px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+      max-width: 545px;
+      border-radius: 10px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.1);
       position: relative;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      overflow: hidden;
+      overflow: visible;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 6px);
+      margin-bottom: 0;
+      animation: slideIn .5s cubic-bezier(.4,0,.2,1);
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .box>div:not(.unified-header):not(.dashboard-sidebar):not(.dashboard-main-content):not(.message) {
-      padding: 35px 25px;
+      padding: 0;
     }
 
     .message {
@@ -51,8 +62,8 @@
     }
 
     .box.dashboard-wide {
-      max-width: 480px;
-      padding: 0;
+      max-width: 545px;
+      padding: 0 2px 2px 2px;
     }
 
     @media (min-width: 768px) {
@@ -480,7 +491,18 @@
 
     .dashboard-main-content {
       animation: fadeInScale 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #0f9d58;
+      border-radius: 0 0 10px 10px;
+      padding: 3px 3px 2px 3px;
     }
+
+    /* Scrollbar for main content */
+    .dashboard-main-content::-webkit-scrollbar { width: 6px; }
+    .dashboard-main-content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+    .dashboard-main-content::-webkit-scrollbar-thumb { background: #0f9d58; border-radius: 3px; }
+    .dashboard-main-content::-webkit-scrollbar-thumb:hover { background: #0b7d46; }
 
     /* --- Groups Module Sub-Header --- */
     .groups-sub-nav {
@@ -529,13 +551,14 @@
     /* --- Mobile Responsiveness --- */
     @media (max-width: 480px) {
       body {
-        padding: 10px;
-        align-items: flex-start;
-        /* Better for scrolling on long forms */
+        padding: 3px;
+        align-items: stretch;
       }
 
       .box {
-        padding: 25px 20px;
+        padding: 0 2px 2px 2px;
+        max-width: 100%;
+        margin: 0;
       }
 
       h2,
@@ -1148,7 +1171,7 @@
 
   <div class="box dashboard-wide">
     <div class="unified-header"
-      style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 15px 20px; color: white; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1);">
+      style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 15px 20px; color: white; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 8px 8px 0 0;">
       <!-- NAVIGATION CONTROLS (TOP) -->
       <a href="javascript:void(0)" onclick="appBackNavigation()" title="Back"
         style="position: absolute; top: 18px; left: 18px; color: white; opacity: 0.8; font-size: 1.1rem; z-index: 100; transition: all 0.3s ease;">
@@ -3670,6 +3693,12 @@
     function handleGroupClick(groupName, headerEl = null) {
       const group = window.managedGroups.find(g => g.groupName === groupName);
       if (!group) return;
+
+      // REDIRECT IF PHASE 2 (PENDING APPROVAL) GROUPS TO con-group ROUTE
+      if (group.phase == 2) {
+        window.location.href = `/agent/con-group?groupName=${encodeURIComponent(groupName)}`;
+        return;
+      }
 
       // REDIRECT IF NEW REQUEST (NO POPULATED MEMBERS)
       const isPopulated = group.trustee_2 || group.member_1 || group.official_1;
