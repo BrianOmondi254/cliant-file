@@ -1656,4 +1656,115 @@ router.get("/api/form-downloads/:groupName", (req, res) => {
   }
 });
 
+/* 📥 API: Process Group Deductions */
+router.post("/api/process-deduction", (req, res) => {
+  try {
+    const { groupName, deductions } = req.body;
+    
+    if (!groupName || !deductions || !Array.isArray(deductions) || deductions.length === 0) {
+      return res.status(400).json({ error: "Missing groupName or deductions array" });
+    }
+
+    const allData = readJSON(generalFile, {});
+    let groupFound = null;
+    let groupUpdated = false;
+    
+    // Search through nested structure
+    for (const county in allData) {
+      for (const constituency in allData[county]) {
+        const wards = allData[county][constituency];
+        if (Array.isArray(wards)) {
+          for (let i = 0; i < wards.length; i++) {
+            const group = wards[i];
+            if (group.groupName && group.groupName.toLowerCase() === groupName.toLowerCase()) {
+              groupFound = group;
+              
+              // Initialize deductions array if not exists
+              if (!group.deductions) {
+                group.deductions = [];
+              }
+              
+              // Add each deduction with timestamp
+              deductions.forEach(ded => {
+                group.deductions.push({
+                  id: (group.deductions.length + 1),
+                  timestamp: new Date().toISOString(),
+                  memberPhone: ded.memberPhone,
+                  memberName: ded.memberName,
+                  memberAccount: ded.memberAccount,
+                  accountType: ded.accountType,
+                  amount: parseFloat(ded.amount),
+                  note: ded.note || '',
+                  processedBy: req.session?.user?.phoneNumber || 'unknown'
+                });
+              });
+              
+              groupUpdated = true;
+              break;
+            }
+          }
+        }
+        if (groupUpdated) break;
+      }
+      if (groupUpdated) break;
+    }
+    
+    if (!groupFound) {
+      return res.status(404).json({ error: "Group not found: " + groupName });
+    }
+
+    // Save back to file
+    writeJSON(generalFile, allData);
+
+    console.log(`✓ Deductions processed for ${groupName}: ${deductions.length} item(s)`);
+
+    return res.json({ 
+      success: true, 
+      message: "Deductions processed successfully",
+      totalDeductions: groupFound.deductions ? groupFound.deductions.length : 0
+    });
+  } catch (err) {
+    console.error("Error in /api/process-deduction:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* 📥 API: Get Group Deductions */
+router.get("/api/group-deductions/:groupName", (req, res) => {
+  try {
+    const groupName = decodeURIComponent(req.params.groupName);
+    const allData = readJSON(generalFile, {});
+    let groupFound = null;
+    
+    for (const county in allData) {
+      for (const constituency in allData[county]) {
+        const wards = allData[county][constituency];
+        if (Array.isArray(wards)) {
+          for (const group of wards) {
+            if (group.groupName && group.groupName.toLowerCase() === groupName.toLowerCase()) {
+              groupFound = group;
+              break;
+            }
+          }
+        }
+        if (groupFound) break;
+      }
+      if (groupFound) break;
+    }
+    
+    if (!groupFound) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    return res.json({ 
+      success: true, 
+      deductions: groupFound.deductions || [],
+      totalDeductions: groupFound.deductions ? groupFound.deductions.length : 0
+    });
+  } catch (err) {
+    console.error("Error in /api/group-deductions:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 module.exports = router;

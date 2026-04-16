@@ -12,6 +12,7 @@ const dealerRoutes = require("./routes/dealer");
 const generalRoutes = require("./routes/general");
 const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
+const mpesaRoutes = require("./routes/mpesa");
 
 
 
@@ -86,6 +87,7 @@ app.use("/", authRoutes);
 app.use("/", tbankRoutes);
 app.use("/general", generalRoutes);
 app.use("/api/locations", locationsRoutes);
+app.use("/api/mpesa", mpesaRoutes);
 
 // 3️⃣ Protected routes (require login)
 const protect = (req, res, next) => {
