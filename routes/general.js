@@ -1375,12 +1375,14 @@ router.get("/group/:groupName", (req, res) => {
     const item = group[key];
     if (item && typeof item === 'object' && item.phone) {
       const name = item.name || getUserName(item.phone) || "Unknown";
+      const memberNum = key.replace(/[a-z_]/g, '');
       group.members.push({
         name,
         phone: item.phone,
         role: item.type || 'member',
         title: item.title || item.type || 'Member',
-        id: item.id || ''
+        id: item.id || '',
+        memberNumber: memberNum
       });
     }
   });

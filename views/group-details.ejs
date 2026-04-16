@@ -536,18 +536,13 @@
                             <div id="deductionInputSection">
                                 <input type="hidden" id="selectedMemberPhone">
 
-                                <div id="selectedMemberBox" style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border); display: none;">
-                                    <span style="font-size: 0.75rem; color: var(--text-muted);">Selected Member</span>
-                                    <div id="formSelectedMember" style="font-weight: 600; color: var(--text);"></div>
-                                </div>
-
                                 <div class="info-item">
                                     <span class="info-label">Select Member</span>
                                     <select id="memberSelectDropdown" class="form-input" onchange="changeMemberFromDropdown(this.value)">
                                         <option value="">-- Select Member --</option>
                                         <% if (group.members && group.members.length > 0) { %>
                                             <% group.members.forEach((member, idx) => {
-                                                const memberIndex = member.index || (idx + 1);
+                                                const memberIndex = member.memberNumber || (idx + 1);
                                             %>
                                                 <option value="<%= member.phone %>|<%= member.name %>|<%= memberIndex %>">
                                                     #<%= memberIndex %> - <%= member.name %>
@@ -587,6 +582,15 @@
                                             <option value="fines">Fines</option>
                                         </select>
                                     </div>
+                                </div>
+
+                                <div class="info-item" style="margin-top: 10px;">
+                                    <span class="info-label">Due Time</span>
+                                    <select id="deductionTimeInput" class="form-input">
+                                        <option value="now">Now</option>
+                                        <option value="nextday">Next 1 Day</option>
+                                        <option value="nextround">Next Group Round</option>
+                                    </select>
                                 </div>
 
                                 <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -945,7 +949,7 @@
 
         // ── Download helpers ──────────────────────────────────────────────
         function downloadMembersList() {
-            const groupName = <%- JSON.stringify(group.groupName || "Group") %>;
+            const groupName = <%- JSON.stringify(group?.groupName || "Group") %>;
             const downloadedAt = new Date().toLocaleString();
             let txt = `========================================================\n   ${groupName.toUpperCase()} - OFFICIAL MEMBERS LIST\n   Exported On: ${downloadedAt}\n========================================================\n\n`;
             txt += `[ NO. ] | [ NAME ]                          | [ ROLE ]      | [ PHONE ]\n`;
@@ -972,7 +976,7 @@
         }
 
         function downloadGroupRegistrationForm() {
-            const groupName = <%- JSON.stringify(group.groupName || "Group") %>;
+            const groupName = <%- JSON.stringify(group?.groupName || "Group") %>;
             window.location.href = `/group-registration-pdf/${encodeURIComponent(groupName)}`;
         }
 
@@ -1022,7 +1026,7 @@
             const newPin = document.getElementById('newGroupPin').value;
             const confirmPin = document.getElementById('confirmGroupPin').value;
             const btn = document.getElementById('submitPinBtn');
-            const groupName = "<%= group.groupName %>";
+            const groupName = <%- JSON.stringify(group?.groupName || "Group") %>;
             if (!newPin || newPin.length < 4) { alert('Please enter a valid 4-6 digit Constitution Key.'); return; }
             if (newPin !== confirmPin) { alert('PINs do not match. Please try again.'); return; }
             btn.innerText = 'Processing...'; btn.disabled = true;
@@ -1053,7 +1057,7 @@
         });
 
         async function loadExistingDeductions() {
-            const groupName = "<%= group.groupName %>";
+            const groupName = <%- JSON.stringify(group?.groupName || "Group") %>;
             try {
                 const res = await fetch('/general/api/group-deductions/' + encodeURIComponent(groupName));
                 const data = await res.json();
@@ -1149,6 +1153,26 @@
     <script>
         var deductionQueue = [];
 
+        function showToast(message, type) {
+            type = type || 'success';
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.style.cssText = 'background: ' + (type === 'error' ? '#dc2626' : '#10b981') + '; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-weight: 500; animation: slideIn 0.3s ease;';
+            toast.innerHTML = '<i class="fas ' + (type === 'error' ? 'fa-circle-xmark' : 'fa-circle-check') + '"></i> <span>' + message + '</span>';
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         function showDeductionSection(event) {
             if (event) event.preventDefault();
             document.getElementById('groupAccountButtons').style.display = 'none';
@@ -1182,16 +1206,12 @@
 
         function changeMemberFromDropdown(value) {
             if (!value) {
-                document.getElementById('selectedMemberBox').style.display = 'none';
                 document.getElementById('selectedMemberPhone').value = '';
                 return;
             }
             const parts = value.split('|');
             if (parts.length === 3) {
                 document.getElementById('selectedMemberPhone').value = parts[0];
-                document.getElementById('formSelectedMember').innerHTML =
-                    '<span style="color: var(--primary);">#' + parts[2] + '</span> ' + parts[1];
-                document.getElementById('selectedMemberBox').style.display = 'block';
             }
         }
 
@@ -1207,8 +1227,11 @@
             let total = 0;
             deductionQueue.forEach((ded, idx) => {
                 total += parseFloat(ded.amount);
+                const timeLabel = ded.processTime === 'nextday' ? 'Next 1 Day' : (ded.processTime === 'nextround' ? 'Next Group Round' : 'Now');
+                const timeColor = ded.processTime === 'now' ? '#059669' : (ded.processTime === 'nextday' ? '#d97706' : '#7c3aed');
                 content += `
-                    <p style="margin: 5px 0; padding: 8px; background: #fff; border-radius: 5px; border: 1px solid #e5e7eb;">
+                    <p style="margin: 5px 0; padding: 8px; background: #fff; border-radius: 5px; border: 1px solid #e5e7eb; position: relative;">
+                        <button onclick="removeDeduction(${idx})" style="position: absolute; top: 5px; right: 5px; background: #dc2626; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px;">✕</button>
                         <strong style="color: var(--text);">${idx + 1}. ${ded.memberName}</strong><br>
                         <span style="font-size: 0.8rem; color: #374151;">
                             KES ${parseFloat(ded.amount).toLocaleString()}
@@ -1216,6 +1239,7 @@
                             &nbsp;→&nbsp; To: <em>${ded.accountType}</em>
                         </span>
                         ${ded.note ? '<br><span style="font-size: 0.75rem; color: #6b7280;">Note: ' + ded.note + '</span>' : ''}
+                        <br><span style="font-size: 0.75rem; font-weight: 600; color: ${timeColor};">⏱ Due: ${timeLabel}</span>
                     </p>`;
             });
             content += `
@@ -1228,19 +1252,25 @@
 
         /* ── Process button handler ── */
         function processDeduction() {
-            const memberPhone   = document.getElementById('selectedMemberPhone').value;
-            const memberAccount = document.getElementById('memberDeductionAccount').value;
-            const accountType   = document.getElementById('deductionAccountType').value;
-            const amount        = document.getElementById('deductionAmount').value;
-            const note          = document.getElementById('deductionNote').value;
-            const memberName    = document.getElementById('formSelectedMember').innerText;
+            const memberSelect    = document.getElementById('memberSelectDropdown');
+            const selectedValue   = memberSelect.value;
+            const memberPhone     = document.getElementById('selectedMemberPhone').value;
+            const memberAccount  = document.getElementById('memberDeductionAccount').value;
+            const accountType    = document.getElementById('deductionAccountType').value;
+            const amount         = document.getElementById('deductionAmount').value;
+            const note           = document.getElementById('deductionNote').value;
+            
+            if (!selectedValue)                      { alert('Please select a member'); return; }
+            const parts = selectedValue.split('|');
+            const memberName = parts.length === 3 ? parts[1] : '';
 
             if (!memberPhone)                        { alert('Please select a member'); return; }
             if (!memberAccount)                      { alert('Please select member account'); return; }
             if (!amount || parseFloat(amount) <= 0)  { alert('Please enter a valid amount'); return; }
             if (!accountType)                        { alert('Please select group account'); return; }
 
-            deductionQueue.push({ memberPhone, memberName, memberAccount, accountType, amount, note });
+            const processTime = document.getElementById('deductionTimeInput').value;
+            deductionQueue.push({ memberPhone, memberName, memberAccount, accountType, amount, note, processTime });
 
             updateConfirmationDisplay();
             updateQueueStatus();
@@ -1272,10 +1302,113 @@
             }
         }
 
+        function removeDeduction(index) {
+            const item = document.querySelectorAll('#confirmMember p')[index];
+            if (item) {
+                item.style.opacity = '0.3';
+                item.style.textDecoration = 'line-through';
+                item.style.background = '#f3f4f6';
+            }
+            setTimeout(() => {
+                deductionQueue.splice(index, 1);
+                updateConfirmationDisplay();
+                updateQueueStatus();
+                if (deductionQueue.length === 0) {
+                    document.getElementById('deductionConfirmation').style.display = 'none';
+                    document.getElementById('deductionInputSection').style.display = 'block';
+                }
+            }, 300);
+        }
+
         function confirmDeduction() {
-            if (deductionQueue.length === 0) { alert('No deductions to process'); return; }
-            const groupName = "<%= group.groupName %>";
-            fetch('/general/api/process-deduction', {
+            if (deductionQueue.length === 0) { showToast('No deductions to process', 'error'); return; }
+            
+            const groupName = <%- JSON.stringify(group?.groupName || '') %>;
+            
+            fetch('/member/verify-group', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName })
+            })
+            .then(res => res.json())
+            .then(groupData => {
+                if (!groupData || groupData.error) {
+                    showToast('Group not found in member.json - syncing from general.json', 'error');
+                    fetch('/member/sync', { method: 'POST' })
+                    .then(() => fetch('/member/verify-group', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ groupName })
+                    }))
+                    .then(res => res.json())
+                    .then(syncedGroupData => {
+                        if (!syncedGroupData || syncedGroupData.error) {
+                            showToast('Could not find group data', 'error');
+                            return;
+                        }
+                        proceedWithVerification(syncedGroupData);
+                    });
+                    return;
+                }
+                
+                proceedWithVerification(groupData);
+            })
+            .catch(err => showToast('Error: ' + err.message, 'error'));
+            
+            function proceedWithVerification(groupData) {
+                const memberPhones = Object.keys(groupData.members || {});
+                
+                for (let i = 0; i < deductionQueue.length; i++) {
+                    const ded = deductionQueue[i];
+                    if (!ded.memberPhone || !ded.memberAccount || !ded.accountType || !ded.amount) {
+                        showToast('Missing information for ' + (ded.memberName || 'member #' + (i + 1)), 'error');
+                        return;
+                    }
+                    if (!memberPhones.includes(ded.memberPhone)) {
+                        showToast('Member ' + ded.memberName + ' not found in group', 'error');
+                        return;
+                    }
+                }
+                
+                const groupNumber = groupData.groupNumber || '';
+                
+                let previewHtml = '<div style="max-height: 300px; overflow-y: auto; padding: 5px;">';
+                previewHtml += '<div style="background: #dbeafe; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: center;">';
+                previewHtml += '<strong style="color: #1e40af;">Group #: ' + groupNumber + '</strong><br>';
+                previewHtml += '<span style="color: #3730a3;">' + groupName + '</span>';
+                previewHtml += '</div>';
+                
+                previewHtml += '<table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">';
+                previewHtml += '<tr style="background: #f3f4f6;"><th style="padding: 5px; text-align: left;">#</th><th style="padding: 5px; text-align: left;">Member</th><th style="padding: 5px;">From</th><th style="padding: 5px;">To</th><th style="padding: 5px; text-align: right;">Amount</th></tr>';
+                
+                deductionQueue.forEach((ded, idx) => {
+                    const fromLabel = ded.memberAccount === '001' ? 'Saving' : ded.memberAccount === '002' ? 'Registration' : ded.memberAccount === '003' ? 'latenes' : ded.memberAccount === '004' ? 'welfare' : ded.memberAccount;
+                    const toLabel = ded.accountType === '001' ? 'Saving' : ded.accountType === '002' ? 'Registration' : ded.accountType === '003' ? 'latenes' : ded.accountType === '004' ? 'welfare' : ded.accountType;
+                    const dueLabel = ded.processTime === 'nextday' ? 'Next Day' : ded.processTime === 'nextround' ? 'Next Round' : 'Now';
+                    
+                    previewHtml += '<tr style="border-bottom: 1px solid #e5e7eb;">';
+                    previewHtml += '<td style="padding: 5px;">' + (idx + 1) + '</td>';
+                    previewHtml += '<td style="padding: 5px;">' + ded.memberName + '<br><span style="font-size: 0.7rem; color: #6b7280;">' + ded.memberPhone + '</span></td>';
+                    previewHtml += '<td style="padding: 5px; text-align: center;">' + fromLabel + '</td>';
+                    previewHtml += '<td style="padding: 5px; text-align: center;">' + toLabel + '</td>';
+                    previewHtml += '<td style="padding: 5px; text-align: right; font-weight: 600;">' + parseFloat(ded.amount).toLocaleString() + '</td>';
+                    previewHtml += '</tr>';
+                    previewHtml += '<tr><td colspan="5" style="padding: 3px 5px; font-size: 0.7rem; color: #9ca3af;">Due: ' + dueLabel + (ded.note ? ' | Note: ' + ded.note : '') + '</td></tr>';
+                });
+                
+                const total = deductionQueue.reduce((sum, ded) => sum + parseFloat(ded.amount), 0);
+                previewHtml += '<tr style="background: #d1fae5;"><td colspan="4" style="padding: 8px; text-align: right; font-weight: 700;">Total:</td><td style="padding: 8px; text-align: right; font-weight: 700; color: #065f46;">' + total.toLocaleString() + '</td></tr>';
+                previewHtml += '</table></div>';
+                
+                document.getElementById('confirmMember').innerHTML = previewHtml;
+                document.querySelector('#deductionConfirmation button[onclick="confirmDeduction()"]').innerHTML = '<i class="fas fa-check"></i> Process Now';
+                document.querySelector('#deductionConfirmation button[onclick="confirmDeduction()"]').setAttribute('onclick', 'processAllDeductions()');
+            }
+        }
+
+        function processAllDeductions() {
+            const groupName = <%- JSON.stringify(group?.groupName || '') %>;
+            fetch('/member/process-deduction', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ groupName, deductions: deductionQueue })
@@ -1283,15 +1416,15 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    alert('Deductions processed successfully!\nTotal: ' + deductionQueue.length + ' item(s)');
+                    showToast('Deductions processed successfully! Total: ' + deductionQueue.length + ' item(s)', 'success');
                     deductionQueue = [];
                     updateQueueStatus();
                     location.reload();
                 } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
+                    showToast('Error: ' + (data.error || 'Unknown error'), 'error');
                 }
             })
-            .catch(err => alert('Network error: ' + err.message));
+            .catch(err => showToast('Network error: ' + err.message, 'error'));
         }
     </script>
 </body>

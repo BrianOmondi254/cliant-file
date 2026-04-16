@@ -13,6 +13,7 @@ const generalRoutes = require("./routes/general");
 const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
 const mpesaRoutes = require("./routes/mpesa");
+const memberRoutes = require("./routes/member");
 
 
 
@@ -86,6 +87,7 @@ app.use("/hq", hqOperationsRoutes);
 app.use("/", authRoutes);
 app.use("/", tbankRoutes);
 app.use("/general", generalRoutes);
+app.use("/member", memberRoutes);
 app.use("/api/locations", locationsRoutes);
 app.use("/api/mpesa", mpesaRoutes);
 
