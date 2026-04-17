@@ -24,7 +24,7 @@ const writeJSON = (file, data) => {
 };
 
 const defaultMemberStructure = () => ({
-  groups: []
+  group: {}
 });
 
 const flattenData = (data) => {
@@ -50,48 +50,71 @@ const syncFromGeneral = () => {
   const allGroups = flattenData(generalData);
   const memberData = readJSON(memberFile, defaultMemberStructure());
   
+  // Ensure group object exists
+  if (!memberData.group) {
+    memberData.group = {};
+  }
+  
   allGroups.forEach(group => {
-    const existingGroup = memberData.groups.find(g => g.groupName === group.groupName);
+    const groupName = group.groupName;
+    if (!groupName) return;
+    
     const memberKeys = Object.keys(group).filter(k =>
       k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
     );
     
-  const membersObj = {};
-  memberKeys.forEach(key => {
-    const item = group[key];
-    if (item && item.phone) {
-      membersObj[item.phone] = {
-        totalBalance: "",
-        accounts: {
-          "001": { accountNumber: "001", accountName: "Saving", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "002": { accountNumber: "002", accountName: "Registration", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "003": { accountNumber: "003", accountName: "latenes", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "004": { accountNumber: "004", accountName: "welfare", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } }
-        },
-        processedDeductions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" }
-      };
-    }
-  });
+    const membersObj = {};
+    memberKeys.forEach(key => {
+      const item = group[key];
+      if (item && item.phone) {
+        membersObj[item.phone] = {
+          memberId: item.phone,
+          memberFinancials: {
+            openingBalance: 0,
+            amountIn: 0,
+            amountOut: 0,
+            closingBalance: 0
+          },
+          accounts: {
+            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+          },
+          processedDeductions: []
+        };
+      }
+    });
     
-    if (existingGroup) {
+    if (memberData.group[groupName]) {
+      // Add new members to existing group
       Object.keys(membersObj).forEach(phone => {
-        if (!existingGroup.members[phone]) {
-          existingGroup.members[phone] = membersObj[phone];
+        if (!memberData.group[groupName].members[phone]) {
+          memberData.group[groupName].members[phone] = membersObj[phone];
         }
       });
     } else {
-      memberData.groups.push({
-        groupNumber: memberData.groups.length + 1,
-        accountNumber: group.accountNumber || "",
-        groupName: group.groupName || "",
-        otherContributions: {
-          "001": { accountName: "Saving", expectedAmount: "100", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "002": { accountName: "Registration", expectedAmount: "100", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "003": { accountName: "latenes", expectedAmount: "100", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "004": { accountName: "welfare", expectedAmount: "100", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } }
+      // Create new group structure
+      const groupNum = Object.keys(memberData.group).length + 1;
+      const accountNum = group.accountNumber || "ACC" + groupNum;
+      memberData.group[accountNum] = {
+        groupNumber: groupNum,
+        groupName: groupName,
+        groupFinancials: {
+          totalOpeningBalance: 0,
+          totalAmountIn: 0,
+          totalAmountOut: 0,
+          totalClosingBalance: 0,
+          availableWithdrawalBalance: 0
+        },
+        accountSchema: {
+          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
+          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
+          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
         },
         members: membersObj
-      });
+      };
     }
   });
   
@@ -115,7 +138,8 @@ router.get("/", (req, res) => {
 router.get("/group/:groupNumber", (req, res) => {
   const { groupNumber } = req.params;
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.groups.find(g => g.groupNumber == groupNumber);
+  const groupKey = Object.keys(data.group).find(k => data.group[k].groupNumber == groupNumber);
+  const group = groupKey ? data.group[groupKey] : null;
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
@@ -125,7 +149,8 @@ router.get("/group/:groupNumber", (req, res) => {
 router.get("/group/:groupNumber/member/:memberId", (req, res) => {
   const { groupNumber, memberId } = req.params;
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.groups.find(g => g.groupNumber == groupNumber);
+  const groupKey = Object.keys(data.group).find(k => data.group[k].groupNumber == groupNumber);
+  const group = groupKey ? data.group[groupKey] : null;
   if (!group || !group.members || !group.members[memberId]) {
     return res.status(404).json({ error: "Member not found" });
   }
@@ -142,20 +167,28 @@ router.post("/group", (req, res) => {
   const { groupNumber, accountNumber, groupName, otherContributions } = req.body;
   const data = readJSON(memberFile, defaultMemberStructure());
   
+  const accountNum = accountNumber || "ACC" + (Object.keys(data.group).length + 1);
+  
   const newGroup = {
-    groupNumber: groupNumber || data.groups.length + 1,
-    accountNumber: accountNumber || "",
+    groupNumber: groupNumber || Object.keys(data.group).length + 1,
     groupName: groupName || "",
-    otherContributions: otherContributions || {
-      "001": { accountName: "Saving", expectedAmount: "", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-      "002": { accountName: "Registration", expectedAmount: "", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-      "003": { accountName: "latenes", expectedAmount: "", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-      "004": { accountName: "welfare", expectedAmount: "", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } }
+    groupFinancials: {
+      totalOpeningBalance: 0,
+      totalAmountIn: 0,
+      totalAmountOut: 0,
+      totalClosingBalance: 0,
+      availableWithdrawalBalance: 0
+    },
+    accountSchema: otherContributions || {
+      "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
+      "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+      "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
+      "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
     },
     members: {}
   };
   
-  data.groups.push(newGroup);
+  data.group[accountNum] = newGroup;
   writeJSON(memberFile, data);
   res.json({ success: true, group: newGroup });
 });
@@ -169,23 +202,30 @@ router.post("/group/:groupNumber/member", (req, res) => {
   }
   
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.groups.find(g => g.groupNumber == groupNumber);
+  const groupKey = Object.keys(data.group).find(k => data.group[k].groupNumber == groupNumber);
+  const group = groupKey ? data.group[groupKey] : null;
   
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
   
   const defaultAccounts = {
-    "001": { accountNumber: "001", accountName: "Saving", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-    "002": { accountNumber: "002", accountName: "Registration", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-    "003": { accountNumber: "003", accountName: "latenes", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-    "004": { accountNumber: "004", accountName: "welfare", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } }
+    "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+    "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+    "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+    "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
   };
   
   group.members[memberId] = {
-    totalBalance: "",
+    memberId: memberId,
+    memberFinancials: {
+      openingBalance: 0,
+      amountIn: 0,
+      amountOut: 0,
+      closingBalance: 0
+    },
     accounts: accounts || defaultAccounts,
-    processedDeductions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" }
+    processedDeductions: []
   };
   
   writeJSON(memberFile, data);
@@ -197,7 +237,7 @@ router.put("/group/:groupNumber/member/:memberId/account/:accountNumber/transact
   const transactionData = req.body;
   
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.groups.find(g => g.groupNumber == groupNumber);
+  const group = data.group.find(g => g.groupNumber == groupNumber);
   
   if (!group || !group.members || !group.members[memberId] || !group.members[memberId].accounts || !group.members[memberId].accounts[accountNumber]) {
     return res.status(404).json({ error: "Account not found" });
@@ -215,7 +255,7 @@ router.put("/group/:groupNumber/contribution/:accountNumber/transaction", (req, 
   const transactionData = req.body;
   
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.groups.find(g => g.groupNumber == groupNumber);
+  const group = data.group.find(g => g.groupNumber == groupNumber);
   
   if (!group || !group.otherContributions || !group.otherContributions[accountNumber]) {
     return res.status(404).json({ error: "Contribution account not found" });
@@ -236,11 +276,20 @@ router.post("/verify-group", (req, res) => {
   
   let data = readJSON(memberFile, defaultMemberStructure());
   
-  if (!data.groups || data.groups.length === 0) {
+  if (!data.group || Object.keys(data.group).length === 0) {
     return res.status(404).json({ error: "No groups in member.json" });
   }
   
-  const group = data.groups.find(g => g.groupName === groupName);
+  // Find group by groupName
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  const group = foundKey ? data.group[foundKey] : null;
   
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
@@ -257,18 +306,27 @@ router.post("/group-by-name", (req, res) => {
   const { groupName } = req.body;
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.groups || data.groups.length === 0) {
+  if (!data.group || Object.keys(data.group).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
   
-  const group = data.groups.find(g => g.groupName === groupName);
+  // Find group by groupName
+  let foundKey = null;
+  let foundGroup = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      foundGroup = data.group[key];
+      break;
+    }
+  }
   
-  if (!group) {
+  if (!foundGroup) {
     return res.status(404).json({ error: "Group not found" });
   }
   
-  res.json(group);
+  res.json(foundGroup);
 });
 
 const accountTypeMap = {
@@ -290,16 +348,30 @@ router.post("/process-deduction", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.groups || data.groups.length === 0) {
+  if (!data.group || Object.keys(data.group).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
   
-  const group = data.groups.find(g => g.groupName === groupName);
+  // Find group by groupName
+  let foundKey = null;
+  let foundGroup = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      foundGroup = data.group[key];
+      break;
+    }
+  }
+  
+  const group = foundGroup;
   
   if (!group) {
     return res.status(404).json({ error: "Group not found: " + groupName });
   }
+  
+  // Store reference for updates
+  const groupRef = data.group[foundKey];
   
   let transactionCount = 0;
   
@@ -326,39 +398,88 @@ router.post("/process-deduction", (req, res) => {
       scheduledTime = new Date().toISOString();
     }
     
+    // Create member if not exists
     if (!group.members[memberPhone]) {
       group.members[memberPhone] = {
-        totalBalance: "",
-        accounts: {
-          "001": { accountNumber: "001", accountName: "Saving", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "002": { accountNumber: "002", accountName: "Registration", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "003": { accountNumber: "003", accountName: "latenes", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } },
-          "004": { accountNumber: "004", accountName: "welfare", transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" } }
+        memberId: memberPhone,
+        memberFinancials: {
+          openingBalance: 0,
+          amountIn: 0,
+          amountOut: 0,
+          closingBalance: 0
         },
-        processedDeductions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" }
+        accounts: {
+          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+        },
+        processedDeductions: []
       };
     }
     
     const member = group.members[memberPhone];
     
+    // Get existing totals
+    const processedArr = member.processedDeductions || [];
+    const existingTotal = processedArr.length > 0 ? (processedArr[processedArr.length - 1].totalDeductions || 0) : 0;
+    const existingPending = processedArr.length > 0 ? (processedArr[processedArr.length - 1].totalPendingDeductions || 0) : 0;
+    const newTotal = existingTotal + amount;
+    const newPending = existingPending + amount;
+    
+    // Ensure source account exists
     if (!member.accounts[fromAccountNum]) {
       member.accounts[fromAccountNum] = {
-        accountNumber: fromAccountNum,
+        accountId: fromAccountNum,
         accountName: ded.memberAccount,
-        transactions: { time: "", transactionId: "", transactionNumber: "", entryType: "", counterpartyAccount: "", amount: "", totalAmount: "", transactionState: "" }
+        expectedAmount: "100",
+        financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+        transactionHistory: []
       };
     }
     
-    member.processedDeductions = {
+    // Add to transaction history
+    const txnRecord = {
       time: scheduledTime,
       transactionId: "TXN" + Date.now() + idx,
       transactionNumber: idx + 1,
-      entryType: "sent",
-      counterpartyAccount: toAccountNum,
+      type: "credit",
+      targetAccount: toAccountNum,
       amount: amount,
-      totalAmount: amount,
-      transactionState: transactionState
+      state: transactionState,
+      description: "Deduction sent to " + ded.accountType
     };
+    member.accounts[fromAccountNum].transactionHistory.push(txnRecord);
+    
+    // Update account financials
+    member.accounts[fromAccountNum].financials.amountOut = (member.accounts[fromAccountNum].financials.amountOut || 0) + amount;
+    member.accounts[fromAccountNum].financials.closingBalance = (member.accounts[fromAccountNum].financials.openingBalance || 0) + (member.accounts[fromAccountNum].financials.amountIn || 0) - (member.accounts[fromAccountNum].financials.amountOut || 0);
+    
+    // Add to processed deductions array
+    if (!member.processedDeductions) {
+      member.processedDeductions = [];
+    }
+    member.processedDeductions.push({
+      time: scheduledTime,
+      transactionId: "TXN" + Date.now() + idx,
+      transactionNumber: idx + 1,
+      type: "credit",
+      targetAccount: toAccountNum,
+      amount: amount,
+      state: transactionState,
+      description: "Deduction sent to " + ded.accountType,
+      totalDeductions: newTotal,
+      totalPendingDeductions: newPending
+    });
+    
+    // Update member financials
+    member.memberFinancials.amountOut = (member.memberFinancials.amountOut || 0) + amount;
+    member.memberFinancials.closingBalance = (member.memberFinancials.openingBalance || 0) + (member.memberFinancials.amountIn || 0) - (member.memberFinancials.amountOut || 0);
+    
+    // Update group financials
+    groupRef.groupFinancials.totalAmountOut = (group.groupFinancials.totalAmountOut || 0) + amount;
+    groupRef.groupFinancials.totalClosingBalance = (group.groupFinancials.totalOpeningBalance || 0) + (group.groupFinancials.totalAmountIn || 0) - (group.groupFinancials.totalAmountOut || 0);
+    groupRef.groupFinancials.availableWithdrawalBalance = group.groupFinancials.totalClosingBalance;
     
     transactionCount++;
   });

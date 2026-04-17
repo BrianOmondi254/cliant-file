@@ -2500,5 +2500,2205 @@
         }
       }
     }
-  ]
+  ],
+  "group": {
+    "2540442621424001": {
+      "groupNumber": 1,
+      "groupName": "kinda eteko",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {
+        "0700051102": {
+          "memberId": "0700051102",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0741001141": {
+          "memberId": "0741001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0742001141": {
+          "memberId": "0742001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0743001141": {
+          "memberId": "0743001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0744001141": {
+          "memberId": "0744001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0745001141": {
+          "memberId": "0745001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0746001141": {
+          "memberId": "0746001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0747001141": {
+          "memberId": "0747001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0748001141": {
+          "memberId": "0748001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0749001141": {
+          "memberId": "0749001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    },
+    "2540422491234001": {
+      "groupNumber": 2,
+      "groupName": "ONE SACCO ",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {
+        "0740415992": {
+          "memberId": "0740415992",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0741001141": {
+          "memberId": "0741001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0742001141": {
+          "memberId": "0742001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0743001141": {
+          "memberId": "0743001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0744001141": {
+          "memberId": "0744001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0745001141": {
+          "memberId": "0745001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0746001141": {
+          "memberId": "0746001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0747001141": {
+          "memberId": "0747001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0748001141": {
+          "memberId": "0748001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0749001141": {
+          "memberId": "0749001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0741101141": {
+          "memberId": "0741101141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0741201141": {
+          "memberId": "0741201141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0741301141": {
+          "memberId": "0741301141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0741001143": {
+          "memberId": "0741001143",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    },
+    "ACC3": {
+      "groupNumber": 3,
+      "groupName": "namla  sacco",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {
+        "0740415992": {
+          "memberId": "0740415992",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0700051102": {
+          "memberId": "0700051102",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0746001141": {
+          "memberId": "0746001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    },
+    "ACC4": {
+      "groupNumber": 4,
+      "groupName": " ALIANCE",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {
+        "0740415992": {
+          "memberId": "0740415992",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0700051102": {
+          "memberId": "0700051102",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        },
+        "0746001141": {
+          "memberId": "0746001141",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    },
+    "ACC5": {
+      "groupNumber": 5,
+      "groupName": "olao group",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {
+        "0740415992": {
+          "memberId": "0740415992",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    },
+    "ACC6": {
+      "groupNumber": 6,
+      "groupName": "kissi wote",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {}
+    },
+    "ACC7": {
+      "groupNumber": 7,
+      "groupName": "kiwswa grops",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {}
+    },
+    "ACC8": {
+      "groupNumber": 8,
+      "groupName": "ONE  ",
+      "groupFinancials": {
+        "totalOpeningBalance": 0,
+        "totalAmountIn": 0,
+        "totalAmountOut": 0,
+        "totalClosingBalance": 0,
+        "availableWithdrawalBalance": 0
+      },
+      "accountSchema": {
+        "001": {
+          "accountId": "001",
+          "accountName": "Saving",
+          "expectedAmount": "100"
+        },
+        "002": {
+          "accountId": "002",
+          "accountName": "Registration",
+          "expectedAmount": "100"
+        },
+        "003": {
+          "accountId": "003",
+          "accountName": "latenes",
+          "expectedAmount": "100"
+        },
+        "004": {
+          "accountId": "004",
+          "accountName": "welfare",
+          "expectedAmount": "100"
+        }
+      },
+      "members": {
+        "0740415992": {
+          "memberId": "0740415992",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    }
+  }
 }
