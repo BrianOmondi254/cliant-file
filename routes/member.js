@@ -370,6 +370,13 @@ router.post("/process-deduction", (req, res) => {
     return res.status(404).json({ error: "Group not found: " + groupName });
   }
   
+  // Calculate round based on constitution creation date
+  const constitutionCreated = group.constitutionKeyGeneratedAt || group.constitutionKeySetByAgentAt || group.createdAt || new Date().toISOString();
+  const now = new Date();
+  const created = new Date(constitutionCreated);
+  const diffTime = Math.abs(now - created);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
   // Store reference for updates
   const groupRef = data.group[foundKey];
   
@@ -459,6 +466,10 @@ router.post("/process-deduction", (req, res) => {
     if (!member.processedDeductions) {
       member.processedDeductions = [];
     }
+    
+    // Get round info
+    const currentRound = Math.ceil(diffDays / 7) || 1;
+    
     member.processedDeductions.push({
       time: scheduledTime,
       transactionId: "TXN" + Date.now() + idx,
@@ -469,7 +480,9 @@ router.post("/process-deduction", (req, res) => {
       state: transactionState,
       description: "Deduction sent to " + ded.accountType,
       totalDeductions: newTotal,
-      totalPendingDeductions: newPending
+      totalPendingDeductions: newPending,
+      round: currentRound,
+      createdAt: constitutionCreated
     });
     
     // Update member financials
@@ -486,6 +499,106 @@ router.post("/process-deduction", (req, res) => {
   
   writeJSON(memberFile, data);
   res.json({ success: true, message: `Processed ${transactionCount} deductions`, processed: transactionCount });
+});
+
+router.get("/contribution", (req, res) => {
+  const { groupName, memberPhone: queryPhone } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/");
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  // Find group by groupName
+  let foundGroup = null;
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundGroup = data.group[key];
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundGroup) {
+    return res.status(404).send("Group not found");
+  }
+  
+  // Get constitution creation date for round calculation
+  const constitutionCreated = foundGroup.constitutionKeyGeneratedAt || foundGroup.constitutionKeySetByAgentAt || foundGroup.createdAt || new Date().toISOString();
+  const now = new Date();
+  const created = new Date(constitutionCreated);
+  const diffTime = Math.abs(now - created);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Get end saving period from principles
+  const principles = foundGroup.principles || {};
+  const intervals = principles.intervals || {};
+  const endSavingPeriod = intervals.endSavingPeriod || '1-year';
+  
+  // Calculate total rounds based on period
+  let totalRounds = 52;
+  if (endSavingPeriod === '6-months') totalRounds = 26;
+  else if (endSavingPeriod === '2-years') totalRounds = 104;
+  else if (endSavingPeriod === '3-years') totalRounds = 156;
+  else if (endSavingPeriod === '4-years') totalRounds = 208;
+  else if (endSavingPeriod === '5-years') totalRounds = 260;
+  
+  const activeRound = Math.ceil(diffDays / 7) || 1;
+  const daysUntilMeeting = 7 - (diffDays % 7);
+  const remainRounds = Math.max(0, totalRounds - activeRound);
+  
+  const summaryStats = {
+    activeRound: activeRound,
+    daysUntilMeeting: daysUntilMeeting,
+    totalMembers: foundGroup.members ? Object.keys(foundGroup.members).length : 0,
+    remainRounds: remainRounds
+  };
+  
+  // Determine member phone and index
+  const sessionPhone = req.session.user?.phoneNumber;
+  const targetPhone = queryPhone || sessionPhone;
+  
+  // Get member index if member exists
+  let memberIndex = null;
+  if (foundGroup.members && targetPhone) {
+    const memberKeys = Object.keys(foundGroup.members);
+    memberIndex = memberKeys.indexOf(targetPhone) + 1;
+  }
+  
+  // Get group number (from groupNumber field)
+  const groupNumber = foundGroup.groupNumber || 1;
+  const accountNumber = foundKey || foundGroup.accountNumber || '';
+  
+  // Format phone number for display
+  let displayPhone = targetPhone;
+  if (targetPhone && targetPhone.startsWith('254')) {
+    displayPhone = '0' + targetPhone.substring(3);
+  } else if (targetPhone && targetPhone.startsWith('+254')) {
+    displayPhone = '0' + targetPhone.substring(4);
+  }
+  
+  // Get member data directly from group
+  let memberData = null;
+  if (foundGroup && foundGroup.members && foundGroup.members[displayPhone]) {
+    memberData = foundGroup.members[displayPhone];
+  }
+  
+  res.render("mcont", {
+    group: foundGroup,
+    user: req.session.user,
+    memberPhone: displayPhone,
+    memberIndex: memberIndex,
+    groupNumber: groupNumber,
+    accountNumber: accountNumber,
+    summaryStats: summaryStats,
+    memberData: memberData
+  });
 });
 
 module.exports = router;

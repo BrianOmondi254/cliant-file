@@ -1338,7 +1338,7 @@ router.get("/group/:groupName", (req, res) => {
   const group = allGroups.find(g => g.groupName === groupName);
 
   if (!group) {
-    return res.render("group-details", { group: null, userRole: null });
+    return res.render("group-details", { group: null, userRole: null, currentUserPhone: userPhone });
   }
 
   // Determine logged-in user's role in this group
@@ -1406,7 +1406,7 @@ router.get("/group/:groupName", (req, res) => {
   // PIN status for Group Account tab
   group.pinIsSet = !!group.constitutionStartKey;
 
-  return res.render("group-details", { group, userRole });
+  return res.render("group-details", { group, userRole, currentUserPhone: userPhone });
 });
 
 /* ================= API: Verify Members Against data.json ================= */

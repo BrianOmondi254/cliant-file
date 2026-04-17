@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Contribution - <%= group ? group.groupName : 'Group' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+      color: #1e293b;
+    }
+    .container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      overflow: hidden;
+      padding-bottom: 20px;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .header {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 20px;
+      color: white;
+      text-align: center;
+      position: relative;
+    }
+    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .back-link {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+    }
+    .content { padding: 20px; }
+
+    /* Financial Summary Cards */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .card {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      color: white;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .card.pending { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .card.loan { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .card-label { font-size: 11px; opacity: 0.9; text-transform: uppercase; font-weight: 700; }
+    .card-amount { font-size: 18px; font-weight: 800; }
+
+    /* ── Chart Section with Slide Navigation ── */
+    .chart-section {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    .chart-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .chart-title {
+      font-size: 14px;
+      color: #1e293b;
+      text-transform: uppercase;
+      font-weight: 700;
+      flex: 1;
+      text-align: center;
+    }
+    .chart-nav-btn {
+      background: #e2e8f0;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .chart-nav-btn:hover { background: #0f9d58; color: white; }
+    .chart-nav-btn:disabled { opacity: 0.35; cursor: default; }
+    .chart-nav-btn:disabled:hover { background: #e2e8f0; color: #475569; }
+
+    /* Slide wrapper */
+    .chart-slides-wrapper {
+      overflow: hidden;
+      width: 100%;
+    }
+    .chart-slides {
+      display: flex;
+      transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+      width: 200%;
+    }
+    .chart-slide {
+      width: 50%;
+      flex-shrink: 0;
+    }
+    .chart-slide canvas {
+      width: 100%;
+      height: 120px;
+    }
+
+    /* Dots indicator */
+    .chart-dots {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .chart-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      transition: background 0.2s;
+    }
+    .chart-dot.active { background: #0f9d58; }
+
+    /* Account List */
+    .account-list {
+      background: #f8fafc;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    .account-header {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      padding: 10px 12px;
+      background: #e2e8f0;
+      font-size: 14px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .account-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      padding: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 15px;
+    }
+    .account-row:last-child { border-bottom: none; }
+    .amount-in { color: #0f9d58; font-weight: 600; }
+    .amount-out { color: #ef4444; font-weight: 600; text-align: right; }
+
+    /* Performance by Account — clickable */
+    .perf-section { margin-bottom: 15px; }
+    .perf-title {
+      font-size: 16px;
+      color: #1e293b;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .perf-item {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border-left: 3px solid #0f9d58;
+      cursor: pointer;
+      transition: box-shadow 0.18s, transform 0.15s;
+      user-select: none;
+    }
+    .perf-item:hover {
+      box-shadow: 0 3px 12px rgba(15,157,88,0.18);
+      transform: translateY(-1px);
+    }
+    .perf-item:active { transform: translateY(0); }
+    .perf-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 16px;
+    }
+    .perf-details {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      font-size: 14px;
+      color: #64748b;
+    }
+    .perf-tap-hint {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* ── Transaction Statement Overlay ── */
+    .stmt-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 32, 39, 0.72);
+      z-index: 1000;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .stmt-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    /* The "EJS file" frame — styled to look like a nested template card */
+    .stmt-frame {
+      background: #fff;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 16px 16px 0 0;
+      max-height: 82vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+    }
+    .stmt-overlay.open .stmt-frame {
+      transform: translateY(0);
+    }
+
+    /* Frame top rounded */
+    .stmt-frame {
+      border-radius: 16px 16px 0 0;
+    }
+
+    .stmt-header {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 14px 16px 12px;
+      color: white;
+    }
+    .stmt-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stmt-header h2 { font-size: 20px; font-weight: 800; }
+    .stmt-header p { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+    .stmt-close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      color: white;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stmt-body { padding: 14px; }
+
+    /* Summary mini-cards inside statement */
+    .stmt-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stmt-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stmt-card-label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+    .stmt-card-val { font-size: 18px; font-weight: 800; color: #1e293b; }
+    .stmt-card-val.green { color: #0f9d58; }
+    .stmt-card-val.red { color: #ef4444; }
+    .stmt-card-val.amber { color: #f59e0b; }
+
+    /* Transaction table */
+    .stmt-table-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .stmt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .stmt-table thead tr {
+      background: #e2e8f0;
+    }
+    .stmt-table th {
+      padding: 7px 8px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+    }
+    .stmt-table td {
+      padding: 9px 8px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+    .stmt-table tr:last-child td { border-bottom: none; }
+    .stmt-table .txn-credit { color: #0f9d58; font-weight: 700; }
+    .stmt-table .txn-debit { color: #ef4444; font-weight: 700; }
+    .stmt-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-completed { background: #dcfce7; color: #15803d; }
+    .badge-pending { background: #fef9c3; color: #a16207; }
+    .badge-failed { background: #fee2e2; color: #b91c1c; }
+
+    .stmt-empty {
+      text-align: center;
+      padding: 30px 10px;
+      color: #94a3b8;
+      font-size: 15px;
+    }
+    .stmt-empty i { font-size: 28px; margin-bottom: 8px; display: block; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: #64748b; }
+  </style>
+</head>
+<body>
+
+  <!-- Transaction Statement Overlay -->
+  <div class="stmt-overlay" id="stmtOverlay">
+    <div class="stmt-frame">
+
+      <!-- Statement Header -->
+      <div class="stmt-header">
+        <div class="stmt-header-top">
+          <div>
+            <h2 id="stmtAccName"><i class="fas fa-receipt"></i> Transaction Statement</h2>
+            <p id="stmtAccId">Account · <%- group ? group.groupName : '' %></p>
+          </div>
+          <button class="stmt-close-btn" onclick="closeStatement()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Statement Body -->
+      <div class="stmt-body">
+
+        <!-- Mini summary cards -->
+        <div class="stmt-summary">
+          <div class="stmt-card">
+            <div class="stmt-card-label">Amount In</div>
+            <div class="stmt-card-val green" id="stmtAmtIn">KES 0</div>
+          </div>
+          <div class="stmt-card">
+            <div class="stmt-card-label">Amount Out</div>
+            <div class="stmt-card-val red" id="stmtAmtOut">KES 0</div>
+          </div>
+          <div class="stmt-card">
+            <div class="stmt-card-label">Balance</div>
+            <div class="stmt-card-val" id="stmtBalance">KES 0</div>
+          </div>
+        </div>
+
+        <!-- Transaction history table -->
+        <div class="stmt-table-title"><i class="fas fa-list-ul"></i> Transaction History</div>
+        <div id="stmtTableWrap">
+          <div class="stmt-empty">
+            <i class="fas fa-inbox"></i>
+            No transactions yet
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       MAIN PAGE CONTENT
+       ══════════════════════════════════════ -->
+  <div class="container">
+    <div class="header">
+      <a href="/group-details?groupName=<%= encodeURIComponent(group.groupName) %>" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <h1><i class="fas fa-hand-holding-usd"></i> My Contribution</h1>
+      <p><%= group.groupName || 'Group' %></p>
+    </div>
+
+    <div class="content">
+
+      <!-- Group & Member Info -->
+      <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:3px solid #0f9d58;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Member Index</div>
+            <div style="font-size:14px; font-weight:700; color:#1e293b;"><%= memberIndex || '-' %></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Group Account</div>
+            <div style="font-size:12px; font-weight:700; color:#1e293b; word-break:break-all;"><%= accountNumber || '-' %></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Round Structure -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin-bottom:15px;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:8px; text-align:center;">
+          <div style="font-size:8px; color:#2563eb; text-transform:uppercase; font-weight:700;">Next Meeting</div>
+          <div style="font-size:12px; font-weight:800; color:#1e40af;" id="nextMeeting"><%= summaryStats && summaryStats.daysUntilMeeting !== undefined ? (summaryStats.daysUntilMeeting === 0 ? 'Today' : summaryStats.daysUntilMeeting + ' Days') : '-' %></div>
+        </div>
+        <div style="background:#fdf4ff; border:1px solid #fbcfe8; border-radius:8px; padding:8px; text-align:center;">
+          <div style="font-size:8px; color:#c026d3; text-transform:uppercase; font-weight:700;">Active</div>
+          <div style="font-size:12px; font-weight:800; color:#86198f;" id="activeRound">R-<%= summaryStats ? summaryStats.activeRound : '-' %></div>
+        </div>
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px; text-align:center;">
+          <div style="font-size:8px; color:#d97706; text-transform:uppercase; font-weight:700;">Remaining</div>
+          <div style="font-size:12px; font-weight:800; color:#92400e;" id="remainRounds"><%= summaryStats ? summaryStats.remainRounds : '-' %></div>
+        </div>
+      </div>
+
+      <!-- Financial Summary -->
+      <div class="summary-cards">
+        <div class="card">
+          <div class="card-label">Total Saving</div>
+          <div class="card-amount" id="totalSaving">KES 0</div>
+        </div>
+        <div class="card pending">
+          <div class="card-label">Pending</div>
+          <div class="card-amount" id="pendingAmt">KES 0</div>
+        </div>
+        <div class="card loan">
+          <div class="card-label">Loan</div>
+          <div class="card-amount">KES 0</div>
+        </div>
+      </div>
+
+      <!-- ── Chart Section with < > nav ── -->
+      <div class="chart-section">
+        <div class="chart-nav">
+          <button class="chart-nav-btn" id="chartPrevBtn" onclick="shiftChart(-1)" disabled>
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <div class="chart-title" id="chartTitle">Account Performance</div>
+          <button class="chart-nav-btn" id="chartNextBtn" onclick="shiftChart(1)">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="chart-slides-wrapper">
+          <div class="chart-slides" id="chartSlides">
+            <!-- Slide 0: Account Performance -->
+            <div class="chart-slide">
+              <canvas id="accountChartCanvas"></canvas>
+            </div>
+            <!-- Slide 1: Round Performance -->
+            <div class="chart-slide">
+              <canvas id="roundChartCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-dots">
+          <div class="chart-dot active" id="dot0"></div>
+          <div class="chart-dot" id="dot1"></div>
+        </div>
+      </div>
+
+      <!-- Account List -->
+      <div class="account-list">
+        <div class="account-header">
+          <span>Account</span>
+          <span>In</span>
+          <span style="text-align:right;">Out</span>
+        </div>
+        <div id="accountListContent">
+          <div class="loading">Loading accounts...</div>
+        </div>
+      </div>
+
+      <!-- Performance by Account (clickable → statement) -->
+      <div class="perf-section">
+        <div class="perf-title">Performance by Account</div>
+        <div id="performanceContent">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const groupName  = '<%= group ? group.groupName : "" %>';
+    const memberPhone = '<%= user ? user.phoneNumber : "" %>';
+
+    /* ── Chart slide navigation ── */
+    let currentSlide = 0;
+    const slideTitles = ['Account Performance', 'Round Performance'];
+
+    function shiftChart(dir) {
+      currentSlide = Math.max(0, Math.min(1, currentSlide + dir));
+      document.getElementById('chartSlides').style.transform =
+        `translateX(-${currentSlide * 50}%)`;
+      document.getElementById('chartTitle').textContent = slideTitles[currentSlide];
+      document.getElementById('chartPrevBtn').disabled = currentSlide === 0;
+      document.getElementById('chartNextBtn').disabled = currentSlide === 1;
+      document.getElementById('dot0').classList.toggle('active', currentSlide === 0);
+      document.getElementById('dot1').classList.toggle('active', currentSlide === 1);
+    }
+
+    /* ── Transaction Statement overlay ── */
+    function openStatement(accId, accName) {
+      // Show loading first
+      const overlay = document.getElementById('stmtOverlay');
+      document.getElementById('stmtAccName').innerHTML = '<i class="fas fa-receipt"></i> ' + accName;
+      document.getElementById('stmtAccId').textContent = 'Account ' + accId + ' · ' + groupName;
+      document.getElementById('stmtAmtIn').textContent = 'Loading...';
+      document.getElementById('stmtAmtOut').textContent = 'Loading...';
+      document.getElementById('stmtBalance').textContent = 'Loading...';
+      document.getElementById('stmtTableWrap').innerHTML = '<div class="loading">Loading...</div>';
+      overlay.classList.add('open');
+
+      // Fetch fresh data from server
+      fetch('/member/group-by-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName })
+      })
+      .then(res => res.json())
+      .then(groupData => {
+        if (!groupData || !groupData.members) {
+          showStmtEmpty();
+          return;
+        }
+        const member = memberPhone && groupData.members[memberPhone]
+          ? groupData.members[memberPhone] : null;
+        if (!member || !member.accounts || !member.accounts[accId]) {
+          showStmtEmpty();
+          return;
+        }
+        const acc = member.accounts[accId];
+        const fin = acc.financials || {};
+        const amountIn = fin.amountIn || 0;
+        const amountOut = fin.amountOut || 0;
+        const closing = fin.closingBalance || 0;
+
+        document.getElementById('stmtAmtIn').textContent = 'KES ' + amountIn.toLocaleString();
+        document.getElementById('stmtAmtOut').textContent = 'KES ' + amountOut.toLocaleString();
+        
+        const balEl = document.getElementById('stmtBalance');
+        balEl.textContent = 'KES ' + closing.toLocaleString();
+        balEl.className = 'stmt-card-val ' + (closing > 0 ? 'green' : closing < 0 ? 'red' : '');
+
+        // Build transaction table with fresh data
+        const history = acc.transactionHistory || [];
+        let tableHtml = '';
+        if (history.length === 0) {
+          tableHtml = '<div class="stmt-empty"><i class="fas fa-inbox"></i>No transactions yet</div>';
+        } else {
+          tableHtml = `
+            <table class="stmt-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${history.map((txn, i) => {
+                  const date = txn.time ? new Date(txn.time).toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'2-digit' }) : '-';
+                  const isCredit = txn.type === 'credit';
+                  const amtClass = isCredit ? 'txn-credit' : 'txn-debit';
+                  const amtSign = isCredit ? '+' : '-';
+                  const badgeClass = txn.state === 'completed' ? 'badge-completed' :
+                                     txn.state === 'pending'   ? 'badge-pending'   : 'badge-failed';
+                  return `
+                    <tr>
+                      <td>${txn.transactionNumber || (i + 1)}</td>
+                      <td>${date}</td>
+                      <td style="max-width:110px; word-break:break-word;">${txn.description || '-'}</td>
+                      <td class="${amtClass}">${amtSign}KES ${(txn.amount || 0).toLocaleString()}</td>
+                      <td><span class="stmt-badge ${badgeClass}">${txn.state || '-'}</span></td>
+                    </tr>`;
+                }).join('')}
+              </tbody>
+            </table>`;
+        }
+        document.getElementById('stmtTableWrap').innerHTML = tableHtml;
+      })
+      .catch(err => {
+        console.error(err);
+        showStmtEmpty();
+      });
+    }
+
+    function showStmtEmpty() {
+      document.getElementById('stmtAmtIn').textContent = 'KES 0';
+      document.getElementById('stmtAmtOut').textContent = 'KES 0';
+      document.getElementById('stmtBalance').textContent = 'KES 0';
+      document.getElementById('stmtTableWrap').innerHTML = '<div class="stmt-empty"><i class="fas fa-inbox"></i>No data available</div>';
+    }
+
+    function closeStatement() {
+      document.getElementById('stmtOverlay').classList.remove('open');
+    }
+
+    // Tap outside the frame to close
+    document.getElementById('stmtOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeStatement();
+    });
+
+    /* ── Data fetch ── */
+    fetch('/member/group-by-name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupName })
+    })
+    .then(res => res.json())
+    .then(groupData => {
+      if (!groupData || !groupData.members) { showEmpty(); return; }
+      const member = memberPhone && groupData.members[memberPhone]
+        ? groupData.members[memberPhone] : null;
+      if (!member) { showAllMembers(groupData); return; }
+      processMemberData(member, groupData);
+    })
+    .catch(err => { console.error(err); showEmpty(); });
+
+    /* ── Member data processing ── */
+    function processMemberData(member, groupData) {
+      let accountsData = [];
+      let totalSaving = 0;
+      let accountsHtml = '';
+      let perfHtml = '';
+
+      if (member.accounts) {
+        for (const [accId, acc] of Object.entries(member.accounts)) {
+          const fin = acc.financials || {};
+          const amountIn  = fin.amountIn  || 0;
+          const amountOut = fin.amountOut || 0;
+          const closing   = fin.closingBalance || 0;
+          totalSaving += closing;
+
+          accountsData.push({
+            accountId: accId,
+            accountName: acc.accountName || accId,
+            amountIn, amountOut, balance: closing,
+            transactionHistory: acc.transactionHistory || []
+          });
+
+          accountsHtml += `
+            <div class="account-row">
+              <span>${acc.accountName || accId}</span>
+              <span class="amount-in">${amountIn > 0 ? 'KES ' + amountIn.toLocaleString() : '-'}</span>
+              <span class="amount-out">${amountOut > 0 ? 'KES ' + amountOut.toLocaleString() : '-'}</span>
+            </div>`;
+
+          const color = amountOut > 0 ? '#f59e0b' : amountIn > 0 ? '#0f9d58' : '#94a3b8';
+          const txnCount = (acc.transactionHistory || []).length;
+          const accName = acc.accountName || accId;
+          perfHtml += `
+            <div class="perf-item" style="border-left-color:${color}"
+                 onclick="openStatement('${accId}', '${accName}')">
+              <div class="perf-header">
+                <span>${accName}</span>
+                <span>KES ${closing.toLocaleString()}</span>
+              </div>
+              <div class="perf-details">
+                <span>In: KES ${amountIn.toLocaleString()}</span>
+                <span>Out: KES ${amountOut.toLocaleString()}</span>
+              </div>
+              <div class="perf-tap-hint">
+                <i class="fas fa-receipt" style="font-size:8px;"></i>
+                Tap to view ${txnCount} transaction${txnCount !== 1 ? 's' : ''}
+              </div>
+            </div>`;
+        }
+      }
+
+      // Deduction / pending
+      const deductions   = member.processedDeductions || [];
+      const lastDed      = deductions.length > 0 ? deductions[deductions.length - 1] : null;
+      const pendingAmt   = lastDed ? (lastDed.totalPendingDeductions || 0) : 0;
+
+      document.getElementById('totalSaving').textContent  = 'KES ' + totalSaving.toLocaleString();
+      document.getElementById('pendingAmt').textContent   = 'KES ' + pendingAmt.toLocaleString();
+      document.getElementById('accountListContent').innerHTML =
+        accountsHtml || '<div class="loading">No accounts</div>';
+      document.getElementById('performanceContent').innerHTML =
+        perfHtml || '<div class="loading">No data</div>';
+
+      // Fix onclick attribute JSON (was escaped for HTML attribute)
+      drawAccountChart(accountsData);
+      drawRoundChart(deductions);
+    }
+
+    function showAllMembers(groupData) {
+      const count = Object.keys(groupData.members || {}).length;
+      document.getElementById('accountListContent').innerHTML =
+        `<div class="loading">${count} members in group</div>`;
+      document.getElementById('performanceContent').innerHTML =
+        '<div class="loading">Select a member to view details</div>';
+    }
+
+    function showEmpty() {
+      document.getElementById('accountListContent').innerHTML =
+        '<div class="loading">No data found</div>';
+      document.getElementById('performanceContent').innerHTML =
+        '<div class="loading">No data</div>';
+    }
+
+    /* ── Chart: Account Performance (slide 0) ── */
+    function drawAccountChart(accountsData) {
+      const canvas = document.getElementById('accountChartCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width = canvas.offsetWidth || 300;
+      const height = canvas.height = 120;
+      ctx.clearRect(0, 0, width, height);
+
+      if (!accountsData || accountsData.length === 0) {
+        ctx.fillStyle = '#64748b'; ctx.font = '12px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data', width / 2, height / 2);
+        return;
+      }
+      const maxVal = Math.max(...accountsData.map(d => Math.max(d.amountIn, d.amountOut))) || 1;
+      const barWidth   = (width - 40) / accountsData.length / 2 - 5;
+      const chartHeight = height - 30;
+      const startX     = 20;
+
+      accountsData.forEach((acc, i) => {
+        const x = startX + i * (barWidth * 2 + 10);
+        const inH  = (acc.amountIn  / maxVal) * chartHeight;
+        const outH = (acc.amountOut / maxVal) * chartHeight;
+        ctx.fillStyle = '#0f9d58';
+        ctx.fillRect(x, height - 20 - inH, barWidth, inH);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(x + barWidth + 3, height - 20 - outH, barWidth, outH);
+        ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'center';
+        const name = acc.accountName.length > 5
+          ? acc.accountName.substring(0, 4) + '.' : acc.accountName;
+        ctx.fillText(name, x + barWidth, height - 5);
+      });
+
+      // legend
+      ctx.fillStyle = '#0f9d58'; ctx.fillRect(width - 55, 5, 8, 8);
+      ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'left';
+      ctx.fillText('In', width - 44, 13);
+      ctx.fillStyle = '#f59e0b'; ctx.fillRect(width - 55, 18, 8, 8);
+      ctx.fillText('Out', width - 44, 26);
+    }
+
+    /* ── Chart: Round Performance (slide 1) ── */
+    function drawRoundChart(deductions) {
+      const canvas = document.getElementById('roundChartCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width = canvas.offsetWidth || 300;
+      const height = canvas.height = 120;
+      ctx.clearRect(0, 0, width, height);
+
+      if (!deductions || deductions.length === 0) {
+        ctx.fillStyle = '#64748b'; ctx.font = '12px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('No round data yet', width / 2, height / 2);
+        return;
+      }
+
+      const maxVal = Math.max(...deductions.map(d => d.amount || 0)) || 1;
+      const barWidth   = Math.max(8, (width - 40) / deductions.length - 6);
+      const chartHeight = height - 30;
+      const startX     = 20;
+
+      deductions.forEach((ded, i) => {
+        const x = startX + i * (barWidth + 6);
+        const barH = ((ded.amount || 0) / maxVal) * chartHeight;
+        const isPending = (ded.totalPendingDeductions || 0) > 0;
+        ctx.fillStyle = isPending ? '#f59e0b' : '#0f9d58';
+        ctx.fillRect(x, height - 20 - barH, barWidth, barH);
+
+        ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'center';
+        const label = ded.round ? 'R' + ded.round : 'T' + (i + 1);
+        ctx.fillText(label, x + barWidth / 2, height - 5);
+      });
+
+      // legend
+      ctx.fillStyle = '#0f9d58'; ctx.fillRect(width - 70, 5, 8, 8);
+      ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'left';
+      ctx.fillText('Paid', width - 59, 13);
+      ctx.fillStyle = '#f59e0b'; ctx.fillRect(width - 70, 18, 8, 8);
+      ctx.fillText('Pending', width - 59, 26);
+    }
+  </script>
+</body>
+</html>

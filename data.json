@@ -168,7 +168,7 @@
     "ageBracket": "26-35",
     "idNumber": "35951449",
     "createdAt": "2026-01-25T18:38:05.240Z",
-    "lastLogin": "2026-04-17T08:22:24.908Z",
+    "lastLogin": "2026-04-17T11:13:48.686Z",
     "passkey": "69278",
     "personalPin": "1234"
   },
@@ -323,8 +323,9 @@
     "ageBracket": "18-25",
     "idNumber": "35951449",
     "createdAt": "2026-01-30T14:30:12.510Z",
-    "lastLogin": "2026-04-13T15:13:49.805Z",
-    "passkey": "12151"
+    "lastLogin": "2026-04-17T15:01:06.784Z",
+    "passkey": "12151",
+    "personalPin": "$2b$10$ma1ERTF2cVO7X9RUsn83P.LIO4wG0zifn4vGrxraBdRci.qSs7hNO"
   },
   {
     "FirstName": "broan",

@@ -418,7 +418,7 @@
             <div id="myAccountSection" class="step-box">
 
                 <div id="otherButtonsGD">
-                    <a href="#" class="action-button"><i class="fas fa-hand-holding-usd"></i> Contribution</a>
+                    <a href="/member/contribution?groupName=<%= group.groupName %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-hand-holding-usd"></i> Contribution</a>
                     <a href="#" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
                     <a href="#" class="action-button"><i class="fas fa-id-card"></i> Membership</a>
                 </div>
@@ -1075,6 +1075,381 @@
             document.getElementById('changePinContainerGD').classList.add('hidden');
             document.getElementById('accountDetailsContainerGD').classList.add('hidden');
             document.getElementById('changePinOptionsGD').classList.remove('hidden');
+        }
+
+        function showPendingBalances() {
+            // Show pending balances modal
+            const modal = document.getElementById('pendingBalancesModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                // Create modal if not exists
+                const modalHtml = `
+                    <div id="pendingBalancesModal" class="modal-overlay" onclick="if(event.target === this) this.classList.add('hidden')" style="display:flex; align-items:center; justify-content:center; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999;">
+                        <div style="background:white; border-radius:12px; width:90%; max-width:420px; max-height:80vh; overflow-y:auto; padding:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:10px; border-bottom:2px solid #f1f5f9;">
+                                <h3 style="margin:0; color:#1e293b; font-size:16px;">Pending Balances</h3>
+                                <button onclick="document.getElementById('pendingBalancesModal').classList.add('hidden')" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+                            </div>
+                            <div style="text-align:center; padding:40px 20px; color:#64748b;">
+                                <i class="fas fa-clock" style="font-size:40px; color:#f59e0b; margin-bottom:15px;"></i>
+                                <p style="font-size:14px;">Loading pending balances...</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+        }
+
+function showMyAccountDetails() {
+            // Show my account details modal with all financial info
+            const groupName = window.currentGroupName;
+            const memberPhone = window.currentUserPhone;
+            
+            const modal = document.getElementById('myAccountDetailsModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            } else {
+                const modalHtml = `
+                    <div id="myAccountDetailsModal" class="modal-overlay" onclick="if(event.target === this) this.classList.add('hidden')" style="display:flex; align-items:center; justify-content:center; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; overflow-y:auto;">
+                        <div style="background:white; border-radius:12px; width:90%; max-width:550px; max-height:90vh; overflow-y:auto; padding:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:10px; border-bottom:2px solid #f1f5f9;">
+                                <h3 style="margin:0; color:#1e293b; font-size:16px;"><i class="fas fa-wallet"></i> My Account</h3>
+                                <button onclick="document.getElementById('myAccountDetailsModal').classList.add('hidden')" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+                            </div>
+                            
+                            <!-- Group Info -->
+                            <div id="groupInfoDisplay" style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:3px solid #0f9d58;">
+                                <div style="font-size:11px; color:#64748b;">Group: <span id="displayGroupName" style="font-weight:700; color:#1e293b;">-</span></div>
+                                <div style="font-size:10px; color:#64748b;">Account: <span id="displayAccountNum" style="font-weight:700; color:#1e293b;">-</span></div>
+                            </div>
+                            
+                            <!-- Financial Summary Cards -->
+                            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:15px;">
+                                <div style="background:linear-gradient(135deg, #0f9d58, #34d399); color:white; padding:12px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.9; text-transform:uppercase;">Total Saving</div>
+                                    <div id="totalSavingDisplay" style="font-size:16px; font-weight:800;">KES 0</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #f59e0b, #d97706); color:white; padding:12px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.9; text-transform:uppercase;">Pending</div>
+                                    <div id="pendingDisplay" style="font-size:16px; font-weight:800;">KES 0</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; padding:12px; border-radius:8px; text-align:center;">
+                                    <div style="font-size:8px; opacity:0.9; text-transform:uppercase;">Loan</div>
+                                    <div id="loanBalanceDisplay" style="font-size:16px; font-weight:800;">KES 0</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Account Performance Chart -->
+                            <div style="margin-bottom:15px;">
+                                <h4 style="font-size:12px; color:#1e293b; margin-bottom:10px; text-transform:uppercase; font-weight:700;">Account Performance</h4>
+                                <div id="accountPerformanceChart" style="background:#f8fafc; padding:15px; border-radius:8px; min-height:150px;">
+                                    <!-- Chart canvas -->
+                                    <canvas id="accountChartCanvas" height="120"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Account Balances List -->
+                            <div style="margin-bottom:15px;">
+                                <h4 style="font-size:12px; color:#1e293b; margin-bottom:10px; text-transform:uppercase; font-weight:700;">Account Balances</h4>
+                                <div style="background:#f8fafc; border-radius:8px; overflow:hidden;">
+                                    <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:0; padding:8px 12px; background:#e2e8f0; font-size:10px; font-weight:700; color:#475569;">
+                                        <span>Account</span>
+                                        <span>In</span>
+                                        <span style="text-align:right;">Out</span>
+                                    </div>
+                                    <div id="accountBalancesList" style="max-height:200px; overflow-y:auto;">
+                                        Loading accounts...
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Saving Performance by Account -->
+                            <div style="margin-bottom:15px;">
+                                <h4 style="font-size:12px; color:#1e293b; margin-bottom:10px; text-transform:uppercase; font-weight:700;">Performance by Account</h4>
+                                <div id="performanceByAccount" style="display:flex; flex-direction:column; gap:8px;">
+                                    Loading...
+                                </div>
+                            </div>
+                            
+                            <!-- Transaction Round Statement -->
+                            <div style="margin-bottom:15px;">
+                                <h4 style="font-size:12px; color:#1e293b; margin-bottom:10px; text-transform:uppercase; font-weight:700;">Transaction Round</h4>
+                                <div style="background:#f1f5f9; padding:12px; border-radius:8px;">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                        <span style="font-size:11px; color:#475569;">Current Round</span>
+                                        <span id="currentRound" style="font-size:11px; font-weight:700; color:#1e293b;">-</span>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                        <span style="font-size:11px; color:#475569;">Total Rounds</span>
+                                        <span id="totalRounds" style="font-size:11px; font-weight:700; color:#1e293b;">0</span>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                        <span style="font-size:11px; color:#475569;">Compliance</span>
+                                        <span id="complianceStatus" style="font-size:11px; font-weight:700; color:#0f9d58;">-</span>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between;">
+                                        <span style="font-size:11px; color:#475569;">Last Saving</span>
+                                        <span id="lastTransaction" style="font-size:11px; font-weight:700; color:#1e293b;">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+            
+            // Fetch member data from member.json
+            fetchMemberAccountData(groupName, memberPhone);
+        }
+        
+        async function fetchMemberAccountData(groupName, memberPhone) {
+            try {
+                const response = await fetch('/member/group-by-name', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupName: groupName })
+                });
+                
+                const groupData = await response.json();
+                
+                if (!groupData || !groupData.members || !groupData.members[memberPhone]) {
+                    resetAccountDisplays();
+                    return;
+                }
+                
+                const member = groupData.members[memberPhone];
+                
+                // Update group info
+                document.getElementById('displayGroupName').textContent = groupData.groupName || '-';
+                document.getElementById('displayAccountNum').textContent = groupData.accountNumber || '-';
+                
+                // Process accounts and build data for chart
+                let accountsData = [];
+                let totalSaving = 0;
+                let totalIn = 0;
+                let totalOut = 0;
+                let accountsHtml = '';
+                let perfHtml = '';
+                
+                if (member.accounts) {
+                    for (const [accId, acc] of Object.entries(member.accounts)) {
+                        const financials = acc.financials || {};
+                        const amountIn = financials.amountIn || 0;
+                        const amountOut = financials.amountOut || 0;
+                        const closing = financials.closingBalance || 0;
+                        
+                        totalIn += amountIn;
+                        totalOut += amountOut;
+                        totalSaving += closing;
+                        
+                        accountsData.push({
+                            accountName: acc.accountName || accId,
+                            amountIn: amountIn,
+                            amountOut: amountOut,
+                            balance: closing
+                        });
+                        
+                        // Account balance row
+                        accountsHtml += `
+                            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:0; padding:10px 12px; border-bottom:1px solid #f1f5f9;">
+                                <span style="font-size:11px; color:#475569;">${acc.accountName || accId}</span>
+                                <span style="font-size:11px; font-weight:600; color:#0f9d58;">${amountIn > 0 ? 'KES ' + amountIn.toLocaleString() : '-'}</span>
+                                <span style="font-size:11px; font-weight:600; color:#ef4444; text-align:right;">${amountOut > 0 ? 'KES ' + amountOut.toLocaleString() : '-'}</span>
+                            </div>
+                        `;
+                        
+                        // Performance per account
+                        const perfColor = amountIn > 0 && amountOut === 0 ? '#0f9d58' : (amountOut > 0 ? '#f59e0b' : '#94a3b8');
+                        perfHtml += `
+                            <div style="background:#f8fafc; padding:10px; border-radius:6px; border-left:3px solid ${perfColor};">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:11px; font-weight:700; color:#1e293b;">${acc.accountName || accId}</span>
+                                    <span style="font-size:11px; font-weight:700; color:#1e293b;">KES ${closing.toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; margin-top:4px; font-size:10px; color:#64748b;">
+                                    <span>In: KES ${amountIn.toLocaleString()}</span>
+                                    <span>Out: KES ${amountOut.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Get processed deductions
+                const processedDeductions = member.processedDeductions || [];
+                const lastDed = processedDeductions.length > 0 ? processedDeductions[processedDeductions.length - 1] : null;
+                const pendingAmt = lastDed ? (lastDed.totalPendingDeductions || 0) : 0;
+                
+                // Update displays
+                document.getElementById('totalSavingDisplay').textContent = 'KES ' + totalSaving.toLocaleString();
+                document.getElementById('pendingDisplay').textContent = 'KES ' + pendingAmt.toLocaleString();
+                document.getElementById('loanBalanceDisplay').textContent = 'KES 0';
+                document.getElementById('accountBalancesList').innerHTML = accountsHtml || '<div style="padding:10px; text-align:center; color:#64748b;">No accounts</div>';
+                document.getElementById('performanceByAccount').innerHTML = perfHtml || '<div style="padding:10px; text-align:center; color:#64748b;">No performance data</div>';
+                
+                // Transaction round
+                document.getElementById('currentRound').textContent = (processedDeductions.length + 1).toString();
+                document.getElementById('totalRounds').textContent = processedDeductions.length.toString();
+                document.getElementById('complianceStatus').textContent = pendingAmt > 0 ? 'Pending' : 'Compliant';
+                document.getElementById('complianceStatus').style.color = pendingAmt > 0 ? '#f59e0b' : '#0f9d58';
+                document.getElementById('lastTransaction').textContent = lastDed ? new Date(lastDed.time).toLocaleDateString() : '-';
+                
+                // Draw chart
+                drawAccountChart(accountsData);
+                
+            } catch (err) {
+                console.error('Error fetching member data:', err);
+                document.getElementById('accountBalancesList').innerHTML = '<div style="padding:10px; text-align:center; color:#ef4444;">Error loading data</div>';
+                resetAccountDisplays();
+            }
+        }
+        
+        function drawAccountChart(accountsData) {
+            const canvas = document.getElementById('accountChartCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.offsetWidth || 300;
+            const height = canvas.height = 120;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            if (!accountsData || accountsData.length === 0) {
+                ctx.fillStyle = '#64748b';
+                ctx.font = '12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data', width/2, height/2);
+                return;
+            }
+            
+            const maxVal = Math.max(...accountsData.map(d => Math.max(d.amountIn, d.amountOut))) || 1;
+            const barWidth = (width - 40) / accountsData.length / 2 - 5;
+            const chartHeight = height - 30;
+            const startX = 20;
+            
+            // Draw bars for each account
+            accountsData.forEach((acc, i) => {
+                const x = startX + i * (barWidth * 2 + 10);
+                
+                // Amount In bar (green)
+                const inHeight = (acc.amountIn / maxVal) * chartHeight;
+                ctx.fillStyle = '#0f9d58';
+                ctx.fillRect(x, height - 20 - inHeight, barWidth, inHeight);
+                
+                // Amount Out bar (orange)
+                const outHeight = (acc.amountOut / maxVal) * chartHeight;
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(x + barWidth + 3, height - 20 - outHeight, barWidth, outHeight);
+                
+                // Account name
+                ctx.fillStyle = '#475569';
+                ctx.font = '8px Inter';
+                ctx.textAlign = 'center';
+                const shortName = acc.accountName.length > 6 ? acc.accountName.substring(0, 5) + '.' : acc.accountName;
+                ctx.fillText(shortName, x + barWidth, height - 5);
+            });
+            
+            // Legend
+            ctx.font = '8px Inter';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#0f9d58';
+            ctx.fillText('In', width - 60, 12);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText('Out', width - 20, 12);
+        }
+        
+        function resetAccountDisplays() {
+            document.getElementById('totalSavingDisplay').textContent = 'KES 0';
+            document.getElementById('pendingDisplay').textContent = 'KES 0';
+            document.getElementById('loanBalanceDisplay').textContent = 'KES 0';
+            document.getElementById('accountBalancesList').innerHTML = '<div style="padding:10px; text-align:center; color:#64748b;">No account data found</div>';
+            document.getElementById('performanceByAccount').innerHTML = '-';
+            document.getElementById('currentRound').textContent = '-';
+            document.getElementById('totalRounds').textContent = '0';
+            document.getElementById('complianceStatus').textContent = '-';
+            document.getElementById('lastTransaction').textContent = '-';
+        }
+            
+            // Fetch member data from member.json
+            fetchMemberAccountData(groupName, memberPhone);
+        }
+        
+        async function fetchMemberAccountData(groupName, memberPhone) {
+            try {
+                // Get group data from member API
+                const response = await fetch('/member/group-by-name', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupName: groupName })
+                });
+                
+                const groupData = await response.json();
+                
+                if (!groupData || !groupData.members || !groupData.members[memberPhone]) {
+                    document.getElementById('totalSavingDisplay').textContent = 'KES 0';
+                    document.getElementById('pendingDisplay').textContent = 'KES 0';
+                    document.getElementById('loanBalanceDisplay').textContent = 'KES 0';
+                    document.getElementById('accountBalancesList').innerHTML = '<div style="padding:10px; text-align:center; color:#64748b;">No account data found</div>';
+                    return;
+                }
+                
+                const member = groupData.members[memberPhone];
+                
+                // Update group info
+                document.getElementById('displayGroupName').textContent = groupData.groupName || '-';
+                document.getElementById('displayAccountNum').textContent = groupData.accountNumber || '-';
+                
+                // Calculate totals from accounts
+                let totalSaving = 0;
+                let totalPending = 0;
+                let accountsHtml = '';
+                
+                if (member.accounts) {
+                    for (const [accId, acc] of Object.entries(member.accounts)) {
+                        const financials = acc.financials || {};
+                        const balance = (financials.closingBalance || financials.openingBalance || 0);
+                        const amountOut = financials.amountOut || 0;
+                        
+                        totalSaving += balance;
+                        totalPending += amountOut;
+                        
+                        accountsHtml += `
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0; padding:8px 12px; border-bottom:1px solid #f1f5f9;">
+                                <span style="font-size:11px; color:#475569;">${acc.accountName || accId}</span>
+                                <span style="font-size:11px; font-weight:700; color:#1e293b; text-align:right;">KES ${balance.toLocaleString()}</span>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Get processed deductions totals
+                const processedDeductions = member.processedDeductions || [];
+                const lastDed = processedDeductions.length > 0 ? processedDeductions[processedDeductions.length - 1] : null;
+                const pendingAmt = lastDed ? (lastDed.totalPendingDeductions || 0) : 0;
+                
+                // Update displays
+                document.getElementById('totalSavingDisplay').textContent = 'KES ' + totalSaving.toLocaleString();
+                document.getElementById('pendingDisplay').textContent = 'KES ' + pendingAmt.toLocaleString();
+                document.getElementById('loanBalanceDisplay').textContent = 'KES 0';
+                document.getElementById('accountBalancesList').innerHTML = accountsHtml || '<div style="padding:10px; text-align:center; color:#64748b;">No accounts</div>';
+                
+                // Update saving performance
+                document.getElementById('roundsSaved').textContent = processedDeductions.length.toString();
+                document.getId('complianceStatus').textContent = pendingAmt > 0 ? 'Pending' : 'Compliant';
+                
+                // Update transaction round
+                document.getElementById('currentRound').textContent = (processedDeductions.length + 1).toString();
+                document.getElementById('totalTransactions').textContent = processedDeductions.length.toString();
+                document.getElementById('lastTransaction').textContent = lastDed ? new Date(lastDed.time).toLocaleDateString() : '-';
+                
+            } catch (err) {
+                console.error('Error fetching member data:', err);
+                document.getElementById('accountBalancesList').innerHTML = '<div style="padding:10px; text-align:center; color:#ef4444;">Error loading data</div>';
+            }
         }
 
         function hideChangePinOptionsGD() {
