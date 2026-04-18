@@ -11,14 +11,14 @@
     body {
       font-family: 'Inter', sans-serif;
       font-size: 16px;
-      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      background: #f1f5f9;
       min-height: 100vh;
       padding: 0;
       margin: 0;
       color: #1e293b;
     }
     .container {
-      background: #ffffff;
+      background: #f8fafc;
       width: 100%;
       max-width: 100%;
       margin: 0 auto;
@@ -45,7 +45,7 @@
       text-decoration: none;
       font-size: 18px;
     }
-    .content { padding: 20px; }
+    .content { padding: 20px 20px 40px 20px; }
 
     /* Financial Summary Cards */
     .summary-cards {
@@ -68,7 +68,7 @@
 
     /* ── Chart Section with Slide Navigation ── */
     .chart-section {
-      background: #f8fafc;
+      background: #ffffff;
       padding: 15px;
       border-radius: 8px;
       margin-bottom: 15px;
@@ -415,10 +415,10 @@
        ══════════════════════════════════════ -->
   <div class="container">
     <div class="header">
-      <a href="/group-details?groupName=<%= encodeURIComponent(group.groupName) %>" class="back-link">
+      <a href="/general/group/<%= encodeURIComponent(group.groupName) %>" class="back-link">
         <i class="fas fa-arrow-left"></i>
       </a>
-      <h1><i class="fas fa-hand-holding-usd"></i> My Contribution</h1>
+      <span style="position: absolute; top: 17px; left: 42px; font-size: 16px; font-weight: 700; color: white;">Contribution</span>
       <p><%= group.groupName || 'Group' %></p>
     </div>
 
@@ -426,13 +426,19 @@
 
       <!-- Group & Member Info -->
       <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:3px solid #0f9d58;">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
           <div>
-            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Member Index</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Index</div>
             <div style="font-size:14px; font-weight:700; color:#1e293b;"><%= memberIndex || '-' %></div>
           </div>
+          <div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Member</div>
+            <div style="font-size:14px; font-weight:700; color:#1e293b;">
+              <%= memberData ? (memberData.name || memberData.memberId) : memberPhone %>
+            </div>
+          </div>
           <div style="text-align:right;">
-            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Group Account</div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Account</div>
             <div style="font-size:12px; font-weight:700; color:#1e293b; word-break:break-all;"><%= accountNumber || '-' %></div>
           </div>
         </div>
@@ -761,31 +767,40 @@
         ctx.fillText('No data', width / 2, height / 2);
         return;
       }
-      const maxVal = Math.max(...accountsData.map(d => Math.max(d.amountIn, d.amountOut))) || 1;
-      const barWidth   = (width - 40) / accountsData.length / 2 - 5;
-      const chartHeight = height - 30;
-      const startX     = 20;
+      
+      const maxVal = 1000;
+      const barHeight = 12;
+      const rowHeight = (height - 25) / Math.max(accountsData.length, 1);
+      const startY = 10;
+      const maxBarWidth = width - 80;
 
       accountsData.forEach((acc, i) => {
-        const x = startX + i * (barWidth * 2 + 10);
-        const inH  = (acc.amountIn  / maxVal) * chartHeight;
-        const outH = (acc.amountOut / maxVal) * chartHeight;
-        ctx.fillStyle = '#0f9d58';
-        ctx.fillRect(x, height - 20 - inH, barWidth, inH);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(x + barWidth + 3, height - 20 - outH, barWidth, outH);
-        ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'center';
-        const name = acc.accountName.length > 5
-          ? acc.accountName.substring(0, 4) + '.' : acc.accountName;
-        ctx.fillText(name, x + barWidth, height - 5);
+        const y = startY + i * rowHeight + 5;
+        const inW = Math.min((acc.amountIn / maxVal) * maxBarWidth, maxBarWidth);
+        const outW = Math.min((acc.amountOut / maxVal) * maxBarWidth, maxBarWidth);
+        
+        ctx.fillStyle = '#1e293b'; ctx.font = '11px Inter'; ctx.textAlign = 'left';
+        const name = acc.accountName.length > 6 ? acc.accountName.substring(0, 5) + '.' : acc.accountName;
+        ctx.fillText(name, 5, y + 10);
+        
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(55, y + 1, maxBarWidth, barHeight);
+        
+        if (inW > 0) {
+          ctx.fillStyle = '#0f9d58';
+          ctx.fillRect(55, y + 1, inW, barHeight);
+        }
+        
+        ctx.fillStyle = '#1e293b'; ctx.font = '11px Inter'; ctx.textAlign = 'right';
+        ctx.fillText('In: ' + acc.amountIn.toLocaleString(), width - 5, y + 10);
       });
 
-      // legend
-      ctx.fillStyle = '#0f9d58'; ctx.fillRect(width - 55, 5, 8, 8);
-      ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'left';
-      ctx.fillText('In', width - 44, 13);
-      ctx.fillStyle = '#f59e0b'; ctx.fillRect(width - 55, 18, 8, 8);
-      ctx.fillText('Out', width - 44, 26);
+      // Y-axis label
+      ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'left';
+      ctx.fillText('0', 55, height - 3);
+      ctx.fillText('1000', width - 5, height - 3);
+      ctx.textAlign = 'center';
+      ctx.fillText('500', 55 + maxBarWidth/2, height - 3);
     }
 
     /* ── Chart: Round Performance (slide 1) ── */
@@ -803,30 +818,40 @@
         ctx.fillText('No round data yet', width / 2, height / 2);
         return;
       }
-
-      const maxVal = Math.max(...deductions.map(d => d.amount || 0)) || 1;
-      const barWidth   = Math.max(8, (width - 40) / deductions.length - 6);
-      const chartHeight = height - 30;
-      const startX     = 20;
+      
+      const maxVal = 1000;
+      const barHeight = 12;
+      const rowHeight = (height - 25) / Math.max(deductions.length, 1);
+      const startY = 10;
+      const maxBarWidth = width - 80;
 
       deductions.forEach((ded, i) => {
-        const x = startX + i * (barWidth + 6);
-        const barH = ((ded.amount || 0) / maxVal) * chartHeight;
+        const y = startY + i * rowHeight + 5;
+        const amount = ded.amount || 0;
+        const barW = Math.min((amount / maxVal) * maxBarWidth, maxBarWidth);
         const isPending = (ded.totalPendingDeductions || 0) > 0;
+        
+        ctx.fillStyle = '#1e293b'; ctx.font = '11px Inter'; ctx.textAlign = 'left';
+        const label = ded.round ? 'R' + ded.round : 'Round ' + (i + 1);
+        const shortLabel = label.length > 6 ? label.substring(0, 5) + '.' : label;
+        ctx.fillText(shortLabel, 5, y + 10);
+        
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(55, y + 1, maxBarWidth, barHeight);
+        
         ctx.fillStyle = isPending ? '#f59e0b' : '#0f9d58';
-        ctx.fillRect(x, height - 20 - barH, barWidth, barH);
-
-        ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'center';
-        const label = ded.round ? 'R' + ded.round : 'T' + (i + 1);
-        ctx.fillText(label, x + barWidth / 2, height - 5);
+        ctx.fillRect(55, y + 1, barW, barHeight);
+        
+        ctx.fillStyle = '#1e293b'; ctx.font = '11px Inter'; ctx.textAlign = 'right';
+        ctx.fillText(amount.toLocaleString(), width - 5, y + 10);
       });
 
-      // legend
-      ctx.fillStyle = '#0f9d58'; ctx.fillRect(width - 70, 5, 8, 8);
-      ctx.fillStyle = '#475569'; ctx.font = '8px Inter'; ctx.textAlign = 'left';
-      ctx.fillText('Paid', width - 59, 13);
-      ctx.fillStyle = '#f59e0b'; ctx.fillRect(width - 70, 18, 8, 8);
-      ctx.fillText('Pending', width - 59, 26);
+      // X-axis label
+      ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'left';
+      ctx.fillText('0', 55, height - 3);
+      ctx.fillText('1000', width - 5, height - 3);
+      ctx.textAlign = 'center';
+      ctx.fillText('500', 55 + maxBarWidth/2, height - 3);
     }
   </script>
 </body>
