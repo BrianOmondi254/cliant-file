@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Membership - <%= group ? group.groupName : 'Group' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg:        #f1f5f9;
+      --surface:   #ffffff;
+      --card:      #f8fafc;
+      --border:    #e2e8f0;
+      --primary:   #0f9d58;
+      --primary-dk:#0b7d46;
+      --accent:    #f59e0b;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --faint:     #94a3b8;
+      --radius:    14px;
+      --radius-sm: 8px;
+      --shadow:    0 4px 20px rgba(0,0,0,0.1);
+      --focus-ring:rgba(15,157,88,0.15);
+      --danger:    #ef4444;
+    }
+ 
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      font-size: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2px;
+      color: var(--text);
+    }
+ 
+    /* ── OUTER WRAPPER ── */
+    .page-wrapper {
+      width: calc(100% - 4px);
+      max-width: 640px;
+      background: var(--surface);
+      border-radius: 5px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      overflow: hidden;
+      animation: slideUp .5s ease-out;
+      min-height: calc(100vh - 4px);
+      display: flex;
+      flex-direction: column;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+ 
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%; right: -20%;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,.08);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .header-back {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.3);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: background .2s;
+      position: relative;
+    }
+    .header-back:hover { background: rgba(255,255,255,.28); }
+    .header-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+      position: relative;
+    }
+    .header-subtitle {
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      font-weight: 500;
+      margin-top: 1px;
+      position: relative;
+    }
+    .header-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,.2);
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .3px;
+      position: relative;
+      white-space: nowrap;
+    }
+ 
+    /* ── CONTENT ── */
+    .content { padding: 20px; flex: 1; background: var(--bg); }
+ 
+    /* ── IDENTITY CARD ── */
+    .id-card {
+      background: linear-gradient(135deg, #f0fdf4, #eff6ff);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid #bbf7d0;
+    }
+    .id-card::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(15,157,88,.08);
+      pointer-events: none;
+    }
+    .id-card::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; right: 20px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(245,158,11,.06);
+      pointer-events: none;
+    }
+    .id-card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .id-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 3px rgba(15,157,88,.2);
+    }
+    .id-info { flex: 1; min-width: 0; }
+    .id-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .id-phone { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .id-status-chip {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      color: #15803d;
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      white-space: nowrap;
+    }
+    .id-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .id-stat {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .id-stat-label {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 4px;
+    }
+    .id-stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+ 
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      margin-top: 22px;
+    }
+ 
+    /* ── ACTION GRID ── */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .action-grid.single { grid-template-columns: 1fr; }
+ 
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: background .2s, border-color .2s, box-shadow .2s, transform .1s;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .action-btn:active { transform: scale(.98); }
+    .action-btn:hover {
+      background: #f0fdf4;
+      border-color: var(--primary);
+      box-shadow: 0 2px 8px rgba(15,157,88,.12);
+    }
+    .action-btn.accent:hover {
+      background: #fffbeb;
+      border-color: var(--accent);
+      box-shadow: 0 2px 8px rgba(245,158,11,.12);
+    }
+    .btn-icon {
+      width: 34px; height: 34px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .btn-icon.green  { background: #dcfce7; color: #15803d; }
+    .btn-icon.blue   { background: #dbeafe; color: #1d4ed8; }
+    .btn-icon.amber  { background: #fef3c7; color: #b45309; }
+    .btn-icon.red    { background: #fee2e2; color: #b91c1c; }
+    .btn-icon.violet { background: #ede9fe; color: #6d28d9; }
+ 
+    .btn-text { flex: 1; min-width: 0; }
+    .btn-label { display: block; }
+    .btn-hint  { display: block; font-size: 10px; font-weight: 400; color: var(--muted); margin-top: 1px; }
+    .btn-arrow { color: var(--faint); font-size: 11px; }
+ 
+    /* ── MODALS ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 500;
+      overflow-y: auto;
+      padding: 20px;
+      backdrop-filter: blur(3px);
+    }
+    .overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+ 
+    .modal {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      animation: slideUp .25s ease;
+      margin: auto;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+ 
+    .modal-header {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      overflow: hidden;
+    }
+    .modal-header::before {
+      content: '';
+      position: absolute;
+      top: -40%; right: -10%;
+      width: 100px; height: 100px;
+      background: rgba(255,255,255,.08);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .modal-header-icon {
+      width: 30px; height: 30px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      background: rgba(255,255,255,.2);
+      color: #fff;
+      position: relative;
+    }
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      flex: 1;
+      color: #fff;
+      position: relative;
+    }
+    .modal-close {
+      background: rgba(255,255,255,.2);
+      border: none;
+      color: #fff;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 15px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+      position: relative;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.35); }
+ 
+    .modal-body {
+      padding: 18px;
+      max-height: 70vh;
+      overflow-y: auto;
+      background: #fff;
+    }
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-track { background: transparent; }
+    .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+ 
+    /* ── MEMBER LIST ── */
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      transition: border-color .2s, background .2s;
+    }
+    .member-item:hover { background: #f0fdf4; border-color: #86efac; }
+    .member-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #15803d;
+      flex-shrink: 0;
+    }
+    .member-details { flex: 1; min-width: 0; }
+    .member-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .member-phone { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .role-chip {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: .3px;
+      white-space: nowrap;
+    }
+    .chip-green  { background: #dcfce7; color: #15803d;  border: 1px solid #86efac; }
+    .chip-blue   { background: #dbeafe; color: #1d4ed8;  border: 1px solid #93c5fd; }
+    .chip-amber  { background: #fef3c7; color: #b45309;  border: 1px solid #fcd34d; }
+ 
+    /* ── CONSTITUTION ── */
+    .const-section { margin-bottom: 22px; }
+    .const-section-head {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--border);
+    }
+    .const-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .const-cell {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .const-cell-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .const-cell-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .const-info-bar {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .const-info-bar strong { color: var(--text); }
+    .const-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .const-table th {
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .const-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .const-table tr:last-child td { border-bottom: none; }
+    .const-table tr:hover td { background: #f0fdf4; }
+ 
+    /* ── FORM FIELDS ── */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 6px;
+    }
+    .field input,
+    .field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .field input:focus,
+    .field textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--focus-ring);
+    }
+    .field textarea { resize: none; }
+    ::placeholder { color: var(--faint); }
+ 
+    .submit-btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      letter-spacing: .3px;
+    }
+    .submit-btn:hover { opacity: .9; }
+    .submit-btn:active { transform: scale(.98); }
+ 
+    /* ── EMPTY / LOADING ── */
+    .empty-state {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--faint);
+    }
+    .empty-state i { font-size: 32px; margin-bottom: 10px; display: block; color: #cbd5e1; }
+    .empty-state p { font-size: 13px; }
+ 
+    /* ── DIVIDER ── */
+    .divider { height: 1px; background: var(--border); margin: 18px 0; }
+ 
+    /* Mobile tweaks */
+    @media (max-width: 380px) {
+      .id-stats { grid-template-columns: 1fr 1fr; }
+      .action-grid { grid-template-columns: 1fr; }
+      .const-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+ 
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <a href="/general/group/<%= encodeURIComponent(group.groupName) %>" class="header-back">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <div class="header-title">Membership</div>
+      <div class="header-subtitle"><%= group.groupName || 'Group' %></div>
+    </div>
+    <div class="header-badge"><i class="fas fa-circle" style="font-size:7px; margin-right:4px;"></i>Active</div>
+  </div>
+ 
+  <div class="content">
+ 
+    <!-- ── IDENTITY CARD ── -->
+    <div class="id-card">
+      <div class="id-card-top">
+        <div class="id-avatar" id="avatarInitial">?</div>
+        <div class="id-info">
+          <div class="id-name"><%= member ? (member.name || member.memberId) : memberPhone %></div>
+          <div class="id-phone"><%= memberPhone %></div>
+        </div>
+        <div class="id-status-chip">Active</div>
+      </div>
+      <div class="id-stats">
+        <div class="id-stat">
+          <div class="id-stat-label">Index</div>
+          <div class="id-stat-value"><%= memberIndex || '—' %></div>
+        </div>
+        <div class="id-stat">
+          <div class="id-stat-label">Role</div>
+          <div class="id-stat-value">Member</div>
+        </div>
+        <div class="id-stat">
+          <div class="id-stat-label">Account</div>
+          <div class="id-stat-value" title="<%= accountNumber || '' %>"><%= accountNumber || '—' %></div>
+        </div>
+      </div>
+    </div>
+ 
+    <!-- ── QUICK ACTIONS ── -->
+    <div class="section-label">Quick Actions</div>
+    <div class="action-grid">
+ 
+      <button class="action-btn" onclick="alert('test'); showOfficials()">
+        <div class="btn-icon blue"><i class="fas fa-user-tie"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Officials</span>
+          <span class="btn-hint">View group leaders</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+ 
+      <button class="action-btn" onclick="showTrustrees()">
+        <div class="btn-icon green"><i class="fas fa-users"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Trustees</span>
+          <span class="btn-hint">Legal representatives</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+ 
+    </div>
+ 
+    <div class="divider"></div>
+ 
+    <div class="action-grid single">
+ 
+      <button class="action-btn accent" onclick="showAddMemberRequest()">
+        <div class="btn-icon violet"><i class="fas fa-user-plus"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Request to Add Member</span>
+          <span class="btn-hint">Submit a membership request</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+ 
+      <button class="action-btn accent" onclick="showConstitution()" style="margin-top:10px;">
+        <div class="btn-icon amber"><i class="fas fa-file-alt"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Review Constitution</span>
+          <span class="btn-hint">Rules, loans & governance</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+ 
+    </div>
+ 
+  </div>
+ 
+  <!-- ══════════════════════════════════
+       OFFICIALS MODAL
+  ══════════════════════════════════ -->
+  <div id="officialsOverlay" class="overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-icon btn-icon blue"><i class="fas fa-user-tie"></i></div>
+        <div class="modal-title">Group Officials</div>
+        <button class="modal-close" onclick="closeModal('officialsOverlay')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="officialsList">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading officials…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ══════════════════════════════════
+       TRUSTEES MODAL
+  ══════════════════════════════════ -->
+  <div id="trustreesOverlay" class="overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-icon btn-icon green"><i class="fas fa-users"></i></div>
+        <div class="modal-title">Group Trustees</div>
+        <button class="modal-close" onclick="closeModal('trustreesOverlay')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="trustreesList">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading trustees…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ══════════════════════════════════
+       ADD MEMBER MODAL
+  ══════════════════════════════════ -->
+  <div id="addMemberOverlay" class="overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-icon btn-icon violet"><i class="fas fa-user-plus"></i></div>
+        <div class="modal-title">Request to Add Member</div>
+        <button class="modal-close" onclick="closeModal('addMemberOverlay')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="newMemberName" placeholder="Enter full name">
+        </div>
+        <div class="field">
+          <label>Phone Number</label>
+          <input type="tel" id="newMemberPhone" placeholder="Enter phone number">
+        </div>
+        <div class="field">
+          <label>Reason for Request</label>
+          <textarea id="memberReason" rows="3" placeholder="Explain why this member should be added"></textarea>
+        </div>
+        <button class="submit-btn" onclick="submitAddMemberRequest()">
+          <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit Request
+        </button>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ══════════════════════════════════
+       CONSTITUTION MODAL
+  ══════════════════════════════════ -->
+  <div id="constitutionOverlay" class="overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-header-icon btn-icon amber"><i class="fas fa-file-alt"></i></div>
+        <div class="modal-title">Group Constitution</div>
+        <button class="modal-close" onclick="closeModal('constitutionOverlay')">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="constitutionContent">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading constitution…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <script>
+    /* ── SERVER DATA (EJS-injected; safe fallbacks for static preview) ── */
+    const groupName       = (function(){ try{ return '<%= group ? group.groupName : "" %>'; } catch(e){ return ''; } })();
+    const memberPhone     = (function(){ try{ return '<%= memberPhone %>'; } catch(e){ return ''; } })();
+    let groupPrinciples   = {};
+    let groupMembersList  = [];
+    try { groupPrinciples  = <%- JSON.stringify(group ? group.principles   : {}) %>; } catch(e) {}
+    try { groupMembersList = <%- JSON.stringify(group ? group.membersList  : []) %>; } catch(e) {}
+ 
+    /* ── AVATAR INITIAL ── */
+    (function() {
+      try {
+        const name = '<%= member ? (member.name || member.memberId) : memberPhone %>';
+        const initial = (name && name.trim().length) ? name.trim()[0].toUpperCase() : '?';
+        document.getElementById('avatarInitial').textContent = initial;
+      } catch(e) {}
+    })();
+ 
+    /* ── MODAL HELPERS ── */
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+    document.querySelectorAll('.overlay').forEach(el => {
+document.querySelectorAll('.overlay').forEach(el => {
+      el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+    });
+    
+    /* ── OFFICIALS / TRUSTREES ── */
+    function showOfficials() {
+      alert('clicked');
+      document.getElementById('officialsOverlay').classList.add('open');
+      loadGroupData('officialsList', 'official');
+    }
+    function showTrustrees() {
+      document.getElementById('trustreesOverlay').classList.add('open');
+      loadGroupData('trustreesList', 'trustree');
+    }
+ 
+    function loadGroupData(containerId, filterRole) {
+      const container = document.getElementById(containerId);
+      fetch('/member/group-by-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data || !data.members) {
+          container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>No data available</p></div>';
+          return;
+        }
+        const filtered = Object.entries(data.members).filter(([, m]) =>
+          (m.role || '').toLowerCase().includes(filterRole)
+        );
+        if (!filtered.length) {
+          container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><p>No ' + filterRole + 's found</p></div>';
+          return;
+        }
+        container.innerHTML = filtered.map(([phone, m], i) => {
+          const name = m.name || m.memberId || phone;
+          const role = m.role || 'Member';
+          const chipClass = filterRole === 'official' ? 'chip-blue' : 'chip-green';
+          return '<div class="member-item">' +
+            '<div class="member-num">' + (i + 1) + '</div>' +
+            '<div class="member-details">' +
+              '<div class="member-name">' + name + '</div>' +
+              '<div class="member-phone">' + phone + '</div>' +
+            '</div>' +
+            '<span class="role-chip ' + chipClass + '">' + role + '</span>' +
+          '</div>';
+        }).join('');
+      })
+      .catch(() => {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading data</p></div>';
+      });
+    }
+ 
+    /* ── ADD MEMBER ── */
+    function showAddMemberRequest() {
+      document.getElementById('addMemberOverlay').classList.add('open');
+    }
+    function submitAddMemberRequest() {
+      const name   = document.getElementById('newMemberName').value.trim();
+      const phone  = document.getElementById('newMemberPhone').value.trim();
+      const reason = document.getElementById('memberReason').value.trim();
+      if (!name)  { alert('Please enter member name'); return; }
+      if (!phone) { alert('Please enter phone number'); return; }
+      alert('Request submitted!\nName: ' + name + '\nPhone: ' + phone + (reason ? '\nReason: ' + reason : ''));
+      closeModal('addMemberOverlay');
+      ['newMemberName','newMemberPhone','memberReason'].forEach(id => document.getElementById(id).value = '');
+    }
+ 
+    /* ── CONSTITUTION ── */
+    function showConstitution() {
+      document.getElementById('constitutionOverlay').classList.add('open');
+      loadConstitution();
+    }
+    function loadConstitution() {
+      const p   = groupPrinciples  || {};
+      const ml  = groupMembersList || [];
+      const trustees = ml.filter(m => m.type === 'trustee');
+      const officials = ml.filter(m => m.type === 'official');
+      const loans = p.loans || {};
+      const interest = loans.interestAndLimits || {};
+      const repayment = loans.repayment || {};
+      const intervals = p.intervals || {};
+      const governance = p.governance || {};
+      const distribution = p.distribution || {};
+      const contributions = p.otherContributions || [];
+ 
+      function row(label, value) {
+        return '<div class="const-cell"><div class="const-cell-label">' + label + '</div><div class="const-cell-value">' + (value || '—') + '</div></div>';
+      }
+ 
+      let html = '';
+ 
+      /* A: Officials & Trustees */
+      html += '<div class="const-section">';
+      html += '<div class="const-section-head">A · Officials &amp; Trustees</div>';
+      html += '<div class="const-info-bar"><strong>Trustees</strong> are legal representatives who sign documents. <strong>Officials</strong> manage day-to-day operations.</div>';
+      if (trustees.length || officials.length) {
+        html += '<table class="const-table"><thead><tr><th>#</th><th>Name</th><th>Role</th><th>Phone</th></tr></thead><tbody>';
+        let idx = 1;
+        trustees.forEach(t => {
+          html += '<tr><td>' + idx++ + '</td><td>' + (t.name||'—') + '</td><td><span class="role-chip chip-blue">Trustee</span></td><td>' + (t.phone||'—') + '</td></tr>';
+        });
+        officials.forEach(o => {
+          html += '<tr><td>' + idx++ + '</td><td>' + (o.name||'—') + '</td><td><span class="role-chip chip-green">Official</span></td><td>' + (o.phone||'—') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<div class="empty-state" style="padding:16px;"><p>No officials registered yet.</p></div>';
+      }
+      html += '</div>';
+ 
+      /* B: Contributions */
+      html += '<div class="const-section">';
+      html += '<div class="const-section-head">B · Contributions</div>';
+      if (contributions.length) {
+        html += '<table class="const-table"><thead><tr><th>#</th><th>Account</th><th>Expected (KES)</th></tr></thead><tbody>';
+        contributions.forEach((c, i) => {
+          html += '<tr><td>' + (i+1) + '</td><td>' + (c.accountName||'—') + '</td><td>' + (c.expectedAmount||'0') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<div class="empty-state" style="padding:16px;"><p>No contributions defined.</p></div>';
+      }
+      html += '</div>';
+ 
+      /* C: Loans */
+      html += '<div class="const-section">';
+      html += '<div class="const-section-head">C · Loan Policy</div>';
+      html += '<div class="const-grid">';
+      html += row('Interest Rate',    (interest.interestRate||'0') + '%');
+      html += row('Max Active Loans', interest.maxActiveLoans||'1');
+      html += row('Limit Multiplier', 'x' + (interest.limitMultiplier||'0'));
+      html += row('Repayment Days',   (repayment.durationDays||'0') + ' days');
+      html += '</div>';
+      if (loans.longTerm) {
+        html += '<div class="const-info-bar" style="margin-top:10px;"><strong>Long-Term Loan:</strong> Payment period ' + (loans.longTerm.paymentPeriod||'—') + ' months · ' + (loans.longTerm.paymentMethod||'—') + ' method</div>';
+      }
+      html += '</div>';
+ 
+      /* D: Meeting Schedule */
+      html += '<div class="const-section">';
+      html += '<div class="const-section-head">D · Meeting Schedule</div>';
+      html += '<div class="const-info-bar"><strong>Frequency:</strong> ' + (intervals.frequency||'Not set') + ' &nbsp;·&nbsp; <strong>Day:</strong> ' + (intervals.period||'—') + ' &nbsp;·&nbsp; <strong>Saving Period End:</strong> ' + (intervals.endSavingPeriod||'—') + '</div>';
+      html += '</div>';
+ 
+      /* E: Governance */
+      html += '<div class="const-section">';
+      html += '<div class="const-section-head">E · Governance Rules</div>';
+      html += '<div class="const-grid">';
+      html += row('Fast Notification',  (governance.fastNotificationThreshold||'0') + '%');
+      html += row('Edit Account',       (governance.editAccountThreshold||'0') + '%');
+      html += row('Member Removal',     (governance.memberRemovalThreshold||'0') + '%');
+      html += row('Response Note',      governance.requireResponseNote ? 'Required' : 'Optional');
+      html += '</div>';
+      html += '</div>';
+ 
+      /* F: Distribution */
+      html += '<div class="const-section">';
+      html += '<div class="const-section-head">F · Benefit Distribution</div>';
+      html += '<div class="const-grid">';
+      html += row('Model',       distribution.model||'—');
+      html += row('Performance', (distribution.performancePct||'0') + '%');
+      html += row('Official %',  (distribution.officialPct||'0') + '%');
+      html += row('Target Acct', distribution.targetAccountName||'—');
+      html += '</div>';
+      html += '</div>';
+ 
+      document.getElementById('constitutionContent').innerHTML = html;
+    }
+  </script>
+</div><!-- /page-wrapper -->
+</body>
+</html>

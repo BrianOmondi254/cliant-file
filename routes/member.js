@@ -47,6 +47,13 @@ const syncFromGeneral = () => {
     return;
   }
   
+  const dataFile = path.join(__dirname, "../data.json");
+  const usersData = readJSON(dataFile, []);
+  const getUserName = (phone) => {
+    const u = usersData.find(user => user.phoneNumber === phone || user.phoneNumber === '0' + phone || user.phoneNumber === '+254' + phone.substring(1));
+    return u ? `${u.FirstName} ${u.LastName}`.trim() : null;
+  };
+  
   const allGroups = flattenData(generalData);
   const memberData = readJSON(memberFile, defaultMemberStructure());
   
@@ -67,8 +74,12 @@ const syncFromGeneral = () => {
     memberKeys.forEach(key => {
       const item = group[key];
       if (item && item.phone) {
+        // Get name from data.json users
+        const memberName = getUserName(item.phone) || item.title || key.replace(/_/g, ' ').replace(/(\d+)/, '#$1');
+        
         membersObj[item.phone] = {
           memberId: item.phone,
+          name: memberName,
           memberFinancials: {
             openingBalance: 0,
             amountIn: 0,
@@ -87,34 +98,49 @@ const syncFromGeneral = () => {
     });
     
     if (memberData.group[groupName]) {
-      // Add new members to existing group
+      // Add new members to existing group and update existing members with names
       Object.keys(membersObj).forEach(phone => {
         if (!memberData.group[groupName].members[phone]) {
           memberData.group[groupName].members[phone] = membersObj[phone];
+        } else if (membersObj[phone].name) {
+          // Update name for existing member
+          memberData.group[groupName].members[phone].name = membersObj[phone].name;
         }
       });
     } else {
-      // Create new group structure
-      const groupNum = Object.keys(memberData.group).length + 1;
-      const accountNum = group.accountNumber || "ACC" + groupNum;
-      memberData.group[accountNum] = {
-        groupNumber: groupNum,
-        groupName: groupName,
-        groupFinancials: {
-          totalOpeningBalance: 0,
-          totalAmountIn: 0,
-          totalAmountOut: 0,
-          totalClosingBalance: 0,
-          availableWithdrawalBalance: 0
-        },
-        accountSchema: {
-          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
-          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-        },
-        members: membersObj
-      };
+      // Try to find by groupName in existing keys
+      let foundKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
+      if (foundKey) {
+        Object.keys(membersObj).forEach(phone => {
+          if (!memberData.group[foundKey].members[phone]) {
+            memberData.group[foundKey].members[phone] = membersObj[phone];
+          } else if (membersObj[phone].name) {
+            memberData.group[foundKey].members[phone].name = membersObj[phone].name;
+          }
+        });
+      } else {
+        // Create new group structure
+        const groupNum = Object.keys(memberData.group).length + 1;
+        const accountNum = group.accountNumber || "ACC" + groupNum;
+        memberData.group[accountNum] = {
+          groupNumber: groupNum,
+          groupName: groupName,
+          groupFinancials: {
+            totalOpeningBalance: 0,
+            totalAmountIn: 0,
+            totalAmountOut: 0,
+            totalClosingBalance: 0,
+            availableWithdrawalBalance: 0
+          },
+          accountSchema: {
+            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
+            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
+            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
+          },
+          members: membersObj
+        };
+      }
     }
   });
   
@@ -326,6 +352,7 @@ router.post("/group-by-name", (req, res) => {
     return res.status(404).json({ error: "Group not found" });
   }
   
+  // Return group as-is (member.json already has correct names)
   res.json(foundGroup);
 });
 
@@ -564,17 +591,6 @@ router.get("/contribution", (req, res) => {
   const sessionPhone = req.session.user?.phoneNumber;
   const targetPhone = queryPhone || sessionPhone;
   
-  // Get member index if member exists
-  let memberIndex = null;
-  if (foundGroup.members && targetPhone) {
-    const memberKeys = Object.keys(foundGroup.members);
-    memberIndex = memberKeys.indexOf(targetPhone) + 1;
-  }
-  
-  // Get group number (from groupNumber field)
-  const groupNumber = foundGroup.groupNumber || 1;
-  const accountNumber = foundKey || foundGroup.accountNumber || '';
-  
   // Format phone number for display
   let displayPhone = targetPhone;
   if (targetPhone && targetPhone.startsWith('254')) {
@@ -583,13 +599,24 @@ router.get("/contribution", (req, res) => {
     displayPhone = '0' + targetPhone.substring(4);
   }
   
+  // Get member index - find the position in sorted member list
+  let memberIndex = null;
+  if (foundGroup.members && displayPhone) {
+    const memberKeys = Object.keys(foundGroup.members).sort();
+    memberIndex = memberKeys.indexOf(displayPhone) + 1;
+  }
+  
+  // Get group number (from groupNumber field)
+  const groupNumber = foundGroup.groupNumber || 1;
+  const accountNumber = foundKey || foundGroup.accountNumber || '';
+  
   // Get member data directly from group
   let memberData = null;
   if (foundGroup && foundGroup.members && foundGroup.members[displayPhone]) {
     memberData = foundGroup.members[displayPhone];
   }
   
-  res.render("mcont", {
+  res.render("maccount/mcont", {
     group: foundGroup,
     user: req.session.user,
     memberPhone: displayPhone,
@@ -598,6 +625,128 @@ router.get("/contribution", (req, res) => {
     accountNumber: accountNumber,
     summaryStats: summaryStats,
     memberData: memberData
+  });
+});
+
+router.get("/loan", (req, res) => {
+  const { groupName, memberPhone: queryPhone } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/");
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundGroup = null;
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundGroup = data.group[key];
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundGroup) {
+    return res.status(404).send("Group not found");
+  }
+  
+  const targetPhone = queryPhone || req.session?.user?.phoneNumber;
+  let displayPhone = targetPhone;
+  if (targetPhone && targetPhone.startsWith('254')) {
+    displayPhone = '0' + targetPhone.substring(3);
+  } else if (targetPhone && targetPhone.startsWith('+254')) {
+    displayPhone = '0' + targetPhone.substring(4);
+  }
+  
+  // Get member index from member keys
+  let memberIndex = null;
+  if (foundGroup.members && displayPhone) {
+    const memberKeys = Object.keys(foundGroup.members);
+    memberIndex = memberKeys.indexOf(displayPhone) + 1;
+  }
+  
+  const groupNumber = foundGroup.groupNumber || 1;
+  const accountNumber = foundKey || foundGroup.accountNumber || '';
+  
+  let memberData = null;
+  if (foundGroup && foundGroup.members && foundGroup.members[displayPhone]) {
+    memberData = foundGroup.members[displayPhone];
+  }
+  
+  res.render("maccount/mloan", {
+    group: foundGroup,
+    user: req.session.user,
+    member: memberData,
+    memberPhone: displayPhone,
+    memberIndex: memberIndex,
+    groupNumber: groupNumber,
+    accountNumber: accountNumber
+  });
+});
+
+router.get("/membership", (req, res) => {
+  const { groupName, memberPhone: queryPhone } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/");
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundGroup = null;
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundGroup = data.group[key];
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundGroup) {
+    return res.status(404).send("Group not found");
+  }
+  
+  const targetPhone = queryPhone || req.session?.user?.phoneNumber;
+  let displayPhone = targetPhone;
+  if (targetPhone && targetPhone.startsWith('254')) {
+    displayPhone = '0' + targetPhone.substring(3);
+  } else if (targetPhone && targetPhone.startsWith('+254')) {
+    displayPhone = '0' + targetPhone.substring(4);
+  }
+  
+  // Get member index from member keys
+  let memberIndex = null;
+  if (foundGroup.members && displayPhone) {
+    const memberKeys = Object.keys(foundGroup.members);
+    memberIndex = memberKeys.indexOf(displayPhone) + 1;
+  }
+  
+  const groupNumber = foundGroup.groupNumber || 1;
+  const accountNumber = foundKey || foundGroup.accountNumber || '';
+  
+  let memberData = null;
+  if (foundGroup && foundGroup.members && foundGroup.members[displayPhone]) {
+    memberData = foundGroup.members[displayPhone];
+  }
+  
+  res.render("maccount/membership", {
+    group: foundGroup,
+    user: req.session.user,
+    member: memberData,
+    memberPhone: displayPhone,
+    memberIndex: memberIndex,
+    groupNumber: groupNumber,
+    accountNumber: accountNumber
   });
 });
 

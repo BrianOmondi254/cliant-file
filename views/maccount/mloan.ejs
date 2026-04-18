@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Loan - <%= group ? group.groupName : 'Group' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      background: #f1f5f9;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+      color: #1e293b;
+    }
+    .container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      overflow: hidden;
+      padding-bottom: 40px;
+    }
+    .header {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 20px;
+      color: white;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .back-link {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+    }
+    .content { padding: 20px; }
+    
+    .info-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 15px;
+      border: 1px solid #e2e8f0;
+    }
+    .info-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .info-card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-active {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .status-inactive {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .info-item {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .info-label {
+      font-size: 10px;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    .info-value.green { color: #0f9d58; }
+    .info-value.red { color: #ef4444; }
+    .info-value.amber { color: #f59e0b; }
+    .info-value.blue { color: #3b82f6; }
+    
+    .summary-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .summary-card {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      color: white;
+      padding: 14px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .summary-card.amber {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+    .summary-card.red {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+    .summary-card.blue {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+    .summary-label {
+      font-size: 9px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .action-btn:hover {
+      background: linear-gradient(135deg, #0b7d46, #28a06b);
+    }
+    
+    .stmt-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .stmt-overlay.open { display: block; }
+    .stmt-modal {
+      background: white;
+      margin: 20px auto;
+      max-width: 500px;
+      border-radius: 12px;
+      overflow: hidden;
+      padding-bottom: 20px;
+    }
+    .stmt-header {
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      padding: 15px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stmt-header h3 { margin: 0; font-size: 16px; }
+    .stmt-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .stmt-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      padding: 15px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .stmt-card-item { text-align: center; }
+    .stmt-card-label { font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+    .stmt-card-val { font-size: 16px; font-weight: 800; color: #1e293b; }
+    .stmt-card-val.green { color: #0f9d58; }
+    .stmt-card-val.red { color: #ef4444; }
+    .stmt-table-wrap { padding: 10px; max-height: 300px; overflow-y: auto; }
+    .stmt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .stmt-table th { text-align: left; padding: 8px 4px; background: #f1f5f9; color: #475569; font-weight: 700; }
+    .stmt-table td { padding: 8px 4px; border-bottom: 1px solid #e2e8f0; }
+    .txn-credit { color: #0f9d58; font-weight: 600; }
+    .txn-debit { color: #ef4444; font-weight: 600; }
+    .stmt-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-completed { background: #dcfce7; color: #15803d; }
+    .badge-pending { background: #fef3c7; color: #b45309; }
+    .badge-failed { background: #fee2e2; color: #dc2626; }
+    .stmt-empty { text-align: center; padding: 30px; color: #64748b; }
+    .summary-value {
+      font-size: 18px;
+      font-weight: 800;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #64748b;
+    }
+    .empty-state i {
+      font-size: 48px;
+      color: #cbd5e1;
+      margin-bottom: 15px;
+    }
+    .empty-state p {
+      font-size: 14px;
+    }
+    .action-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    .action-btn:hover {
+      background: linear-gradient(135deg, #0b7d46, #28a06b);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="/general/group/<%= encodeURIComponent(group.groupName) %>" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <span style="position: absolute; top: 17px; left: 42px; font-size: 16px; font-weight: 700; color: white;">Loan</span>
+      <p><%= group.groupName || 'Group' %></p>
+    </div>
+    
+    <div class="content">
+      
+      <% 
+      const loanPrinciples = group.principles && group.principles.loans ? group.principles.loans : {};
+      const interestRate = loanPrinciples.interestAndLimits ? loanPrinciples.interestAndLimits.interestRate || 0 : 0;
+      const limitMultiplier = loanPrinciples.interestAndLimits ? loanPrinciples.interestAndLimits.limitMultiplier || 0 : 0;
+      const maxActiveLoans = loanPrinciples.interestAndLimits ? loanPrinciples.interestAndLimits.maxActiveLoans || 0 : 0;
+      const repaymentDays = loanPrinciples.repayment ? loanPrinciples.repayment.durationDays || 0 : 0;
+      
+      let totalSavings = 0;
+      let activeLoanAmount = 0;
+      let activeLoanBalance = 0;
+      let loanEndDate = null;
+      let hasActiveLoan = false;
+      
+      if (member && member.accounts) {
+        Object.values(member.accounts).forEach(acc => {
+          if (acc.accountName && acc.accountName.toLowerCase() !== 'loan') {
+            const fin = acc.financials || {};
+            totalSavings += fin.closingBalance || 0;
+          }
+        });
+      }
+      
+      const loanLimit = totalSavings * limitMultiplier;
+      const loanBalance = loanLimit - activeLoanAmount;
+      %>
+      
+      <!-- Group & Member Info -->
+      <div style="background:#f8fafc; padding:10px; border-radius:8px; margin-bottom:15px; border-left:3px solid #0f9d58;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+          <div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Index</div>
+            <div style="font-size:14px; font-weight:700; color:#1e293b;"><%= memberIndex || '-' %></div>
+          </div>
+          <div>
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Member</div>
+            <div style="font-size:14px; font-weight:700; color:#1e293b;">
+              <%= member ? (member.name || member.memberId) : memberPhone %>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:8px; color:#64748b; text-transform:uppercase;">Account</div>
+            <div style="font-size:12px; font-weight:700; color:#1e293b; word-break:break-all;"><%= accountNumber || '-' %></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Round Structure -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin-bottom:15px;">
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:8px; text-align:center;">
+          <div style="font-size:8px; color:#2563eb; text-transform:uppercase; font-weight:700;">Total Savings</div>
+          <div style="font-size:12px; font-weight:800; color:#1e40af;">KES <%= totalSavings.toLocaleString() %></div>
+        </div>
+        <div style="background:#fdf4ff; border:1px solid #fbcfe8; border-radius:8px; padding:8px; text-align:center;">
+          <div style="font-size:8px; color:#c026d3; text-transform:uppercase; font-weight:700;">Active</div>
+          <div style="font-size:12px; font-weight:800; color:#86198f;"><%= hasActiveLoan ? 'Yes' : 'No' %></div>
+        </div>
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px; text-align:center;">
+          <div style="font-size:8px; color:#d97706; text-transform:uppercase; font-weight:700;">Limit</div>
+          <div style="font-size:12px; font-weight:800; color:#92400e;">x<%= limitMultiplier %></div>
+        </div>
+      </div>
+      
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-label">Total Loan Requests</div>
+          <div class="summary-value">KES <%= activeLoanAmount.toLocaleString() %></div>
+        </div>
+        <div class="summary-card blue">
+          <div class="summary-label">Loan Limit</div>
+          <div class="summary-value">KES <%= loanLimit.toLocaleString() %></div>
+        </div>
+      </div>
+      
+      <div class="summary-cards">
+        <div class="summary-card amber">
+          <div class="summary-label">Active Loan Balance</div>
+          <div class="summary-value">KES <%= activeLoanBalance.toLocaleString() %></div>
+        </div>
+        <div class="summary-card red">
+          <div class="summary-label">Available Balance</div>
+          <div class="summary-value">KES <%= loanBalance.toLocaleString() %></div>
+        </div>
+      </div>
+      
+      <!-- Loan Status -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <span class="info-card-title"><i class="fas fa-info-circle"></i> Loan Status</span>
+          <span class="status-badge <%= hasActiveLoan ? 'status-active' : 'status-inactive' %>">
+            <%= hasActiveLoan ? 'Active' : 'Not Active' %>
+          </span>
+        </div>
+        
+        <% if (hasActiveLoan) { %>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Loan Amount</div>
+              <div class="info-value red">KES <%= activeLoanAmount.toLocaleString() %></div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Outstanding Balance</div>
+              <div class="info-value amber">KES <%= activeLoanBalance.toLocaleString() %></div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Loan Period</div>
+              <div class="info-value"><%= repaymentDays %> Days</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Remaining Days</div>
+              <div class="info-value green">-</div>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <i class="fas fa-check-circle"></i>
+            <p>You have no active loans</p>
+          </div>
+        <% } %>
+      </div>
+      
+      <!-- Loan Details -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <span class="info-card-title"><i class="fas fa-cog"></i> Loan Policy</span>
+        </div>
+        
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Interest Rate</div>
+            <div class="info-value blue"><%= interestRate %>%</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Limit Multiplier</div>
+            <div class="info-value">x<%= limitMultiplier %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Max Active Loans</div>
+            <div class="info-value"><%= maxActiveLoans %></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Repayment Period</div>
+            <div class="info-value"><%= repaymentDays %> Days</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button class="action-btn" onclick="showLoanHistory()" style="margin-bottom: 0;">
+          <i class="fas fa-history"></i> Statement
+        </button>
+        <button class="action-btn" onclick="showLoanApply()" style="margin-bottom: 0;">
+          <i class="fas fa-plus-circle"></i> Apply
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loan Apply Modal -->
+  <div id="loanApplyOverlay" class="stmt-overlay">
+    <div class="stmt-modal" style="max-height:90vh; display:flex; flex-direction:column;">
+      <div class="stmt-header" style="position:sticky; top:0; z-index:10; flex-shrink:0;">
+        <h3><i class="fas fa-hand-holding-usd"></i> Apply for Loan</h3>
+        <button class="stmt-close" onclick="closeLoanApply()">&times;</button>
+      </div>
+      <div style="padding: 15px; overflow-y: auto; flex:1;">
+        <div style="margin-bottom: 15px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">Select Loan Type</label>
+          <select id="loanTypeSelect" onchange="toggleLoanTypeFields()" style="width:100%; padding:12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;">
+            <option value="">-- Select Loan Type --</option>
+            <option value="short">Short Term Loan</option>
+            <option value="long">Long Term Loan</option>
+          </select>
+        </div>
+        
+        <div id="loanAmountSection" style="display:none; margin-bottom:15px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">Loan Amount (KES)</label>
+          <input type="number" id="loanAmountInput" placeholder="Enter amount" style="width:100%; padding:12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;">
+        </div>
+        
+        <div id="guarantorSection" style="display:none; margin-bottom:15px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">Guarantors</label>
+          <div style="display:flex; gap:5px; margin-bottom:10px;">
+            <input type="text" id="guarantorSearch" placeholder="Search by name or index..." onkeyup="filterGuarantors()" style="flex:1; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:13px;">
+            <button onclick="showAddGuarantorModal()" style="padding:8px 15px; border-radius:8px; border:none; background:#3b82f6; color:white; font-size:12px; cursor:pointer;"><i class="fas fa-user-plus"></i> + Guarantors</button>
+          </div>
+          <div id="guarantorList" style="max-height:150px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; padding:8px; background:#f8fafc;">
+            <div style="text-align:center; color:#64748b; font-size:12px; padding:10px;">No guarantors selected</div>
+          </div>
+          <div style="margin-top:8px; padding:8px; background:#fef3c7; border-radius:6px; font-size:10px; color:#b45309;">
+            <i class="fas fa-info-circle"></i> Guarantors are members who guarantee your loan. They will be responsible for repayment if you default.
+          </div>
+        </div>
+        
+        <div id="loanPurposeSection" style="display:none; margin-bottom:15px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px;">Purpose</label>
+          <textarea id="loanPurposeInput" placeholder="Describe purpose of loan" rows="3" style="width:100%; padding:12px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px; resize:none;"></textarea>
+        </div>
+        
+        <div id="shortTermInfo" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:15px;">
+          <div style="font-size:12px; font-weight:700; color:#1e40af; margin-bottom:5px;">Short Term Loan</div>
+          <div style="font-size:11px; color:#475569;">Repaid within <%= repaymentDays %> days. Interest rate: <%= interestRate %>%</div>
+        </div>
+        
+        <div id="longTermInfo" style="display:none; background:#fdf4ff; border:1px solid #fbcfe8; border-radius:8px; padding:12px; margin-bottom:15px;">
+          <div style="font-size:12px; font-weight:700; color:#86198f; margin-bottom:5px;">Long Term Loan</div>
+          <div style="font-size:11px; color:#475569;">Repaid over multiple months. Interest rate: <%= interestRate %>%</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button onclick="closeLoanApply()" class="action-btn" style="margin-bottom: 0; background: linear-gradient(135deg, #64748b, #94a3b8);">Cancel</button>
+          <button onclick="showLoanConfirm()" class="action-btn" style="margin-bottom: 0;">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loan Statement Modal -->
+  <div id="loanStmtOverlay" class="stmt-overlay">
+    <div class="stmt-modal" style="max-height:90vh; display:flex; flex-direction:column;">
+      <div class="stmt-header" style="position:sticky; top:0; z-index:10; flex-shrink:0;">
+        <h3><i class="fas fa-history"></i> Loan History</h3>
+        <button class="stmt-close" onclick="closeLoanStmt()">&times;</button>
+      </div>
+      <div class="stmt-card" style="overflow-y:auto; flex:1;">
+        <div class="stmt-card-item">
+          <div class="stmt-card-label">Total Loans</div>
+          <div class="stmt-card-val" id="stmtTotalLoans">KES 0</div>
+        </div>
+        <div class="stmt-card-item">
+          <div class="stmt-card-label">Paid</div>
+          <div class="stmt-card-val green" id="stmtPaid">KES 0</div>
+        </div>
+        <div class="stmt-card-item">
+          <div class="stmt-card-label">Balance</div>
+          <div class="stmt-card-val red" id="stmtBalance">KES 0</div>
+        </div>
+      </div>
+      <div class="stmt-table-wrap" id="stmtTableWrap">
+        <div class="stmt-empty"><i class="fas fa-inbox"></i>No loan records yet</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Guarantor Modal -->
+  <div id="guarantorAddOverlay" class="stmt-overlay">
+    <div class="stmt-modal" style="max-width:400px; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="stmt-header" style="background:linear-gradient(135deg, #3b82f6, #2563eb); position:sticky; top:0; z-index:10; flex-shrink:0;">
+        <h3><i class="fas fa-user-plus"></i> Add Guarantor</h3>
+        <button class="stmt-close" onclick="closeAddGuarantor()">&times;</button>
+      </div>
+      <div style="padding:15px; overflow-y:auto; flex:1;">
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:5px;">Member Name</label>
+          <input type="text" id="newGuarantorName" placeholder="Enter name" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;">
+        </div>
+        <div style="margin-bottom:15px;">
+          <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:5px;">Phone Number</label>
+          <input type="text" id="newGuarantorPhone" placeholder="Enter phone" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button onclick="closeAddGuarantor()" class="action-btn" style="margin-bottom: 0; background: linear-gradient(135deg, #64748b, #94a3b8);">Cancel</button>
+          <button onclick="addNewGuarantor()" class="action-btn" style="margin-bottom: 0;">Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loan Confirmation Modal -->
+  <div id="loanConfirmOverlay" class="stmt-overlay">
+    <div class="stmt-modal" style="max-width:400px; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="stmt-header" style="background:linear-gradient(135deg, #0f9d58, #34d399); position:sticky; top:0; z-index:10; flex-shrink:0;">
+        <h3><i class="fas fa-check-circle"></i> Confirm Loan</h3>
+        <button class="stmt-close" onclick="closeLoanConfirm()">&times;</button>
+      </div>
+      <div style="padding:15px; overflow-y:auto; flex:1;">
+        <div style="background:#f8fafc; border-radius:8px; padding:12px; margin-bottom:15px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
+            <span style="color:#64748b;">Loan Type:</span>
+            <span style="font-weight:700; color:#1e293b;" id="confirmLoanType">-</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
+            <span style="color:#64748b;">Amount:</span>
+            <span style="font-weight:700; color:#dc2626;" id="confirmAmount">KES 0</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px;">
+            <span style="color:#64748b;">Purpose:</span>
+            <span style="font-weight:700; color:#1e293b;" id="confirmPurpose">-</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px;">
+            <span style="color:#64748b;">Guarantors:</span>
+            <span style="font-weight:700; color:#1e293b;" id="confirmGuarantors">0</span>
+</div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button onclick="closeLoanApply()" class="action-btn" style="margin-bottom: 0; background: linear-gradient(135deg, #64748b, #94a3b8);">Cancel</button>
+          <button onclick="showLoanConfirm()" class="action-btn" style="margin-bottom: 0;">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Error Modal -->
+  <div id="errorModal" class="stmt-overlay">
+    <div class="stmt-modal" style="max-width:350px; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="stmt-header" style="background:linear-gradient(135deg, #ef4444, #dc2626); position:sticky; top:0; z-index:10; flex-shrink:0;">
+        <h3><i class="fas fa-exclamation-circle"></i> <span id="errorTitle">Error</span></h3>
+        <button class="stmt-close" onclick="closeErrorModal()">&times;</button>
+      </div>
+      <div style="padding:20px; text-align:center; overflow-y:auto; flex:1;">
+        <div style="font-size:40px; color:#ef4444; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div>
+        <div id="errorMessage" style="font-size:14px; color:#1e293b; margin-bottom:15px;"></div>
+        <button onclick="closeErrorModal()" class="action-btn" style="margin-bottom:0;">OK</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loan Success Modal -->
+  <div id="loanSuccessOverlay" class="stmt-overlay">
+    <div class="stmt-modal" style="max-width:400px; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="stmt-header" style="background:linear-gradient(135deg, #0f9d58, #34d399); position:sticky; top:0; z-index:10; flex-shrink:0;">
+        <h3><i class="fas fa-check-circle"></i> Success</h3>
+        <button class="stmt-close" onclick="closeLoanSuccess()">&times;</button>
+      </div>
+      <div style="padding:20px; text-align:center; overflow-y:auto; flex:1;">
+        <div style="font-size:40px; color:#0f9d58; margin-bottom:15px;"><i class="fas fa-check-circle"></i></div>
+        <div style="font-size:16px; font-weight:700; color:#1e293b; margin-bottom:10px;">Loan Application Submitted!</div>
+        <div style="font-size:13px; color:#64748b; margin-bottom:15px;">Your loan is pending approval.</div>
+        <div id="successLoanDetails" style="background:#f8fafc; border-radius:8px; padding:12px; margin-bottom:15px; text-align:left;"></div>
+        <button onclick="closeLoanSuccess()" class="action-btn" style="margin-bottom:0;">OK</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const groupName = '<%= group.groupName %>';
+    const memberPhone = '<%= memberPhone %>';
+    
+    function showLoanHistory() {
+      fetch('/member/group-by-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName })
+      })
+      .then(res => res.json())
+      .then(groupData => {
+        if (!groupData || !groupData.members || !groupData.members[memberPhone]) {
+          showLoanStmtEmpty();
+          return;
+        }
+        const member = groupData.members[memberPhone];
+        
+        let totalLoans = 0;
+        let totalPaid = 0;
+        let loanHistory = [];
+        
+        if (member.accounts) {
+          Object.values(member.accounts).forEach(acc => {
+            if (acc.accountName && acc.accountName.toLowerCase().includes('loan')) {
+              const fin = acc.financials || {};
+              totalLoans += fin.amountIn || 0;
+              totalPaid += fin.amountOut || 0;
+              const history = acc.transactionHistory || [];
+              history.forEach(txn => {
+                loanHistory.push({...txn, accountName: acc.accountName});
+              });
+            }
+          });
+        }
+        
+        const balance = totalLoans - totalPaid;
+        
+        document.getElementById('stmtTotalLoans').textContent = 'KES ' + totalLoans.toLocaleString();
+        document.getElementById('stmtPaid').textContent = 'KES ' + totalPaid.toLocaleString();
+        document.getElementById('stmtBalance').textContent = 'KES ' + balance.toLocaleString();
+        
+        let tableHtml = '';
+        if (loanHistory.length === 0) {
+          tableHtml = '<div class="stmt-empty"><i class="fas fa-inbox"></i>No loan transactions yet</div>';
+        } else {
+          loanHistory.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+          tableHtml = '<table class="stmt-table"><thead><tr><th>#</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead><tbody>';
+          loanHistory.forEach((txn, i) => {
+            const date = txn.time ? new Date(txn.time).toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'2-digit' }) : '-';
+            const isCredit = txn.type === 'credit';
+            const amtClass = isCredit ? 'txn-credit' : 'txn-debit';
+            const amtSign = isCredit ? '+' : '-';
+            const badgeClass = txn.state === 'completed' ? 'badge-completed' : txn.state === 'pending' ? 'badge-pending' : 'badge-failed';
+            tableHtml += '<tr><td>' + (txn.transactionNumber || (i + 1)) + '</td><td>' + date + '</td><td style="max-width:110px; word-break:break-word;">' + (txn.description || '-') + '</td><td class="' + amtClass + '">' + amtSign + 'KES ' + (txn.amount || 0).toLocaleString() + '</td><td><span class="stmt-badge ' + badgeClass + '">' + (txn.state || '-') + '</span></td></tr>';
+          });
+          tableHtml += '</tbody></table>';
+        }
+        document.getElementById('stmtTableWrap').innerHTML = tableHtml;
+        document.getElementById('loanStmtOverlay').classList.add('open');
+      })
+      .catch(err => { console.error(err); showLoanStmtEmpty(); });
+    }
+    
+    function showLoanStmtEmpty() {
+      document.getElementById('stmtTotalLoans').textContent = 'KES 0';
+      document.getElementById('stmtPaid').textContent = 'KES 0';
+      document.getElementById('stmtBalance').textContent = 'KES 0';
+      document.getElementById('stmtTableWrap').innerHTML = '<div class="stmt-empty"><i class="fas fa-inbox"></i>No data available</div>';
+      document.getElementById('loanStmtOverlay').classList.add('open');
+    }
+    
+    function closeLoanStmt() {
+      document.getElementById('loanStmtOverlay').classList.remove('open');
+    }
+    
+    function showLoanApply() {
+      document.getElementById('loanTypeSelect').value = '';
+      document.getElementById('loanAmountInput').value = '';
+      document.getElementById('loanPurposeInput').value = '';
+      document.getElementById('loanAmountSection').style.display = 'none';
+      document.getElementById('loanPurposeSection').style.display = 'none';
+      document.getElementById('shortTermInfo').style.display = 'none';
+      document.getElementById('longTermInfo').style.display = 'none';
+      document.getElementById('guarantorSection').style.display = 'none';
+      document.getElementById('guarantorSearch').value = '';
+      selectedGuarantors = [];
+      loadGroupMembers();
+      document.getElementById('loanApplyOverlay').classList.add('open');
+    }
+    
+    function toggleLoanTypeFields() {
+      const loanType = document.getElementById('loanTypeSelect').value;
+      document.getElementById('loanAmountSection').style.display = loanType ? 'block' : 'none';
+      document.getElementById('loanPurposeSection').style.display = loanType ? 'block' : 'none';
+      document.getElementById('shortTermInfo').style.display = loanType === 'short' ? 'block' : 'none';
+      document.getElementById('longTermInfo').style.display = loanType === 'long' ? 'block' : 'none';
+      document.getElementById('guarantorSection').style.display = loanType === 'long' ? 'block' : 'none';
+      
+      if (loanType === 'long') {
+        loadGroupMembers();
+      }
+    }
+    
+    function loadGroupMembers() {
+      const container = document.getElementById('guarantorList');
+      if (!container) return;
+      
+      fetch('/member/group-by-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(groupData => {
+        allGuarantors = [];
+        
+        if (groupData && groupData.members) {
+          const sortedMembers = Object.entries(groupData.members).sort((a, b) => a[0].localeCompare(b[0]));
+          sortedMembers.forEach(([phone, member], index) => {
+            if (phone !== memberPhone) {
+              const memberIndex = index + 1;
+              const name = member.name || member.memberId || phone;
+              allGuarantors.push({ phone, name, index: memberIndex });
+            }
+          });
+        }
+        
+        renderGuarantorList();
+        
+        const searchTerm = document.getElementById('guarantorSearch')?.value;
+        if (searchTerm) {
+          filterGuarantors();
+        }
+      })
+      .catch(err => {
+        console.error('Error loading members:', err);
+        if (container) {
+          container.innerHTML = '<div style="text-align:center; color:#64748b; font-size:12px; padding:10px;">Unable to load members</div>';
+        }
+      });
+    }
+    
+    function renderGuarantorList() {
+      const container = document.getElementById('guarantorList');
+      if (!container) return;
+      
+      if (allGuarantors.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#64748b; font-size:12px; padding:10px;">No members found</div>';
+        return;
+      }
+      
+      const searchTerm = document.getElementById('guarantorSearch').value.toLowerCase();
+      
+      const filtered = allGuarantors.filter(g => 
+        g.name.toLowerCase().includes(searchTerm) || 
+        g.index.toString().includes(searchTerm)
+      );
+      
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#64748b; font-size:12px; padding:10px;">No matching members</div>';
+        return;
+      }
+      
+      container.innerHTML = filtered.map(g => {
+        const isSelected = selectedGuarantors.some(sg => sg.phone === g.phone);
+        const btnStyle = isSelected 
+          ? 'background:#dcfce7; border-color:#15803d; color:#15803d; cursor:pointer;' 
+          : 'background:white; border-color:#e2e8f0; color:#475569; cursor:pointer;';
+        return '<div onclick="toggleGuarantor(\'' + g.phone + '\')" style="padding:8px 10px; margin-bottom:5px; border:1px solid; border-radius:6px; ' + btnStyle + ' font-size:13px;">' + g.index + ' - ' + g.name + '</div>';
+      }).join('');
+    }
+    
+    function toggleGuarantor(phone) {
+      const member = allGuarantors.find(g => g.phone === phone);
+      if (!member) return;
+      
+      const exists = selectedGuarantors.find(g => g.phone === phone);
+      if (exists) {
+        selectedGuarantors = selectedGuarantors.filter(g => g.phone !== phone);
+      } else {
+        selectedGuarantors.push(member);
+      }
+      
+      renderGuarantorList();
+      renderSelectedGuarantors();
+    }
+    
+    let selectedGuarantors = [];
+    
+    function renderSelectedGuarantors() {
+      const container = document.getElementById('guarantorList');
+      if (!container) return;
+      
+      if (selectedGuarantors.length === 0) {
+        renderGuarantorList();
+        return;
+      }
+      
+      let html = '<div style="margin-bottom:10px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">';
+      html += '<div style="font-size:11px; font-weight:700; color:#15803d; margin-bottom:5px;">Selected Guarantors:</div>';
+      html += selectedGuarantors.map(g => 
+        '<span style="background:#dcfce7; color:#15803d; padding:6px 10px; border-radius:8px; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:5px; margin:2px;">' + g.index + ' - ' + g.name + ' <span style="cursor:pointer;color:#dc2626; font-size:16px;" onclick="event.stopPropagation(); toggleGuarantor(\'' + g.phone + '\')">&times;</span></span>'
+      ).join('');
+      html += '</div>';
+      
+      const searchInput = document.getElementById('guarantorSearch');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+      const filtered = allGuarantors.filter(g => 
+        !selectedGuarantors.find(sg => sg.phone === g.phone) &&
+        (g.name.toLowerCase().includes(searchTerm) || g.index.toString().includes(searchTerm))
+      );
+      
+      if (filtered.length > 0) {
+        html += '<div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Available Members:</div>';
+        html += filtered.map(g => 
+          '<div onclick="toggleGuarantor(\'' + g.phone + '\')" style="padding:8px 10px; margin-bottom:5px; border:1px solid #e2e8f0; border-radius:6px; background:white; cursor:pointer; font-size:13px;">' + g.index + ' - ' + g.name + '</div>'
+        ).join('');
+      }
+      
+      container.innerHTML = html;
+    }
+    
+    function filterGuarantors() {
+      if (allGuarantors.length === 0) {
+        loadGroupMembers();
+        return;
+      }
+      renderGuarantorList();
+    }
+    
+    function closeLoanApply() {
+      document.getElementById('loanApplyOverlay').classList.remove('open');
+    }
+    
+    function showLoanConfirm() {
+      const loanType = document.getElementById('loanTypeSelect').value;
+      const amount = document.getElementById('loanAmountInput').value;
+      const purpose = document.getElementById('loanPurposeInput').value;
+      
+      if (!loanType) { showError('Required', 'Please select a loan type'); return; }
+      if (!amount || amount <= 0) { showError('Invalid', 'Please enter a valid amount'); return; }
+      
+      document.getElementById('confirmLoanType').textContent = loanType === 'short' ? 'Short Term' : 'Long Term';
+      document.getElementById('confirmAmount').textContent = 'KES ' + parseInt(amount).toLocaleString();
+      document.getElementById('confirmPurpose').textContent = purpose || '-';
+      document.getElementById('confirmGuarantors').textContent = selectedGuarantors.length;
+      
+      document.getElementById('loanConfirmOverlay').classList.add('open');
+    }
+    
+    function closeLoanConfirm() {
+      document.getElementById('loanConfirmOverlay').classList.remove('open');
+    }
+    
+    function submitLoanApplication() {
+      const loanType = document.getElementById('loanTypeSelect').value;
+      const amount = document.getElementById('loanAmountInput').value;
+      const purpose = document.getElementById('loanPurposeInput').value;
+      
+      const guarantors = selectedGuarantors.map(g => g.index + ' - ' + g.name).join(', ') || 'None';
+      
+      document.getElementById('successLoanDetails').innerHTML = 
+        '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:#64748b;">Loan Type:</span><span style="font-weight:600;">' + (loanType === 'short' ? 'Short Term' : 'Long Term') + '</span></div>' +
+        '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:#64748b;">Amount:</span><span style="font-weight:600;color:#dc2626;">KES ' + parseInt(amount).toLocaleString() + '</span></div>' +
+        '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;"><span style="color:#64748b;">Purpose:</span><span style="font-weight:600;">' + (purpose || '-') + '</span></div>' +
+        '<div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#64748b;">Guarantors:</span><span style="font-weight:600;">' + selectedGuarantors.length + '</span></div>';
+      
+      document.getElementById('loanSuccessOverlay').classList.add('open');
+      closeLoanConfirm();
+      closeLoanApply();
+    }
+    
+    function closeLoanSuccess() {
+      document.getElementById('loanSuccessOverlay').classList.remove('open');
+    }
+    
+    function showError(title, message) {
+      var modal = document.getElementById('errorModal');
+      if (!modal) {
+        alert(title + ': ' + message);
+        return;
+      }
+      document.getElementById('errorTitle').innerText = title;
+      document.getElementById('errorMessage').innerText = message;
+      modal.style.display = 'block';
+    }
+    
+    function closeErrorModal() {
+      var modal = document.getElementById('errorModal');
+      if (modal) modal.style.display = 'none';
+    }
+    
+    document.getElementById('loanStmtOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeLoanStmt();
+    });
+    
+    document.getElementById('loanApplyOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeLoanApply();
+    });
+    
+    document.getElementById('loanConfirmOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeLoanConfirm();
+    });
+    
+    document.getElementById('loanSuccessOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeLoanSuccess();
+    });
+    
+    document.getElementById('errorModal').addEventListener('click', function(e) {
+      if (e.target === this) closeErrorModal();
+    });
+    
+    function showAddGuarantorModal() {
+      document.getElementById('guarantorAddOverlay').classList.add('open');
+    }
+    
+    function closeAddGuarantor() {
+      document.getElementById('guarantorAddOverlay').classList.remove('open');
+      document.getElementById('newGuarantorName').value = '';
+      document.getElementById('newGuarantorPhone').value = '';
+    }
+    
+    function addNewGuarantor() {
+      const name = document.getElementById('newGuarantorName').value.trim();
+      const phone = document.getElementById('newGuarantorPhone').value.trim();
+      
+      if (!name) { showError('Required', 'Please enter member name'); return; }
+      if (!phone) { showError('Required', 'Please enter phone number'); return; }
+      
+      // Add to allGuarantors
+      const newIndex = allGuarantors.length + 1;
+      allGuarantors.push({ phone, name, index: newIndex });
+      
+      // Add to selected guarantors
+      selectedGuarantors.push({ phone, name: newIndex + ' - ' + name, isNew: true });
+      renderSelectedGuarantors();
+      
+      closeAddGuarantor();
+    }
+    
+    document.getElementById('guarantorAddOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeAddGuarantor();
+    });
+  </script>
+</body>
+</html>
