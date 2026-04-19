@@ -1074,4 +1074,36 @@ router.get("/con-group", (req, res) => {
   });
 });
 
+// GET /conform - View/download constitution form
+router.get("/conform", (req, res) => {
+  const { groupName } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/agent");
+  }
+  
+  const generalData = loadJSON(generalFile, {});
+  const flatGroups = flattenData(generalData);
+  const group = flatGroups.find(g => g.groupName === groupName);
+  
+  if (!group) {
+    return res.status(404).send("Group not found");
+  }
+  
+  const users = loadJSON(dataFile, []);
+  const userMap = new Map();
+  if (Array.isArray(users)) {
+    users.forEach(u => {
+      const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
+      if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
+    });
+  }
+  
+  res.render("agent/conform", {
+    group: group,
+    user: req.session.user,
+    userMap: userMap
+  });
+});
+
 module.exports = router;
