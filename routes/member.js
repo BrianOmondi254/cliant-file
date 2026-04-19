@@ -23,6 +23,33 @@ const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
 
+const restructureData = (data) => {
+  const counties = Object.keys(data);
+  const result = {};
+  
+  for (const county of counties) {
+    const constis = data[county];
+    for (const consti in constis) {
+      const wards = constis[consti];
+      for (const ward in wards) {
+        const groups = wards[ward];
+        if (Array.isArray(groups)) {
+          for (const g of groups) {
+            if (g.groupName) {
+              if (!result[county]) result[county] = {};
+              if (!result[county][consti]) result[county][consti] = {};
+              if (!result[county][consti][ward]) result[county][consti][ward] = [];
+              result[county][consti][ward].push(g);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return result;
+};
+
 const defaultMemberStructure = () => ({
   group: {}
 });
@@ -350,6 +377,38 @@ router.post("/group-by-name", (req, res) => {
   
   if (!foundGroup) {
     return res.status(404).json({ error: "Group not found" });
+  }
+  
+  // Also fetch principles from general.json
+  let accounts = readJSON(generalFile, {});
+  if (Array.isArray(accounts)) {
+    accounts = restructureData(accounts);
+  }
+  const flattenData = (data) => {
+    const result = {};
+    for (const county in data) {
+      const constis = data[county];
+      for (const consti in constis) {
+        const wards = constis[consti];
+        for (const ward in wards) {
+          const groups = wards[ward];
+          for (const idx in groups) {
+            const g = groups[idx];
+            if (g.groupName) {
+              result[g.groupName] = { ...g, _key: idx };
+            }
+          }
+        }
+      }
+    }
+    return result;
+  };
+  const allGroups = flattenData(accounts);
+  const generalGroup = allGroups[groupName];
+  
+  // Merge principles from general.json if available
+  if (generalGroup && generalGroup.principles) {
+    foundGroup.principles = generalGroup.principles;
   }
   
   // Return group as-is (member.json already has correct names)
@@ -748,6 +807,499 @@ router.get("/membership", (req, res) => {
     groupNumber: groupNumber,
     accountNumber: accountNumber
   });
+});
+
+// GET /gmember - Group membership management (for agents/officials)
+router.get("/gmember", (req, res) => {
+  const { groupName } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/");
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundGroup = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundGroup = data.group[key];
+      break;
+    }
+  }
+  
+  if (!foundGroup) {
+    return res.status(404).send("Group not found");
+  }
+  
+  const membersList = foundGroup.members ? Object.entries(foundGroup.members).map(([phone, m]) => ({
+    phone,
+    name: m.name || phone,
+    memberId: m.memberId || phone,
+    role: m.role || 'member',
+    accounts: m.accounts || {},
+    memberFinancials: m.memberFinancials || {}
+  })) : [];
+  
+  res.render("maccount/gmember", {
+    group: foundGroup,
+    members: membersList,
+    user: req.session.user
+  });
+});
+
+router.get("/gcon", (req, res) => {
+  const { groupName } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/");
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundGroup = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundGroup = data.group[key];
+      break;
+    }
+  }
+  
+  if (!foundGroup) {
+    return res.status(404).send("Group not found");
+  }
+  
+  const membersCount = foundGroup.members ? Object.keys(foundGroup.members).length : 0;
+  const activeRound = foundGroup.currentRound || 1;
+  const meetingsHeld = foundGroup.meetings ? foundGroup.meetings.length : 0;
+  const groupAccountNumber = foundGroup.accountNumber || 'Pending';
+  const hasConstitution = foundGroup.pinIsSet || false;
+  
+  let totalSavings = 0;
+  let totalShares = 0;
+  let totalLoans = 0;
+  let totalFines = 0;
+  
+  if (foundGroup.members) {
+    for (const phone in foundGroup.members) {
+      const member = foundGroup.members[phone];
+      if (member.accounts) {
+        for (const accId in member.accounts) {
+          const acc = member.accounts[accId];
+          const fin = acc.financials || {};
+          if (accId.toLowerCase().includes('saving')) {
+            totalSavings += fin.closingBalance || 0;
+          } else if (accId.toLowerCase().includes('share')) {
+            totalShares += fin.closingBalance || 0;
+          } else if (accId.toLowerCase().includes('loan')) {
+            totalLoans += fin.closingBalance || 0;
+          } else if (accId.toLowerCase().includes('fine')) {
+            totalFines += fin.closingBalance || 0;
+          }
+        }
+      }
+    }
+  }
+  
+  res.render("gaccount/gcon", {
+    group: foundGroup,
+    user: req.session.user,
+    membersCount: membersCount,
+    activeRound: activeRound,
+    meetingsHeld: meetingsHeld,
+    groupAccountNumber: groupAccountNumber,
+    hasConstitution: hasConstitution,
+    totalSavings: totalSavings,
+    totalShares: totalShares,
+    totalLoans: totalLoans,
+    totalFines: totalFines
+  });
+});
+
+// POST /add-member - Add a new member to a group
+router.post("/add-member", (req, res) => {
+  const { groupName, name, phone, role, initialSavings } = req.body;
+  
+  if (!groupName || !name || !phone) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundKey) {
+    return res.status(404).json({ success: false, error: "Group not found" });
+  }
+  
+  const group = data.group[foundKey];
+  
+  // Check if member already exists
+  if (group.members && group.members[phone]) {
+    return res.status(400).json({ success: false, error: "Member already exists" });
+  }
+  
+  // Create new member structure
+  const memberId = phone;
+  const defaultAccounts = {
+    "001": { 
+      accountId: "001", 
+      accountName: "Saving", 
+      expectedAmount: "100", 
+      financials: { openingBalance: initialSavings || 0, amountIn: initialSavings || 0, amountOut: 0, closingBalance: initialSavings || 0 }, 
+      transactionHistory: initialSavings > 0 ? [{
+        date: new Date().toISOString(),
+        type: "deposit",
+        amount: initialSavings,
+        balance: initialSavings,
+        note: "Initial savings"
+      }] : []
+    },
+    "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+    "003": { accountId: "003", accountName: "Shares", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+    "004": { accountId: "004", accountName: "Welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+  };
+  
+  if (!group.members) group.members = {};
+  
+  group.members[phone] = {
+    memberId: memberId,
+    name: name,
+    role: role || 'member',
+    memberFinancials: {
+      openingBalance: initialSavings || 0,
+      amountIn: initialSavings || 0,
+      amountOut: 0,
+      closingBalance: initialSavings || 0
+    },
+    accounts: defaultAccounts,
+    processedDeductions: [],
+    createdAt: new Date().toISOString()
+  };
+  
+  writeJSON(memberFile, data);
+  
+  res.json({ success: true, member: group.members[phone] });
+});
+
+// POST /request-add-member - Submit a request to add a new member
+router.post("/request-add-member", (req, res) => {
+  const { groupName, requesterPhone, requesterName, newMemberName, newMemberPhone, reason } = req.body;
+  
+  if (!groupName || !newMemberName || !newMemberPhone) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundKey) {
+    return res.status(404).json({ success: false, error: "Group not found" });
+  }
+  
+  const group = data.group[foundKey];
+  
+  // Check if member already exists
+  if (group.members && group.members[newMemberPhone]) {
+    return res.status(400).json({ success: false, error: "Member already exists in this group" });
+  }
+  
+  // Initialize requests array if not exists
+  if (!group.requests) group.requests = {};
+  if (!group.requests.addMember) group.requests.addMember = [];
+  
+  // Check for duplicate pending request
+  const existingRequest = group.requests.addMember.find(r => 
+    r.newMemberPhone === newMemberPhone && r.status === 'pending'
+  );
+  if (existingRequest) {
+    return res.status(400).json({ success: false, error: "A pending request already exists for this phone number" });
+  }
+  
+  // Add the request
+  const newRequest = {
+    id: Date.now().toString(),
+    type: 'addMember',
+    requesterPhone: requesterPhone || '',
+    requesterName: requesterName || '',
+    newMemberName,
+    newMemberPhone,
+    reason: reason || '',
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  
+  group.requests.addMember.push(newRequest);
+  writeJSON(memberFile, data);
+  
+  res.json({ success: true, request: newRequest });
+});
+
+// GET /member-requests - Get pending requests for a group
+router.get("/member-requests", (req, res) => {
+  const { groupName } = req.query;
+  
+  if (!groupName) {
+    return res.status(400).json({ success: false, error: "groupName is required" });
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundKey) {
+    return res.status(404).json({ success: false, error: "Group not found" });
+  }
+  
+  const group = data.group[foundKey];
+  const requests = group.requests || {};
+  const addMemberRequests = requests.addMember || [];
+  const roleChangeRequests = requests.roleChange || [];
+  
+  res.json({ 
+    success: true, 
+    requests: {
+      addMember: addMemberRequests.filter(r => r.status === 'pending'),
+      roleChange: roleChangeRequests.filter(r => r.status === 'pending'),
+      termination: (requests.termination || []).filter(r => r.status === 'pending')
+    }
+  });
+});
+
+// POST /approve-member-request - Approve a member request
+router.post("/approve-member-request", (req, res) => {
+  const { groupName, requestId, action } = req.body;
+  
+  if (!groupName || !requestId) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundKey) {
+    return res.status(404).json({ success: false, error: "Group not found" });
+  }
+  
+  const group = data.group[foundKey];
+  
+  if (!group.requests || !group.requests.addMember) {
+    return res.status(404).json({ success: false, error: "No requests found" });
+  }
+  
+  const requestIndex = group.requests.addMember.findIndex(r => r.id === requestId);
+  if (requestIndex === -1) {
+    return res.status(404).json({ success: false, error: "Request not found" });
+  }
+  
+  const request = group.requests.addMember[requestIndex];
+  
+  if (action === 'approve') {
+    // Create the new member
+    const defaultAccounts = {
+      "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+      "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+      "003": { accountId: "003", accountName: "Shares", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+      "004": { accountId: "004", accountName: "Welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+    };
+    
+    if (!group.members) group.members = {};
+    
+    group.members[request.newMemberPhone] = {
+      memberId: request.newMemberPhone,
+      name: request.newMemberName,
+      role: 'member',
+      memberFinancials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+      accounts: defaultAccounts,
+      processedDeductions: [],
+      createdAt: new Date().toISOString()
+    };
+    
+    request.status = 'approved';
+    request.approvedAt = new Date().toISOString();
+  } else if (action === 'reject') {
+    request.status = 'rejected';
+    request.rejectedAt = new Date().toISOString();
+  }
+  
+  writeJSON(memberFile, data);
+  
+  res.json({ success: true, request });
+});
+
+// POST /request-role-change - Request to change member role (promote/demote/replace official or trustee)
+router.post("/request-role-change", (req, res) => {
+  const { groupName, requesterPhone, requesterName, targetMemberPhone, newRole, reason } = req.body;
+  
+  if (!groupName || !targetMemberPhone || !newRole) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundKey) {
+    return res.status(404).json({ success: false, error: "Group not found" });
+  }
+  
+  const group = data.group[foundKey];
+  
+  // Check if target member exists
+  if (!group.members || !group.members[targetMemberPhone]) {
+    return res.status(404).json({ success: false, error: "Target member not found" });
+  }
+  
+  const targetMember = group.members[targetMemberPhone];
+  const currentRole = targetMember.role || 'member';
+  
+  // Initialize requests array if not exists
+  if (!group.requests) group.requests = {};
+  if (!group.requests.roleChange) group.requests.roleChange = [];
+  
+  // Check for duplicate pending request for same target and role
+  const existingRequest = group.requests.roleChange.find(r => 
+    r.targetMemberPhone === targetMemberPhone && r.newRole === newRole && r.status === 'pending'
+  );
+  if (existingRequest) {
+    return res.status(400).json({ success: false, error: "A pending request already exists for this role change" });
+  }
+  
+  // Add the request
+  const newRequest = {
+    id: Date.now().toString(),
+    type: 'roleChange',
+    requesterPhone: requesterPhone || '',
+    requesterName: requesterName || '',
+    targetMemberPhone,
+    targetMemberName: targetMember.name,
+    currentRole,
+    newRole,
+    reason: reason || '',
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  
+  group.requests.roleChange.push(newRequest);
+  writeJSON(memberFile, data);
+  
+  res.json({ success: true, request: newRequest });
+});
+
+// POST /approve-role-change - Approve or reject role change request
+router.post("/approve-role-change", (req, res) => {
+  const { groupName, requestId, action } = req.body;
+  
+  if (!groupName || !requestId) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+  
+  let data = readJSON(memberFile, defaultMemberStructure());
+  if (!data.group || Object.keys(data.group).length === 0) {
+    syncFromGeneral();
+    data = readJSON(memberFile, defaultMemberStructure());
+  }
+  
+  let foundKey = null;
+  for (const key in data.group) {
+    if (data.group[key].groupName === groupName) {
+      foundKey = key;
+      break;
+    }
+  }
+  
+  if (!foundKey) {
+    return res.status(404).json({ success: false, error: "Group not found" });
+  }
+  
+  const group = data.group[foundKey];
+  
+  if (!group.requests || !group.requests.roleChange) {
+    return res.status(404).json({ success: false, error: "No requests found" });
+  }
+  
+  const requestIndex = group.requests.roleChange.findIndex(r => r.id === requestId);
+  if (requestIndex === -1) {
+    return res.status(404).json({ success: false, error: "Request not found" });
+  }
+  
+  const request = group.requests.roleChange[requestIndex];
+  
+  if (action === 'approve') {
+    // Update the member's role
+    if (group.members && group.members[request.targetMemberPhone]) {
+      group.members[request.targetMemberPhone].role = request.newRole;
+    }
+    
+    request.status = 'approved';
+    request.approvedAt = new Date().toISOString();
+  } else if (action === 'reject') {
+    request.status = 'rejected';
+    request.rejectedAt = new Date().toISOString();
+  }
+  
+  writeJSON(memberFile, data);
+  
+  res.json({ success: true, request });
 });
 
 module.exports = router;
