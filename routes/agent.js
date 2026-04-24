@@ -9,7 +9,9 @@ const agentFile = path.join(__dirname, "../agent.json");
 const generalFile = path.join(__dirname, "../general.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
 const dataFile = path.join(__dirname, "../data.json");
+const perfLogger = require("../performance/group-performance");
 
+const notification = require("../notification/notification");
 const loadJSON = (file, fallback = []) => {
   if (!fs.existsSync(file)) return fallback;
   try {
@@ -39,10 +41,36 @@ const flattenData = (data) => {
     for (const county in data) {
         if (typeof data[county] !== 'object') continue;
         for (const constituency in data[county]) {
-            if (typeof data[county][constituency] !== 'object') continue;
-            for (const ward in data[county][constituency]) {
-                    const groups = data[county][constituency][ward];
-                    if (Array.isArray(groups)) flat.push(...groups);
+            const level2 = data[county][constituency];
+            if (!level2) continue;
+            
+            if (Array.isArray(level2)) {
+                // Handle County -> Constituency -> GroupsArray
+                const wardName = typeof level2[0] === 'string' ? level2[0] : '';
+                level2.forEach(g => {
+                    if (typeof g === 'object' && g !== null && !Array.isArray(g)) {
+                        g.county = g.county || county;
+                        g.constituency = g.constituency || constituency;
+                        if (wardName) g.ward = g.ward || wardName;
+                        flat.push(g);
+                    }
+                });
+            } else if (typeof level2 === 'object') {
+                // Handle County -> Constituency -> Ward -> GroupsArray
+                for (const ward in level2) {
+                    const groups = level2[ward];
+                    if (Array.isArray(groups)) {
+                        const wardName = typeof groups[0] === 'string' ? groups[0] : ward;
+                        groups.forEach(g => {
+                            if (typeof g === 'object' && g !== null && !Array.isArray(g)) {
+                                g.county = g.county || county;
+                                g.constituency = g.constituency || constituency;
+                                g.ward = g.ward || wardName;
+                                flat.push(g);
+                            }
+                        });
+                    }
+                }
             }
         }
     }
@@ -486,39 +514,59 @@ router.post("/activate-group", async (req, res) => {
   // Load general.json
   let general = loadJSON(generalFile, {});
 
-  // Ensure hierarchy exists
-  if (!general[county]) general[county] = {};
-  if (!general[county][constituency]) general[county][constituency] = {};
-  if (!general[county][constituency][ward]) general[county][constituency][ward] = [];
+  // Identify/Handle Ward Groups
+  let wardGroups = null;
+  let isArrayStructure = false;
 
-  const wardGroups = general[county][constituency][ward];
-  const groupName = displayName;
-
-  // Check if group already exists
-  let existingGroupIndex = -1;
-  if (groupName) {
-    existingGroupIndex = wardGroups.findIndex(g => g.groupName === groupName);
+  // Find county (case insensitive)
+  let countyKey = Object.keys(general).find(k => normStr(k) === normStr(county));
+  if (!countyKey) {
+      countyKey = county;
+      general[countyKey] = {};
   }
 
-  // Block update if group already has members
-  if (existingGroupIndex >= 0) {
-    const existingGroup = wardGroups[existingGroupIndex];
-    if (existingGroup.totalProposedMembers && existingGroup.totalProposedMembers > 0) {
-      return res.json({ success: false, message: "Group already has members registered. Cannot update." });
+  // Find constituency (case insensitive)
+  let constituencyKey = Object.keys(general[countyKey]).find(k => normStr(k) === normStr(constituency));
+  if (!constituencyKey) {
+      constituencyKey = constituency;
+      general[countyKey][constituencyKey] = {};
+  }
+
+  let constituencyObj = general[countyKey][constituencyKey];
+
+  if (Array.isArray(constituencyObj)) {
+    // It's the [WardName, Group1, ...] structure
+    isArrayStructure = true;
+    wardGroups = constituencyObj;
+  } else {
+    // Object-based structure
+    if (!constituencyObj[ward]) {
+        // Try to find ward case-insensitively
+        const wardKey = Object.keys(constituencyObj).find(k => normStr(k) === normStr(ward));
+        if (wardKey) {
+            wardGroups = constituencyObj[wardKey];
+        } else {
+            constituencyObj[ward] = [];
+            wardGroups = constituencyObj[ward];
+        }
+    } else {
+        wardGroups = constituencyObj[ward];
     }
   }
+
+  const groupName = displayName;
+
+  // Check if group already exists (Use normalized comparison)
+  let existingGroupIndex = -1;
+  if (groupName && wardGroups) {
+    existingGroupIndex = wardGroups.findIndex(g => typeof g === 'object' && g !== null && normStr(g.groupName) === normStr(groupName));
+  }
+
+  // NO BLOCK: Allow updating even if group already has members if we are in activation flow
 
   // Build group object - use constitutionStartKey as-is (plain string)
   const group = {
     groupName,
-    phone: phone || trustees[0].phone,
-    firstName: 'Chairperson',
-    secondName: '',
-    lastName: '',
-    county,
-    constituency,
-    ward,
-    processorPhone: processorPhone || 'n/a',
     createdAt: createdAt || new Date().toISOString(),
     agentProcessed: agentProcessed || agentPhone || 'n/a',
     phase: phase || 2,
@@ -548,21 +596,56 @@ router.post("/activate-group", async (req, res) => {
 
   // Update existing group or add new one
   if (existingGroupIndex >= 0) {
+    const oldPhase = wardGroups[existingGroupIndex].phase || 1;
     // Update existing group
     wardGroups[existingGroupIndex] = group;
+
+    // Log Performance Graduation (Phase 1 -> Phase 2)
+    try {
+        perfLogger.logActivity(county, constituency, ward, group.phase, true, oldPhase, group.totalProposedMembers);
+    } catch(e) { console.error("Performance log error (Update):", e); }
+
     console.log(`✓ Updated existing group: ${groupName}`);
   } else {
     // Add new group
-    wardGroups.push(group);
+    if (isArrayStructure) {
+        // Find ward index or append if missing (though usually it should be there)
+        let wardIdx = wardGroups.findIndex(item => typeof item === 'string' && normStr(item) === normStr(ward));
+        if (wardIdx === -1) {
+            wardGroups.push(ward);
+            wardGroups.push(group);
+        } else {
+            // Insert after the ward name
+            wardGroups.splice(wardIdx + 1, 0, group);
+        }
+    } else {
+        wardGroups.push(group);
+    }
+
     // Increment regional counts only for new groups
     general[county].countyGroupCount = (general[county].countyGroupCount || 0) + 1;
     if (constituency) {
-      general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
-      if (ward) {
-        general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+      if (typeof general[county][constituency] === 'object' && !Array.isArray(general[county][constituency])) {
+          general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
+          if (ward && general[county][constituency][ward]) {
+              general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
+          }
       }
     }
     console.log(`✓ Created new group: ${groupName}`);
+
+    // Log Performance New Activity (Starts at Phase 2)
+    try {
+        perfLogger.logActivity(county, constituency, ward, group.phase, false, null, group.totalProposedMembers);
+    } catch(e) { console.error("Performance log error (Create):", e); }
+  }
+
+  // Send Notifications
+  try {
+    const agentName = agent.name || "System Agent";
+    notification.sendActivationNotices(group, payload, agentName, agentPhone);
+  } catch (e) {
+    console.error("Notification broadcast error:", e);
   }
 
   // Save

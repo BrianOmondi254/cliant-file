@@ -4,6 +4,8 @@ const path = require("path");
 
 const router = express.Router();
 const generalFile = path.join(__dirname, "../general.json");
+const notification = require("../notification/notification");
+const perfLogger = require("../performance/group-performance");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -62,9 +64,24 @@ const flattenData = (data) => {
   if (Array.isArray(data)) return data;
   const flat = [];
   for (const county in data) {
+    if (county === 'performance') continue;
     for (const constituency in data[county]) {
-      for (const ward in data[county][constituency]) {
-        flat.push(...data[county][constituency][ward]);
+      if (constituency === 'performance') continue;
+      const items = data[county][constituency];
+      if (Array.isArray(items)) {
+        let currentWard = "Unknown Ward";
+        items.forEach(item => {
+          if (typeof item === 'string') {
+            currentWard = item;
+          } else if (typeof item === 'object' && item !== null && !item.isPerformance) {
+            flat.push({
+              ...item,
+              county,
+              constituency,
+              ward: currentWard
+            });
+          }
+        });
       }
     }
   }
@@ -290,41 +307,101 @@ router.get("/tbank-config", (req, res) => {
 });
 
 /* ✅ Verify Member Phone Numbers against data.json (POST) */
+/**
+ * Combined and robust member verification route
+ */
 router.post("/verify-members", (req, res) => {
-  const { phoneNumbers } = req.body;
-  const dataFile = path.join(__dirname, "../data.json");
-  const userData = readJSON(dataFile, []);
+  try {
+    const { members, phoneNumbers } = req.body;
+    const inputList = members || phoneNumbers || [];
+    
+    if (!Array.isArray(inputList)) {
+      return res.status(400).json({ success: false, message: "Invalid payload format" });
+    }
 
-  const results = phoneNumbers.map((member) => {
-    const inputPhone = String(member.phone).trim();
-    const inputId = String(member.id).trim();
+    const dataFile = path.join(__dirname, "../data.json");
+    const userData = readJSON(dataFile, []);
+    const generalData = readJSON(generalFile, {});
 
-    const user = userData.find(
-      (u) => String(u.phoneNumber).trim() === inputPhone,
-    );
+    // Build a map of phone numbers from all groups in general.json for cross-referencing
+    const generalMembersMap = new Map();
+    const flattenForSearch = (obj) => {
+      if (!obj || typeof obj !== 'object') return;
+      Object.keys(obj).forEach(key => {
+        if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+          const m = obj[key];
+          if (m && typeof m === 'object' && m.phone) {
+            const normalized = norm(m.phone);
+            if (!generalMembersMap.has(normalized)) {
+              generalMembersMap.set(normalized, {
+                name: m.name || m.title || "Group Member",
+                id: m.id || null,
+                memberNumber: m.memberNumber || null
+              });
+            }
+          }
+        }
+      });
+    };
 
-    let status = "not-found";
-    let foundName = "Not Found";
-
-    if (user) {
-      if (String(user.idNumber).trim() === inputId) {
-        status = "verified";
-        foundName = `${user.FirstName} ${user.LastName}`;
-      } else {
-        status = "mismatch";
-        foundName = "ID does not match Phone";
+    // Traverse the hierarchy (supports both hybrid array and object structures)
+    for (const county in generalData) {
+      if (county === 'performance') continue;
+      const constituencies = generalData[county];
+      for (const constituency in constituencies) {
+        const wardsOrGroups = constituencies[constituency];
+        if (Array.isArray(wardsOrGroups)) {
+          wardsOrGroups.forEach(item => {
+            if (typeof item === 'object' && item !== null && !item.isPerformance) flattenForSearch(item);
+          });
+        } else if (typeof wardsOrGroups === 'object') {
+          for (const ward in wardsOrGroups) {
+            const list = wardsOrGroups[ward];
+            if (Array.isArray(list)) {
+              list.forEach(g => { if (typeof g === 'object') flattenForSearch(g); });
+            }
+          }
+        }
       }
     }
 
-    return {
-      ...member,
-      status,
-      verified: status === "verified",
-      foundName,
-    };
-  });
+    const results = inputList.map(member => {
+      const phone = member.phone || member.phoneNumber;
+      const id = member.id || member.idNumber;
+      const normalized = norm(phone);
+      
+      const user = userData.find(u => norm(u.phoneNumber) === normalized);
+      
+      let resMember = {
+        ...member,
+        verified: false,
+        name: "Not Found",
+        status: "not-found"
+      };
 
-  return res.json({ success: true, results });
+      if (user) {
+        const fullName = [user.FirstName, user.MiddleName, user.LastName].filter(Boolean).join(' ');
+        const idMatch = id && String(user.idNumber).trim() === String(id).trim();
+        resMember.name = fullName;
+        resMember.verified = idMatch || false;
+        resMember.status = idMatch ? "verified" : (id ? "mismatch" : "partial");
+      } else {
+        const gen = generalMembersMap.get(normalized);
+        if (gen) {
+          resMember.name = gen.name;
+          resMember.verified = id && gen.id && String(gen.id).trim() === String(id).trim() || false;
+          resMember.status = resMember.verified ? "verified" : "mismatch";
+          resMember.source = "general";
+        }
+      }
+      return resMember;
+    });
+
+    return res.json({ success: true, results, members: results });
+  } catch (err) {
+    console.error("Verification Error:", err);
+    return res.status(500).json({ success: false, message: "Server error during verification" });
+  }
 });
 
 /* 💾 Save General Account (POST) */
@@ -350,70 +427,8 @@ router.post("/", (req, res) => {
     accounts = restructureData(accounts);
   }
 
-  if (!groupName || !chairpersonalphonenumber || !firstName || !county) {
-    return res.status(400).send("Missing required fields.");
-  }
-
-  // 1. Hierarchical official verification
-  const agentFile = path.join(__dirname, "../agent.json");
-  const dealerFile = path.join(__dirname, "../dealer.json");
-  const hqFile = path.join(__dirname, "../hq.json");
-
-  const agents = readJSON(agentFile, []);
-  const dealers = readJSON(dealerFile, []);
-  const hqs = readJSON(hqFile, []);
-
-  let allocatedOfficial = null;
-  let officialType = "";
-
-  // Check Agent
-  const agent = agents.find(a => a.ward && a.ward.toLowerCase() === ward.toLowerCase());
-  if (agent) {
-    allocatedOfficial = agent;
-    officialType = "Agent";
-  } else {
-    // Check Dealer
-    const dealer = dealers.find(d => d.ward && d.ward.toLowerCase() === ward.toLowerCase());
-    if (dealer) {
-      allocatedOfficial = dealer;
-      officialType = "Dealer";
-    } else {
-      // Check Regional Office (HQ) by constituency (regional block)
-      const hq = hqs.find(h => h.constituency && h.constituency.toLowerCase() === constituency.toLowerCase());
-      if (hq) {
-        allocatedOfficial = hq;
-        officialType = "Regional Office";
-      }
-    }
-  }
-
-  let notificationContent = "";
-  if (allocatedOfficial) {
-    const officialPhone = allocatedOfficial.phoneNumber || allocatedOfficial.hqPhone || allocatedOfficial.dealerPhone;
-    notificationContent = `Your application for ${groupName} is pending. ${officialType} available at your location. Contact: ${officialPhone}`;
-  } else {
-    notificationContent = `Your application for ${groupName} is pending. Note: Your regional block is not yet allocated to any of our officials.`;
-  }
-
-  const messagesList = [
-    {
-      to: req.session?.user?.phoneNumber,
-      type: "security_alert",
-      title: "Group Creation",
-      content: notificationContent,
-      createdAt: new Date().toISOString()
-    }
-  ];
-
-  if (allocatedOfficial) {
-    const officialPhone = allocatedOfficial.phoneNumber || allocatedOfficial.hqPhone || allocatedOfficial.dealerPhone;
-    messagesList.push({
-      to: officialPhone,
-      type: "security_alert",
-      title: "Group Creation",
-      content: `Group Creation Request: ${groupName}. Submitted by Processor: ${req.session?.user?.phoneNumber || 'Anonymous'}. Chairperson Phone: ${chairpersonalphonenumber}. Location: ${county}/${constituency}/${ward}. Please verify this request.`,
-      createdAt: new Date().toISOString()
-    });
+  if (!groupName || !chairpersonalphonenumber || !firstName || !county || !constituency || !ward) {
+    return res.status(400).send("Missing required fields (Check county, constituency, and ward).");
   }
 
   const newAccount = {
@@ -422,76 +437,78 @@ router.post("/", (req, res) => {
     firstName,
     secondName,
     lastName,
-    county,
-    constituency,
-    ward,
     processorPhone: req.session?.user?.phoneNumber || "Anonymous",
     createdAt: new Date().toISOString(),
-    messages: messagesList,
     totalProposedMembers: parseInt(totalProposedMembers) || 0,
     phase: 1 // Initial phase
   };
 
-  // Add members from the form
-  const STD_TRUSTEES = 3;
-  const STD_OFFICIALS = 3;
+  // Centralized Notification Service - Pass location data explicitly since it's not stored in newAccount
+  const { notificationContent } = notification.sendGroupCreationAlerts({
+    ...newAccount,
+    ward,
+    constituency,
+    county
+  }, req.session?.user?.phoneNumber);
 
   // 1. Chairperson is always trustee_1
   newAccount.trustee_1 = {
       phone: chairpersonalphonenumber,
-      name: `${firstName} ${secondName || ''} ${lastName}`.trim(),
       type: 'trustee',
       title: 'Chairperson'
   };
 
-  // 2. Add other trustees from the `trustees` array. They will be trustee_2, trustee_3.
+  // 2. Add other trustees
   if (Array.isArray(trustees)) {
-      trustees.slice(0, STD_TRUSTEES - 1).forEach((t, i) => { // Limit to fill up to trustee_3
+      trustees.slice(0, 2).forEach((t, i) => {
           if (t && t.phone && t.name) {
-              newAccount[`trustee_${i + 2}`] = {
-                  phone: t.phone,
-                  name: t.name,
-                  id: t.id || null,
-                  type: 'trustee'
-              };
+              newAccount[`trustee_${i + 2}`] = { phone: t.phone, name: t.name, id: t.id || null, type: 'trustee' };
           }
       });
   }
 
-  // 3. Add officials. They start from index 4.
+  // 3. Add officials
   if (Array.isArray(officials)) {
-      officials.slice(0, STD_OFFICIALS).forEach((o, i) => { // Limit to fill up to official_6
+      officials.slice(0, 3).forEach((o, i) => {
           if (o && o.phone && o.name) {
-              newAccount[`official_${STD_TRUSTEES + i + 1}`] = {
-                  phone: o.phone,
-                  name: o.name,
-                  id: o.id || null,
-                  type: 'official'
-              };
+              newAccount[`official_${4 + i}`] = { phone: o.phone, name: o.name, id: o.id || null, type: 'official' };
           }
       });
   }
 
-  // 4. Add members. They start from index 7.
+  // 4. Add members
   if (Array.isArray(members)) {
       members.forEach((m, i) => {
           if (m && m.phone && m.name) {
-              newAccount[`member_${STD_TRUSTEES + STD_OFFICIALS + i + 1}`] = {
-                  phone: m.phone,
-                  name: m.name,
-                  id: m.id || null,
-                  type: 'member'
-              };
+              newAccount[`member_${7 + i}`] = { phone: m.phone, name: m.name, id: m.id || null, type: 'member' };
           }
       });
   }
 
   if (!accounts[county]) accounts[county] = {};
-  if (!accounts[county][constituency]) accounts[county][constituency] = {};
-  if (!accounts[county][constituency][ward])
-    accounts[county][constituency][ward] = [];
+  if (!accounts[county][constituency]) accounts[county][constituency] = [];
 
-  accounts[county][constituency][ward].push(newAccount);
+  // Remove redundant location fields (county, constituency, and ward) as they are already in the hierarchy
+  const { county: _co, constituency: _cn, ward: _wd, ...accountToSave } = newAccount;
+
+  const constituencyArray = accounts[county][constituency];
+  let wardIndex = constituencyArray.findIndex(item => typeof item === 'string' && item.toLowerCase() === ward.toLowerCase());
+
+  if (wardIndex === -1) {
+    // Ward doesn't exist, append ward name then the group
+    constituencyArray.push(ward);
+    constituencyArray.push(accountToSave);
+  } else {
+    // Ward exists, find the position of the last group in this ward
+    let insertIndex = wardIndex + 1;
+    while (insertIndex < constituencyArray.length && typeof constituencyArray[insertIndex] === 'object') {
+      insertIndex++;
+    }
+    constituencyArray.splice(insertIndex, 0, accountToSave);
+  }
+
+  // Log Performance (New Group Created in Phase 1)
+  perfLogger.logActivity(county, constituency, ward, 1);
 
   writeJSON(generalFile, accounts);
 
@@ -546,7 +563,16 @@ router.post("/update-members", (req, res) => {
   let accounts = readJSON(generalFile, {});
   if (Array.isArray(accounts)) {
     accounts = restructureData(accounts);
-    writeJSON(generalFile, accounts);
+    // Check for phase graduation
+  if (updatedAccount.phase !== targetGroup.phase) {
+    const allGroups = flattenData(accounts);
+    const self = allGroups.find(g => g.groupName === groupName);
+    if (self) {
+      perfLogger.logActivity(self.county, self.constituency, self.ward, updatedAccount.phase, true, targetGroup.phase);
+    }
+  }
+
+  writeJSON(generalFile, accounts);
   }
 
   let targetGroup = null;
@@ -554,17 +580,18 @@ router.post("/update-members", (req, res) => {
 
   outer: for (const c in accounts) {
     for (const consti in accounts[c]) {
-      for (const w in accounts[c][consti]) {
-        const list = accounts[c][consti][w];
+      const list = accounts[c][consti];
+      if (Array.isArray(list)) {
         const idx = list.findIndex(
           (acc) =>
+            typeof acc === 'object' && acc !== null &&
             acc.groupName === groupName &&
             (acc.chairpersonalphonenumber === chairpersonalphonenumber ||
               acc.phone === chairpersonalphonenumber),
         );
         if (idx !== -1) {
           targetGroup = list[idx];
-          locationPath = { c, consti, w, idx };
+          locationPath = { c, consti, idx };
           break outer;
         }
       }
@@ -605,62 +632,29 @@ router.post("/update-members", (req, res) => {
     updatedAccount.phase = 2;
   }
 
-  // --- Notification Logic ---
+  // --- Notification Logic using Centralized Service ---
   const agentPhone = req.session?.user?.phoneNumber || "Unknown";
   let agentName = "System Agent";
   try {
     const agentFile = path.join(__dirname, "../agent.json");
     if (fs.existsSync(agentFile)) {
       const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
-      const foundAgent = agents.find(a => norm(a.phoneNumber) === norm(agentPhone));
+      const foundAgent = agents.find(a => notification.norm(a.phoneNumber) === notification.norm(agentPhone));
       if (foundAgent) agentName = foundAgent.name;
     }
   } catch (e) {
     console.error("Error looking up agent name:", e);
   }
 
-  const messages = updatedAccount.messages || [];
-  
-  Object.values(membersData).forEach(member => {
-    if (member && member.phone) {
-      const memberPhone = member.phone;
-      const memberType = member.type || "member";
-      const memberIndex = member.index || "N/A";
-      
-      const messageContent = `You have been added to ${groupName}. \n` +
-                             `Agent: ${agentName} (${agentPhone})\n` +
-                             `Chairperson: ${chairpersonalphonenumber}\n` +
-                             `Role: ${memberType.charAt(0).toUpperCase() + memberType.slice(1)}`;
-
-      // Create message for this member
-      const newMessage = {
-        to: memberPhone,
-        type: "group_added",
-        title: "Group Registration Notice",
-        content: messageContent,
-        createdAt: new Date().toISOString(),
-        isNew: true
-      };
-
-      // Avoid duplicate notifications for the same group in this session
-      const alreadyNotified = messages.some(m => 
-        m.to === memberPhone && 
-        m.type === "group_added" && 
-        m.content.includes(groupName)
-      );
-      
-      if (!alreadyNotified) {
-        messages.push(newMessage);
-      }
-    }
-  });
-
-  updatedAccount.messages = messages;
+  notification.sendMemberAddedNotices(updatedAccount, membersData, agentName, agentPhone);
   // --- End Notification Logic ---
 
-  accounts[locationPath.c][locationPath.consti][locationPath.w][
-    locationPath.idx
-  ] = updatedAccount;
+  // Check for phase graduation (Member Update might graduate from Phase 1 to Phase 2)
+  if (updatedAccount.phase !== targetGroup.phase) {
+      perfLogger.logActivity(locationPath.c, locationPath.consti, targetGroup.ward || "Unknown", updatedAccount.phase, true, targetGroup.phase);
+  }
+
+  accounts[locationPath.c][locationPath.consti][locationPath.idx] = updatedAccount;
 
   writeJSON(generalFile, accounts);
 
@@ -683,13 +677,18 @@ router.post("/set-principles", (req, res) => {
 
   outer: for (const c in accounts) {
     for (const consti in accounts[c]) {
-      for (const w in accounts[c][consti]) {
-        const list = accounts[c][consti][w];
-        const idx = list.findIndex(acc => acc.groupName === groupName);
-        if (idx !== -1) {
-          targetGroup = list[idx];
-          locationPath = { c, consti, w, idx };
-          break outer;
+      const list = accounts[c][consti];
+      if (Array.isArray(list)) {
+        let currentWard = "Unknown Ward";
+        for (let i = 0; i < list.length; i++) {
+          const item = list[i];
+          if (typeof item === 'string') {
+            currentWard = item;
+          } else if (typeof item === 'object' && item !== null && item.groupName === groupName) {
+            targetGroup = item;
+            locationPath = { c, consti, idx: i, w: currentWard };
+            break outer;
+          }
         }
       }
     }
@@ -734,12 +733,17 @@ router.post("/set-principles", (req, res) => {
                        globalWardIdx.toString().padStart(4, '0') + 
                        (locationPath.idx + 1).toString().padStart(3, '0');
 
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].principles = principles;
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].principlesSetAt = new Date().toISOString();
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].phase = 3;
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].accountNumber = accountNumber;
-  accounts[locationPath.c][locationPath.consti][locationPath.w][locationPath.idx].pin = targetGroup.constitutionStartKey || null;
-  
+  // Check for phase graduation (Set Principles graduates group to Phase 3)
+  if (targetGroup.phase !== 3) {
+      perfLogger.logActivity(locationPath.c, locationPath.consti, locationPath.w, 3, true, targetGroup.phase);
+  }
+
+  accounts[locationPath.c][locationPath.consti][locationPath.idx].principles = principles;
+  accounts[locationPath.c][locationPath.consti][locationPath.idx].principlesSetAt = new Date().toISOString();
+  accounts[locationPath.c][locationPath.consti][locationPath.idx].phase = 3;
+  accounts[locationPath.c][locationPath.consti][locationPath.idx].accountNumber = accountNumber;
+  accounts[locationPath.c][locationPath.consti][locationPath.idx].pin = targetGroup.constitutionStartKey || null;
+
   writeJSON(generalFile, accounts);
 
   const totalMembers = Object.keys(targetGroup).filter(k => 
@@ -1409,136 +1413,7 @@ router.get("/group/:groupName", (req, res) => {
   return res.render("group-details", { group, userRole, currentUserPhone: userPhone });
 });
 
-/* ================= API: Verify Members Against data.json ================= */
-router.post("/api/verify-members", (req, res) => {
-  try {
-    const { members } = req.body;
-    
-    if (!members || !Array.isArray(members)) {
-      return res.status(400).json({ error: "members array is required" });
-    }
-
-    console.log(`✓ Received ${members.length} members to verify`);
-
-    // Read data.json to get registered users
-    const usersFile = path.join(__dirname, "../data.json");
-    const users = readJSON(usersFile, []);
-    console.log(`✓ Loaded ${users.length} users from data.json`);
-    
-    // Read general.json to get group members
-    const generalData = readJSON(generalFile, {});
-    console.log(`✓ Loaded general.json for group member lookup`);
-
-    // Build a map of phone numbers from general.json groups (trustees, officials, members)
-    const generalMembersMap = new Map();
-    const flattenForSearch = (obj) => {
-      if (!obj) return;
-      for (const key of Object.keys(obj)) {
-        if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
-          const m = obj[key];
-          if (m.phone) {
-            const normPhone = norm(m.phone);
-            if (!generalMembersMap.has(normPhone)) {
-              generalMembersMap.set(normPhone, {
-                name: m.name || m.title || key,
-                id: m.id || null,
-                memberNumber: m.memberNumber || null
-              });
-            }
-          }
-        }
-      }
-    };
-    
-    // Search through all groups in general.json
-    for (const county in generalData) {
-      const countyData = generalData[county];
-      if (countyData && typeof countyData === 'object') {
-        for (const constituency in countyData) {
-          const constData = countyData[constituency];
-          if (constData && typeof constData === 'object') {
-            for (const ward in constData) {
-              const wardData = constData[ward];
-              if (Array.isArray(wardData)) {
-                wardData.forEach(group => flattenForSearch(group));
-              } else {
-                flattenForSearch(wardData);
-              }
-            }
-          }
-        }
-      }
-    }
-    console.log(`✓ Built general members map with ${generalMembersMap.size} entries`);
-
-    // Verify each member against data.json and general.json
-    const results = members.map(member => {
-      const { key, phone, id, role, title, index } = member;
-      
-      // Normalize phone for comparison
-      const normalizedPhone = norm(phone);
-      
-      // Find matching user in data.json by phone number
-      const matchedUser = users.find(u => norm(u.phoneNumber) === normalizedPhone);
-      
-      let verificationResult = {
-        key,
-        phone,
-        id: id || null,
-        role,
-        title,
-        index,
-        name: null,
-        verified: false,
-        notRegistered: true
-      };
-      
-      if (matchedUser) {
-        // Phone found in data.json - get name
-        const fullName = `${matchedUser.FirstName} ${matchedUser.MiddleName || ''} ${matchedUser.LastName}`.replace(/\s+/g, ' ').trim();
-        
-        // Check if ID matches
-        const idMatch = id && String(matchedUser.idNumber || '').trim() === String(id).trim();
-        
-        verificationResult = {
-          ...verificationResult,
-          name: fullName,
-          verified: idMatch,
-          notRegistered: false
-        };
-        
-        console.log(`✓ Match in data.json: ${phone} → ${fullName} (ID match: ${idMatch})`);
-      } else {
-        // Check if member exists in general.json (from any group)
-        const generalMember = generalMembersMap.get(normalizedPhone);
-        if (generalMember) {
-          const fullName = generalMember.name || 'Group Member';
-          const idMatch = id && generalMember.id && String(generalMember.id).trim() === String(id).trim();
-          
-          verificationResult = {
-            ...verificationResult,
-            name: fullName,
-            verified: idMatch || false,
-            notRegistered: false,
-            source: 'general'
-          };
-          
-          console.log(`✓ Match in general.json: ${phone} → ${fullName} (ID match: ${idMatch})`);
-        } else {
-          console.log(`✗ Not found: ${phone}`);
-        }
-      }
-      
-      return verificationResult;
-    });
-
-    console.log(`✓ Verification complete. Returning ${results.length} results`);
-    return res.json({ success: true, members: results });
-  } catch (err) {
-    console.error("Error in /api/verify-members:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
+// Redundant verify-members removed (Consolidated at line 310)
 
 /* 📥 API: Track Form Download */
 router.post("/api/form-download-log", (req, res) => {

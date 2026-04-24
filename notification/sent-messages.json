@@ -1,0 +1,50 @@
+[
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Your application for ONE SACCO  is pending. Agent available at your location. Contact: 0740001141",
+    "createdAt": "2026-04-24T11:21:03.444Z"
+  },
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Group Creation Request: ONE SACCO . Submitted by Processor: 0740001141. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
+    "createdAt": "2026-04-24T11:21:03.455Z"
+  },
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0740415992",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: ONE SACCO  has been activated by Agent brian siaya agent. \nRole: Chairperson\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-24T16:15:08.886Z"
+  },
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0700051102",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: ONE SACCO  has been activated by Agent brian siaya agent. \nRole: Ass. Chairperson\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-24T16:15:08.894Z"
+  },
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0746001141",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: ONE SACCO  has been activated by Agent brian siaya agent. \nRole: member\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-24T16:15:08.898Z"
+  },
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0700051102",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: ONE SACCO  has been activated by Agent brian siaya agent. \nRole: Auditor\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-24T16:52:32.919Z"
+  }
+]

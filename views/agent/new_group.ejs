@@ -779,7 +779,7 @@
         </div>
 
         <div class="btn-container" id="verifyBtnContainer" style="padding-top:12px;">
-          <button class="btn-tbank" id="confirmSubmitBtn" onclick="confirmAndSubmit()" style="display:none;">
+          <button class="btn-tbank" id="confirmSubmitBtn" onclick="submitTbankRegistration()" style="display:none;">
             <i class="fas fa-check-circle"></i> Confirm & Submit Registration
           </button>
           <button class="btn-secondary" onclick="goBackToForm()">
@@ -1295,28 +1295,22 @@
 
     // ─── VERIFY MEMBERS ───────────────────────────────────────
     function verifyMembers() {
-      // Fast check: block if group already has members
-      checkGroupProposedMembers().then(totalProposedMembers => {
-        if (totalProposedMembers > 0) {
-          showNotification('Group already has ' + totalProposedMembers + ' members. Cannot verify again.', 'error');
-          return;
+      // Start verification flow
+      try {
+        const list = document.getElementById('verificationList');
+        if (list) {
+          list.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--primary);"></i><p style="margin-top:10px; font-size:13px; color:var(--slate);">Preparing verification...</p></div>';
         }
-        
-        try {
-          const list = document.getElementById('verificationList');
-          if (list) {
-            list.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--primary);"></i><p style="margin-top:10px; font-size:13px; color:var(--slate);">Preparing verification...</p></div>';
-          }
-        } catch(e) { console.error('Pre-verify prep error:', e); }
+      } catch(e) { console.error('Pre-verify prep error:', e); }
       
         const allPhones = [], phoneErrors = [];
         let hasEmptyMemberNumber = false, emptyMemberName = '';
 
         for (let i=0; i<STD_TRUSTEES; i++) {
           const idx         = i+1;
-          const memberNumber= document.getElementById(`t${idx}_memberNumber`).value.trim();
-          const phone       = document.getElementById(`t${idx}_phone`).value.trim();
-          const title       = document.getElementById(`t${idx}_title`).value.trim();
+          const memberNumber= document.getElementById(`t${idx}_memberNumber`)?.value.trim() || '';
+          const phone       = document.getElementById(`t${idx}_phone`)?.value.trim() || '';
+          const title       = document.getElementById(`t${idx}_title`)?.value.trim() || '';
           if (!title)        { showNotification(`Title is required for Trustee ${idx}. Please select a title.`); return; }
           if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = title; }
           if (i===0) { if (isValidPhone(phone)) allPhones.push({ phone, name:`Trustee ${idx} (${title})` }); }
@@ -1329,9 +1323,9 @@
         let hasOfficialTitle = false, hasOfficialNumber = false, missingOfficialInfo = '';
         for (let i=0; i<currentOfficialsCount; i++) {
           const idx         = STD_TRUSTEES + i + 1;
-          const memberNumber= document.getElementById(`official_${idx}_memberNumber`).value.trim();
-          const phone       = document.getElementById(`official_${idx}_phone`).value.trim();
-          const title       = document.getElementById(`official_${idx}_title`).value.trim();
+          const memberNumber= document.getElementById(`official_${idx}_memberNumber`)?.value.trim() || '';
+          const phone       = document.getElementById(`official_${idx}_phone`)?.value.trim() || '';
+          const title       = document.getElementById(`official_${idx}_title`)?.value.trim() || '';
           if (!title)        { hasOfficialTitle = true; missingOfficialInfo = `Official ${i+1}`; }
           if (!memberNumber) { hasEmptyMemberNumber = true; hasOfficialNumber = true; if (!missingOfficialInfo) missingOfficialInfo = `Official ${i+1}`; }
           if (phone && isValidPhone(phone)) allPhones.push({ phone, name: title || `Official ${i+1}` });
@@ -1342,8 +1336,8 @@
 
         for (let i=0; i<regularMembersCount; i++) {
           const idx         = STD_TRUSTEES + currentOfficialsCount + i + 1;
-          const memberNumber= document.getElementById(`member_${idx}_memberNumber`).value.trim();
-          const phone       = document.getElementById(`member_${idx}_phone`).value.trim();
+          const memberNumber= document.getElementById(`member_${idx}_memberNumber`)?.value.trim() || '';
+          const phone       = document.getElementById(`member_${idx}_phone`)?.value.trim() || '';
           if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = `Member ${i+1}`; }
           if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Member ${i+1}`)); return; }
           allPhones.push({ phone, name:`Member ${i+1} (Index ${idx})` });
@@ -1400,7 +1394,6 @@
         }
 
         showVerificationForm();
-      });
     }
 
     // ─── SHOW VERIFICATION FORM ──────────────────────────────
@@ -1422,37 +1415,36 @@
       for (let i=0; i<STD_TRUSTEES; i++) {
         const idx = i+1;
         membersToVerify.push({
-          key:`trustee_${idx}`, memberNumber:document.getElementById(`t${idx}_memberNumber`).value.trim(),
-          phone:document.getElementById(`t${idx}_phone`).value.trim(), id:document.getElementById(`t${idx}_id`).value.trim(),
-          role:'trustee', title:document.getElementById(`t${idx}_title`).value.trim()||'Trustee', index:String(idx)
+          key:`trustee_${idx}`, memberNumber:document.getElementById(`t${idx}_memberNumber`)?.value.trim() || '',
+          phone:document.getElementById(`t${idx}_phone`)?.value.trim() || '', id:document.getElementById(`t${idx}_id`)?.value.trim() || '',
+          role:'trustee', title:document.getElementById(`t${idx}_title`)?.value.trim()||'Trustee', index:String(idx)
         });
       }
       for (let i=0; i<currentOfficialsCount; i++) {
         const idx = STD_TRUSTEES + i + 1;
         membersToVerify.push({
-          key:`official_${idx}`, memberNumber:document.getElementById(`official_${idx}_memberNumber`).value.trim(),
-          phone:document.getElementById(`official_${idx}_phone`).value.trim(), id:document.getElementById(`official_${idx}_id`).value.trim(),
-          role:'official', title:document.getElementById(`official_${idx}_title`).value.trim()||'No Title', index:String(idx)
+          key:`official_${idx}`, memberNumber:document.getElementById(`official_${idx}_memberNumber`)?.value.trim() || '',
+          phone:document.getElementById(`official_${idx}_phone`)?.value.trim() || '', id:document.getElementById(`official_${idx}_id`)?.value.trim() || '',
+          role:'official', title:document.getElementById(`official_${idx}_title`)?.value.trim()||'No Title', index:String(idx)
         });
       }
       for (let i=0; i<regularMembersCount; i++) {
         const idx = STD_TRUSTEES + currentOfficialsCount + i + 1;
         membersToVerify.push({
-          key:`member_${idx}`, memberNumber:document.getElementById(`member_${idx}_memberNumber`).value.trim(),
-          phone:document.getElementById(`member_${idx}_phone`).value.trim(), id:document.getElementById(`member_${idx}_id`).value.trim(),
+          key:`member_${idx}`, memberNumber:document.getElementById(`member_${idx}_memberNumber`)?.value.trim() || '',
+          phone:document.getElementById(`member_${idx}_phone`)?.value.trim() || '', id:document.getElementById(`member_${idx}_id`)?.value.trim() || '',
           role:'member', title:'Member', index:String(idx)
         });
       }
 
       let agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
-      if (agentPhone.startsWith('0'))    agentPhone = agentPhone.substring(1);
-      if (agentPhone.startsWith('+254')) agentPhone = agentPhone.substring(4);
-      if (agentPhone.startsWith('254') && agentPhone.length > 9) agentPhone = agentPhone.substring(3);
-
-      fetch('/general/api/verify-members', {
+      fetch('/general/verify-members', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ members: [{ key:'agent', phone:agentPhone, id:'', role:'agent', title:'Agent', index:'0' }] })
-      }).then(r => r.json()).then(agentResponse => {
+      }).then(r => {
+        if (!r.ok) return { success: false };
+        return r.json();
+      }).then(agentResponse => {
         if (agentResponse.success && agentResponse.members && agentResponse.members.length > 0) {
           const agentData = agentResponse.members[0];
           if (agentData.name) {
@@ -1472,10 +1464,13 @@
         document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
       });
 
-      fetch('/general/api/verify-members', {
+      fetch('/general/verify-members', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ members: membersToVerify })
-      }).then(r => r.json()).then(apiResponse => {
+      }).then(r => {
+        if (!r.ok) throw new Error('Verification failed with status ' + r.status);
+        return r.json();
+      }).then(apiResponse => {
         if (!apiResponse.success) { showNotification('Failed to verify members. Please try again.', 'error'); return; }
         const verifiedMembers = apiResponse.members;
         verifiedMembersData = verifiedMembers;
@@ -1559,15 +1554,7 @@
       updateTrusteeTitles();
     }
 
-    function confirmAndSubmit() { 
-      checkGroupProposedMembers().then(totalProposedMembers => {
-        if (totalProposedMembers > 0) {
-          showNotification('Group "' + groupData.groupName + '" already has ' + totalProposedMembers + ' members. Cannot update.', 'error');
-          return;
-        }
-        submitTbankRegistration();
-      });
-    }
+      submitTbankRegistration();
 
     // ─── DOWNLOAD REGISTRATION FORM ────────────────────────────────────
     async function downloadRegistrationForm() {
@@ -1716,13 +1703,14 @@
       const constitutionStartKey = String(Math.floor(1000 + Math.random() * 9000));
       
       const agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
+      const finalTotalCount = STD_TRUSTEES + currentOfficialsCount + regularMembersCount;
       
       const payload = {
         groupName: groupData.groupName,
         groupType,
         groupCertificateNumber,
         phone: groupData.phone,
-        totalMembers: totalMembersCount,
+        totalMembers: finalTotalCount,
         totalAmount: totalPayableAmount,
         paymentMethod: 'tbank',
         constitutionStartKey,

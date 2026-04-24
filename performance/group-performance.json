@@ -1,0 +1,168 @@
+{
+  "counties": {
+    "Siaya": {
+      "totals": {
+        "phase1": 0,
+        "phase2": 1,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 3
+      },
+      "hourly": {
+        "2026-04-24-19": {
+          "phase1": 0,
+          "phase2": 1,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 3
+        }
+      },
+      "weekly": {
+        "2026-W17": {
+          "phase1": 0,
+          "phase2": 1,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 3
+        }
+      },
+      "monthly": {
+        "2026-04": {
+          "phase1": 0,
+          "phase2": 1,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 3
+        }
+      },
+      "constituencies": {
+        "Ugenya": {
+          "totals": {
+            "phase1": 0,
+            "phase2": 1,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 3
+          },
+          "hourly": {
+            "2026-04-24-19": {
+              "phase1": 0,
+              "phase2": 1,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 3
+            }
+          },
+          "weekly": {
+            "2026-W17": {
+              "phase1": 0,
+              "phase2": 1,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 3
+            }
+          },
+          "monthly": {
+            "2026-04": {
+              "phase1": 0,
+              "phase2": 1,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 3
+            }
+          },
+          "wards": {
+            "East Ugenya": {
+              "totals": {
+                "phase1": 0,
+                "phase2": 1,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 3
+              },
+              "hourly": {
+                "2026-04-24-19": {
+                  "phase1": 0,
+                  "phase2": 1,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 3
+                }
+              },
+              "weekly": {
+                "2026-W17": {
+                  "phase1": 0,
+                  "phase2": 1,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 3
+                }
+              },
+              "monthly": {
+                "2026-04": {
+                  "phase1": 0,
+                  "phase2": 1,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 3
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "global": {
+    "hourly": {
+      "2026-04-24-19": {
+        "phase1": 0,
+        "phase2": 1,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 3
+      }
+    },
+    "weekly": {
+      "2026-W17": {
+        "phase1": 0,
+        "phase2": 1,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 3
+      }
+    },
+    "monthly": {
+      "2026-04": {
+        "phase1": 0,
+        "phase2": 1,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 3
+      }
+    },
+    "totals": {
+      "phase1": 0,
+      "phase2": 1,
+      "phase3": 0,
+      "phase4": 0,
+      "phase5": 0,
+      "totalMembers": 3
+    }
+  }
+}
