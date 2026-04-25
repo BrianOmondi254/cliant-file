@@ -6,6 +6,7 @@ const router = express.Router();
 const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
+const regPerfLogger = require("../performance/registration-performance");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -509,6 +510,16 @@ router.post("/", (req, res) => {
 
   // Log Performance (New Group Created in Phase 1)
   perfLogger.logActivity(county, constituency, ward, 1);
+  
+  // Log Registration Performance
+  try {
+      regPerfLogger.logRegistration(county, constituency, ward, 'groups');
+      if (newAccount.totalProposedMembers > 0) {
+          regPerfLogger.logRegistration(county, constituency, ward, 'members', newAccount.totalProposedMembers);
+      }
+  } catch (e) {
+      console.error("Registration performance log error:", e);
+  }
 
   writeJSON(generalFile, accounts);
 
@@ -652,6 +663,13 @@ router.post("/update-members", (req, res) => {
   // Check for phase graduation (Member Update might graduate from Phase 1 to Phase 2)
   if (updatedAccount.phase !== targetGroup.phase) {
       perfLogger.logActivity(locationPath.c, locationPath.consti, targetGroup.ward || "Unknown", updatedAccount.phase, true, targetGroup.phase);
+      
+      // If graduating to phase 2, it might be the first time members are actually "registered" 
+      // but they were already counted in the proposed count usually.
+      // However, if we want to be precise about WHEN they are added:
+      if (updatedAccount.phase === 2) {
+          // You could log more here if needed
+      }
   }
 
   accounts[locationPath.c][locationPath.consti][locationPath.idx] = updatedAccount;

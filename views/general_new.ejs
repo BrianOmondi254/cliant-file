@@ -316,15 +316,15 @@ function switchTab(tab) {
             <label style="margin-top:0;">Chairperson Phone</label>
             <div class="input-group">
               <i class="fas fa-phone"></i>
-              <input type="tel" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="07XXXXXXXX" maxlength="10" inputmode="numeric" required>
+              <input type="tel" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Phone Number" inputmode="numeric" required>
             </div>
  
             <label>Chairperson Full Name</label>
             <div class="input-group">
-              <i class="fas fa-user"></i>
-              <input type="text" id="fullNameInput" placeholder="First Middle Last" required oninput="parseFullName()">
+              <i class="fas fa-user-tie"></i>
+              <input type="text" name="name" id="fullNameInput" placeholder="First Middle Last" required oninput="parseFullName()">
             </div>
-            <small style="color:red;font-size:0.7rem;display:none;" id="nameError">Please enter at least 2 names.</small>
+            <small id="nameError" style="color:red;font-size:0.7rem;display:none;margin-bottom:12px;">Please enter three names (First Middle Last).</small>
             <input type="hidden" name="firstName" id="firstName">
             <input type="hidden" name="secondName" id="secondName">
             <input type="hidden" name="lastName" id="lastName">
@@ -376,6 +376,23 @@ function switchTab(tab) {
       </form>
     `;
     initCounties();
+    
+    // Dynamic Phone Maxlength
+    const confirmedPhoneInput = document.getElementById('confirmedPhone');
+    if(confirmedPhoneInput) {
+      confirmedPhoneInput.addEventListener('input', function() {
+          let val = this.value.trim();
+          if (val.startsWith('+254')) {
+              this.maxLength = 13;
+          } else if (val.startsWith('254')) {
+              this.maxLength = 12;
+          } else if (val.startsWith('07') || val.startsWith('01')) {
+              this.maxLength = 10;
+          } else {
+              this.maxLength = 13; // default
+          }
+      });
+    }
   }
 }
  
@@ -564,9 +581,12 @@ function goToRegions() {
   const name     = document.getElementById('confirmedGroup').value.trim();
   const phone    = document.getElementById('confirmedPhone').value.trim();
   const fullName = document.getElementById('fullNameInput').value.trim();
+  const isValidP = (p) => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
+  
   if (!name)                                    { alert('Please enter a group name.'); return; }
-  if (!phone || phone.length < 10)              { alert('Enter a valid 10-digit phone number.'); return; }
-  if (fullName.split(/\s+/).length < 2)         { document.getElementById('nameError').style.display = 'block'; return; }
+  if (!phone)                                   { alert('Please enter phone number'); return; }
+  if (!isValidP(phone))                         { alert('Invalid phone format. Use +254XXXXXXXXX (13), 254XXXXXXXXX (12) or 07/01XXXXXXXX (10 digits).'); return; }
+  if (fullName.split(/\s+/).length < 3)         { document.getElementById('nameError').style.display = 'block'; return; }
   document.getElementById('nameError').style.display = 'none';
   document.getElementById('cAccount').classList.add('hidden');
   document.getElementById('gRegions').classList.remove('hidden');

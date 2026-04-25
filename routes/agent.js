@@ -10,6 +10,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
 const dataFile = path.join(__dirname, "../data.json");
 const perfLogger = require("../performance/group-performance");
+const regPerfLogger = require("../performance/registration-performance");
 
 const notification = require("../notification/notification");
 const loadJSON = (file, fallback = []) => {
@@ -307,25 +308,9 @@ router.post("/set-constitution-key", async (req, res) => {
       found = true;
   };
 
-  if (Array.isArray(general)) {
-       const g = general.find(g => g.groupName === groupName);
-       if (g) updateGroup(g);
-  } else {
-       // Traverse Hierarchy
-       for (const c in general) {
-           if (typeof general[c] !== 'object') continue;
-           for (const co in general[c]) {
-               if (typeof general[c][co] !== 'object') continue;
-               for (const w in general[c][co]) {
-                   const list = general[c][co][w];
-                   if (Array.isArray(list)) {
-                       const g = list.find(g => g.groupName === groupName);
-                       if (g) updateGroup(g);
-                   }
-               }
-           }
-       }
-  }
+  const flat = flattenData(general);
+  const g = flat.find(g => g.groupName === groupName);
+  if (g) updateGroup(g);
 
   if (found) {
       fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
@@ -353,24 +338,9 @@ router.post("/verify-constitution-key", async (req, res) => {
     }
   };
 
-  if (Array.isArray(general)) {
-    const g = general.find(g => g.groupName === groupName);
-    if (g) checkKey(g);
-  } else {
-    for (const c in general) {
-      if (typeof general[c] !== 'object') continue;
-      for (const co in general[c]) {
-        if (typeof general[c][co] !== 'object') continue;
-        for (const w in general[c][co]) {
-          const list = general[c][co][w];
-          if (Array.isArray(list)) {
-            const g = list.find(g => g.groupName === groupName);
-            if (g) checkKey(g);
-          }
-        }
-      }
-    }
-  }
+  const flat = flattenData(general);
+  const g = flat.find(g => g.groupName === groupName);
+  if (g) checkKey(g);
 
   if (verified) {
     return res.json({ success: true });
@@ -453,28 +423,31 @@ router.post("/register-new-group", async (req, res) => {
       found = true;
   };
 
-  if (Array.isArray(general)) {
-       const g = general.find(g => g.groupName === groupName);
-       if (g) updateGroup(g);
-  } else {
-       // Traverse Hierarchy
-       for (const c in general) {
-           if (typeof general[c] !== 'object') continue;
-           for (const co in general[c]) {
-               if (typeof general[c][co] !== 'object') continue;
-               for (const w in general[c][co]) {
-                   const list = general[c][co][w];
-                   if (Array.isArray(list)) {
-                       const g = list.find(g => g.groupName === groupName);
-                       if (g) updateGroup(g);
-                   }
-               }
-           }
-       }
-  }
+  const flat = flattenData(general);
+  const g = flat.find(g => g.groupName === groupName);
+  if (g) updateGroup(g);
 
   if (found) {
       fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
+      
+      // Log Registration Performance
+      try {
+          // Since we might not have full location here easily, we search for the group's location or use agent's location
+          // For simplicity, let's assume we use the agent's location if available
+          const agents = loadJSON(agentFile, []);
+          const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(req.session.user.phoneNumber));
+          if (agent) {
+              regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'groups');
+              // Increment members too
+              const memberCount = (trustees ? trustees.length : 0) + (officials ? officials.length : 0) + (members ? members.length : 0);
+              if (memberCount > 0) {
+                  regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'members', memberCount);
+              }
+          }
+      } catch (e) {
+          console.error("Registration performance log error:", e);
+      }
+
       return res.json({ success: true, message: "Group registered successfully" });
   } else {
       return res.json({ success: false, message: "Group not found." });
@@ -637,6 +610,11 @@ router.post("/activate-group", async (req, res) => {
     // Log Performance New Activity (Starts at Phase 2)
     try {
         perfLogger.logActivity(county, constituency, ward, group.phase, false, null, group.totalProposedMembers);
+        // Also log registration performance
+        regPerfLogger.logRegistration(county, constituency, ward, 'groups');
+        if (group.totalProposedMembers > 0) {
+            regPerfLogger.logRegistration(county, constituency, ward, 'members', group.totalProposedMembers);
+        }
     } catch(e) { console.error("Performance log error (Create):", e); }
   }
 
