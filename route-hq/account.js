@@ -30,8 +30,7 @@ const norm = (p) => (p ? String(p).trim() : "");
 
 /* ================= GET HQ DASHBOARD ================= */
 router.get("/", (req, res) => {
-  const stats = readJSON(statsFile);
-  res.render("hq/hq", { stats });
+  res.render("hq/hq");
 });
 
 // Dynamic section route

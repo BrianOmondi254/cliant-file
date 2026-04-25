@@ -7,6 +7,7 @@ const router = express.Router();
 const usersFile = path.join(__dirname, "../data.json");
 const tbankFile = path.join(__dirname, "../tbank.json");
 const statsFile = path.join(__dirname, "../personal_stats.json");
+const regPerfLogger = require("../performance/registration-performance");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback = []) => {
@@ -147,6 +148,13 @@ router.post("/register", async (req, res) => {
   users.push(newUser);
   writeJSON(usersFile, users);
 
+  // Log Performance
+  try {
+      regPerfLogger.logRegistration(newUser.county, newUser.constituency, newUser.ward, 'members');
+  } catch (e) {
+      console.error("Member registration performance log error:", e);
+  }
+
   // 🔄 Rotate passkey for the next user
   rotatePasskey();
 
@@ -234,6 +242,13 @@ router.post("/complete-registration", async (req, res) => {
 
     users.push(newUser);
     writeJSON(usersFile, users);
+
+    // Log Performance
+    try {
+        regPerfLogger.logRegistration(newUser.county, newUser.constituency, newUser.ward, 'members');
+    } catch (e) {
+        console.error("Member registration performance log error:", e);
+    }
 
     // Update statistics
     const stats = readJSON(statsFile, { totalRegistrations: 0, mpesaPayments: 0, passkeyPayments: 0 });

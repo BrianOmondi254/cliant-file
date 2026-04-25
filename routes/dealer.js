@@ -6,6 +6,7 @@ const bcrypt = require("bcrypt");
 const usersFile = path.join(__dirname, "../data.json");
 const agentFile = path.join(__dirname, "../agent.json");
 const dealerFile = path.join(__dirname, "../dealer.json"); 
+const regPerfLogger = require("../performance/registration-performance");
 
 // Helper functions
 const readJSON = (file, fallback = []) => {
@@ -81,11 +82,28 @@ router.get("/", (req, res) => {
   const agents = readJSON(agentFile, []);
   const dealerAgents = agents.filter((a) => norm(a.dealerPhone) === norm(phoneNumber));
 
+  const locationsFile = path.join(__dirname, "../locations.json");
+  const locationsData = readJSON(locationsFile, {});
+  
+  // Find wards already occupied by an agent in this constituency
+  const occupiedWards = agents
+    .filter(a => a.constituency === dealer.constituency && a.ward)
+    .map(a => a.ward);
+
+  let localWards = [];
+  if (dealer.county && dealer.constituency && locationsData[dealer.county] && locationsData[dealer.county][dealer.constituency]) {
+      const wardsObj = locationsData[dealer.county][dealer.constituency];
+      if (wardsObj && Array.isArray(wardsObj.wards)) {
+          localWards = wardsObj.wards.filter(wardName => !occupiedWards.includes(wardName)); // Hide occupied wards
+      }
+  }
+
   res.render("dealer/dealer", {
     step: "dashboard",
     user: req.session.user,
     dealer: dealer,
     agents: dealerAgents,
+    localWards: localWards,
     message: null,
     preview: null, error: null, success: null
   });
@@ -240,6 +258,13 @@ router.post("/approve-agent", (req, res) => {
   agents.push(newAgent);
   writeJSON(agentFile, agents);
 
+  // Log Performance
+  try {
+      regPerfLogger.logRegistration(newAgent.county, newAgent.constituency, newAgent.ward, 'agents');
+  } catch (e) {
+      console.error("Agent registration performance log error:", e);
+  }
+
   res.json({ success: true });
 });
 
@@ -299,6 +324,13 @@ router.post("/", (req, res) => {
   });
 
   fs.writeFileSync(agentFile, JSON.stringify(agents, null, 2));
+
+  // Log Performance
+  try {
+      regPerfLogger.logRegistration(user.county, user.constituency, user.ward, 'agents');
+  } catch (e) {
+      console.error("Agent registration performance log error:", e);
+  }
 
   // Filter agents again for the view
   const dealerAgents = agents.filter((a) => norm(a.dealerPhone) === norm(sessionPhone));
@@ -381,6 +413,14 @@ router.post("/create-pin", async (req, res) => {
       dealers.push(newDealer);
       writeJSON(dealerFile, dealers);
       console.log(`[dealer-create-pin] Added new dealer:`, newDealer);
+      
+      // Log Performance
+      try {
+          regPerfLogger.logRegistration(newDealer.county, newDealer.constituency, newDealer.ward, 'dealers');
+      } catch (e) {
+          console.error("Dealer registration performance log error:", e);
+      }
+
       dealerIndex = dealers.length - 1; // Set to the new index
     }
 
