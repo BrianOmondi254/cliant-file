@@ -1,0 +1,376 @@
+{
+  "counties": {
+    "Siaya": {
+      "totals": {
+        "agents": 1,
+        "dealers": 0,
+        "members": {
+          "total": 0,
+          "gender": {
+            "male": 0,
+            "female": 0,
+            "unknown": 0
+          },
+          "ageBracket": {
+            "18-25": 0,
+            "26-35": 0,
+            "36-45": 0,
+            "46-55": 0,
+            "56+": 0,
+            "unknown": 0
+          }
+        },
+        "groups": 0
+      },
+      "hourly": {
+        "2026-04-25-14": {
+          "agents": 1,
+          "dealers": 0,
+          "members": {
+            "total": 0,
+            "gender": {
+              "male": 0,
+              "female": 0,
+              "unknown": 0
+            },
+            "ageBracket": {
+              "18-25": 0,
+              "26-35": 0,
+              "36-45": 0,
+              "46-55": 0,
+              "56+": 0,
+              "unknown": 0
+            }
+          },
+          "groups": 0
+        }
+      },
+      "weekly": {
+        "2026-W18": {
+          "agents": 1,
+          "dealers": 0,
+          "members": {
+            "total": 0,
+            "gender": {
+              "male": 0,
+              "female": 0,
+              "unknown": 0
+            },
+            "ageBracket": {
+              "18-25": 0,
+              "26-35": 0,
+              "36-45": 0,
+              "46-55": 0,
+              "56+": 0,
+              "unknown": 0
+            }
+          },
+          "groups": 0
+        }
+      },
+      "monthly": {
+        "2026-04": {
+          "agents": 1,
+          "dealers": 0,
+          "members": {
+            "total": 0,
+            "gender": {
+              "male": 0,
+              "female": 0,
+              "unknown": 0
+            },
+            "ageBracket": {
+              "18-25": 0,
+              "26-35": 0,
+              "36-45": 0,
+              "46-55": 0,
+              "56+": 0,
+              "unknown": 0
+            }
+          },
+          "groups": 0
+        }
+      },
+      "constituencies": {
+        "Ugenya": {
+          "totals": {
+            "agents": 1,
+            "dealers": 0,
+            "members": {
+              "total": 0,
+              "gender": {
+                "male": 0,
+                "female": 0,
+                "unknown": 0
+              },
+              "ageBracket": {
+                "18-25": 0,
+                "26-35": 0,
+                "36-45": 0,
+                "46-55": 0,
+                "56+": 0,
+                "unknown": 0
+              }
+            },
+            "groups": 0
+          },
+          "hourly": {
+            "2026-04-25-14": {
+              "agents": 1,
+              "dealers": 0,
+              "members": {
+                "total": 0,
+                "gender": {
+                  "male": 0,
+                  "female": 0,
+                  "unknown": 0
+                },
+                "ageBracket": {
+                  "18-25": 0,
+                  "26-35": 0,
+                  "36-45": 0,
+                  "46-55": 0,
+                  "56+": 0,
+                  "unknown": 0
+                }
+              },
+              "groups": 0
+            }
+          },
+          "weekly": {
+            "2026-W18": {
+              "agents": 1,
+              "dealers": 0,
+              "members": {
+                "total": 0,
+                "gender": {
+                  "male": 0,
+                  "female": 0,
+                  "unknown": 0
+                },
+                "ageBracket": {
+                  "18-25": 0,
+                  "26-35": 0,
+                  "36-45": 0,
+                  "46-55": 0,
+                  "56+": 0,
+                  "unknown": 0
+                }
+              },
+              "groups": 0
+            }
+          },
+          "monthly": {
+            "2026-04": {
+              "agents": 1,
+              "dealers": 0,
+              "members": {
+                "total": 0,
+                "gender": {
+                  "male": 0,
+                  "female": 0,
+                  "unknown": 0
+                },
+                "ageBracket": {
+                  "18-25": 0,
+                  "26-35": 0,
+                  "36-45": 0,
+                  "46-55": 0,
+                  "56+": 0,
+                  "unknown": 0
+                }
+              },
+              "groups": 0
+            }
+          },
+          "wards": {
+            "West Ugenya": {
+              "totals": {
+                "agents": 1,
+                "dealers": 0,
+                "members": {
+                  "total": 0,
+                  "gender": {
+                    "male": 0,
+                    "female": 0,
+                    "unknown": 0
+                  },
+                  "ageBracket": {
+                    "18-25": 0,
+                    "26-35": 0,
+                    "36-45": 0,
+                    "46-55": 0,
+                    "56+": 0,
+                    "unknown": 0
+                  }
+                },
+                "groups": 0
+              },
+              "hourly": {
+                "2026-04-25-14": {
+                  "agents": 1,
+                  "dealers": 0,
+                  "members": {
+                    "total": 0,
+                    "gender": {
+                      "male": 0,
+                      "female": 0,
+                      "unknown": 0
+                    },
+                    "ageBracket": {
+                      "18-25": 0,
+                      "26-35": 0,
+                      "36-45": 0,
+                      "46-55": 0,
+                      "56+": 0,
+                      "unknown": 0
+                    }
+                  },
+                  "groups": 0
+                }
+              },
+              "weekly": {
+                "2026-W18": {
+                  "agents": 1,
+                  "dealers": 0,
+                  "members": {
+                    "total": 0,
+                    "gender": {
+                      "male": 0,
+                      "female": 0,
+                      "unknown": 0
+                    },
+                    "ageBracket": {
+                      "18-25": 0,
+                      "26-35": 0,
+                      "36-45": 0,
+                      "46-55": 0,
+                      "56+": 0,
+                      "unknown": 0
+                    }
+                  },
+                  "groups": 0
+                }
+              },
+              "monthly": {
+                "2026-04": {
+                  "agents": 1,
+                  "dealers": 0,
+                  "members": {
+                    "total": 0,
+                    "gender": {
+                      "male": 0,
+                      "female": 0,
+                      "unknown": 0
+                    },
+                    "ageBracket": {
+                      "18-25": 0,
+                      "26-35": 0,
+                      "36-45": 0,
+                      "46-55": 0,
+                      "56+": 0,
+                      "unknown": 0
+                    }
+                  },
+                  "groups": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "global": {
+    "hourly": {
+      "2026-04-25-14": {
+        "agents": 1,
+        "dealers": 0,
+        "members": {
+          "total": 0,
+          "gender": {
+            "male": 0,
+            "female": 0,
+            "unknown": 0
+          },
+          "ageBracket": {
+            "18-25": 0,
+            "26-35": 0,
+            "36-45": 0,
+            "46-55": 0,
+            "56+": 0,
+            "unknown": 0
+          }
+        },
+        "groups": 0
+      }
+    },
+    "weekly": {
+      "2026-W18": {
+        "agents": 1,
+        "dealers": 0,
+        "members": {
+          "total": 0,
+          "gender": {
+            "male": 0,
+            "female": 0,
+            "unknown": 0
+          },
+          "ageBracket": {
+            "18-25": 0,
+            "26-35": 0,
+            "36-45": 0,
+            "46-55": 0,
+            "56+": 0,
+            "unknown": 0
+          }
+        },
+        "groups": 0
+      }
+    },
+    "monthly": {
+      "2026-04": {
+        "agents": 1,
+        "dealers": 0,
+        "members": {
+          "total": 0,
+          "gender": {
+            "male": 0,
+            "female": 0,
+            "unknown": 0
+          },
+          "ageBracket": {
+            "18-25": 0,
+            "26-35": 0,
+            "36-45": 0,
+            "46-55": 0,
+            "56+": 0,
+            "unknown": 0
+          }
+        },
+        "groups": 0
+      }
+    },
+    "totals": {
+      "agents": 1,
+      "dealers": 0,
+      "members": {
+        "total": 0,
+        "gender": {
+          "male": 0,
+          "female": 0,
+          "unknown": 0
+        },
+        "ageBracket": {
+          "18-25": 0,
+          "26-35": 0,
+          "36-45": 0,
+          "46-55": 0,
+          "56+": 0,
+          "unknown": 0
+        }
+      },
+      "groups": 0
+    }
+  }
+}
