@@ -148,6 +148,23 @@ const app = {
         this.seedHistory();
         this.render();
         this.updateBadge();
+        this.setupPhoneListeners();
+    },
+    setupPhoneListeners() {
+        document.addEventListener('input', (e) => {
+            if (e.target.type === 'tel' || e.target.id === 'newChairPhone') {
+                let val = e.target.value.trim();
+                if (val.startsWith('+254')) {
+                    e.target.maxLength = 13;
+                } else if (val.startsWith('254')) {
+                    e.target.maxLength = 12;
+                } else if (val.startsWith('07') || val.startsWith('01')) {
+                    e.target.maxLength = 10;
+                } else {
+                    e.target.maxLength = 13;
+                }
+            }
+        });
     },
     updateBadge() {
         const badge = document.getElementById('msgBadge');
@@ -381,13 +398,13 @@ const app = {
                                     </h4>
                                     <div class="form-group">
                                         <label class="form-label">Chairperson Phone</label>
-                                        <input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="07XXXXXXXX" maxlength="10" inputmode="numeric" required>
+                                        <input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="Phone Number" inputmode="numeric" required>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Chairperson Full Name</label>
                                         <input type="text" id="newFullNameInput" class="form-input" placeholder="First Middle Last" required oninput="app.parseNewFullName()">
                                     </div>
-                                    <small style="color:red;font-size:0.7rem;display:none;" id="newNameError">Please enter at least 2 names.</small>
+                                    <small style="color:red;font-size:0.7rem;display:none;" id="newNameError">Please enter exactly 3 names (First Middle Last).</small>
                                     <input type="hidden" name="firstName" id="newFirstName">
                                     <input type="hidden" name="secondName" id="newSecondName">
                                     <input type="hidden" name="lastName" id="newLastName">
@@ -794,9 +811,11 @@ const app = {
         const name = document.getElementById('newGroupName').value.trim();
         const phone = document.getElementById('newChairPhone').value.trim();
         const fullName = document.getElementById('newFullNameInput').value.trim();
+        const isValidP = (p) => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
+        
         if (!name) { this.showToast('Please enter a group name.', 'error'); return; }
-        if (!phone || phone.length < 10) { this.showToast('Enter a valid 10-digit phone number.', 'error'); return; }
-        if (fullName.split(/\s+/).length < 2) { document.getElementById('newNameError').style.display = 'block'; return; }
+        if (!phone || !isValidP(phone)) { this.showToast('Invalid phone. Use +254XXXXXXXXX (13), 254XXXXXXXXX (12) or 07/01XXXXXXXX (10 digits).', 'error'); return; }
+        if (fullName.split(/\s+/).length < 3) { document.getElementById('newNameError').style.display = 'block'; return; }
         document.getElementById('newNameError').style.display = 'none';
         document.getElementById('cAccountStep').classList.add('hidden');
         document.getElementById('gRegionsStep').classList.remove('hidden');

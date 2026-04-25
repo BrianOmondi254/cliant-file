@@ -70,202 +70,57 @@
       border-radius: 5px 5px 0 0;
     }
 
-    .header h1 {
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 5px;
-      letter-spacing: -.5px;
-    }
-
-    .header p {
-      font-size: 12px;
-      opacity: .9;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.5px; }
+    .header p { font-size: 12px; opacity: .9; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
 
     .back-btn {
-      position: absolute;
-      top: 20px;
-      left: 16px;
-      color: var(--white);
-      text-decoration: none;
-      font-size: 16px;
-      opacity: .8;
-      transition: opacity .2s;
+      position: absolute; top: 20px; left: 16px;
+      color: var(--white); text-decoration: none; font-size: 16px; opacity: .8; transition: opacity .2s;
     }
+    .back-btn:hover { opacity: 1; }
 
-    .back-btn:hover {
-      opacity: 1;
-    }
+    .content { padding: 20px; padding-bottom: 40px; }
 
-    .content {
-      padding: 20px;
-      padding-bottom: 40px;
-    }
+    .group-info { background: var(--light); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--slate); font-weight: 500; }
+    .info-value { font-weight: 700; color: var(--dark); }
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .status-pending { background: #fffbeb; color: #d97706; }
 
-    .group-info {
-      background: var(--light);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid #e2e8f0;
-      font-size: 13px;
-    }
-
-    .info-row:last-child {
-      border-bottom: none;
-    }
-
-    .info-label {
-      color: var(--slate);
-      font-weight: 500;
-    }
-
-    .info-value {
-      font-weight: 700;
-      color: var(--dark);
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .status-pending {
-      background: #fffbeb;
-      color: #d97706;
-    }
-
-    .members-section {
-      margin-bottom: 20px;
-    }
-
-    .members-section h3 {
-      font-size: 14px;
-      color: var(--dark);
-      margin-bottom: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    .members-section { margin-bottom: 20px; }
+    .members-section h3 { font-size: 14px; color: var(--dark); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
     .member-card {
-      background: var(--white);
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 12px 15px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      background: var(--white); border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 12px 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
     }
-
-    .member-card:hover {
-      border-color: var(--primary);
-    }
-
-    .member-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .member-icon {
-      width: 36px;
-      height: 36px;
-      background: var(--primary-light);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--primary);
-    }
-
-    .member-details h4 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--dark);
-    }
-
-    .member-details p {
-      font-size: 11px;
-      color: var(--slate);
-      margin-top: 2px;
-    }
-
-    .member-phone {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--secondary);
-    }
-
-    .section-divider {
-      height: 1px;
-      background: #e2e8f0;
-      margin: 20px 0;
-    }
+    .member-card:hover { border-color: var(--primary); }
+    .member-info { display: flex; align-items: center; gap: 12px; }
+    .member-icon { width: 36px; height: 36px; background: var(--primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); }
+    .member-details h4 { font-size: 14px; font-weight: 600; color: var(--dark); }
+    .member-details p { font-size: 11px; color: var(--slate); margin-top: 2px; }
+    .member-phone { font-size: 12px; font-weight: 600; color: var(--secondary); }
 
     .btn {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      background: var(--primary);
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all .3s ease;
-      text-align: center;
-      text-decoration: none;
+      display: block; width: 100%; padding: 14px; border: none; border-radius: 10px;
+      background: var(--primary); color: white; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all .3s ease; text-align: center; text-decoration: none;
     }
+    .btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
+    .btn-secondary { background: var(--secondary); }
+    .btn-secondary:hover { background: #3367d6; }
+    .btn-row { display: flex; gap: 10px; }
+    .btn-row .btn { flex: 1; }
 
-    .btn:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-    }
+    .empty-members { text-align: center; padding: 30px; color: var(--slate); }
+    .empty-members i { font-size: 40px; margin-bottom: 10px; opacity: .5; }
 
-    .btn-secondary {
-      background: var(--secondary);
-    }
-
-    .btn-secondary:hover {
-      background: #3367d6;
-    }
-
-    .empty-members {
-      text-align: center;
-      padding: 30px;
-      color: var(--slate);
-    }
-
-    .empty-members i {
-      font-size: 40px;
-      margin-bottom: 10px;
-      opacity: .5;
-    }
-
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none !important; }
 
     .constitution-form {
-      margin-top: 20px;
-      padding-top: 20px;
-      border-top: 2px dashed #e2e8f0;
+      margin-top: 20px; padding-top: 20px; border-top: 2px dashed #e2e8f0;
       animation: slideUp 0.3s ease;
     }
 
@@ -274,186 +129,113 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--dark);
-      margin-bottom: 8px;
-    }
-
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--dark); margin-bottom: 8px; }
     .form-group input {
-      width: 100%;
-      padding: 14px;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 3px;
-      text-align: center;
-      transition: all 0.3s ease;
+      width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+      font-size: 16px; font-weight: 600; letter-spacing: 3px; text-align: center; transition: all 0.3s ease;
     }
+    .form-group input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(95,158,160,0.2); }
 
-    .form-group input:focus {
-      border-color: var(--accent);
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(95, 158, 160, 0.2);
+    /* ── STEP PROGRESS BAR ── */
+    .step-progress {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 14px 20px 10px; background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0; margin-bottom: 18px; border-radius: 8px;
+      overflow-x: auto;
     }
+    .step-dot {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: default; min-width: 36px;
+    }
+    .step-dot .dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; border: 2px solid #e2e8f0;
+      background: white; color: #94a3b8; transition: all 0.3s ease;
+    }
+    .step-dot.active .dot { background: #008080; border-color: #008080; color: white; box-shadow: 0 0 0 3px rgba(0,128,128,0.2); }
+    .step-dot.completed .dot { background: #10b981; border-color: #10b981; color: white; }
+    .step-dot .label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; text-align: center; white-space: nowrap; }
+    .step-dot.active .label { color: #008080; }
+    .step-dot.completed .label { color: #10b981; }
+    .step-connector { height: 2px; flex: 1; min-width: 10px; background: #e2e8f0; margin-bottom: 16px; transition: background 0.3s; }
+    .step-connector.done { background: #10b981; }
 
-    .btn-row {
-      display: flex;
-      gap: 10px;
-    }
+    /* ── STEP PANELS ── */
+    .step-panel { display: none; animation: slideUp 0.3s ease; }
+    .step-panel.active { display: block; }
 
-    .btn-row .btn {
-      flex: 1;
+    .step-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0;
     }
+    .step-card-title {
+      color: #008080; margin-bottom: 15px; font-size: 15px;
+      border-bottom: 2px solid #e0f2f1; padding-bottom: 12px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .step-card-title i { background: #e0f2f1; padding: 8px; border-radius: 8px; }
 
-    .step-section {
-      display: none;
-    }
+    .nav-row { display: flex; gap: 10px; margin-top: 8px; }
+    .nav-row .btn { padding: 13px; font-size: 14px; }
+    .btn-back { background: #95a5a6; flex: 1; }
+    .btn-back:hover { background: #7f8c8d; transform: none; }
+    .btn-next { background: linear-gradient(135deg, #5f9ea0, #008080); flex: 2; }
+    .btn-next:hover { background: linear-gradient(135deg, #008080, #005f5f); }
+    .btn-activate { background: linear-gradient(135deg, #0f9d58, #2e7d32); flex: 2; }
+    .btn-activate:hover { background: #1b5e20; }
 
-    .step-section.active {
-      display: block;
-      animation: slideUp 0.3s ease;
+    /* field styles */
+    .field-label {
+      display: block; font-size: 11px; font-weight: 700; color: #475569;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
     }
+    .field-select, .field-input {
+      width: 100%; padding: 10px 12px; font-size: 13px; border-radius: 8px;
+      border: 1.5px solid #cbd5e1; background: white; margin-bottom: 14px;
+    }
+    .field-select:focus, .field-input:focus { border-color: #008080; outline: none; }
 
-    .step-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--dark);
-      margin-bottom: 15px;
-      text-align: center;
-    }
+    .field-with-icon { position: relative; }
+    .field-with-icon i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px; }
+    .field-with-icon select, .field-with-icon input { padding-left: 40px; }
 
-    .step-subtitle {
-      font-size: 13px;
-      color: var(--slate);
-      margin-bottom: 20px;
-      text-align: center;
-    }
+    .info-box { font-size: 10px; color: #5f9ea0; margin-top: -10px; margin-bottom: 12px; font-style: italic; }
 
-    .form-section {
-      background: var(--light);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 15px;
+    /* account list */
+    .acct-header {
+      display: grid; grid-template-columns: 35px 1fr 55px 24px; gap: 4px;
+      margin-bottom: 8px; padding: 8px 0; background: #e0f2f1; border-radius: 8px;
     }
+    .acct-header div { font-size: 10px; font-weight: 800; color: #00695c; }
 
-    .form-section h4 {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--dark);
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .charge-row {
+      display: grid; grid-template-columns: 35px 1fr 55px 24px; gap: 4px;
+      margin-bottom: 8px; background: white; padding: 8px 0; border-radius: 8px; border: 1px solid #e2e8f0;
     }
+    .charge-row input { width: 100%; height: 36px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    .charge-row .chg-num { background: #f8fafc; color: #64748b; text-align: center; font-weight: 800; }
+    .charge-row .chg-name { padding: 0 8px; font-weight: 600; }
+    .charge-row .chg-amt { padding: 0 8px; font-weight: 700; color: #008080; text-align: right; }
+    .charge-row .del-btn { background: #ef4444; color: white; border: none; border-radius: 6px; width: 100%; height: 36px; cursor: pointer; font-size: 14px; }
 
-    .form-section h4 i {
-      color: var(--accent);
-    }
-
-    .input-group {
-      margin-bottom: 10px;
-    }
-
-    .input-group label {
-      display: block;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--slate);
-      margin-bottom: 5px;
-    }
-
-    .input-group input,
-    .input-group select {
-      width: 100%;
-      padding: 10px 12px;
-      border: 2px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      background: var(--white);
-    }
-
-    .input-group input:focus,
-    .input-group select:focus {
-      border-color: var(--accent);
-      outline: none;
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--accent);
-    }
-
-    .checkbox-group label {
-      font-size: 12px;
-      color: var(--dark);
-    }
-
-    .account-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-      align-items: center;
-    }
-
-    .account-row input {
-      flex: 1;
-      padding: 8px 10px;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 12px;
-    }
-
-    .account-row .remove-btn {
-      background: var(--danger);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-    }
-
-    .add-account-btn {
-      background: var(--secondary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      margin-bottom: 15px;
-    }
+    /* review */
+    #reviewContentArea { max-height: 450px; overflow-y: auto; }
   </style>
 </head>
 
 <body>
   <div class="container">
     <div class="header">
-      <a href="/agent" class="back-btn">
-        <i class="fas fa-arrow-left"></i>
-      </a>
+      <a href="/agent" class="back-btn"><i class="fas fa-arrow-left"></i></a>
       <h1><%= group.groupName %></h1>
       <p>Pending Approval Group</p>
     </div>
 
     <div class="content">
+
+      <!-- ══ GROUP INFO ══ -->
       <div id="groupInfoSection" class="group-info">
         <div class="info-row">
           <span class="info-label">Location</span>
@@ -485,55 +267,46 @@
         <% } %>
       </div>
 
+      <!-- ══ MEMBERS ══ -->
       <div id="membersSection" class="members-section">
         <h3>Registered Members</h3>
-        
         <% if (group.membersList && group.membersList.length > 0) { %>
-          <% 
+          <%
             const trustees = group.membersList.filter(m => m.type === 'trustee');
             const officials = group.membersList.filter(m => m.type === 'official');
-            const members = group.membersList.filter(m => m.type === 'member');
+            const members  = group.membersList.filter(m => m.type === 'member');
           %>
-          
           <% trustees.forEach((m, i) => { %>
             <div class="member-card">
               <div class="member-info">
-                <div class="member-icon">
-                  <i class="fas fa-user-tie"></i>
-                </div>
+                <div class="member-icon"><i class="fas fa-user-tie"></i></div>
                 <div class="member-details">
                   <h4><%= m.name || 'Unknown' %></h4>
-                  <p>Trustee <%= i + 1 %> · <%= m.title || 'Member' %></p>
+                  <p>Trustee <%= i+1 %> · <%= m.title || 'Member' %></p>
                 </div>
               </div>
               <span class="member-phone"><%= m.phone %></span>
             </div>
           <% }); %>
-          
           <% officials.forEach((m, i) => { %>
             <div class="member-card">
               <div class="member-info">
-                <div class="member-icon">
-                  <i class="fas fa-user-gear"></i>
-                </div>
+                <div class="member-icon"><i class="fas fa-user-gear"></i></div>
                 <div class="member-details">
                   <h4><%= m.name || 'Unknown' %></h4>
-                  <p>Official <%= i + 1 %></p>
+                  <p>Official <%= i+1 %></p>
                 </div>
               </div>
               <span class="member-phone"><%= m.phone %></span>
             </div>
           <% }); %>
-          
           <% members.forEach((m, i) => { %>
             <div class="member-card">
               <div class="member-info">
-                <div class="member-icon">
-                  <i class="fas fa-user"></i>
-                </div>
+                <div class="member-icon"><i class="fas fa-user"></i></div>
                 <div class="member-details">
                   <h4><%= m.name || 'Unknown' %></h4>
-                  <p>Member <%= i + 1 %></p>
+                  <p>Member <%= i+1 %></p>
                 </div>
               </div>
               <span class="member-phone"><%= m.phone %></span>
@@ -546,775 +319,877 @@
           </div>
         <% } %>
       </div>
-      </div>
 
+      <!-- ══ CONTINUE BUTTONS ══ -->
       <div id="continueSection">
         <button onclick="showConstitutionForm()" class="btn" style="background: linear-gradient(135deg, #5f9ea0, #008080);">
           <i class="fas fa-file-contract"></i> Continue to Constitution
         </button>
-        <a href="/agent/conform?groupName=<%= encodeURIComponent(group.groupName) %>" target="_blank" class="btn btn-secondary" style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <a href="/agent/conform?groupName=<%= encodeURIComponent(group.groupName) %>" target="_blank"
+           class="btn btn-secondary" style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:8px;">
           <i class="fas fa-download"></i> View Constitution
         </a>
       </div>
 
+      <!-- ══ KEY VERIFICATION FORM ══ -->
       <div id="constitutionForm" class="hidden constitution-form">
         <% if (existingKey) { %>
-        <h3 style="font-size: 14px; color: var(--dark); margin-bottom: 15px; font-weight: 700; text-transform: uppercase;">
+        <h3 style="font-size:14px; color:var(--dark); margin-bottom:15px; font-weight:700; text-transform:uppercase;">
           <i class="fas fa-key"></i> Constitution Start Key
         </h3>
-        
         <div class="form-group">
           <label for="startKey">Enter Key to Confirm</label>
           <input type="text" id="startKey" maxlength="4" placeholder="----" autocomplete="off">
         </div>
-        
-        <div id="startKeyError" style="color: var(--danger); font-size: 12px; margin-bottom: 10px; display: none;">
+        <div id="startKeyError" style="color:var(--danger); font-size:12px; margin-bottom:10px; display:none;">
           <i class="fas fa-exclamation-circle"></i> Incorrect key. Please try again.
         </div>
-
         <div class="btn-row">
           <button onclick="verifyStartKey()" class="btn" style="background: linear-gradient(135deg, #5f9ea0, #008080);">
             <i class="fas fa-check"></i> Verify & Continue
           </button>
-          <button onclick="cancelConstitution()" class="btn" style="background: #64748b;">
+          <button onclick="cancelConstitution()" class="btn" style="background:#64748b;">
             <i class="fas fa-times"></i> Cancel
           </button>
         </div>
         <% } else { %>
-        <h3 style="font-size: 14px; color: var(--dark); margin-bottom: 15px; font-weight: 700; text-transform: uppercase;">
+        <h3 style="font-size:14px; color:var(--dark); margin-bottom:15px; font-weight:700; text-transform:uppercase;">
           <i class="fas fa-key"></i> Set Constitution Start Key
         </h3>
-        
         <div class="form-group">
           <label for="startKey">Start Key (4 digits)</label>
           <input type="text" id="startKey" maxlength="4" placeholder="----" autocomplete="off">
         </div>
-        
-        <div id="startKeyError" style="color: var(--danger); font-size: 12px; margin-bottom: 10px; display: none;">
+        <div id="startKeyError" style="color:var(--danger); font-size:12px; margin-bottom:10px; display:none;">
           <i class="fas fa-exclamation-circle"></i> Please enter a valid 4-digit key
         </div>
-
         <div class="btn-row">
           <button onclick="submitStartKey()" class="btn" style="background: linear-gradient(135deg, #5f9ea0, #008080);">
             <i class="fas fa-check"></i> Submit
           </button>
-          <button onclick="cancelConstitution()" class="btn" style="background: #64748b;">
+          <button onclick="cancelConstitution()" class="btn" style="background:#64748b;">
             <i class="fas fa-times"></i> Cancel
           </button>
         </div>
         <% } %>
       </div>
 
-      <div id="step1Section" style="display: none;">
-        <div style="text-align: center; padding: 25px 20px 20px;">
-          <div style="width:55px; height:55px; background:#e0f2f1; color:#008080; border-radius:16px; display:inline-flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:15px; transform: rotate(-3deg); box-shadow: 0 8px 20px rgba(0, 128, 128, 0.1);">
+      <!-- ══ SETUP WIZARD ══ -->
+      <div id="step1Section" style="display:none;">
+
+        <!-- Header -->
+        <div style="text-align:center; padding:20px 20px 10px;">
+          <div style="width:50px; height:50px; background:#e0f2f1; color:#008080; border-radius:14px; display:inline-flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:12px; box-shadow:0 6px 16px rgba(0,128,128,0.15);">
             <i class="fas fa-file-shield"></i>
           </div>
-          <h4 style="color:#1e293b; margin:0 0 8px; font-size:17px; font-weight:800;">Group Principles / Constitution Setup</h4>
-          <p style="color:#64748b; font-size:12px; line-height:1.5; margin:0 auto;">Configure activation rules for this group</p>
+          <h4 style="color:#1e293b; font-size:16px; font-weight:800; margin-bottom:4px;">Constitution Setup</h4>
+          <p style="color:#64748b; font-size:12px;">Complete each step to configure group principles</p>
         </div>
 
-        <div id="setupStep1">
-        <!-- Step 1: Duration & Frequency -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-hourglass-end" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 1: Duration & Frequency
-          </h4>
-          
-          <div style="margin-bottom:18px;">
-            <label style="display:block; font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">End Saving Period</label>
-            <div style="position:relative;">
-              <i class="fas fa-hourglass-end" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px;"></i>
-              <select id="endSavingPeriod" style="width:100%; padding:12px 12px 12px 40px; font-size:14px; border-radius:10px; border:1.5px solid #cbd5e1; background:white; cursor:pointer;">
+        <!-- Progress bar -->
+        <div class="step-progress" id="stepProgress">
+          <div class="step-dot active" id="dot1"><div class="dot">1</div><div class="label">Timing</div></div>
+          <div class="step-connector" id="con1"></div>
+          <div class="step-dot" id="dot2"><div class="dot">2</div><div class="label">Govern</div></div>
+          <div class="step-connector" id="con2"></div>
+          <div class="step-dot" id="dot3"><div class="dot">3</div><div class="label">Accounts</div></div>
+          <div class="step-connector" id="con3"></div>
+          <div class="step-dot" id="dot4"><div class="dot">4</div><div class="label">Loans</div></div>
+          <div class="step-connector" id="con4"></div>
+          <div class="step-dot" id="dot5"><div class="dot">5</div><div class="label">Benefits</div></div>
+          <div class="step-connector" id="con5"></div>
+          <div class="step-dot" id="dot6"><div class="dot">6</div><div class="label">Closer</div></div>
+          <div class="step-connector" id="con6"></div>
+          <div class="step-dot" id="dot7"><div class="dot"><i class="fas fa-check" style="font-size:9px;"></i></div><div class="label">Review</div></div>
+        </div>
+
+        <!-- ── STEP PANELS ── -->
+
+        <!-- STEP 1: Duration & Frequency -->
+        <div class="step-panel active" id="panel1">
+          <div class="step-card">
+            <h4 class="step-card-title">
+              <i class="fas fa-hourglass-end"></i> Step 1: Duration &amp; Frequency
+            </h4>
+
+            <label class="field-label">End Saving Period</label>
+            <div class="field-with-icon" style="margin-bottom:14px;">
+              <i class="fas fa-hourglass-end"></i>
+              <select id="endSavingPeriod" class="field-select" style="padding-left:40px; margin-bottom:0;">
                 <option value="" disabled selected>Select Save Duration</option>
                 <option value="6-months">6 Months</option>
-                <option value="1-year" selected>1 Year</option>
+                <option value="1-year">1 Year</option>
                 <option value="2-years">2 Years</option>
                 <option value="3-years">3 Years</option>
                 <option value="4-years">4 Years</option>
                 <option value="5-years">5 Years</option>
               </select>
             </div>
-          </div>
 
-          <div style="margin-bottom:18px;">
-            <label style="display:block; font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Contribution Interval</label>
-            <div style="position:relative;">
-              <i class="fas fa-history" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px;"></i>
-              <select id="groupInterval" style="width:100%; padding:12px 12px 12px 40px; font-size:14px; border-radius:10px; border:1.5px solid #cbd5e1; background:white; cursor:pointer;">
+            <label class="field-label">Contribution Interval</label>
+            <div class="field-with-icon" style="margin-bottom:14px;">
+              <i class="fas fa-history"></i>
+              <select id="groupInterval" class="field-select" style="padding-left:40px; margin-bottom:0;" onchange="updateIntervalDetail()">
                 <option value="" disabled selected>Select Frequency</option>
                 <option value="daily">Daily</option>
-                <option value="weekly" selected>Weekly</option>
+                <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
                 <option value="yearly">Yearly</option>
               </select>
             </div>
-            <div id="intervalDetailContainer" style="margin-top:15px;">
-              <label style="display:block; font-size:11px; font-weight:600; color:#64748b; margin-bottom:6px;">Day of Week</label>
-              <select id="contributionDay" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;">
+
+            <div id="intervalDetailContainer" style="display:none; margin-top:8px;">
+              <label class="field-label" id="intervalDetailLabel">Day of Week</label>
+              <select id="contributionDay" class="field-select">
                 <option value="monday">Monday</option>
-                <option value="wednesday" selected>Wednesday</option>
+                <option value="wednesday">Wednesday</option>
                 <option value="friday">Friday</option>
                 <option value="saturday">Saturday</option>
               </select>
             </div>
           </div>
-        </div>
 
-        <!-- Step 2: Governance -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-vote-yea" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 2: Governance & Voting
-          </h4>
-          
-          <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:6px;">Fast Notification Threshold (%)</label>
-            <input type="number" id="fastThreshold" value="60" style="width:100%; padding:10px; font-size:14px; border-radius:8px; border:1px solid #cbd5e1;">
-            <p style="font-size:10px; color:#5f9ea0; margin-top:4px; font-style:italic;"><i class="fas fa-info-circle"></i> Min 51% - Max 99%. Required for quick constitution edits.</p>
-          </div>
-
-          <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:6px;">Edit Account Threshold (%)</label>
-            <input type="number" id="editThreshold" value="75" style="width:100%; padding:10px; font-size:14px; border-radius:8px; border:1px solid #cbd5e1;">
-          </div>
-
-          <div style="margin-bottom:15px;">
-            <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:6px;">Member Removal Threshold (%)</label>
-            <input type="number" id="removeThreshold" value="75" style="width:100%; padding:10px; font-size:14px; border-radius:8px; border:1px solid #cbd5e1;">
-          </div>
-
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="requireNote" style="width:18px; height:18px; accent-color:#008080;">
-            <label style="font-size:11px; color:#475569;">Require response note for removals</label>
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="backToVerification()"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-next" onclick="nextStep(1)">Next <i class="fas fa-arrow-right"></i></button>
           </div>
         </div>
 
-        <!-- Step 3: Contribution Accounts -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-coins" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 3: Accounts Configuration
-          </h4>
+        <!-- STEP 2: Governance -->
+        <div class="step-panel" id="panel2">
+          <div class="step-card">
+            <h4 class="step-card-title">
+              <i class="fas fa-vote-yea"></i> Step 2: Governance &amp; Voting
+            </h4>
 
-          <!-- Column Labels -->
-          <div style="display:grid; grid-template-columns: 35px 1fr 55px 24px; gap:4px; margin-bottom:8px; padding:8px 0; background:#e0f2f1; border-radius:8px;">
-            <div style="font-size:10px; font-weight:800; color:#00695c; text-align:center;">No</div>
-            <div style="font-size:10px; font-weight:800; color:#00695c; text-align:left; padding-left:6px;">Name</div>
-            <div style="font-size:10px; font-weight:800; color:#00695c; text-align:right; padding-right:6px;">Amount</div>
-            <div></div>
-          </div>
+            <label class="field-label">Fast Notification Threshold (%)</label>
+            <input type="number" id="fastThreshold" value="60" class="field-input">
+            <p class="info-box"><i class="fas fa-info-circle"></i> Min 51% – Max 99%. Required for quick constitution edits.</p>
 
-          <div id="otherChargesList" style="width:100%;">
-            <div class="charge-row" style="display:grid; grid-template-columns: 35px 1fr 55px 24px; gap:4px; margin-bottom:8px; background:white; padding:8px 0; border-radius:8px; border:1px solid #e2e8f0;">
-              <input type="text" class="chg-num" value="001" readonly style="width:100%; height:36px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#64748b; text-align:center; font-weight:800;">
-              <input type="text" class="chg-name" value="Saving" readonly style="width:100%; height:36px; font-size:12px; padding:0 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#64748b; font-weight:800;">
-              <input type="number" class="chg-amt" placeholder="0" required style="width:100%; height:36px; font-size:12px; padding:0 8px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#008080; background:#fff; text-align: right;">
-              <div style="width:100%; height:36px; display:flex; align-items:center; justify-content:center;"></div>
+            <label class="field-label">Edit Account Threshold (%)</label>
+            <input type="number" id="editThreshold" value="75" class="field-input">
+
+            <label class="field-label">Member Removal Threshold (%)</label>
+            <input type="number" id="removeThreshold" value="75" class="field-input">
+
+            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+              <input type="checkbox" id="requireNote" style="width:18px; height:18px; accent-color:#008080;">
+              <label for="requireNote" style="font-size:11px; color:#475569;">Require response note for removals</label>
             </div>
           </div>
 
-          <!-- Registration Fee Decider -->
-          <div style="background:#e0f2f1; border:1px solid #5f9ea0; padding:12px; border-radius:8px; margin-bottom:15px;">
-            <label style="display:block; font-size:11px; font-weight:700; color:#065f46; margin-bottom:8px;">
-              <i class="fas fa-question-circle"></i> Registration Fee?
-            </label>
-            <select id="regChoiceSelect" onchange="handleRegDecision(this.value)" style="width:100%; padding:10px; font-size:12px; border-radius:6px; border:1px solid #cbd5e1; cursor:pointer; background-color: white;">
-              <option value="" disabled selected>-- Choose --</option>
-              <option value="charged">YES</option>
-              <option value="not_charged">NO</option>
-            </select>
-          </div>
-
-          <div style="display:flex; gap:10px;">
-            <button type="button" onclick="addChargeRow()" style="flex:1; background:#008080; font-size:12px; padding:12px 16px; border-radius:8px; border:none; cursor:pointer; color:white;">
-              <i class="fas fa-plus"></i> Add Account
-            </button>
-            <button type="button" onclick="confirmAccounts()" style="flex:1; background:#10b981; font-size:12px; padding:12px 16px; border-radius:8px; border:none; cursor:pointer; color:white;">
-              <i class="fas fa-check"></i> OK
-            </button>
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="prevStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-next" onclick="nextStep(2)">Next <i class="fas fa-arrow-right"></i></button>
           </div>
         </div>
 
-        <!-- Step 4: Loan Configuration -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-balance-scale" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 4: Loan Configuration
-          </h4>
+        <!-- STEP 3: Accounts -->
+        <div class="step-panel" id="panel3">
+          <div class="step-card">
+            <h4 class="step-card-title">
+              <i class="fas fa-coins"></i> Step 3: Accounts Configuration
+            </h4>
 
-          <div style="background:#f0f9ff; padding:18px; border-radius:12px; border:1px solid #bae6fd; margin-bottom:15px;">
-            <h5 style="font-size:11px; color:#0369a1; text-transform:uppercase; margin-bottom:10px; font-weight:800;">
-              <i class="fas fa-balance-scale"></i> Loans and Loan Payments
-            </h5>
-
-            <label style="display:block; font-size:11px; font-weight:600; color:#1e293b; margin-bottom:8px;">Fast Loan Qualification Criteria</label>
-            <select id="loanQualifyType" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;" onchange="toggleLoanFields()">
-              <option value="none">None (Standard Qualification)</option>
-              <option value="duration">Dedicated Duration</option>
-              <option value="saving">Saving Limit</option>
-              <option value="both">Both Duration and Saving Limit</option>
-            </select>
-
-            <div id="loanDurationParams" class="hidden" style="margin-top:15px; padding:15px; background:#fff; border-radius:10px; border:1px solid #bae6fd;">
-              <label style="display:block; font-size:11px; font-weight:700; color:#0369a1; margin-bottom:5px;">Waiting Period (Days)</label>
-              <input type="number" id="loanDays" placeholder="Number of days" style="width:100%; padding:12px; border-radius:8px; border:1.5px solid #cbd5e1;">
-            </div>
-
-            <div id="loanSavingParams" class="hidden" style="margin-top:15px; padding-top:15px; border-top:1px dashed #bae6fd;">
-              <label style="display:block; font-size:11px; font-weight:700; color:#0369a1; margin-bottom:5px;">Targeted Saving Amount</label>
-              <input type="number" id="loanTargetAmount" placeholder="KES 0.00" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:800; color:#008080; text-align:right; font-size:16px;">
-            </div>
-
-            <div style="margin-top:20px; padding-top:15px; border-top:2px solid #bae6fd;">
-              <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Primary Loan Type</label>
-                <select id="loanCategory" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;" onchange="toggleLoanCategoryFields()">
-                  <option value="short">Short Term Loan</option>
-                  <option value="long">Long Term Loan</option>
-                </select>
-              </div>
-
-              <div id="longTermGuaranteeDiv" class="hidden" style="margin-bottom:15px; padding:12px; background:#f0f9ff; border-radius:10px; border:1px solid #bae6fd;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#0369a1; margin-bottom:5px;">Long Term Guarantee Method</label>
-                <select id="loanGuaranteeMethod" style="width:100%; padding:8px; font-size:12px; border-radius:6px; border:1px solid #cbd5e1;">
-                  <option value="guarantors">Individual Member Guarantors</option>
-                  <option value="group_savings">Whole Group Common Savings</option>
-                  <option value="opted_members">Opted-in Members' Savings</option>
-                </select>
-              </div>
-            </div>
-
-            <div style="margin-top:20px; padding-top:15px; border-top:2px solid #bae6fd;">
-              <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Loan Repayment Duration (Days)</label>
-                <input type="number" id="loanRepaymentDuration" placeholder="e.g. 30" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;" required>
-              </div>
-
-              <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Repayment Alignment</label>
-                <select id="loanRepaymentAlignment" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;" required>
-                  <option value="collapse">Collapse to Meeting (Nearest day before)</option>
-                  <option value="complete">Complete Set Period (Exact day)</option>
-                </select>
-              </div>
-
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div>
-                  <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Rollover Method</label>
-                  <select id="loanRolloverMethod" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;">
-                    <option value="recount">Recount Period</option>
-                    <option value="fixed">Fixed Date Extension</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Max Rollovers</label>
-                  <input type="number" id="loanMaxRollovers" value="3" max="3" min="0" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-                </div>
-              </div>
-            </div>
-
-            <div style="margin-top:20px; padding:15px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
-              <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Interest Rate (% of Requested Amount)</label>
-              <input type="number" id="loanInterestRate" placeholder="0" step="0.1" style="width:100%; padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:12px;">
-
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <div>
-                  <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Limit Basis</label>
-                  <select id="loanLimitBasis" style="width:100%; padding:10px; font-size:12px; border-radius:8px; border:1px solid #cbd5e1;">
-                    <option value="savings">Member Savings Only</option>
-                    <option value="total">All Contributions Combined</option>
-                  </select>
-                </div>
-                <div>
-                  <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Limit Multiplier</label>
-                  <input type="number" id="loanLimitMultiplier" placeholder="e.g. 3" value="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:800; color:#0369a1;">
-                </div>
-              </div>
-
-              <div style="margin-top:10px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#64748b; margin-bottom:5px;">Max Concurrent Active Loans</label>
-                <input type="number" id="loanMaxCount" placeholder="e.g. 1" value="1" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-weight:800; color:#0369a1;">
-              </div>
-            </div>
-
-            <div id="longTermLoanConfig" class="hidden" style="margin-top:25px; padding:20px; background:#eff6ff; border-radius:12px; border:1px solid #bfdbfe;">
-              <label style="display:block; font-size:11px; font-weight:700; color:#1e40af; margin-bottom:5px;">Long Term Payment Period (Months)</label>
-              <input type="number" id="longTermPaymentPeriod" placeholder="e.g. 12" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1;">
-
-              <div style="margin-top:15px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#1e40af; margin-bottom:5px;">Loan Payment Method</label>
-                <select id="longTermPaymentMethod" style="width:100%; padding:10px; font-size:12px; border-radius:8px; border:1px solid #cbd5e1;" onchange="toggleLongTermPaymentOptions()">
-                  <option value="once">Pay Once (Lump Sum)</option>
-                  <option value="installment">Pay in Installments</option>
-                </select>
-              </div>
-
-              <div id="installmentOptionsDiv" class="hidden" style="margin-top:15px; padding:15px; background:white; border-radius:10px; border:1px dashed #bfdbfe;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#0369a1; margin-bottom:5px;">Installment Schedule Configuration</label>
-                <select id="installmentScheduleType" style="width:100%; padding:10px; font-size:12px; border-radius:8px; border:1px solid #cbd5e1;" onchange="toggleInstallmentSchedule()">
-                  <option value="per_saving_round">Per Group Saving Round</option>
-                  <option value="set_rounds">Set Number of Rounds</option>
-                </select>
-
-                <div id="customRoundsDiv" class="hidden" style="margin-top:10px;">
-                  <label style="display:block; font-size:11px; font-weight:700; color:#0369a1; margin-bottom:5px;">Number of Rounds Allowed</label>
-                  <input type="number" id="customRoundsCount" placeholder="e.g. 5" style="width:100%; padding:8px; font-size:12px; border-radius:8px; border:1px solid #cbd5e1;">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 5: Benefits & Deductions -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-chart-pie" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 5: Benefits & Deductions
-          </h4>
-
-          <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #bfdbfe; margin-bottom:15px;">
-            <h5 style="font-size:11px; color:#1e40af; font-weight:700; margin-bottom:10px;">
-              <i class="fas fa-divide"></i> Distribution Formula
-            </h5>
-
-            <div style="margin-bottom:12px;">
-              <label style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px; display:block;">Model</label>
-              <select id="benefitDistModel" style="width:100%; padding:10px; font-size:14px; border-radius:8px; border:1px solid #cbd5e1;" onchange="toggleBenefitModel()">
-                <option value="equal">Equal Benefit Distribution</option>
-                <option value="performance" selected>Members Performance Distribution</option>
+            <!-- Registration fee -->
+            <div style="background:#e0f2f1; border:1px solid #5f9ea0; padding:12px; border-radius:8px; margin-bottom:15px; margin-top:8px;">
+              <label style="display:block; font-size:11px; font-weight:700; color:#065f46; margin-bottom:8px;">
+                <i class="fas fa-question-circle"></i> Registration Fee?
+              </label>
+              <select id="regChoiceSelect" onchange="handleRegDecision(this.value)"
+                style="width:100%; padding:10px; font-size:12px; border-radius:6px; border:1px solid #cbd5e1; background:white; cursor:pointer;">
+                <option value="" disabled selected>-- Choose --</option>
+                <option value="charged">YES</option>
+                <option value="not_charged">NO</option>
               </select>
             </div>
 
-            <div id="distEqualConfig" style="margin-top:12px; padding:12px; background:white; border-radius:8px; border:1px dashed #cbd5e1; display:none;">
-              <label style="font-size:11px; font-weight:700; color:#475569; display:block;">Officials' Portion (%) <span style="color:#ef4444;">(Max 10%)</span></label>
-              <input type="number" id="officialBenefitPct" placeholder="e.g. 5" max="10" style="width:100%; padding:10px; font-size:14px; margin-top:6px; border:1px solid #cbd5e1; border-radius:8px;" oninput="if(this.value>10) this.value=10;">
-            </div>
+            <div id="accountsConfigArea" style="display:none;">
+              <!-- Column headers -->
+              <div class="acct-header">
+                <div style="text-align:center;">No</div>
+                <div style="padding-left:6px;">Name</div>
+                <div style="text-align:right; padding-right:6px;">Amount</div>
+                <div></div>
+              </div>
 
-            <div id="distPerfConfig" style="margin-top:12px; padding:12px; background:white; border-radius:8px; border:1px dashed #99f6e4;">
-              <label style="font-size:11px; font-weight:700; color:#0f766e; display:block;">Performance Allocation (%)</label>
-              <input type="number" id="memberPerfPct" placeholder="e.g. 70" value="70" style="width:100%; padding:10px; font-size:14px; margin-top:6px; border:1px solid #cbd5e1; border-radius:8px;">
+              <div id="otherChargesList">
+                <div class="charge-row">
+                  <input type="text"   class="chg-num" value="001" readonly>
+                  <input type="text"   class="chg-name" value="Saving" readonly style="background:#f8fafc; color:#64748b; font-weight:800;">
+                  <input type="number" class="chg-amt"  placeholder="0">
+                  <div></div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; margin-bottom:4px; margin-top:15px;">
+                <button type="button" onclick="addChargeRow()"
+                  style="flex:1; background:#008080; font-size:12px; padding:12px; border-radius:8px; border:none; cursor:pointer; color:white;">
+                  <i class="fas fa-plus"></i> Add Account
+                </button>
+                <button type="button" onclick="confirmAccounts()"
+                  style="flex:1; background:#10b981; font-size:12px; padding:12px; border-radius:8px; border:none; cursor:pointer; color:white;">
+                  <i class="fas fa-check"></i> OK / Confirm
+                </button>
+              </div>
+
+              <div id="accountsConfirmedBadge" style="display:none; margin-top:10px; padding:8px 12px; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; font-size:12px; color:#166534; font-weight:700;">
+                <i class="fas fa-check-circle"></i> Accounts confirmed — proceed to next step.
+              </div>
             </div>
           </div>
 
-          <!-- Benefit Target Account -->
-          <div style="background:#fff; padding:15px; border-radius:10px; border:1px solid #fed7d7; margin-bottom:15px;">
-            <h5 style="font-size:11px; color:#9b2c2c; font-weight:700; margin-bottom:10px; text-transform:uppercase;">
-              <i class="fas fa-piggy-bank"></i> Benefit Target Account
-            </h5>
-            <div>
-              <label style="font-size:10px; font-weight:700; color:#718096;">Benefit Account Name</label>
-              <input type="text" id="benefitAccName" class="form-input" placeholder="Benefit Account Name" readonly style="width:100%; padding:10px; font-size:13px; background:#f8fafc; border:1px solid #fed7d7; border-radius:8px; font-weight:700; color:#c53030;">
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="prevStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-next" onclick="nextStep(3)">Next <i class="fas fa-arrow-right"></i></button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Loan Configuration -->
+        <div class="step-panel" id="panel4">
+          <div class="step-card">
+            <h4 class="step-card-title">
+              <i class="fas fa-balance-scale"></i> Step 4: Loan Configuration
+            </h4>
+
+            <div style="background:#f0f9ff; padding:15px; border-radius:10px; border:1px solid #bae6fd; margin-bottom:15px;">
+              <label class="field-label" style="color:#0369a1;">Fast Loan Qualification</label>
+              <select id="loanQualifyType" class="field-select" onchange="toggleLoanFields()">
+                <option value="none">None (Standard Qualification)</option>
+                <option value="duration">Dedicated Duration</option>
+                <option value="saving">Saving Limit</option>
+                <option value="both">Both Duration and Saving Limit</option>
+              </select>
+
+              <div id="loanDurationParams" style="display:none; margin-top:8px;">
+                <label class="field-label">Waiting Period (Days)</label>
+                <input type="number" id="loanDays" placeholder="Number of days" class="field-input">
+              </div>
+              <div id="loanSavingParams" style="display:none; margin-top:8px;">
+                <label class="field-label">Targeted Saving Amount (KES)</label>
+                <input type="number" id="loanTargetAmount" placeholder="0.00" class="field-input" style="font-weight:800; color:#008080; text-align:right;">
+              </div>
             </div>
-          </div>
 
-          <!-- Select accounts contributing to profit -->
-          <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:8px; text-transform:uppercase;">Select accounts contributing to profit</label>
-          <div id="benefitAccountsList" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-          </div>
-
-          <!-- Due Balances Deduction Logic -->
-          <div style="background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:10px;">
-            <h5 style="font-size:11px; color:#4a5568; font-weight:700; margin-bottom:10px; text-transform:uppercase;">
-              <i class="fas fa-file-invoice-dollar"></i> Due Balances Deduction
-            </h5>
-            <label style="font-size:11px; font-weight:700; color:#64748b;">Primary Deduction Source</label>
-            <select id="dueDedSource" style="width:100%; padding:10px; font-size:13px; margin-top:6px; border-radius:8px; border:1px solid #cbd5e1;" onchange="toggleDueDedSource()">
-              <option value="savings">Member's Savings</option>
-              <option value="benefit">Group Benefit</option>
-              <option value="bad_debt">Consider Bad Debt</option>
+            <label class="field-label">Primary Loan Type</label>
+            <select id="loanCategory" class="field-select" onchange="toggleLoanCategoryFields()">
+              <option value="short">Short Term Loan</option>
+              <option value="long">Long Term Loan</option>
             </select>
 
-            <div id="dueLogicSavings" style="margin-top:10px; font-size:11px; color:#475569; padding:10px; background:white; border-radius:6px; border:1px solid #e2e8f0;">
-              <b>Logic:</b> Member Savings cover debt first. If Debt > Savings, overflow to Group Benefit.
+            <div id="longTermGuaranteeDiv" style="display:none; margin-bottom:14px;">
+              <label class="field-label">Guarantee Method</label>
+              <select id="loanGuaranteeMethod" class="field-select">
+                <option value="guarantors">Individual Member Guarantors</option>
+                <option value="group_savings">Whole Group Common Savings</option>
+                <option value="opted_members">Opted-in Members' Savings</option>
+              </select>
             </div>
-            <div id="dueLogicBenefit" class="hidden" style="margin-top:10px; font-size:11px; color:#475569; padding:10px; background:#fff1f2; border-radius:6px; border:1px solid #fecaca;">
-              <b>Logic:</b> Group Benefit covers debt first. Requires balancing.
+
+            <label class="field-label">Repayment Duration (Days)</label>
+            <input type="number" id="loanRepaymentDuration" placeholder="e.g. 30" class="field-input">
+
+            <label class="field-label">Repayment Alignment</label>
+            <select id="loanRepaymentAlignment" class="field-select">
+              <option value="collapse">Collapse to Meeting (Nearest day before)</option>
+              <option value="complete">Complete Set Period (Exact day)</option>
+            </select>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+              <div>
+                <label class="field-label">Rollover Method</label>
+                <select id="loanRolloverMethod" class="field-select" style="margin-bottom:0;">
+                  <option value="recount">Recount Period</option>
+                  <option value="fixed">Fixed Date Extension</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Max Rollovers</label>
+                <input type="number" id="loanMaxRollovers" value="3" max="3" min="0" class="field-input" style="margin-bottom:0;">
+              </div>
             </div>
+
+            <label class="field-label">Interest Rate (% of Requested Amount)</label>
+            <input type="number" id="loanInterestRate" placeholder="0" step="0.1" class="field-input">
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+              <div>
+                <label class="field-label">Limit Basis</label>
+                <select id="loanLimitBasis" class="field-select" style="margin-bottom:0;">
+                  <option value="savings">Member Savings Only</option>
+                  <option value="total">All Contributions Combined</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Limit Multiplier</label>
+                <input type="number" id="loanLimitMultiplier" value="3" class="field-input" style="margin-bottom:0; font-weight:800; color:#0369a1;">
+              </div>
+            </div>
+
+            <label class="field-label">Max Concurrent Active Loans</label>
+            <input type="number" id="loanMaxCount" value="1" class="field-input">
+
+            <!-- Long Term config -->
+            <div id="longTermLoanConfig" style="display:none; margin-top:8px; padding:15px; background:#eff6ff; border-radius:10px; border:1px solid #bfdbfe;">
+              <label class="field-label" style="color:#1e40af;">Long Term Payment Period (Months)</label>
+              <input type="number" id="longTermPaymentPeriod" placeholder="e.g. 12" class="field-input">
+
+              <label class="field-label" style="color:#1e40af;">Loan Payment Method</label>
+              <select id="longTermPaymentMethod" class="field-select" onchange="toggleLongTermPaymentOptions()">
+                <option value="once">Pay Once (Lump Sum)</option>
+                <option value="installment">Pay in Installments</option>
+              </select>
+
+              <div id="installmentOptionsDiv" style="display:none; padding:12px; background:white; border-radius:8px; border:1px dashed #bfdbfe;">
+                <label class="field-label" style="color:#0369a1;">Installment Schedule</label>
+                <select id="installmentScheduleType" class="field-select" onchange="toggleInstallmentSchedule()">
+                  <option value="per_saving_round">Per Group Saving Round</option>
+                  <option value="set_rounds">Set Number of Rounds</option>
+                </select>
+                <div id="customRoundsDiv" style="display:none;">
+                  <label class="field-label">Number of Rounds</label>
+                  <input type="number" id="customRoundsCount" placeholder="e.g. 5" class="field-input">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="prevStep(4)"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-next" onclick="nextStep(4)">Next <i class="fas fa-arrow-right"></i></button>
           </div>
         </div>
 
-        <!-- Step 6: Contribution Closer -->
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-door-closed" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 6: Contribution Closer
-          </h4>
+        <!-- STEP 5: Benefits & Deductions -->
+        <div class="step-panel" id="panel5">
+          <div class="step-card">
+            <h4 class="step-card-title">
+              <i class="fas fa-chart-pie"></i> Step 5: Benefits &amp; Deductions
+            </h4>
 
-          <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
-            <!-- Saving Submission Closer -->
-            <div style="background: white; padding:15px; border-radius:10px; border:1px solid #bdf2e9; margin-bottom:20px;">
-              <h4 style="font-size:12px; margin-bottom:12px; color:#065f46; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #bfdbfe; margin-bottom:15px;">
+              <h5 style="font-size:11px; color:#1e40af; font-weight:700; margin-bottom:10px;"><i class="fas fa-divide"></i> Distribution Formula</h5>
+              <label class="field-label">Model</label>
+              <select id="benefitDistModel" class="field-select" onchange="toggleBenefitModel()">
+                <option value="equal">Equal Benefit Distribution</option>
+                <option value="performance" selected>Members Performance Distribution</option>
+              </select>
+
+              <div id="distEqualConfig" style="display:none; padding:12px; background:white; border-radius:8px; border:1px dashed #cbd5e1;">
+                <label class="field-label">Officials' Portion (%) <span style="color:#ef4444;">(Max 10%)</span></label>
+                <input type="number" id="officialBenefitPct" placeholder="e.g. 5" max="10" class="field-input" style="margin-bottom:0;" oninput="if(this.value>10) this.value=10;">
+              </div>
+              <div id="distPerfConfig" style="padding:12px; background:white; border-radius:8px; border:1px dashed #99f6e4;">
+                <label class="field-label" style="color:#0f766e;">Performance Allocation (%)</label>
+                <input type="number" id="memberPerfPct" value="70" class="field-input" style="margin-bottom:0;">
+              </div>
+            </div>
+
+            <div style="background:#fff; padding:15px; border-radius:10px; border:1px solid #fed7d7; margin-bottom:15px;">
+              <h5 style="font-size:11px; color:#9b2c2c; font-weight:700; margin-bottom:10px; text-transform:uppercase;"><i class="fas fa-piggy-bank"></i> Benefit Target Account</h5>
+              <label class="field-label">Account Name</label>
+              <input type="text" id="benefitAccName" placeholder="Auto-set from Accounts" readonly class="field-input" style="background:#f8fafc; color:#c53030; font-weight:700;">
+            </div>
+
+            <label class="field-label">Accounts contributing to profit</label>
+            <div id="benefitAccountsList" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;"></div>
+
+            <div style="background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0;">
+              <h5 style="font-size:11px; color:#4a5568; font-weight:700; margin-bottom:10px; text-transform:uppercase;"><i class="fas fa-file-invoice-dollar"></i> Due Balances Deduction</h5>
+              <label class="field-label">Primary Deduction Source</label>
+              <select id="dueDedSource" class="field-select" onchange="toggleDueDedSource()">
+                <option value="savings">Member's Savings</option>
+                <option value="benefit">Group Benefit</option>
+                <option value="bad_debt">Consider Bad Debt</option>
+              </select>
+              <div id="dueLogicSavings" style="font-size:11px; color:#475569; padding:10px; background:white; border-radius:6px; border:1px solid #e2e8f0;">
+                <b>Logic:</b> Member Savings cover debt first. If Debt &gt; Savings, overflow to Group Benefit.
+              </div>
+              <div id="dueLogicBenefit" style="display:none; font-size:11px; color:#475569; padding:10px; background:#fff1f2; border-radius:6px; border:1px solid #fecaca;">
+                <b>Logic:</b> Group Benefit covers debt first. Requires balancing.
+              </div>
+            </div>
+          </div>
+
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="prevStep(5)"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-next" onclick="nextStep(5)">Next <i class="fas fa-arrow-right"></i></button>
+          </div>
+        </div>
+
+        <!-- STEP 6: Contribution Closer -->
+        <div class="step-panel" id="panel6">
+          <div class="step-card">
+            <h4 class="step-card-title">
+              <i class="fas fa-door-closed"></i> Step 6: Contribution Closer
+            </h4>
+
+            <!-- Saving Closer -->
+            <div style="background:white; padding:15px; border-radius:10px; border:1px solid #bdf2e9; margin-bottom:18px;">
+              <h5 style="font-size:12px; margin-bottom:12px; color:#065f46; font-weight:700; display:flex; align-items:center; gap:8px;">
                 <i class="fas fa-piggy-bank"></i> Saving Submission Closer
-              </h4>
-              <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Duration to end (Days)</label>
-                <select id="savingCloseDuration" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;">
-                  <option value="1">1 Day Before End</option>
-                  <option value="3">3 Days Before End</option>
-                  <option value="5">5 Days Before End</option>
-                  <option value="7">7 Days Before End</option>
-                  <option value="14">14 Days Before End</option>
-                </select>
-              </div>
-              <div>
-                <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Interval Buffer (Rounds)</label>
-                <select id="savingCloseInterval" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;">
-                  <option value="0">0 Rounds (Last Meeting)</option>
-                  <option value="1">1 Round Before End</option>
-                </select>
-              </div>
+              </h5>
+              <label class="field-label">Duration to end (Days)</label>
+              <select id="savingCloseDuration" class="field-select">
+                <option value="1">1 Day Before End</option>
+                <option value="3">3 Days Before End</option>
+                <option value="5">5 Days Before End</option>
+                <option value="7">7 Days Before End</option>
+                <option value="14">14 Days Before End</option>
+              </select>
+              <label class="field-label">Interval Buffer (Rounds)</label>
+              <select id="savingCloseInterval" class="field-select" style="margin-bottom:0;">
+                <option value="0">0 Rounds (Last Meeting)</option>
+                <option value="1">1 Round Before End</option>
+              </select>
             </div>
 
-            <!-- Loan Submission Closer -->
-            <div style="background: white; padding:15px; border-radius:10px; border:1px solid #bae6fd; margin-bottom:10px;">
-              <h4 style="font-size:12px; margin-bottom:12px; color:#1e40af; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <!-- Loan Closer -->
+            <div style="background:white; padding:15px; border-radius:10px; border:1px solid #bae6fd;">
+              <h5 style="font-size:12px; margin-bottom:12px; color:#1e40af; font-weight:700; display:flex; align-items:center; gap:8px;">
                 <i class="fas fa-hand-holding-usd"></i> Loan Submission Closer
-              </h4>
-              <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Duration to end (Days)</label>
-                <select id="loanCloseDuration" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;">
-                  <option value="1">1 Day Before End</option>
-                  <option value="3">3 Days Before End</option>
-                  <option value="5">5 Days Before End</option>
-                  <option value="7">7 Days Before End</option>
-                  <option value="14">14 Days Before End</option>
-                </select>
-              </div>
-              <div>
-                <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Interval Buffer (Rounds)</label>
-                <select id="loanCloseInterval" style="width:100%; padding:10px; font-size:13px; border-radius:8px; border:1px solid #cbd5e1;">
-                  <option value="0">0 Rounds (Last Meeting)</option>
-                  <option value="1">1 Round Before End</option>
-                </select>
-              </div>
+              </h5>
+              <label class="field-label">Duration to end (Days)</label>
+              <select id="loanCloseDuration" class="field-select">
+                <option value="1">1 Day Before End</option>
+                <option value="3">3 Days Before End</option>
+                <option value="5">5 Days Before End</option>
+                <option value="7">7 Days Before End</option>
+                <option value="14">14 Days Before End</option>
+              </select>
+              <label class="field-label">Interval Buffer (Rounds)</label>
+              <select id="loanCloseInterval" class="field-select" style="margin-bottom:0;">
+                <option value="0">0 Rounds (Last Meeting)</option>
+                <option value="1">1 Round Before End</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        <!-- Step 7: Review & Activate -->
-        <div id="reviewSection" class="hidden" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #e2e8f0;">
-          <h4 style="color:#008080; margin-bottom:15px; font-size:15px; border-bottom:2px solid #e0f2f1; padding-bottom:12px; display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-clipboard-check" style="background:#e0f2f1; padding:8px; border-radius:8px;"></i>
-            Step 7: Review & Activate
-          </h4>
-
-          <div id="reviewContentArea" style="max-height:400px; overflow-y:auto;">
-            <!-- Content will be injected by goToReview -->
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="prevStep(6)"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-next" onclick="nextStep(6)">Review &amp; Activate <i class="fas fa-arrow-right"></i></button>
           </div>
         </div>
 
-        <div style="display:flex; gap:10px;">
-          <button type="button" onclick="backToVerification()" style="flex:1; background:#95a5a6; color:white; padding:14px; border-radius:12px; border:none; cursor:pointer; font-weight:700;">
-            <i class="fas fa-arrow-left"></i> Back
-          </button>
-          <button type="button" onclick="goToReview()" style="flex:2; background:#5f9ea0; color:white; padding:14px; border-radius:12px; border:none; cursor:pointer; font-weight:700;">
-            Review & Next <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
+        <!-- STEP 7: Review & Activate -->
+        <div class="step-panel" id="panel7">
+          <div class="step-card" style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5);">
+            <h4 class="step-card-title" style="color:#065f46; border-bottom-color:#a7f3d0;">
+              <i class="fas fa-clipboard-check" style="background:#a7f3d0;"></i> Step 7: Review &amp; Activate
+            </h4>
+            <div id="reviewContentArea"></div>
+          </div>
 
-      </div>
-    </div>
-  </div>
+          <div class="nav-row">
+            <button class="btn btn-back" onclick="prevStep(7)"><i class="fas fa-arrow-left"></i> Back</button>
+            <button class="btn btn-activate" onclick="savePrinciples()">
+              <i class="fas fa-check-double"></i> Activate Principles
+            </button>
+          </div>
+        </div>
+
+      </div><!-- end #step1Section -->
+
+    </div><!-- end .content -->
+  </div><!-- end .container -->
 
   <script>
-    const groupName = '<%= group.groupName %>';
-    const existingKey = '<%= existingKey || '' %>';
+    const groupName  = '<%= group.groupName %>';
+    const existingKey = '<%= existingKey || "" %>';
     const keyRequired = <%= keyRequired ? 'true' : 'false' %>;
 
+    let currentStep = 1;
+    const TOTAL_STEPS = 7;
+
+    /* ─── Progress indicator ─── */
+    function updateProgress(step) {
+      for (let i = 1; i <= TOTAL_STEPS; i++) {
+        const dot = document.getElementById('dot' + i);
+        dot.classList.remove('active', 'completed');
+        if (i < step)       dot.classList.add('completed');
+        else if (i === step) dot.classList.add('active');
+      }
+      for (let i = 1; i < TOTAL_STEPS; i++) {
+        const con = document.getElementById('con' + i);
+        if (con) con.classList.toggle('done', i < step);
+      }
+    }
+
+    function showPanel(step) {
+      document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('panel' + step);
+      if (panel) {
+        panel.classList.add('active');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      currentStep = step;
+      updateProgress(step);
+    }
+
+    /* ─── Navigation ─── */
+    function nextStep(from) {
+      if (!validateStep(from)) return;
+      if (from === 6) { buildReview(); }
+      showPanel(from + 1);
+    }
+
+    function prevStep(from) {
+      showPanel(from - 1);
+    }
+
+    /* ─── Validation per step ─── */
+    function validateStep(step) {
+      if (step === 1) {
+        const period = document.getElementById('endSavingPeriod').value;
+        const freq   = document.getElementById('groupInterval').value;
+        if (!period) { alert('Please select End Saving Period'); return false; }
+        if (!freq)   { alert('Please select Contribution Interval'); return false; }
+        return true;
+      }
+      if (step === 2) {
+        const ft = +document.getElementById('fastThreshold').value;
+        const et = +document.getElementById('editThreshold').value;
+        const rt = +document.getElementById('removeThreshold').value;
+        if (!ft || ft < 51 || ft > 99) { alert('Fast Notification Threshold must be 51–99%'); return false; }
+        if (!et || et < 51 || et > 99) { alert('Edit Account Threshold must be 51–99%'); return false; }
+        if (!rt || rt < 51 || rt > 99) { alert('Member Removal Threshold must be 51–99%'); return false; }
+        return true;
+      }
+      if (step === 3) {
+        if (!window.confirmedAccounts || window.confirmedAccounts.length === 0) {
+          alert('Please confirm accounts by clicking the OK / Confirm button first');
+          return false;
+        }
+        return true;
+      }
+      if (step === 4) {
+        const repDays = document.getElementById('loanRepaymentDuration').value;
+        if (!repDays || +repDays <= 0) { alert('Please enter Loan Repayment Duration'); return false; }
+        return true;
+      }
+      return true; // steps 5, 6 – no strict requirement
+    }
+
+    /* ─── Interval detail ─── */
+    function updateIntervalDetail() {
+      const freq = document.getElementById('groupInterval').value;
+      const container = document.getElementById('intervalDetailContainer');
+      const lbl = document.getElementById('intervalDetailLabel');
+      const sel  = document.getElementById('contributionDay');
+
+      if (freq === 'weekly') {
+        lbl.textContent = 'Day of Week';
+        sel.innerHTML = '<option value="monday">Monday</option><option value="wednesday">Wednesday</option><option value="friday">Friday</option><option value="saturday">Saturday</option>';
+        container.style.display = 'block';
+      } else if (freq === 'monthly') {
+        lbl.textContent = 'Week of Month';
+        sel.innerHTML = '<option value="1st_week">1st Week</option><option value="2nd_week">2nd Week</option><option value="3rd_week">3rd Week</option><option value="4th_week">4th Week</option>';
+        container.style.display = 'block';
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    /* ─── Accounts ─── */
     function addChargeRow() {
       const container = document.getElementById('otherChargesList');
-      const rowCount = container.children.length + 1;
+      const rowCount  = container.querySelectorAll('.charge-row').length + 1;
       const row = document.createElement('div');
       row.className = 'charge-row';
-      row.style.cssText = 'display:grid; grid-template-columns: 35px 1fr 55px 24px; gap:4px; margin-bottom:8px; background:white; padding:8px 0; border-radius:8px; border:1px solid #e2e8f0;';
       row.innerHTML = `
-        <input type="text" class="chg-num" value="${String(rowCount).padStart(3, '0')}" readonly style="width:100%; height:36px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#64748b; text-align:center; font-weight:800;">
-        <input type="text" class="chg-name" value="" placeholder="Name" style="width:100%; height:36px; font-size:12px; padding:0 8px; border:1px solid #cbd5e1; border-radius:6px; color:#64748b; font-weight:600;">
-        <input type="number" class="chg-amt" placeholder="0" required style="width:100%; height:36px; font-size:12px; padding:0 8px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; color:#008080; background:#fff; text-align: right;">
-        <button type="button" onclick="this.closest('.charge-row').remove()" style="background:#ef4444; color:white; border:none; border-radius:6px; width:100%; height:36px; cursor:pointer; font-size:14px;">×</button>
+        <input type="text"   class="chg-num"  value="${String(rowCount).padStart(3,'0')}" readonly>
+        <input type="text"   class="chg-name" placeholder="Name">
+        <input type="number" class="chg-amt"  placeholder="0">
+        <button type="button" class="del-btn" onclick="this.closest('.charge-row').remove()">×</button>
       `;
       container.appendChild(row);
-    }
-
-    function confirmAccounts() {
-      let validAccounts = 0;
-      const accounts = [];
-      document.querySelectorAll('#otherChargesList .charge-row').forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        const num = inputs[0].value;
-        const name = inputs[1].value;
-        const amt = inputs[2].value;
-        if (name && amt && parseFloat(amt) > 0) {
-          accounts.push({
-            accountNumber: num,
-            accountName: name,
-            expectedAmount: amt
-          });
-          validAccounts++;
-        }
-      });
-
-      if (validAccounts === 0) {
-        alert('Please add at least one account with name and amount');
-        return;
-      }
-
-      let allHaveAmount = true;
-      document.querySelectorAll('#otherChargesList .charge-row').forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        const name = inputs[1].value;
-        const amt = inputs[2].value;
-        if (name && !amt) {
-          allHaveAmount = false;
-        }
-      });
-      
-      if (!allHaveAmount) {
-        alert('All accounts must have an amount entered');
-        return;
-      }
-
-      window.confirmedAccounts = accounts;
-      
-      const benefitList = document.getElementById('benefitAccountsList');
-      if (benefitList) {
-        benefitList.innerHTML = '';
-        accounts.forEach(acc => {
-          const div = document.createElement('div');
-          div.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px; background:white; border-radius:6px; border:1px solid #e2e8f0;';
-          div.innerHTML = `
-            <input type="checkbox" id="benefit_${acc.accountNumber}" value="${acc.accountName}" checked style="width:18px; height:18px; accent-color:#008080;">
-            <label for="benefit_${acc.accountNumber}" style="font-size:11px; font-weight:600; color:#475569;">${acc.accountName}</label>
-          `;
-          benefitList.appendChild(div);
-        });
-      }
-      
-      const benefitAccName = document.getElementById('benefitAccName');
-      if (benefitAccName && accounts.length > 0) {
-        const loanAccNum = String(accounts.length + 1).padStart(3, '0');
-        benefitAccName.value = 'Loan (' + loanAccNum + ')';
-      }
-      
-      alert('Accounts confirmed! Total: ' + validAccounts + ' account(s)');
-    }
-
-    function toggleBenefitModel() {
-      const model = document.getElementById('benefitDistModel').value;
-      document.getElementById('distEqualConfig').style.display = (model === 'equal') ? 'block' : 'none';
-      document.getElementById('distPerfConfig').style.display = (model === 'performance') ? 'block' : 'none';
-    }
-
-    function toggleDueDedSource() {
-      const source = document.getElementById('dueDedSource').value;
-      document.getElementById('dueLogicSavings').style.display = (source === 'savings') ? 'block' : 'none';
-      document.getElementById('dueLogicBenefit').style.display = (source === 'benefit' || source === 'bad_debt') ? 'block' : 'none';
-    }
-
-    function toggleLoanFields() {
-      const type = document.getElementById('loanQualifyType').value;
-      const dur = document.getElementById('loanDurationParams');
-      const sav = document.getElementById('loanSavingParams');
-
-      const showDuration = (type === 'duration' || type === 'both');
-      const showSaving = (type === 'saving' || type === 'both');
-
-      dur.style.display = showDuration ? 'block' : 'none';
-      sav.style.display = showSaving ? 'block' : 'none';
-    }
-
-    function toggleLoanCategoryFields() {
-      const category = document.getElementById('loanCategory').value;
-      const longTermDiv = document.getElementById('longTermGuaranteeDiv');
-      const longTermConfig = document.getElementById('longTermLoanConfig');
-
-      if (category === 'long') {
-        longTermDiv.style.display = 'block';
-        longTermConfig.style.display = 'block';
-      } else {
-        longTermDiv.style.display = 'none';
-        longTermConfig.style.display = 'none';
-      }
-    }
-
-    function toggleLongTermPaymentOptions() {
-      const method = document.getElementById('longTermPaymentMethod').value;
-      const installmentDiv = document.getElementById('installmentOptionsDiv');
-      installmentDiv.style.display = (method === 'installment') ? 'block' : 'none';
-    }
-
-    function toggleInstallmentSchedule() {
-      const type = document.getElementById('installmentScheduleType').value;
-      const customRoundsDiv = document.getElementById('customRoundsDiv');
-      customRoundsDiv.style.display = (type === 'set_rounds') ? 'block' : 'none';
     }
 
     function handleRegDecision(choice) {
       if (!choice) return;
       window.regDecisionMade = true;
-      
-      const regContainer = document.getElementById('regChoiceSelect').parentElement;
-      const regNote = document.getElementById('regSubmitNote');
-      
-      if (choice === 'charged') {
-        injectAccountRow('002', 'Registration', true);
-        regNote.style.display = 'none';
+
+      const list = document.getElementById('otherChargesList');
+      let row2 = Array.from(list.querySelectorAll('.charge-row')).find(row => row.querySelector('.chg-num').value === '002');
+
+      if (!row2) {
+        if (choice === 'charged') {
+          injectAccountRow('002', 'Registration', true);
+        } else {
+          injectAccountRow('002', '', false);
+        }
       } else {
-        ensureOtherHeading();
-        injectAccountRow('002', '', false);
-        regNote.style.display = 'none';
+        const nameInput = row2.querySelector('.chg-name');
+        if (choice === 'charged') {
+          nameInput.value = 'Registration';
+          nameInput.readOnly = true;
+          nameInput.style.cssText = 'background:#f8fafc; color:#64748b; font-weight:800; padding:0 8px;';
+        } else {
+          nameInput.value = '';
+          nameInput.readOnly = false;
+          nameInput.style.cssText = 'padding:0 8px;';
+        }
       }
-      document.getElementById('regChoiceSelect').value = "";
+
+      document.getElementById('accountsConfigArea').style.display = 'block';
     }
 
-    function ensureOtherHeading() {
+    function injectAccountRow(id, nameValue, readonly) {
       const list = document.getElementById('otherChargesList');
-      if (!document.getElementById('otherAccountsHeading')) {
-        const heading = document.createElement('div');
-        heading.id = 'otherAccountsHeading';
-        heading.style.cssText = "padding: 8px 0 4px; margin: 8px 0 4px; border-top: 1px dashed #cbd5e1; color: #5f9ea0; font-size: 9px; font-weight: 800; text-transform: uppercase; display: block;";
-        heading.innerHTML = `<i class="fas fa-layer-group" style="font-size:9px;"></i> Other Accounts`;
-        list.appendChild(heading);
-      }
-    }
-
-    function injectAccountRow(id, nameValue = '', isNameReadonly = false) {
-      const list = document.getElementById('otherChargesList');
-      
-      if (parseInt(id) > 2) {
-        ensureOtherHeading();
-      } else if (id === '002' && nameValue !== 'Registration') {
-        ensureOtherHeading();
-      }
-      
-      const div = document.createElement('div');
+      const div  = document.createElement('div');
       div.className = 'charge-row';
-      div.style.cssText = 'display:grid; grid-template-columns: 35px 1fr 55px 24px; gap:4px; margin-bottom:4px; background:white; padding:5px 0; border-radius:6px; border:1px solid #e2e8f0;';
-      
-      const nameStyle = isNameReadonly 
-        ? 'readonly style="width:100%; height:30px; font-size:10px; padding:0 6px; border:1px solid #e2e8f0; border-radius:4px; background:#f8fafc; color:#64748b; font-weight:800;"'
-        : 'style="width:100%; height:30px; font-size:10px; padding:0 6px; border:1px solid #e2e8f0; border-radius:4px; font-weight:700; color:#1e293b;"';
-      
+      const nameInput = readonly
+        ? `<input type="text" class="chg-name" value="${nameValue}" readonly style="background:#f8fafc; color:#64748b; font-weight:800; padding:0 8px;">`
+        : `<input type="text" class="chg-name" value="${nameValue}" placeholder="Name" style="padding:0 8px;">`;
       div.innerHTML = `
-        <input type="text" class="chg-num" value="${id}" readonly style="width:100%; height:30px; font-size:10px; border:1px solid #e2e8f0; border-radius:4px; background:#f8fafc; color:#64748b; text-align:center; font-weight:800;">
-        <input type="text" class="chg-name" value="${nameValue}" placeholder="Name" ${nameStyle}>
-        <input type="number" class="chg-amt" placeholder="0" style="width:100%; height:30px; font-size:10px; padding:0 6px; border:1px solid #e2e8f0; border-radius:4px; font-weight:700; color:#008080; background:#fff; text-align: right;">
-        <button type="button" onclick="this.closest('.charge-row').remove()" style="background:#ef4444; color:white; border:none; border-radius:4px; width:100%; height:30px; cursor:pointer; font-size:12px;">×</button>
+        <input type="text" class="chg-num" value="${id}" readonly>
+        ${nameInput}
+        <input type="number" class="chg-amt" placeholder="0">
+        <button type="button" class="del-btn" onclick="this.closest('.charge-row').remove()">×</button>
       `;
       list.appendChild(div);
     }
 
-    function savePrinciples() {
-      const endSavingPeriod = document.getElementById('endSavingPeriod').value;
-      const frequency = document.getElementById('groupInterval').value;
-      const period = document.getElementById('contributionDay').value;
-      const fastThreshold = document.getElementById('fastThreshold').value;
-      const editThreshold = document.getElementById('editThreshold').value;
-      const removeThreshold = document.getElementById('removeThreshold').value;
+    function confirmAccounts() {
+      const accounts = [];
+      document.querySelectorAll('#otherChargesList .charge-row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const num    = inputs[0].value;
+        const name   = inputs[1].value.trim();
+        const amt    = inputs[2]?.value;
+        if (name && amt && parseFloat(amt) > 0) {
+          accounts.push({ accountNumber: num, accountName: name, expectedAmount: amt });
+        }
+      });
 
-      if (!endSavingPeriod) {
-        alert('Please select End Saving Period');
-        return;
-      }
-      if (!frequency) {
-        alert('Please select Contribution Interval Frequency');
-        return;
-      }
-      if (!period) {
-        alert('Please select Day of Week');
-        return;
-      }
-      if (!fastThreshold || fastThreshold < 51 || fastThreshold > 99) {
-        alert('Fast Notification Threshold must be between 51% and 99%');
-        return;
-      }
-      if (!editThreshold || editThreshold < 51 || editThreshold > 99) {
-        alert('Edit Account Threshold must be between 51% and 99%');
-        return;
-      }
-      if (!removeThreshold || removeThreshold < 51 || removeThreshold > 99) {
-        alert('Member Removal Threshold must be between 51% and 99%');
+      if (accounts.length === 0) {
+        alert('Please add at least one account with name and amount');
         return;
       }
 
-      if (!window.regDecisionMade) {
-        alert('Please select whether Registration Fee is charged');
-        return;
-      }
+      window.confirmedAccounts = accounts;
 
-      if (!window.confirmedAccounts || window.confirmedAccounts.length === 0) {
-        alert('Please confirm accounts in Step 3 first by clicking OK button');
-        return;
-      }
+      // Populate benefit accounts checkboxes
+      const benefitList = document.getElementById('benefitAccountsList');
+      benefitList.innerHTML = '';
+      accounts.forEach(acc => {
+        if (acc.accountName.toLowerCase() === 'saving') return;
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px; background:white; border-radius:6px; border:1px solid #e2e8f0;';
+        div.innerHTML = `
+          <input type="checkbox" id="benefit_${acc.accountNumber}" value="${acc.accountName}" checked style="width:18px; height:18px; accent-color:#008080;">
+          <label for="benefit_${acc.accountNumber}" style="font-size:11px; font-weight:600; color:#475569;">${acc.accountName}</label>
+        `;
+        benefitList.appendChild(div);
+      });
 
-      const accounts = window.confirmedAccounts;
+      const loanIntDiv = document.createElement('div');
+      loanIntDiv.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px; background:white; border-radius:6px; border:1px solid #e2e8f0;';
+      loanIntDiv.innerHTML = `
+        <input type="checkbox" id="benefit_loan_interest" value="Loan Interest" checked style="width:18px; height:18px; accent-color:#008080;">
+        <label for="benefit_loan_interest" style="font-size:11px; font-weight:600; color:#475569;">Loan Interest</label>
+      `;
+      benefitList.appendChild(loanIntDiv);
 
+      // Set benefit account name
+      document.getElementById('benefitAccName').value = 'Group Benefit Account';
+
+      document.getElementById('accountsConfirmedBadge').style.display = 'block';
+      alert(`✓ ${accounts.length} account(s) confirmed!`);
+    }
+
+    /* ─── Toggle helpers ─── */
+    function toggleBenefitModel() {
       const model = document.getElementById('benefitDistModel').value;
-      const officialPct = document.getElementById('officialBenefitPct').value || 0;
-      const memberPerfPct = document.getElementById('memberPerfPct').value || 70;
-      const requireNote = document.getElementById('requireNote').checked;
+      document.getElementById('distEqualConfig').style.display = (model === 'equal')        ? 'block' : 'none';
+      document.getElementById('distPerfConfig').style.display  = (model === 'performance')  ? 'block' : 'none';
+    }
+
+    function toggleDueDedSource() {
+      const src = document.getElementById('dueDedSource').value;
+      document.getElementById('dueLogicSavings').style.display = (src === 'savings')                    ? 'block' : 'none';
+      document.getElementById('dueLogicBenefit').style.display = (src === 'benefit' || src === 'bad_debt') ? 'block' : 'none';
+    }
+
+    function toggleLoanFields() {
+      const type = document.getElementById('loanQualifyType').value;
+      document.getElementById('loanDurationParams').style.display = (type === 'duration' || type === 'both') ? 'block' : 'none';
+      document.getElementById('loanSavingParams').style.display   = (type === 'saving'   || type === 'both') ? 'block' : 'none';
+    }
+
+    function toggleLoanCategoryFields() {
+      const cat = document.getElementById('loanCategory').value;
+      document.getElementById('longTermGuaranteeDiv').style.display = (cat === 'long') ? 'block' : 'none';
+      document.getElementById('longTermLoanConfig').style.display   = (cat === 'long') ? 'block' : 'none';
+    }
+
+    function toggleLongTermPaymentOptions() {
+      const method = document.getElementById('longTermPaymentMethod').value;
+      document.getElementById('installmentOptionsDiv').style.display = (method === 'installment') ? 'block' : 'none';
+    }
+
+    function toggleInstallmentSchedule() {
+      const type = document.getElementById('installmentScheduleType').value;
+      document.getElementById('customRoundsDiv').style.display = (type === 'set_rounds') ? 'block' : 'none';
+    }
+
+    /* ─── Build Review ─── */
+    function buildReview() {
+      const accounts    = window.confirmedAccounts || [];
+      const distModel   = document.getElementById('benefitDistModel').value;
+      const dueSource   = document.getElementById('dueDedSource').value;
+      const benefitAcc  = document.getElementById('benefitAccName').value;
+      const freq        = document.getElementById('groupInterval').value;
+      const period      = document.getElementById('contributionDay')?.value || '';
+      const endPeriod   = document.getElementById('endSavingPeriod').value;
+      const fastT       = document.getElementById('fastThreshold').value;
+      const editT       = document.getElementById('editThreshold').value;
+      const removeT     = document.getElementById('removeThreshold').value;
+
+      const dueLabel = dueSource === 'savings' ? 'Member Savings' : dueSource === 'benefit' ? 'Group Benefit' : 'Bad Debt';
+      const distLabel = distModel === 'equal' ? 'Equal Distribution' : 'Performance Based';
+      const benefitAccs = Array.from(document.querySelectorAll('#benefitAccountsList input[type="checkbox"]:checked')).map(cb => cb.value);
+
+      const html = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+          <div style="background:white; border-radius:10px; border:1px solid #e2e8f0; padding:14px;">
+            <h6 style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:800; margin-bottom:10px; letter-spacing:1px;"><i class="fas fa-history"></i> Timing</h6>
+            <div style="display:flex; justify-content:space-between; font-size:13px;">
+              <div>Freq: <b style="color:#1e293b;">${freq.toUpperCase()}</b></div>
+              <div>Period: <b style="color:#1e293b;">${period}</b></div>
+              <div>Ends: <b style="color:#c53030;">${endPeriod}</b></div>
+            </div>
+          </div>
+
+          <div style="background:white; border-radius:10px; border:1px solid #e2e8f0; padding:14px;">
+            <h6 style="font-size:10px; color:#64748b; text-transform:uppercase; font-weight:800; margin-bottom:10px; letter-spacing:1px;"><i class="fas fa-gavel"></i> Governance</h6>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; font-size:12px; gap:6px;">
+              <div style="text-align:center; background:#f0fdfa; border-radius:6px; padding:8px;">
+                <div style="color:#64748b; font-size:9px; font-weight:700;">FAST EDIT</div>
+                <div style="color:#008080; font-weight:800; font-size:15px;">${fastT}%</div>
+              </div>
+              <div style="text-align:center; background:#f0fdfa; border-radius:6px; padding:8px;">
+                <div style="color:#64748b; font-size:9px; font-weight:700;">A/C EDIT</div>
+                <div style="color:#008080; font-weight:800; font-size:15px;">${editT}%</div>
+              </div>
+              <div style="text-align:center; background:#f0fdfa; border-radius:6px; padding:8px;">
+                <div style="color:#64748b; font-size:9px; font-weight:700;">REMOVAL</div>
+                <div style="color:#008080; font-weight:800; font-size:15px;">${removeT}%</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#f0fdf4; border-radius:10px; border:1px solid #86efac; padding:14px;">
+            <h6 style="font-size:10px; color:#065f46; text-transform:uppercase; font-weight:800; margin-bottom:10px; letter-spacing:1px;"><i class="fas fa-coins"></i> Accounts</h6>
+            ${accounts.map(a => `
+              <div style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid #dcfce7;">
+                <span><span style="color:#94a3b8; font-family:monospace; font-weight:800;">${a.accountNumber}</span> ${a.accountName}</span>
+                <b style="color:#065f46;">KES ${parseFloat(a.expectedAmount || 0).toLocaleString()}</b>
+              </div>
+            `).join('')}
+            <div style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid #e0f2fe;">
+              <span><span style="color:#94a3b8; font-family:monospace; font-weight:800;">${String(accounts.length + 1).padStart(3,'0')}</span> Loan (Interest)</span>
+              <b style="color:#1e40af;">Variable</b>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid #fecaca;">
+              <span>Group Benefit Account</span>
+              <b style="color:#c53030;">Final Dist.</b>
+            </div>
+            ${benefitAccs.length > 0 ? `
+            <div style="padding:8px; background:#fff5f5; border-radius:6px; border:1px dashed #fecaca; margin-top:8px;">
+              <span style="color:#c53030; font-size:10px; font-weight:800; text-transform:uppercase;">Profit Sources</span>
+              <div style="font-size:12px; color:#7f1d1d; margin-top:3px; font-weight:600;">
+                ${benefitAccs.join(' • ')}
+              </div>
+            </div>
+            ` : ''}
+          </div>
+
+          <div style="background:#fff5f5; border-radius:10px; border:1px solid #fecaca; padding:14px;">
+            <h6 style="font-size:10px; color:#c53030; text-transform:uppercase; font-weight:800; margin-bottom:10px; letter-spacing:1px;"><i class="fas fa-chart-pie"></i> Distribution &amp; Deductions</h6>
+            <div style="font-size:12px; line-height:1.8; color:#7f1d1d;">
+              <div>Model: <b>${distLabel}</b></div>
+              <div>Target: <b>${benefitAcc}</b></div>
+              <div>Loss Source: <b>${dueLabel}</b></div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      document.getElementById('reviewContentArea').innerHTML = html;
+    }
+
+    /* ─── Save / Submit ─── */
+    function savePrinciples() {
+      const accounts = window.confirmedAccounts || [];
 
       const principles = {
         otherContributions: accounts,
         distribution: {
-          model: model,
-          performancePct: memberPerfPct,
-          officialPct: officialPct,
-          targetAccountName: document.getElementById('benefitAccName')?.value || 'Loan',
+          model: document.getElementById('benefitDistModel').value,
+          performancePct: document.getElementById('memberPerfPct').value || 70,
+          officialPct: document.getElementById('officialBenefitPct').value || 0,
+          targetAccountName: document.getElementById('benefitAccName').value || 'Loan',
           targetAccountNumber: String(accounts.length + 1).padStart(3, '0')
         },
         intervals: {
-          frequency: frequency,
-          period: period,
-          endSavingPeriod: endSavingPeriod
+          frequency: document.getElementById('groupInterval').value,
+          period: document.getElementById('contributionDay')?.value || '',
+          endSavingPeriod: document.getElementById('endSavingPeriod').value
         },
         governance: {
-          fastNotificationThreshold: fastThreshold,
-          editAccountThreshold: editThreshold,
-          memberRemovalThreshold: removeThreshold,
-          requireResponseNote: requireNote
+          fastNotificationThreshold: document.getElementById('fastThreshold').value,
+          editAccountThreshold: document.getElementById('editThreshold').value,
+          memberRemovalThreshold: document.getElementById('removeThreshold').value,
+          requireResponseNote: document.getElementById('requireNote').checked
         },
-        deductions: {
-          primarySource: document.getElementById('dueDedSource')?.value || 'savings'
-        },
+        deductions: { primarySource: document.getElementById('dueDedSource').value },
         balancing: {
           benefitAccounts: Array.from(document.querySelectorAll('#benefitAccountsList input[type="checkbox"]:checked')).map(cb => cb.value)
         },
         loans: {
-          qualificationType: document.getElementById('loanQualifyType')?.value || 'none',
-          duration: {
-            days: document.getElementById('loanDays')?.value || ''
-          },
+          qualificationType: document.getElementById('loanQualifyType').value,
+          duration: { days: document.getElementById('loanDays')?.value || '' },
           savingTarget: document.getElementById('loanTargetAmount')?.value || '',
           repayment: {
-            durationDays: document.getElementById('loanRepaymentDuration')?.value || '30',
-            alignment: document.getElementById('loanRepaymentAlignment')?.value || 'complete',
-            rolloverMethod: document.getElementById('loanRolloverMethod')?.value || 'recount',
-            maxRollovers: document.getElementById('loanMaxRollovers')?.value || '3'
+            durationDays: document.getElementById('loanRepaymentDuration').value || '30',
+            alignment: document.getElementById('loanRepaymentAlignment').value,
+            rolloverMethod: document.getElementById('loanRolloverMethod').value,
+            maxRollovers: document.getElementById('loanMaxRollovers').value
           },
           interestAndLimits: {
-            interestRate: document.getElementById('loanInterestRate')?.value || '3',
-            maxActiveLoans: document.getElementById('loanMaxCount')?.value || '1',
-            limitBasis: document.getElementById('loanLimitBasis')?.value || 'savings',
-            limitMultiplier: document.getElementById('loanLimitMultiplier')?.value || '3'
+            interestRate: document.getElementById('loanInterestRate').value || '0',
+            maxActiveLoans: document.getElementById('loanMaxCount').value,
+            limitBasis: document.getElementById('loanLimitBasis').value,
+            limitMultiplier: document.getElementById('loanLimitMultiplier').value
           },
           type: {
-            category: document.getElementById('loanCategory')?.value || 'short',
-            guaranteeMethod: document.getElementById('loanCategory')?.value === 'long' ? document.getElementById('loanGuaranteeMethod')?.value : 'self'
+            category: document.getElementById('loanCategory').value,
+            guaranteeMethod: document.getElementById('loanCategory').value === 'long'
+              ? document.getElementById('loanGuaranteeMethod').value : 'self'
+          }
+        },
+        closer: {
+          saving: {
+            durationDays: document.getElementById('savingCloseDuration').value,
+            intervalBuffer: document.getElementById('savingCloseInterval').value
+          },
+          loan: {
+            durationDays: document.getElementById('loanCloseDuration').value,
+            intervalBuffer: document.getElementById('loanCloseInterval').value
           }
         }
       };
 
-      if (document.getElementById('loanCategory')?.value === 'long') {
+      if (document.getElementById('loanCategory').value === 'long') {
         principles.loans.longTerm = {
-          paymentPeriod: document.getElementById('longTermPaymentPeriod')?.value || '12',
-          paymentMethod: document.getElementById('longTermPaymentMethod')?.value || 'installment',
+          paymentPeriod: document.getElementById('longTermPaymentPeriod').value,
+          paymentMethod: document.getElementById('longTermPaymentMethod').value,
           installment: {
-            scheduleType: document.getElementById('installmentScheduleType')?.value || 'per_saving_round',
-            customRounds: document.getElementById('customRoundsCount')?.value || '12'
+            scheduleType: document.getElementById('installmentScheduleType').value,
+            customRounds: document.getElementById('customRoundsCount').value
           }
         };
       }
@@ -1322,212 +1197,100 @@
       fetch('/general/set-principles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName: groupName, principles: principles })
+        body: JSON.stringify({ groupName, principles })
       })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          alert('Principles saved successfully!');
+          alert('✓ Principles activated successfully!');
           window.location.href = '/agent';
         } else {
           alert('Error: ' + data.message);
         }
       })
-      .catch(err => {
-        alert('Error saving principles: ' + err.message);
-      });
+      .catch(err => alert('Error saving principles: ' + err.message));
     }
 
-    function backToVerification() {
-      document.getElementById('step1Section').style.display = 'none';
-      document.getElementById('constitutionForm').classList.remove('hidden');
-    }
-
-    function goToReview() {
-      const endSavingPeriod = document.getElementById('endSavingPeriod').value;
-      const frequency = document.getElementById('groupInterval').value;
-      const period = document.getElementById('contributionDay').value;
-      const fastThreshold = document.getElementById('fastThreshold').value;
-      const editThreshold = document.getElementById('editThreshold').value;
-      const removeThreshold = document.getElementById('removeThreshold').value;
-
-      if (!endSavingPeriod || !frequency || !period) {
-        alert('Please complete Steps 1-3 first');
-        return;
-      }
-      if (!fastThreshold || !editThreshold || !removeThreshold) {
-        alert('Please complete Step 2 (Governance) first');
-        return;
-      }
-      if (!window.confirmedAccounts || window.confirmedAccounts.length === 0) {
-        alert('Please confirm accounts in Step 3 first by clicking OK button');
-        return;
-      }
-
-      const accounts = window.confirmedAccounts;
-      const distModel = document.getElementById('benefitDistModel').value;
-      const dueSource = document.getElementById('dueDedSource').value;
-      const benefitAcc = document.getElementById('benefitAccName').value;
-      
-      let periodSetup = period;
-      if (frequency === 'weekly') periodSetup = period.charAt(0).toUpperCase() + period.slice(1);
-
-      const html = `
-        <div style="background:white; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden;">
-          <div style="padding:15px; border-bottom:1px solid #f1f5f9; background:#f8fafc;">
-            <h6 style="margin:0 0 10px; font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:800;"><i class="fas fa-history"></i> Timing & Operations</h6>
-            <div style="display:flex; justify-content:space-between; font-size:13px;">
-              <div>Freq: <b style="color:#2c3e50;">${frequency.toUpperCase()}</b></div>
-              <div>Period: <b style="color:#2c3e50;">${periodSetup}</b></div>
-              <div>Ends: <b style="color:#c53030;">${endSavingPeriod}</b></div>
-            </div>
-          </div>
-
-          <div style="padding:15px; border-bottom:1px solid #f1f5f9;">
-            <h6 style="margin:0 0 10px; font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:1px; font-weight:800;"><i class="fas fa-gavel"></i> Governance Thresholds</h6>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
-              <div>Fast Edit: <b style="color:#008080;">${fastThreshold}%</b></div>
-              <div>A/C Edit: <b style="color:#008080;">${editThreshold}%</b></div>
-              <div>Removal: <b style="color:#008080;">${removeThreshold}%</b></div>
-            </div>
-          </div>
-
-          <div style="padding:15px; border-bottom:1px solid #f1f5f9; background:#f0fdfa;">
-            <h6 style="margin:0 0 10px; font-size:11px; color:#065f46; text-transform:uppercase; letter-spacing:1px; font-weight:800;"><i class="fas fa-coins"></i> Book of Accounts</h6>
-            ${accounts.map(a => `
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:5px; padding:8px; background:white; border-radius:6px; border:1px solid #bdf2e9;">
-                <span style="font-weight:600;"><span style="color:#94a3b8; font-family:monospace; font-weight:700;">${a.accountNumber}</span> ${a.accountName}</span>
-                <b style="color:#065f46; font-size:15px;">KES ${parseFloat(a.expectedAmount || 0).toLocaleString()}</b>
-              </div>
-            `).join('')}
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:5px; padding:8px; background:#f8fafc; border-radius:6px; border:1px solid #bfdbfe;">
-              <span style="font-weight:600;"><span style="color:#94a3b8; font-family:monospace; font-weight:700;">${String(parseInt(accounts[accounts.length - 1].accountNumber) + 1).padStart(3, '0')}</span> Loan (Interest)</span>
-              <b style="color:#1e40af; font-size:12px; font-weight:700;">Variable Profit</b>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:8px; background:#fff5f5; border-radius:6px; border:1px solid #feb2b2;">
-              <span style="font-weight:600;">Group Benefit Account</span>
-              <b style="color:#c53030; font-size:12px; font-weight:700;">Final Distribution</b>
-            </div>
-          </div>
-
-          <div style="padding:15px; border-bottom:1px solid #f1f5f9; background:#fff5f5;">
-            <h6 style="margin:0 0 10px; font-size:11px; color:#c53030; text-transform:uppercase; letter-spacing:1px; font-weight:800;"><i class="fas fa-chart-pie"></i> Distribution & Deductions</h6>
-            <div style="font-size:13px; color:#7f1d1d;">
-              Model: <b>${distModel === 'equal' ? 'Equal Distribution' : 'Performance Based'}</b><br>
-              Target: <b>${benefitAcc}</b><br>
-              Primary Loss Source: <b>${dueSource === 'savings' ? 'Member Savings' : dueSource === 'benefit' ? 'Group Benefit' : 'Bad Debt'}</b>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-          <button type="button" onclick="document.getElementById('reviewSection').style.display='none'; document.querySelector('#step1Section').scrollIntoView({behavior:'smooth'})" style="flex:1; background:#95a5a6; color:white; padding:12px; border-radius:8px; border:none; cursor:pointer; font-weight:600;">
-            <i class="fas fa-arrow-left"></i> Back
-          </button>
-          <button type="button" onclick="savePrinciples()" style="flex:2; background:#2e7d32; color:white; padding:12px; border-radius:8px; border:none; cursor:pointer; font-weight:700;">
-            <i class="fas fa-check-double"></i> Activate Principles
-          </button>
-        </div>
-      `;
-
-      document.getElementById('reviewContentArea').innerHTML = html;
-      document.getElementById('reviewSection').scrollIntoView({behavior: 'smooth'});
-    }
-
+    /* ─── Key flow ─── */
     function showConstitutionForm() {
-      document.getElementById('continueSection').style.display = 'none';
+      document.getElementById('continueSection').style.display  = 'none';
       document.getElementById('groupInfoSection').style.display = 'none';
-      document.getElementById('membersSection').style.display = 'none';
+      document.getElementById('membersSection').style.display   = 'none';
       document.getElementById('constitutionForm').classList.remove('hidden');
       setTimeout(() => document.getElementById('startKey').focus(), 300);
     }
 
     function cancelConstitution() {
       document.getElementById('constitutionForm').classList.add('hidden');
-      document.getElementById('continueSection').style.display = 'block';
+      document.getElementById('continueSection').style.display  = 'block';
       document.getElementById('groupInfoSection').style.display = 'block';
-      document.getElementById('membersSection').style.display = 'block';
+      document.getElementById('membersSection').style.display   = 'block';
       document.getElementById('startKey').value = '';
       document.getElementById('startKeyError').style.display = 'none';
     }
 
+    function openWizard() {
+      document.getElementById('constitutionForm').classList.add('hidden');
+      document.getElementById('groupInfoSection').style.display = 'none';
+      document.getElementById('membersSection').style.display   = 'none';
+      document.getElementById('continueSection').style.display  = 'none';
+      document.getElementById('step1Section').style.display     = 'block';
+      showPanel(1);
+    }
+
+    function backToVerification() {
+      document.getElementById('step1Section').style.display = 'none';
+      document.getElementById('constitutionForm').classList.remove('hidden');
+      document.getElementById('groupInfoSection').style.display = 'block';
+      document.getElementById('membersSection').style.display   = 'block';
+      document.getElementById('continueSection').style.display  = 'block';
+      cancelConstitution();
+    }
+
     function submitStartKey() {
       const key = document.getElementById('startKey').value.trim();
-      const errorEl = document.getElementById('startKeyError');
-      
-      if (!key || key.length !== 4 || isNaN(key)) {
-        errorEl.style.display = 'block';
-        return;
-      }
-      
-      errorEl.style.display = 'none';
-      
+      const err = document.getElementById('startKeyError');
+      if (!key || key.length !== 4 || isNaN(key)) { err.style.display = 'block'; return; }
+      err.style.display = 'none';
       fetch('/agent/set-constitution-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName: groupName, key: key })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, key })
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('constitutionForm').classList.add('hidden');
-          document.getElementById('groupInfoSection').style.display = 'none';
-          document.getElementById('membersSection').style.display = 'none';
-          document.getElementById('continueSection').style.display = 'none';
-          document.getElementById('step1Section').style.display = 'block';
-        } else {
-          alert('Error: ' + data.message);
-        }
-      })
-      .catch(err => {
-        alert('Error setting key: ' + err.message);
-      });
+      .then(r => r.json())
+      .then(d => { if (d.success) openWizard(); else alert('Error: ' + d.message); })
+      .catch(e => alert('Error: ' + e.message));
     }
 
     function verifyStartKey() {
       const key = document.getElementById('startKey').value.trim();
-      const errorEl = document.getElementById('startKeyError');
-      console.log('verifyStartKey called, key:', key);
-      
+      const err = document.getElementById('startKeyError');
       if (!key || key.length !== 4 || isNaN(key)) {
-        errorEl.style.display = 'block';
-        errorEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter a valid 4-digit key';
+        err.style.display = 'block';
+        err.innerHTML = '<i class="fas fa-exclamation-circle"></i> Please enter a valid 4-digit key';
         return;
       }
-      
-      errorEl.style.display = 'none';
-      console.log('Verifying key for:', groupName, 'key:', key);
-      
+      err.style.display = 'none';
       fetch('/agent/verify-constitution-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName: groupName, key: key })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, key })
       })
-      .then(res => res.json())
-      .then(data => {
-        console.log('Verification response:', data);
-        if (data.success) {
-          console.log('Success! Hiding forms and showing step1...');
-          document.getElementById('constitutionForm').classList.add('hidden');
-          document.getElementById('groupInfoSection').style.display = 'none';
-          document.getElementById('membersSection').style.display = 'none';
-          document.getElementById('continueSection').style.display = 'none';
-          document.getElementById('step1Section').style.display = 'block';
-        } else {
-          errorEl.style.display = 'block';
-          errorEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Incorrect key. Please try again.';
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) openWizard();
+        else {
+          err.style.display = 'block';
+          err.innerHTML = '<i class="fas fa-exclamation-circle"></i> Incorrect key. Please try again.';
         }
       })
-      .catch(err => {
-        errorEl.style.display = 'block';
-        errorEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error verifying key';
+      .catch(() => {
+        err.style.display = 'block';
+        err.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error verifying key.';
       });
     }
 
-    document.getElementById('startKey').addEventListener('keypress', function(e) {
+    document.getElementById('startKey').addEventListener('keypress', e => {
       if (!/\d/.test(e.key)) e.preventDefault();
     });
   </script>
 </body>
-
 </html>

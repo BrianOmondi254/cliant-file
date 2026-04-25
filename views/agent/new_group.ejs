@@ -134,7 +134,7 @@
       width: 100%;
       max-width: 545px;
       /* CHANGE 2: removed min-height: calc(100vh - 10px); */
-      border-radius: 10px;
+      border-radius: 5px;
       box-shadow: var(--shadow-lg);
       overflow: hidden;
       position: relative;
@@ -222,7 +222,7 @@
     .group-loc-mini  { font-size: 11px; color: var(--slate); font-weight: 600; margin-top: 2px; }
 
     /* ─── FORM STEPS ─── */
-    .form-step { display: none; animation: fadeIn .4s ease; position: relative; z-index: 10; border: 1px solid var(--primary); border-radius: 8px; margin-bottom: 10px; padding: 15px 3px; background: white; }
+    .form-step { display: none; animation: fadeIn .4s ease; position: relative; z-index: 10; border: 1px solid var(--primary); border-radius: 5px; margin-bottom: 10px; padding: 15px 3px; background: white; }
     .form-step.active { display: block; }
 
     @keyframes fadeIn {
@@ -251,7 +251,7 @@
       width: 100%;
       padding: var(--input-py) var(--input-px);
       border: var(--input-border) solid #e2e8f0;
-      border-radius: var(--input-radius);
+      border-radius: 5px;
       font-size: var(--input-font);
       font-weight: 600;
       color: var(--dark);
@@ -313,7 +313,7 @@
 
     .payment-option {
       border: 2px solid #e2e8f0;
-      border-radius: 16px;
+      border-radius: 5px;
       padding: 18px 12px;        /* taller click target */
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
@@ -375,7 +375,7 @@
     button {
       width: 100%;
       padding: 16px;             /* slightly taller buttons */
-      border: none; border-radius: 12px;
+      border: none; border-radius: 5px;
       font-size: 15px; font-weight: 800;
       cursor: pointer;
       transition: all .3s ease;
@@ -1260,7 +1260,7 @@
               <div class="input-group" style="margin-bottom:0;">
                 <label>Phone</label>
                 <div class="input-wrapper">
-                  <input type="tel" id="${key}_phone" placeholder="Enter phone number" maxlength="12">
+                  <input type="tel" id="${key}_phone" placeholder="Enter phone number">
                 </div>
               </div>
               <div class="input-group" style="margin-bottom:0;">
@@ -1287,11 +1287,22 @@
 
     // ─── PHONE VALIDATION ─────────────────────────────────────
     function isValidPhone(phone) {
-      return /^254[0-9]{9}$/.test(phone) || /^0[17][0-9]{8}$/.test(phone);
+      // Support 254XXXXXXXXX (12), +254XXXXXXXXX (13), 07XXXXXXXX (10) or 01XXXXXXXX (10)
+      return /^\+?254[0-9]{9}$/.test(phone) || /^0[17][0-9]{8}$/.test(phone);
     }
     function getPhoneErrorMessage(field) {
-      return `Invalid phone format for ${field}. Use 254XXXXXXXXX (12 digits) or 07/01XXXXXXXX (10 digits).`;
+      return `Invalid phone format for ${field}. Use +254XXXXXXXXX (13), 254XXXXXXXXX (12) or 07/01XXXXXXXX (10 digits).`;
     }
+
+    // Dynamically adjust phone input maxlength
+    document.addEventListener('input', function(e) {
+      if (e.target.type === 'tel' && e.target.id.includes('_phone')) {
+        const val = e.target.value;
+        if (val.startsWith('+')) e.target.maxLength = 13;
+        else if (val.startsWith('254')) e.target.maxLength = 12;
+        else e.target.maxLength = 10;
+      }
+    });
 
     // ─── VERIFY MEMBERS ───────────────────────────────────────
     function verifyMembers() {
@@ -1308,6 +1319,8 @@
 
         for (let i=0; i<STD_TRUSTEES; i++) {
           const idx         = i+1;
+          const name        = document.getElementById(`t${idx}_name`)?.value.trim() || '';
+          if (name.split(/\s+/).length < 3) { showNotification(`Full Name for Trustee ${idx} must have 3 names (First Middle Last).`); return; }
           const memberNumber= document.getElementById(`t${idx}_memberNumber`)?.value.trim() || '';
           const phone       = document.getElementById(`t${idx}_phone`)?.value.trim() || '';
           const title       = document.getElementById(`t${idx}_title`)?.value.trim() || '';

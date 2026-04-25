@@ -237,7 +237,7 @@ body{
                     <path d="M6 2h12v20H6zM8 4v2h8V4z"/>
                 </svg>
                 <input type="tel" id="phone" name="phoneNumber" placeholder="Phone Number" required>
-                <div class="error" id="phoneError">Enter valid phone number</div>
+                <div class="error" id="phoneError">Invalid phone format. Use +254, 254, or 07/01 format.</div>
             </div>
 
             <div class="field">
@@ -288,9 +288,9 @@ document.getElementById("loginForm").addEventListener("submit", function(e){
     const phone = document.getElementById("phone").value.trim();
     const error = document.getElementById("phoneError");
     const btn = document.getElementById("loginBtn");
+    const isValidP = (p) => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
 
-    // Allow any phone number format (at least 5 characters)
-    if(phone.length < 5){
+    if(!isValidP(phone)){
         e.preventDefault();
         error.style.display = "block";
         return;
@@ -301,6 +301,23 @@ document.getElementById("loginForm").addEventListener("submit", function(e){
     btn.classList.add("loading");
     btn.innerText = "Authenticating...";
 });
+
+// Dynamic Phone Maxlength
+const phoneInput = document.getElementById("phone");
+if(phoneInput) {
+    phoneInput.addEventListener('input', function() {
+        let val = this.value.trim();
+        if (val.startsWith('+254')) {
+            this.maxLength = 13;
+        } else if (val.startsWith('254')) {
+            this.maxLength = 12;
+        } else if (val.startsWith('07') || val.startsWith('01')) {
+            this.maxLength = 10;
+        } else {
+            this.maxLength = 13; // default
+        }
+    });
+}
 
 // Admin Modal Script
 const modal = document.getElementById("adminModal");
