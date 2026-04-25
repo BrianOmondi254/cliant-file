@@ -122,6 +122,13 @@
           "phone": "07",
           "description": "wee",
           "addedAt": "2026-04-13T13:55:34.731Z"
+        },
+        {
+          "id": "1777134565988",
+          "name": "brian",
+          "phone": "0740415992",
+          "description": "member of regigistrr of sosiaty",
+          "addedAt": "2026-04-25T16:29:25.988Z"
         }
       ]
     }
@@ -267,6 +274,33 @@
       "status": "present",
       "apology": "",
       "updatedAt": "2026-04-04T13:05:28.154Z"
+    },
+    {
+      "id": "1777134920094xk66s",
+      "meetingId": "1776080291766",
+      "memberId": "35951444",
+      "groupName": "ONE SACCO",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-25T16:41:05.586Z"
+    },
+    {
+      "id": "1777134920097l5m18",
+      "meetingId": "1776080291766",
+      "memberId": "35951449",
+      "groupName": "ONE SACCO",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-25T16:41:05.616Z"
+    },
+    {
+      "id": "1777134920097g5zap",
+      "meetingId": "1776080291766",
+      "memberId": "35951454",
+      "groupName": "ONE SACCO",
+      "status": "present",
+      "apology": "",
+      "updatedAt": "2026-04-25T16:41:05.616Z"
     }
   ]
 }
