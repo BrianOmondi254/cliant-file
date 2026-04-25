@@ -6,7 +6,7 @@
         "groupName": "ONE SACCO ",
         "createdAt": "2026-04-24T16:52:32.761Z",
         "agentProcessed": "0740001141",
-        "phase": 2,
+        "phase": 3,
         "totalProposedMembers": 3,
         "groupType": "Women's Group",
         "groupCertificateNumber": "1234",
@@ -37,7 +37,96 @@
           "phone": "0746001141",
           "id": "35951454",
           "name": "brian omolo omolo"
-        }
+        },
+        "principles": {
+          "otherContributions": [
+            {
+              "accountNumber": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100"
+            },
+            {
+              "accountNumber": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100"
+            },
+            {
+              "accountNumber": "003",
+              "accountName": "welfare",
+              "expectedAmount": "100"
+            },
+            {
+              "accountNumber": "004",
+              "accountName": "latness",
+              "expectedAmount": "100"
+            }
+          ],
+          "distribution": {
+            "model": "performance",
+            "performancePct": "70",
+            "officialPct": 0,
+            "targetAccountName": "Group Benefit Account",
+            "targetAccountNumber": "005"
+          },
+          "intervals": {
+            "frequency": "weekly",
+            "period": "wednesday",
+            "endSavingPeriod": "6-months"
+          },
+          "governance": {
+            "fastNotificationThreshold": "60",
+            "editAccountThreshold": "75",
+            "memberRemovalThreshold": "75",
+            "requireResponseNote": false
+          },
+          "deductions": {
+            "primarySource": "savings"
+          },
+          "balancing": {
+            "benefitAccounts": [
+              "Registration",
+              "welfare",
+              "latness",
+              "Loan Interest"
+            ]
+          },
+          "loans": {
+            "qualificationType": "none",
+            "duration": {
+              "days": ""
+            },
+            "savingTarget": "",
+            "repayment": {
+              "durationDays": "30",
+              "alignment": "collapse",
+              "rolloverMethod": "recount",
+              "maxRollovers": "3"
+            },
+            "interestAndLimits": {
+              "interestRate": "30",
+              "maxActiveLoans": "1",
+              "limitBasis": "savings",
+              "limitMultiplier": "3"
+            },
+            "type": {
+              "category": "short",
+              "guaranteeMethod": "self"
+            }
+          },
+          "closer": {
+            "saving": {
+              "durationDays": "1",
+              "intervalBuffer": "0"
+            },
+            "loan": {
+              "durationDays": "1",
+              "intervalBuffer": "0"
+            }
+          }
+        },
+        "principlesSetAt": "2026-04-25T12:44:16.216Z",
+        "accountNumber": "2540422491234002",
+        "pin": "1744"
       }
     ]
   }

@@ -46,34 +46,37 @@
             padding-bottom: 80px;
         }
 
-        /* Mobile Header - Fixed */
-        .mobile-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            padding: 12px 16px;
-            box-shadow: 0 4px 12px rgba(15, 157, 88, 0.2);
-            z-index: 1000;
-        }
+         /* Mobile Header - Fixed */
+         .mobile-header {
+             position: fixed;
+             top: 0;
+             left: 0;
+             right: 0;
+             background: linear-gradient(135deg, #0f9d58 0%, #34d399 100%);
+             color: white;
+             padding: 12px 16px;
+             box-shadow: 0 4px 12px rgba(15, 157, 88, 0.2);
+             z-index: 1000;
+             border-bottom: 1px solid rgba(255,255,255,0.15);
+         }
 
-        .header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
+         .header-top {
+             display: flex;
+             align-items: center;
+             justify-content: space-between;
+             margin-bottom: 0;
+         }
 
-        .header-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 18px;
-            font-weight: 800;
-            color: white;
-        }
+         .header-title {
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             gap: 10px;
+             font-size: 20px;
+             font-weight: 800;
+             color: white;
+             flex: 1;
+         }
 
         .header-icon {
             width: 36px;
@@ -86,19 +89,45 @@
             font-size: 20px;
         }
 
-        .menu-btn {
-            width: 40px;
-            height: 40px;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
+         .menu-btn {
+             width: 40px;
+             height: 40px;
+             background: rgba(255,255,255,0.15);
+             border: none;
+             border-radius: 10px;
+             color: white;
+             font-size: 20px;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             cursor: pointer;
+         }
+
+         .menu-btn:hover {
+             background: rgba(255,255,255,0.25);
+         }
+
+         .back-button {
+             width: 40px;
+             height: 40px;
+             background: rgba(255,255,255,0.15);
+             border: none;
+             border-radius: 10px;
+             color: white;
+             font-size: 20px;
+             font-weight: 700;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             text-decoration: none;
+             cursor: pointer;
+             transition: all 0.3s ease;
+         }
+
+         .back-button:hover {
+             background: rgba(255,255,255,0.25);
+             transform: translateX(-2px);
+         }
 
         .meeting-quick-select {
             background: rgba(255,255,255,0.2);
@@ -134,35 +163,47 @@
             padding-bottom: 20px;
         }
 
-        /* Mobile Tabs - Fixed Bottom */
-        .mobile-tabs {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 8px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 999;
-        }
+         /* Mobile Tabs - Fixed Bottom */
+         .mobile-tabs {
+             position: fixed;
+             bottom: 0;
+             left: 0;
+             right: 0;
+             background: linear-gradient(135deg, #0f9d58 0%, #34d399 100%);
+             display: flex;
+             justify-content: space-around;
+             padding: 10px 0;
+             box-shadow: 0 -2px 10px rgba(15, 157, 88, 0.2);
+             z-index: 999;
+         }
 
-        .tab-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 8px 4px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            color: var(--text-muted);
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
+          .tab-item {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 4px;
+              padding: 10px 4px;
+              background: transparent;
+              border: none;
+              cursor: pointer;
+              color: rgba(255, 255, 255, 0.85);
+              font-size: 13px;
+              font-weight: 600;
+              transition: all 0.2s;
+              border-radius: 8px;
+              margin: 0 4px;
+          }
+
+          .tab-item:hover {
+              color: white;
+              background: rgba(255, 255, 255, 0.15);
+          }
+
+          .tab-item.active {
+              color: white;
+              background: rgba(255, 255, 255, 0.25);
+          }
 
         .tab-item-icon {
             font-size: 20px;
@@ -199,10 +240,10 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .card-header.primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-        }
+         .card-header.primary {
+             background: linear-gradient(135deg, #0f9d58 0%, #34d399 100%);
+             color: white;
+         }
 
         .card-header.success {
             background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);
@@ -822,42 +863,58 @@
             padding: 20px;
         }
 
-        .modal-footer {
-            padding: 16px 20px;
-            border-top: 1px solid var(--border);
-            position: sticky;
-            bottom: 0;
-            background: white;
-            display: flex;
-            gap: 10px;
-        }
+         .modal-footer {
+             padding: 16px 20px;
+             border-top: 1px solid var(--border);
+             position: sticky;
+             bottom: 0;
+             background: white;
+             display: flex;
+             gap: 10px;
+         }
 
-        /* Floating Action Button */
-        .fab {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);
-            color: white;
-            border: none;
-            font-size: 24px;
-            box-shadow: 0 4px 12px rgba(56, 161, 105, 0.4);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 998;
-            transition: all 0.3s;
-        }
+         /* Menu Dropdown */
+         .menu-dropdown {
+             display: none;
+             position: fixed;
+             top: 60px;
+             right: 16px;
+             z-index: 3000;
+             width: 200px;
+             background: white;
+             border-radius: 12px;
+             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+             overflow: hidden;
+         }
 
-        .fab:active {
-            transform: scale(0.95);
-        }
+         .menu-dropdown.active {
+             display: block;
+         }
 
-        /* Empty State */
+          .dropdown-content {
+              padding: 0;
+          }
+
+          .dropdown-body {
+              padding: 8px;
+          }
+
+          .dropdown-footer {
+              padding: 6px 8px;
+              border-top: 1px solid var(--border);
+              background: var(--bg-secondary);
+          }
+
+           .dropdown-body .btn,
+           .dropdown-footer .btn {
+               margin-bottom: 0;
+               width: 100%;
+               text-align: center;
+               font-size: 13px;
+               padding: 10px 12px;
+           }
+
+         /* Empty State */
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -1077,29 +1134,31 @@
     </style>
 </head>
 <body>
-    <!-- Mobile Header -->
-    <header class="mobile-header">
-        <div class="header-top">
-            <div class="header-title">
-                <div class="header-icon">⚖️</div>
-                <span>Proceedings</span>
-            </div>
-            <button class="menu-btn" onclick="openModal('menuModal')">☰</button>
-        </div>
-        
-        <div class="meeting-quick-select">
-            <select id="meetingSelect" onchange="selectMeeting()">
-                <option value="">-- Select Meeting --</option>
-                <% if (meetings && meetings.length > 0) { %>
-                    <% meetings.reverse().forEach(function(meeting) { %>
-                        <option value="<%= meeting.id %>" <%= currentMeeting && currentMeeting.id === meeting.id ? 'selected' : '' %>>
-                            <%= meeting.title %> - <%= new Date(meeting.date).toLocaleDateString() %>
-                        </option>
-                    <% }); %>
-                <% } %>
-            </select>
-        </div>
-    </header>
+     <!-- Mobile Header -->
+     <header class="mobile-header">
+         <div class="header-top">
+              <a href="/personal" class="back-button" title="Back to Dashboard">
+                  ←
+              </a>
+             <div class="header-title" style="flex: 1; text-align: center; font-size: 22px; font-weight: 800;">
+                 <span>Proceedings</span>
+             </div>
+             <button class="menu-btn" onclick="toggleMenuDropdown()">☰</button>
+         </div>
+         
+         <div class="meeting-quick-select">
+             <select id="meetingSelect" onchange="selectMeeting()">
+                 <option value="">-- Select Meeting --</option>
+                 <% if (meetings && meetings.length > 0) { %>
+                     <% meetings.reverse().forEach(function(meeting) { %>
+                         <option value="<%= meeting.id %>" <%= currentMeeting && currentMeeting.id === meeting.id ? 'selected' : '' %>>
+                             <%= meeting.title %> - <%= new Date(meeting.date).toLocaleDateString() %>
+                         </option>
+                     <% }); %>
+                 <% } %>
+             </select>
+         </div>
+     </header>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -1246,9 +1305,9 @@
                                 </div>
 
                                 <!-- Visitors Section -->
-                                <div class="visitor-section" style="margin-top: 30px; margin-bottom: 25px; padding-top: 20px; border-top: 1px dashed #cbd5e0;">
-                                    <h4 id="addVisitorHeader" style="font-size: 14px; margin-bottom: 12px; color: #276749; font-weight: 700; padding: 12px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; display: flex; align-items: center; gap: 8px;">
-                                        👤 Add Visitors / Guests
+                                <div class="visitor-section" style="margin-top: 30px; margin-bottom: 25px; padding-top: 20px; border-top: 2px dashed #cbd5e0; background: linear-gradient(to bottom, #f0f9ff, #ffffff); padding: 20px; border-radius: 12px;">
+                                    <h4 id="addVisitorHeader" style="font-size: 15px; margin-bottom: 16px; color: #0c4a6e; font-weight: 800; padding: 10px 14px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(14, 165, 233, 0.1);">
+                                        👤 Visitors / Guests
                                     </h4>
                                     
                                     <div id="visitorForm">
@@ -1265,33 +1324,45 @@
                                             </div>
                                             <textarea class="form-textarea" id="visitorDescription" maxlength="250" oninput="updateCounter('visitorDescription', 'visitorCounter')" placeholder="Purpose of visit..." style="height: 60px; font-size: 13px;"></textarea>
                                         </div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                            <button class="btn btn-secondary btn-small" id="addVisitorBtn" onclick="addVisitor(true)" style="padding: 0 16px; font-size: 12px; height: 32px; width: 140px; justify-content: center;">+ Save Visitor</button>
-                                            <button class="btn btn-primary btn-small" onclick="handleVisitorOk()" style="padding: 0 16px; font-size: 12px; height: 32px; background: #38a169; width: 140px; justify-content: center;">OK</button>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px;">
+                                            <button class="btn btn-secondary" id="addVisitorBtn" onclick="addVisitor(true)" style="flex: 1; padding: 10px 16px; font-size: 14px; height: 40px;">
+                                                + Save Visitor
+                                            </button>
+                                            <button class="btn btn-primary" onclick="handleVisitorOk()" style="flex: 1; padding: 10px 16px; font-size: 14px; height: 40px; background: #38a169;">
+                                                OK
+                                            </button>
                                         </div>
                                     </div>
                                     
                                     <div id="visitorListContainer">
                                         <% if (currentMeeting && currentMeeting.visitors && currentMeeting.visitors.length > 0) { %>
                                             <% currentMeeting.visitors.forEach(function(v) { %>
-                                                <div class="visitor-item">
-                                                    <div class="visitor-icon">👤</div>
-                                                    <div class="visitor-info">
-                                                        <div class="visitor-name"><%= v.name %> <%= v.phone ? '(' + v.phone + ')' : '' %></div>
-                                                        <div class="visitor-desc"><%= v.description %></div>
+                                                <div class="visitor-item" style="background: #f0f9ff; border: 1px solid #bae6fd; margin-bottom: 10px; padding: 12px;">
+                                                    <div class="visitor-icon" style="background: var(--info);">👤</div>
+                                                    <div class="visitor-info" style="flex: 1; min-width: 0;">
+                                                        <div class="visitor-name" style="font-size: 14px; font-weight: 700; color: #0c4a6e; margin-bottom: 4px;">
+                                                            <%= v.name %> <%= v.phone ? '(' + v.phone + ')' : '' %>
+                                                        </div>
+                                                        <div class="visitor-desc" style="font-size: 12px; color: #0369a1; line-height: 1.4;">
+                                                            📝 <%= v.description %>
+                                                        </div>
                                                     </div>
-                                                    <div class="visitor-actions">
-                                                        <button class="btn btn-secondary btn-small" style="font-size: 10px; padding: 2px 8px; height: 24px;" 
+                                                    <div class="visitor-actions" style="display: flex; gap: 8px; flex-shrink: 0;">
+                                                        <button class="btn btn-secondary btn-small" style="font-size: 12px; padding: 6px 12px; height: 32px; min-width: 70px;" 
                                                                 onclick="editVisitor('<%= (v.name || "").replace(/'/g, "\\'") %>', '<%= (v.phone || "").replace(/'/g, "\\'") %>', '<%= (v.description || "").replace(/'/g, "\\'") %>')">
-                                                            EDIT
+                                                            Edit
                                                         </button>
-                                                        <button class="btn" style="font-size: 10px; color: #c53030; background: #fff5f5; border: 1px solid #feb2b2; padding: 2px 8px; height: 24px;" 
+                                                        <button class="btn btn-small" style="font-size: 12px; color: #c53030; background: #fff5f5; border: 1px solid #feb2b2; padding: 6px 12px; height: 32px; min-width: 70px;" 
                                                                 onclick="deleteVisitor('<%= (v.name || "").replace(/'/g, "\\'") %>')">
-                                                            DELETE
+                                                            Delete
                                                         </button>
                                                     </div>
                                                 </div>
                                             <% }); %>
+                                        <% } else { %>
+                                            <div class="empty-state" style="padding: 20px; text-align: center; background: #f8fafc; border-radius: 10px; border: 2px dashed #cbd5e0;">
+                                                <div class="empty-title" style="font-size: 13px; color: #64748b; margin: 0;">No visitors added yet</div>
+                                            </div>
                                         <% } %>
                                     </div>
                                 </div>
@@ -1408,18 +1479,40 @@
 
                                     <div class="sticky-action" id="saveAttendanceAction" style="display: none;">
                                         <button class="btn btn-primary w-100" onclick="bulkSaveAttendance()" style="background: linear-gradient(135deg, #0f9d58, #34d399); box-shadow: 0 4px 12px rgba(15, 157, 88, 0.2); height: 50px; font-weight: 700;">
-                                            💾 Save Attendance & Continue
+                                            Save Attendance & Continue
                                         </button>
+                                    </div>
+                                    
+                                    <!-- Attendance Confirmation Summary (shown after save) -->
+                                    <div id="attendanceConfirmation" style="display: none; margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac; border-radius: 12px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);">
+                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                                            <div style="font-size: 24px;">✅</div>
+                                            <div>
+                                                <div style="font-size: 16px; font-weight: 700; color: #166534;">Attendance Recorded</div>
+                                                <div style="font-size: 12px; color: #15803d;">Saved successfully</div>
+                                            </div>
+                                        </div>
+                                        <div id="attendanceSummary" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: #166534;">
+                                            <!-- Summary stats will be populated by JS -->
+                                        </div>
+                                        <div style="display: flex; gap: 10px; margin-top: 12px;">
+                                            <button class="btn btn-primary" onclick="openTab('minutes')" style="flex: 1; padding: 10px; font-size: 14px;">
+                                                Continue to Minutes →
+                                            </button>
+                                            <button class="btn btn-secondary" onclick="resetAttendance()" style="flex: 1; padding: 10px; font-size: 14px;">
+                                                Edit Attendance
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             <% } %>
 
                         </div>
                     <% } else { %>
-                        <div class="empty-state">
-                            <div class="empty-icon">⏳</div>
-                            <div class="empty-title">Meeting is Pending / No Meeting</div>
-                            <div class="empty-subtitle">Roll-call will be available when meeting is active</div>
+                            <div class="empty-state">
+                                <div class="empty-icon">⏳</div>
+                                <div class="empty-title">Meeting is Pending / No Meeting</div>
+                                <div class="empty-subtitle">Roll-call will be available when meeting is active</div>
                             <% if (currentMeeting) { %>
                                 <button class="btn btn-primary mt-16" onclick="updateMeetingStatus('<%= currentMeeting.id %>', 'active')">
                                     Set as Active
@@ -1773,65 +1866,44 @@
         </div>
     </main>
 
-    <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-tabs">
-        <button class="tab-item active" onclick="openTab('details')">
-            <div class="tab-item-icon">📋</div>
-            <div>Details</div>
-        </button>
-        <button class="tab-item" onclick="openTab('attendance')">
-            <div class="tab-item-icon">✅</div>
-            <div>Roll Call</div>
-        </button>
-        <button class="tab-item" onclick="openTab('minutes')">
-            <div class="tab-item-icon">📄</div>
-            <div>Minutes</div>
-        </button>
-        <button class="tab-item" onclick="openTab('agenda')">
-            <div class="tab-item-icon">📝</div>
-            <div>Agenda</div>
-        </button>
-        <button class="tab-item" onclick="openTab('voting')">
-            <div class="tab-item-icon">🗳️</div>
-            <div>Voting</div>
-        </button>
-        <button class="tab-item" onclick="openTab('final')">
-            <div class="tab-item-icon">⚖️</div>
-            <div>Final</div>
-        </button>
-    </nav>
+     <!-- Mobile Bottom Navigation -->
+     <nav class="mobile-tabs">
+         <button class="tab-item" onclick="openTab('details')">
+             <div>Details</div>
+         </button>
+         <button class="tab-item" onclick="openTab('attendance')">
+             <div>Roll Call</div>
+         </button>
+         <button class="tab-item" onclick="openTab('minutes')">
+             <div>Minutes</div>
+         </button>
+         <button class="tab-item" onclick="openTab('agenda')">
+             <div>Agenda</div>
+         </button>
+         <button class="tab-item" onclick="openTab('voting')">
+             <div>Voting</div>
+         </button>
+         <button class="tab-item" onclick="openTab('final')">
+             <div>Final</div>
+         </button>
+     </nav>
 
-    <!-- Floating Action Buttons -->
-    <button class="fab" onclick="showQuickActions()" id="fabMain">+</button>
-
-    <!-- Modals -->
-    
-    <!-- Menu Modal -->
-    <div id="menuModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Menu</h3>
-                <p class="modal-subtitle">Quick actions</p>
-            </div>
-            <div class="modal-body">
-                <button class="btn btn-primary mb-16" onclick="closeModal('menuModal'); openModal('meetingModal')">
-                    + New Meeting
-                </button>
-                <button class="btn btn-secondary mb-16" onclick="closeModal('menuModal'); openModal('projectModal')">
-                    + New Project
-                </button>
-                <button class="btn btn-secondary mb-16" onclick="closeModal('menuModal'); openModal('agendaModal')">
-                    + Add Agenda
-                </button>
-                <button class="btn btn-secondary" onclick="closeModal('menuModal'); openModal('minuteModal')">
-                    + Add Minute
-                </button>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('menuModal')">Close</button>
-            </div>
-        </div>
-    </div>
+     <!-- Menu Dropdown -->
+     <div id="menuDropdown" class="menu-dropdown">
+              <div class="dropdown-content">
+                  <div class="dropdown-body">
+                      <button class="btn btn-primary" onclick="closeDropdown(); openModal('meetingModal')" style="width: 100%; padding: 8px 12px; font-size: 14px; margin-bottom: 12px;">
+                          + New Meeting
+                      </button>
+                      <button class="btn btn-secondary" onclick="closeDropdown(); openModal('projectModal')" style="width: 100%; padding: 8px 12px; font-size: 14px;">
+                          + New Project
+                      </button>
+                  </div>
+                  <div class="dropdown-footer">
+                      <button class="btn btn-secondary" onclick="closeDropdown()" style="padding: 6px 10px; font-size: 13px;">Close</button>
+                  </div>
+              </div>
+     </div>
 
     <!-- New Meeting Modal -->
     <div id="meetingModal" class="modal">
@@ -1847,8 +1919,8 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Project</label>
-                    <input type="text" class="form-input" id="meetingProject" placeholder="Project name">
+                    <label class="form-label">Description</label>
+                    <input type="text" class="form-input" id="meetingProject" placeholder="Meeting description">
                 </div>
                 
                 <div class="form-group">
@@ -2085,6 +2157,28 @@
             document.body.style.overflow = '';
         }
 
+        function toggleMenuDropdown() {
+            const dropdown = document.getElementById('menuDropdown');
+            const isActive = dropdown.classList.contains('active');
+            
+            // Close any open modals first
+            document.querySelectorAll('.modal.active').forEach(m => {
+                m.classList.remove('active');
+            });
+            document.body.style.overflow = '';
+            
+            // Toggle dropdown
+            if (isActive) {
+                dropdown.classList.remove('active');
+            } else {
+                dropdown.classList.add('active');
+            }
+        }
+
+        function closeDropdown() {
+            document.getElementById('menuDropdown').classList.remove('active');
+        }
+
         // Close modal when clicking outside
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', function(e) {
@@ -2092,6 +2186,17 @@
                     closeModal(this.id);
                 }
             });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('menuDropdown');
+            const menuBtn = document.querySelector('.menu-btn');
+            if (dropdown && dropdown.classList.contains('active')) {
+                if (!dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
+                    closeDropdown();
+                }
+            }
         });
 
         // Toggle guest inputs
@@ -2265,6 +2370,14 @@
                 return;
             }
 
+            // Calculate counts
+            const counts = { present: 0, absent: 0, late: 0 };
+            Object.values(attendanceState).forEach(record => {
+                if (record.status === 'present') counts.present++;
+                else if (record.status === 'absent') counts.absent++;
+                else if (record.status === 'late') counts.late++;
+            });
+
             try {
                 const response = await fetch('/proceedings/api/attendance/bulk', {
                     method: 'POST',
@@ -2277,14 +2390,32 @@
                 });
 
                 if (response.ok) {
-                    showNotification('Attendance saved successfully');
-                    window.location.reload();
+                    showNotification('Attendance saved successfully', 'success');
+                    
+                    // Update confirmation summary
+                    document.getElementById('attendanceSummary').innerHTML = `
+                        <span style="background: #dcfce7; padding: 4px 10px; border-radius: 6px; border: 1px solid #86efac;">✅ Present: ${counts.present}</span>
+                        <span style="background: #fee2e2; padding: 4px 10px; border-radius: 6px; border: 1px solid #fca5a5;">❌ Absent: ${counts.absent}</span>
+                        <span style="background: #fef3c7; padding: 4px 10px; border-radius: 6px; border: 1px solid #fcd34d;">◐ Late: ${counts.late}</span>
+                    `;
+                    
+                    // Hide save button, show confirmation
+                    document.getElementById('saveAttendanceAction').style.display = 'none';
+                    document.getElementById('attendanceConfirmation').style.display = 'block';
+                    
+                    // Clear attendance state
+                    attendanceState = {};
                 } else {
                     showNotification('Error saving data', 'error');
                 }
             } catch (error) {
                 showNotification('Connection error', 'error');
             }
+        }
+
+        function resetAttendance() {
+            // Reload page to reset attendance marks
+            window.location.reload();
         }
 
         // Visitor Management
@@ -2636,10 +2767,6 @@
         }
 
         // Quick actions
-        function showQuickActions() {
-            openModal('menuModal');
-        }
-
         // Check for tab parameter on load
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);

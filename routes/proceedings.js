@@ -38,8 +38,21 @@ const flattenData = (data) => {
   const flat = [];
   for (const county in data) {
     for (const constituency in data[county]) {
-      for (const ward in data[county][constituency]) {
-        flat.push(...data[county][constituency][ward]);
+      const items = data[county][constituency];
+      if (Array.isArray(items)) {
+        let currentWard = "Unknown Ward";
+        items.forEach(item => {
+          if (typeof item === 'string') {
+            currentWard = item;
+          } else if (typeof item === 'object' && item !== null && !item.isPerformance) {
+            flat.push({
+              ...item,
+              county,
+              constituency,
+              ward: currentWard
+            });
+          }
+        });
       }
     }
   }
