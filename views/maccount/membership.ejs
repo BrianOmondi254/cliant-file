@@ -659,10 +659,6 @@
         </div>
         <div class="modal-body">
           <div class="field">
-            <label>Full Name</label>
-            <input type="text" id="newMemberName" placeholder="Enter full name">
-          </div>
-          <div class="field">
             <label>Phone Number</label>
             <input type="tel" id="newMemberPhone" placeholder="Enter phone number">
           </div>
@@ -814,12 +810,32 @@
       document.getElementById('addMemberOverlay').classList.add('open');
     }
     async function submitAddMemberRequest() {
-      const name   = document.getElementById('newMemberName').value.trim();
       const phone  = document.getElementById('newMemberPhone').value.trim();
       const reason = document.getElementById('memberReason').value.trim();
-      if (!name)  { alert('Please enter member name'); return; }
       if (!phone) { alert('Please enter phone number'); return; }
       
+      // First, fetch member details from data.json by phone number
+      let memberName = "";
+      let idNumber = "";
+      try {
+        const memberRes = await fetch(`/member/get-by-phone?phone=${encodeURIComponent(phone)}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const memberData = await memberRes.json();
+        if (memberData.success && memberData.member) {
+          memberName = memberData.member.name || "";
+          idNumber = memberData.member.idNumber || "";
+        } else {
+          alert('Member not found with phone number: ' + phone);
+          return;
+        }
+      } catch (err) {
+        alert('Error fetching member details: ' + err.message);
+        return;
+      }
+      
+      // Now submit the add member request with the fetched details
       try {
         const res = await fetch('/member/request-add-member', {
           method: 'POST',
@@ -827,14 +843,15 @@
           body: JSON.stringify({ 
             groupName: groupName, 
             requesterPhone: memberPhone,
-            newMemberName: name, 
             newMemberPhone: phone, 
+            newMemberName: memberName,
+            idNumber: idNumber,
             reason: reason 
           })
         });
         const data = await res.json();
         if (data.success) {
-          alert('Request submitted successfully!\n\nName: ' + name + '\nPhone: ' + phone + '\n\nPending approval from group officials.');
+           alert('Request submitted successfully!\n\nPhone: ' + phone + '\nName: ' + memberName + '\nID Number: ' + idNumber + '\n\nPending approval from group officials.');
         } else {
           alert('Error: ' + (data.error || 'Failed to submit request'));
           return;
@@ -845,7 +862,7 @@
       }
       
       closeModal('addMemberOverlay');
-      ['newMemberName','newMemberPhone','memberReason'].forEach(id => document.getElementById(id).value = '');
+       ['newMemberPhone','memberReason'].forEach(id => document.getElementById(id).value = '');
     }
   
     /* ── TERMINATION REQUEST ── */

@@ -537,18 +537,18 @@ router.post("/activate-group", async (req, res) => {
 
   // NO BLOCK: Allow updating even if group already has members if we are in activation flow
 
-  // Build group object - use constitutionStartKey as-is (plain string)
+  // Build group object following general.json arrangement
+  // Field order: groupName, groupType, accountNumber, pin, createdAt, agentProcessed, phase, totalProposedMembers,
+  // trustee entries, official entries, member entries, requests, groupCertificateNumber, constitution keys, principlesSetAt
   const group = {
     groupName,
+    groupType: groupType || '',
+    accountNumber: phone || '',
+    pin: constitutionStartKey || '',
     createdAt: createdAt || new Date().toISOString(),
     agentProcessed: agentProcessed || agentPhone || 'n/a',
     phase: phase || 2,
-    totalProposedMembers: totalMembers || 0,
-    groupType: groupType || '',
-    groupCertificateNumber: groupCertificateNumber || '',
-    constitutionStartKey,
-    constitutionKeyGeneratedAt: new Date().toISOString(),
-    messages
+    totalProposedMembers: totalMembers || 0
   };
 
   // Add trustees/officials/members
@@ -566,6 +566,24 @@ router.post("/activate-group", async (req, res) => {
       group[`member_${idx}`] = { index: String(idx), type: 'member', ...m };
     });
   }
+
+
+  // Add requests section with addMember entries
+  group.requests = {
+    addMember: []
+  };
+
+  // Add remaining fields in correct order
+  group.groupCertificateNumber = groupCertificateNumber || '';
+  group.constitutionStartKey = constitutionStartKey || '';
+  group.constitutionKeyGeneratedAt = new Date().toISOString();
+  group.principlesSetAt = new Date().toISOString();
+  
+  // Add principles object (empty for now, can be filled later)
+  group.principles = {};
+  
+  // messages field
+  group.messages = messages;
 
   // Update existing group or add new one
   if (existingGroupIndex >= 0) {

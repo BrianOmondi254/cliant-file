@@ -412,9 +412,9 @@
             <div id="myAccountSection" class="step-box">
 
                 <div id="otherButtonsGD">
-                    <a href="/member/contribution?groupName=<%= group.groupName %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-hand-holding-usd"></i> Contribution</a>
-                    <a href="/member/loan?groupName=<%= group.groupName %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
-                    <a href="/member/membership?groupName=<%= group.groupName %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-id-card"></i> Membership</a>
+                     <a href="/member/contribution?groupName=<%= encodeURIComponent(group.groupName) %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-hand-holding-usd"></i> Contribution</a>
+                     <a href="/member/loan?groupName=<%= encodeURIComponent(group.groupName) %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
+                     <a href="/member/membership?groupName=<%= encodeURIComponent(group.groupName) %>&memberPhone=<%= currentUserPhone %>" class="action-button"><i class="fas fa-id-card"></i> Membership</a>
                 </div>
 
                 <div id="changePinContainerGD" style="margin-top: 15px;">
@@ -511,8 +511,8 @@
                     <% if (group.pinIsSet) { %>
                         <!-- PIN set — show action buttons -->
                         <div id="groupAccountButtons" style="display: flex; flex-direction: column; gap: 10px;">
-                            <a href="/member/gcon?groupName=<%= group.groupName %>" class="action-button"><i class="fas fa-donate"></i> Contribution</a>
-                            <a href="/member/gmember?groupName=<%= group.groupName %>" class="action-button"><i class="fas fa-users"></i> Membership</a>
+                            <a href="/member/gcon?groupName=<%= encodeURIComponent(group.groupName) %>" class="action-button"><i class="fas fa-donate"></i> Contribution</a>
+                             <a href="/member/gmember?groupName=<%= encodeURIComponent(group.groupName) %>" class="action-button"><i class="fas fa-users"></i> Membership</a>
                             <a href="#" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
                             <a href="#" class="action-button" onclick="switchTab('performance')"><i class="fas fa-chart-line"></i> Performance</a>
                             <a href="#" class="action-button"><i class="fas fa-receipt"></i> A/C Statement</a>
@@ -825,6 +825,45 @@
                         style="width: 100%; margin-bottom: 15px; background: #8b5cf6; color: white; border: none; padding: 10px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-weight: 600;">
                         <i class="fas fa-file-pdf" style="margin-right: 5px;"></i> Download
                     </button>
+                    <div style="background:#ffffff; border:1px solid #ddd6fe; border-radius:10px; padding:10px; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="color:#7c3aed; font-weight:700; font-size:0.75rem;">
+                                <i class="fas fa-arrow-right" style="margin-right:4px;"></i> Request Content Store
+                            </span>
+                        </div>
+                        <% 
+                            const addMemberRequests = (group.requests && group.requests.addMember) ? group.requests.addMember : [];
+                        %>
+                        <% if (addMemberRequests.length > 0) { %>
+                            <div style="display:flex; flex-direction:column; gap:8px;">
+                                <% addMemberRequests.forEach((req) => { 
+                                    const reqStatus = String(req.status || 'unapproved').toLowerCase();
+                                    const isApproved = reqStatus === 'approved';
+                                %>
+                                    <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; padding:8px;">
+                                        <div style="font-size:0.72rem; color:#334155; margin-bottom:4px;">
+                                            <strong>Requester Phone:</strong> <%= req.requesterPhone || 'N/A' %>
+                                        </div>
+                                        <div style="font-size:0.72rem; color:#334155; margin-bottom:4px;">
+                                            <strong>Requested Member Phone:</strong> <%= req.newMemberPhone || 'N/A' %>
+                                        </div>
+                                        <div style="font-size:0.72rem; color:#334155; margin-bottom:4px;">
+                                            <strong>Approval:</strong> <%= isApproved ? 'approved' : 'unapproved' %>
+                                        </div>
+                                        <% if (isApproved) { %>
+                                            <div style="font-size:0.72rem; color:#334155;">
+                                                <strong>Approver Phone:</strong> <%= req.approverPhone || req.approvedByPhone || req.approvedBy || 'N/A' %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        <% } else { %>
+                            <div style="font-size:0.72rem; color:#64748b; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:8px;">
+                                No request content stored yet.
+                            </div>
+                        <% } %>
+                    </div>
                     <div class="constitution-content" style="max-height: 400px; overflow-y: auto; background: transparent; border: none; padding: 0; margin-top: 0;">
                         <% if (group.constitutionPoints && group.constitutionPoints.length > 0) { %>
                             <%

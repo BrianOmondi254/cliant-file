@@ -86,7 +86,186 @@ const flattenData = (data) => {
       }
     }
   }
-  return flat;
+   return flat;
+};
+
+/* ================= MEMBER REQUEST HELPERS ================= */
+
+const normalizeKenyanPhone = (p = "") => {
+  let digits = String(p).replace(/\D/g, "");
+  if (digits.startsWith("254")) digits = digits.substring(3);
+  if (digits.startsWith("0")) digits = digits.substring(1);
+  if (digits.length > 9) digits = digits.slice(-9);
+  return digits;
+};
+
+const findGroupInGeneral = (generalData, groupName) => {
+  if (!generalData || !groupName) return null;
+  const wanted = String(groupName || "").trim().toLowerCase();
+  for (const county in generalData) {
+    const constituencies = generalData[county] || {};
+    for (const constituency in constituencies) {
+      const wardArray = constituencies[constituency];
+      if (!Array.isArray(wardArray)) continue;
+      for (let idx = 0; idx < wardArray.length; idx++) {
+        const item = wardArray[idx];
+        const itemName = String(item && item.groupName ? item.groupName : "").trim().toLowerCase();
+        if (item && typeof item === "object" && itemName === wanted) {
+          return { county, constituency, wardArray, index: idx, group: item };
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
+  const targetNorm = normalizeKenyanPhone(memberPhone || "");
+  if (!group || !targetNorm) return { index: "", memberNumber: "", phone: "" };
+
+  const memberKeys = Object.keys(group).filter(k =>
+    k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
+  );
+
+  for (const key of memberKeys) {
+    const person = group[key];
+    if (person && person.phone && normalizeKenyanPhone(person.phone) === targetNorm) {
+      return {
+        index: person.index || "",
+        memberNumber: person.memberNumber || "",
+        phone: person.phone || ""
+      };
+    }
+  }
+
+  return { index: "", memberNumber: "", phone: "" };
+};
+
+const getMemberMetaFromGeneralGroupByName = (group, memberName) => {
+  const wanted = String(memberName || "").trim().toLowerCase();
+  if (!group || !wanted) return { index: "", memberNumber: "", phone: "" };
+
+  const memberKeys = Object.keys(group).filter(k =>
+    k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
+  );
+
+  for (const key of memberKeys) {
+    const person = group[key];
+    const personName = String(person && person.name ? person.name : "").trim().toLowerCase();
+    if (personName && personName === wanted) {
+      return {
+        index: person.index || "",
+        memberNumber: person.memberNumber || "",
+        phone: person.phone || ""
+      };
+    }
+  }
+
+  return { index: "", memberNumber: "", phone: "" };
+};
+
+const defaultMemberStructure = () => ({
+  group: {}
+});
+
+const syncFromGeneral = () => {
+  const generalData = readJSON(generalFile, {});
+  if (!generalData || Object.keys(generalData).length === 0) {
+    return;
+  }
+
+  const dataFile = path.join(__dirname, "../data.json");
+  const usersData = readJSON(dataFile, []);
+  const getUserName = (phone) => {
+    const u = usersData.find(user => user.phoneNumber === phone || user.phoneNumber === '0' + phone || user.phoneNumber === '+254' + phone.substring(1));
+    return u ? `${u.FirstName} ${u.LastName}`.trim() : null;
+  };
+
+  const allGroups = flattenData(generalData);
+  const memberData = defaultMemberStructure();
+
+  if (!memberData.group) {
+    memberData.group = {};
+  }
+
+  allGroups.forEach(group => {
+    const groupName = group.groupName;
+    if (!groupName) return;
+
+    const memberKeys = Object.keys(group).filter(k =>
+      k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+    );
+
+    const membersObj = {};
+    memberKeys.forEach(key => {
+      const item = group[key];
+      if (item && item.phone) {
+        const memberName = getUserName(item.phone) || item.title || key.replace(/_/g, ' ').replace(/(\d+)/, '#$1');
+
+        membersObj[item.phone] = {
+          memberId: item.phone,
+          name: memberName,
+          memberFinancials: {
+            openingBalance: 0,
+            amountIn: 0,
+            amountOut: 0,
+            closingBalance: 0
+          },
+          accounts: {
+            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+          },
+          processedDeductions: []
+        };
+      }
+    });
+
+    if (memberData.group[groupName]) {
+      Object.keys(membersObj).forEach(phone => {
+        if (!memberData.group[groupName].members[phone]) {
+          memberData.group[groupName].members[phone] = membersObj[phone];
+        } else if (membersObj[phone].name) {
+          memberData.group[groupName].members[phone].name = membersObj[phone].name;
+        }
+      });
+    } else {
+      let foundKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
+      if (foundKey) {
+        Object.keys(membersObj).forEach(phone => {
+          if (!memberData.group[foundKey].members[phone]) {
+            memberData.group[foundKey].members[phone] = membersObj[phone];
+          } else if (membersObj[phone].name) {
+            memberData.group[foundKey].members[phone].name = membersObj[phone].name;
+          }
+        });
+      } else {
+        const groupNum = Object.keys(memberData.group).length + 1;
+        const accountNum = group.accountNumber || "ACC" + groupNum;
+        memberData.group[accountNum] = {
+          groupNumber: groupNum,
+          groupName: groupName,
+          groupFinancials: {
+            totalOpeningBalance: 0,
+            totalAmountIn: 0,
+            totalAmountOut: 0,
+            totalClosingBalance: 0,
+            availableWithdrawalBalance: 0
+          },
+          accountSchema: {
+            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
+            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
+            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
+          },
+          members: membersObj
+        };
+      }
+    }
+  });
+
+  // No longer writing to member.json - only using general.json
 };
 
 /* ================= ROUTES ================= */
@@ -572,19 +751,6 @@ router.post("/update-members", (req, res) => {
   }
 
   let accounts = readJSON(generalFile, {});
-  if (Array.isArray(accounts)) {
-    accounts = restructureData(accounts);
-    // Check for phase graduation
-  if (updatedAccount.phase !== targetGroup.phase) {
-    const allGroups = flattenData(accounts);
-    const self = allGroups.find(g => g.groupName === groupName);
-    if (self) {
-      perfLogger.logActivity(self.county, self.constituency, self.ward, updatedAccount.phase, true, targetGroup.phase);
-    }
-  }
-
-  writeJSON(generalFile, accounts);
-  }
 
   let targetGroup = null;
   let locationPath = null;

@@ -5,6 +5,7 @@ const path = require("path");
 const router = express.Router();
 const memberFile = path.join(__dirname, "../member.json");
 const generalFile = path.join(__dirname, "../general.json");
+const dataFile = path.join(__dirname, "../data.json");
 
 const readJSON = (file, fallback = null) => {
   try {
@@ -54,13 +55,120 @@ const defaultMemberStructure = () => ({
   group: {}
 });
 
-const flattenData = (data) => {
+const normalizeKenyanPhone = (p = "") => {
+  let digits = String(p).replace(/\D/g, "");
+
+  // Handle +254..., 254..., and incorrect 2540... variants.
+  if (digits.startsWith("254")) {
+    digits = digits.substring(3);
+  }
+  if (digits.startsWith("0")) {
+    digits = digits.substring(1);
+  }
+
+  // Keep canonical local number as 9 digits (7XXXXXXXX).
+  if (digits.length > 9) {
+    digits = digits.slice(-9);
+  }
+  return digits;
+};
+
+const phoneVariants = (p = "") => {
+  const canonical = normalizeKenyanPhone(p);
+  const set = new Set();
+  if (canonical) {
+    set.add(canonical);
+    set.add("0" + canonical);
+    set.add("254" + canonical);
+    set.add("+254" + canonical);
+  }
+  return set;
+};
+
+const findGroupInGeneral = (generalData, groupName) => {
+  if (!generalData || !groupName) return null;
+  const wanted = String(groupName || "").trim().toLowerCase();
+  for (const county in generalData) {
+    const constituencies = generalData[county] || {};
+    for (const constituency in constituencies) {
+      const wardArray = constituencies[constituency];
+      if (!Array.isArray(wardArray)) continue;
+      for (let idx = 0; idx < wardArray.length; idx++) {
+        const item = wardArray[idx];
+        const itemName = String(item && item.groupName ? item.groupName : "").trim().toLowerCase();
+        if (item && typeof item === "object" && itemName === wanted) {
+          return { county, constituency, wardArray, index: idx, group: item };
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const findGroupByMemberPhoneInGeneral = (generalData, memberPhone) => {
+  const targetNorm = normalizeKenyanPhone(memberPhone || "");
+  if (!generalData || !targetNorm) return null;
+
+  for (const county in generalData) {
+    const constituencies = generalData[county] || {};
+    for (const constituency in constituencies) {
+      const wardArray = constituencies[constituency];
+      if (!Array.isArray(wardArray)) continue;
+      for (let idx = 0; idx < wardArray.length; idx++) {
+        const item = wardArray[idx];
+        if (!item || typeof item !== "object" || !item.groupName) continue;
+
+        const memberKeys = Object.keys(item).filter(k =>
+          k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
+        );
+        for (const key of memberKeys) {
+          const person = item[key];
+          if (person && person.phone && normalizeKenyanPhone(person.phone) === targetNorm) {
+            return { county, constituency, wardArray, index: idx, group: item };
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
+  const targetNorm = normalizeKenyanPhone(memberPhone || "");
+  if (!group || !targetNorm) return { index: "", memberNumber: "", phone: "" };
+
+  const memberKeys = Object.keys(group).filter(k =>
+    k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
+  );
+
+  for (const key of memberKeys) {
+    const person = group[key];
+    if (person && person.phone && normalizeKenyanPhone(person.phone) === targetNorm) {
+      return {
+        index: person.index || "",
+        memberNumber: person.memberNumber || "",
+        phone: person.phone || ""
+      };
+    }
+  }
+
+   return { index: "", memberNumber: "", phone: "" };
+ };
+
+ const flattenData = (data) => {
   const groups = [];
   for (const county in data) {
-    for (const constituency in data[county]) {
-      for (const ward in data[county][constituency]) {
-        for (const group of data[county][constituency][ward]) {
-          groups.push(group);
+    const constis = data[county];
+    for (const consti in constis) {
+      const wardArray = constis[consti];
+      if (Array.isArray(wardArray)) {
+        for (const item of wardArray) {
+          if (item && typeof item === 'object' && item.groupName) {
+            // Also attach location info from the keys
+            item._county = county;
+            item._constituency = consti;
+            groups.push(item);
+          }
         }
       }
     }
@@ -357,13 +465,13 @@ router.post("/verify-group", (req, res) => {
 
 router.post("/group-by-name", (req, res) => {
   const { groupName } = req.body;
-  
+
   let data = readJSON(memberFile, defaultMemberStructure());
   if (!data.group || Object.keys(data.group).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
-  
+
   // Find group by groupName
   let foundKey = null;
   let foundGroup = null;
@@ -374,12 +482,12 @@ router.post("/group-by-name", (req, res) => {
       break;
     }
   }
-  
+
   if (!foundGroup) {
     return res.status(404).json({ error: "Group not found" });
   }
-  
-  // Also fetch principles from general.json
+
+  // Also fetch metadata from general.json
   let accounts = readJSON(generalFile, {});
   if (Array.isArray(accounts)) {
     accounts = restructureData(accounts);
@@ -405,17 +513,169 @@ router.post("/group-by-name", (req, res) => {
   };
   const allGroups = flattenData(accounts);
   const generalGroup = allGroups[groupName];
-  
-  // Merge principles from general.json if available
-  if (generalGroup && generalGroup.principles) {
-    foundGroup.principles = generalGroup.principles;
+
+  // Merge metadata from general.json if available
+  if (generalGroup) {
+    if (generalGroup.principles) foundGroup.principles = generalGroup.principles;
+    if (generalGroup.requests) foundGroup.requests = generalGroup.requests;
+    if (generalGroup.accountNumber) foundGroup.accountNumber = generalGroup.accountNumber;
+    if (generalGroup.phase) foundGroup.phase = generalGroup.phase;
+    if (generalGroup.totalProposedMembers) foundGroup.totalProposedMembers = generalGroup.totalProposedMembers;
+    if (generalGroup.createdAt) foundGroup.createdAt = generalGroup.createdAt;
+    if (generalGroup.county) foundGroup.county = generalGroup.county;
+    if (generalGroup.constituency) foundGroup.constituency = generalGroup.constituency;
+    if (generalGroup.ward) foundGroup.ward = generalGroup.ward;
   }
-  
-  // Return group as-is (member.json already has correct names)
+
+  // Return group with merged data
   res.json(foundGroup);
 });
 
-const accountTypeMap = {
+// POST /verify-user - Verify user exists in data.json by phone and check group membership (from general.json)
+router.post("/verify-user", (req, res) => {
+  const { phone, groupName, requesterPhone } = req.body;
+  
+  if (!phone) {
+    return res.status(400).json({ success: false, error: "Phone number is required" });
+  }
+  
+  const usersData = readJSON(dataFile, []);
+  const generalData = readJSON(generalFile, {});
+  
+  const sessionProcessorPhone = req.session?.user?.phoneNumber || "";
+  const processorPhone = requesterPhone || sessionProcessorPhone;
+  const targetNorm = normalizeKenyanPhone(phone);
+  const targetVariants = phoneVariants(phone);
+  const requesterNorm = normalizeKenyanPhone(processorPhone || "");
+
+  if (requesterNorm && targetNorm && requesterNorm === targetNorm) {
+    return res.json({
+      success: false,
+      verified: false,
+      ownNumber: true,
+      message: "You cannot request to add your own number."
+    });
+  }
+  
+  // Check if already in group via general.json (source of truth for group composition)
+  let isGroupMember = false;
+  let existingRole = null;
+  let existingMemberIndex = null;
+  
+  if (generalData && Object.keys(generalData).length > 0) {
+    // First preference: use processor/requester group to locate members content.
+    const processorGroupRef = findGroupByMemberPhoneInGeneral(generalData, processorPhone || "");
+
+    // Fallback: locate by provided groupName.
+    let targetGroup = null;
+    if (processorGroupRef && processorGroupRef.group) {
+      if (groupName) {
+        const normalizedRequestedGroup = String(groupName).trim().toLowerCase();
+        const normalizedProcessorGroup = String(processorGroupRef.group.groupName || "").trim().toLowerCase();
+        targetGroup = normalizedRequestedGroup === normalizedProcessorGroup ? processorGroupRef.group : null;
+      } else {
+        targetGroup = processorGroupRef.group;
+      }
+    } else if (groupName) {
+      const byNameRef = findGroupInGeneral(generalData, String(groupName).trim());
+      targetGroup = byNameRef ? byNameRef.group : null;
+    }
+
+    if (targetGroup) {
+      const memberKeys = Object.keys(targetGroup).filter(k =>
+        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+      );
+      for (const key of memberKeys) {
+        const item = targetGroup[key];
+        if (item && item.phone && targetVariants.has(normalizeKenyanPhone(item.phone))) {
+          isGroupMember = true;
+          existingRole = item.role || item.type || key.replace(/_/g, ' ').replace(/\d+/, '').trim() || 'member';
+          existingMemberIndex = memberKeys.indexOf(key) + 1;
+          break;
+        }
+      }
+    }
+  }
+  
+  if (isGroupMember) {
+    return res.json({
+      success: false,
+      verified: false,
+      isGroupMember: true,
+      role: existingRole,
+      memberIndex: existingMemberIndex,
+      message: `This phone number is already a ${existingRole} in this group (Index: ${existingMemberIndex}).`
+    });
+  }
+  
+  // Look up in data.json
+  const user = usersData.find(u => {
+    // data.json primary key is "phoneNumber"
+    const uPhone = normalizeKenyanPhone(u.phoneNumber || u.phone || "");
+    return targetVariants.has(uPhone);
+  });
+  
+  if (!user) {
+    // Fallback: lookup by "phone" entry in general.json
+    if (generalData && Object.keys(generalData).length > 0) {
+      for (const county in generalData) {
+        const constis = generalData[county] || {};
+        for (const consti in constis) {
+          const wardArray = constis[consti];
+          if (!Array.isArray(wardArray)) continue;
+          for (const item of wardArray) {
+            if (!item || typeof item !== "object" || !item.groupName) continue;
+            const memberKeys = Object.keys(item).filter(k =>
+              k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
+            );
+            for (const key of memberKeys) {
+              const person = item[key];
+              if (person && person.phone && targetVariants.has(normalizeKenyanPhone(person.phone))) {
+                return res.json({
+                  success: true,
+                  verified: true,
+                  isGroupMember: false,
+                  phone: person.phone,
+                  name: person.name || person.title || person.phone,
+                  firstName: "",
+                  lastName: "",
+                  county: county || "",
+                  constituency: consti || "",
+                  ward: "",
+                  source: "general.json"
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return res.json({
+      success: false, 
+      verified: false, 
+      isGroupMember: false,
+      message: "Phone number not found in system."
+    });
+  }
+  
+  const fullName = `${user.FirstName || ''} ${user.MiddleName || ''} ${user.LastName || ''}`.trim();
+  
+  res.json({
+    success: true,
+    verified: true,
+    isGroupMember: false,
+    phone: user.phoneNumber || user.phone || phone,
+    name: fullName,
+    firstName: user.FirstName,
+    lastName: user.LastName,
+    county: user.county,
+    constituency: user.constituency,
+    ward: user.ward
+  });
+});
+
+ const accountTypeMap = {
   "savings": "001",
   "shares": "002",
   "loan": "003",
@@ -812,17 +1072,17 @@ router.get("/membership", (req, res) => {
 // GET /gmember - Group membership management (for agents/officials)
 router.get("/gmember", (req, res) => {
   const { groupName } = req.query;
-  
+
   if (!groupName) {
     return res.redirect("/");
   }
-  
+
   let data = readJSON(memberFile, defaultMemberStructure());
   if (!data.group || Object.keys(data.group).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
-  
+
   let foundGroup = null;
   for (const key in data.group) {
     if (data.group[key].groupName === groupName) {
@@ -830,11 +1090,25 @@ router.get("/gmember", (req, res) => {
       break;
     }
   }
-  
+
   if (!foundGroup) {
     return res.status(404).send("Group not found");
   }
-  
+
+  // Fetch requests from general.json
+  let generalData = readJSON(generalFile, {});
+  if (generalData && Object.keys(generalData).length > 0) {
+    const groupRef = findGroupInGeneral(generalData, groupName);
+    if (groupRef && groupRef.group && groupRef.group.requests) {
+      // Merge requests from general.json
+      foundGroup.requests = groupRef.group.requests;
+    } else {
+      foundGroup.requests = foundGroup.requests || {};
+    }
+  } else {
+    foundGroup.requests = foundGroup.requests || {};
+  }
+
   const membersList = foundGroup.members ? Object.entries(foundGroup.members).map(([phone, m]) => ({
     phone,
     name: m.name || phone,
@@ -843,8 +1117,8 @@ router.get("/gmember", (req, res) => {
     accounts: m.accounts || {},
     memberFinancials: m.memberFinancials || {}
   })) : [];
-  
-  res.render("maccount/gmember", {
+
+  res.render("gaccount/gmember", {
     group: foundGroup,
     members: membersList,
     user: req.session.user
@@ -999,51 +1273,54 @@ router.post("/add-member", (req, res) => {
   res.json({ success: true, member: group.members[phone] });
 });
 
+
 // POST /request-add-member - Submit a request to add a new member
 router.post("/request-add-member", (req, res) => {
-  const { groupName, requesterPhone, requesterName, newMemberName, newMemberPhone, reason } = req.body;
-  
-  if (!groupName || !newMemberName || !newMemberPhone) {
+  const { groupName, requesterPhone, requesterName, newMemberName, newMemberPhone, reason, county, constituency, ward } = req.body;
+
+  if (!groupName || !newMemberPhone) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
+
+  // Read from general.json
+  let generalData = readJSON(generalFile, {});
+  if (!generalData || Object.keys(generalData).length === 0) {
+    return res.status(404).json({ success: false, error: "No groups found in general.json" });
   }
-  
-  let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundKey = key;
-      break;
-    }
-  }
-  
-  if (!foundKey) {
+
+  // Find the target group
+  const groupRef = findGroupInGeneral(generalData, groupName);
+  if (!groupRef) {
     return res.status(404).json({ success: false, error: "Group not found" });
   }
-  
-  const group = data.group[foundKey];
-  
-  // Check if member already exists
-  if (group.members && group.members[newMemberPhone]) {
+
+  const targetGroup = groupRef.group;
+
+  // Check if member already exists in the group
+  const memberKeys = Object.keys(targetGroup).filter(k =>
+    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+  );
+  const existingMember = memberKeys.find(key => {
+    const person = targetGroup[key];
+    return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(newMemberPhone);
+  });
+
+  if (existingMember) {
     return res.status(400).json({ success: false, error: "Member already exists in this group" });
   }
-  
+
   // Initialize requests array if not exists
-  if (!group.requests) group.requests = {};
-  if (!group.requests.addMember) group.requests.addMember = [];
-  
-  // Check for duplicate pending request
-  const existingRequest = group.requests.addMember.find(r => 
-    r.newMemberPhone === newMemberPhone && r.status === 'pending'
+  if (!targetGroup.requests) targetGroup.requests = {};
+  if (!targetGroup.requests.addMember) targetGroup.requests.addMember = [];
+
+  // Check for any existing request for this phone (any status)
+  const existingRequest = targetGroup.requests.addMember.find(r =>
+    normalizeKenyanPhone(r.newMemberPhone) === normalizeKenyanPhone(newMemberPhone)
   );
   if (existingRequest) {
-    return res.status(400).json({ success: false, error: "A pending request already exists for this phone number" });
+    return res.status(400).json({ success: false, error: "A request already exists for this phone number (status: " + existingRequest.status + ")" });
   }
-  
+
   // Add the request
   const newRequest = {
     id: Date.now().toString(),
@@ -1056,250 +1333,228 @@ router.post("/request-add-member", (req, res) => {
     status: 'pending',
     createdAt: new Date().toISOString()
   };
-  
-  group.requests.addMember.push(newRequest);
-  writeJSON(memberFile, data);
-  
+
+  targetGroup.requests.addMember.push(newRequest);
+
+  // Write back to general.json
+  writeJSON(generalFile, generalData);
+
   res.json({ success: true, request: newRequest });
 });
 
 // GET /member-requests - Get pending requests for a group
 router.get("/member-requests", (req, res) => {
   const { groupName } = req.query;
-  
+
   if (!groupName) {
     return res.status(400).json({ success: false, error: "groupName is required" });
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
+
+  // Read from general.json
+  let generalData = readJSON(generalFile, {});
+  if (!generalData || Object.keys(generalData).length === 0) {
+    return res.status(404).json({ success: false, error: "No groups found" });
   }
-  
-  let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundKey = key;
-      break;
-    }
-  }
-  
-  if (!foundKey) {
+
+  // Find the target group
+  const groupRef = findGroupInGeneral(generalData, groupName);
+  if (!groupRef) {
     return res.status(404).json({ success: false, error: "Group not found" });
   }
-  
-  const group = data.group[foundKey];
-  const requests = group.requests || {};
-  const addMemberRequests = requests.addMember || [];
-  const roleChangeRequests = requests.roleChange || [];
-  
-  res.json({ 
-    success: true, 
+
+  const targetGroup = groupRef.group;
+  const requests = targetGroup.requests || {};
+
+  res.json({
+    success: true,
     requests: {
-      addMember: addMemberRequests.filter(r => r.status === 'pending'),
-      roleChange: roleChangeRequests.filter(r => r.status === 'pending'),
+      addMember: (requests.addMember || []).filter(r => r.status === 'pending'),
+      roleChange: (requests.roleChange || []).filter(r => r.status === 'pending'),
       termination: (requests.termination || []).filter(r => r.status === 'pending')
     }
   });
 });
 
-// POST /approve-member-request - Approve a member request
+// POST /approve-member-request - Approve or reject member request
 router.post("/approve-member-request", (req, res) => {
   const { groupName, requestId, action } = req.body;
-  
+
   if (!groupName || !requestId) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
+
+  // Read from general.json
+  let generalData = readJSON(generalFile, {});
+  if (!generalData || Object.keys(generalData).length === 0) {
+    return res.status(404).json({ success: false, error: "No groups found" });
   }
-  
-  let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundKey = key;
-      break;
-    }
-  }
-  
-  if (!foundKey) {
+
+  // Find target group in general.json
+  const groupRef = findGroupInGeneral(generalData, groupName);
+  if (!groupRef) {
     return res.status(404).json({ success: false, error: "Group not found" });
   }
-  
-  const group = data.group[foundKey];
-  
-  if (!group.requests || !group.requests.addMember) {
+
+  const targetGroup = groupRef.group;
+
+  if (!targetGroup.requests || !targetGroup.requests.addMember) {
     return res.status(404).json({ success: false, error: "No requests found" });
   }
-  
-  const requestIndex = group.requests.addMember.findIndex(r => r.id === requestId);
+
+  const requestIndex = targetGroup.requests.addMember.findIndex(r => r.id === requestId);
   if (requestIndex === -1) {
     return res.status(404).json({ success: false, error: "Request not found" });
   }
-  
-  const request = group.requests.addMember[requestIndex];
-  
-  if (action === 'approve') {
-    // Create the new member
-    const defaultAccounts = {
-      "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-      "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-      "003": { accountId: "003", accountName: "Shares", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-      "004": { accountId: "004", accountName: "Welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
-    };
-    
-    if (!group.members) group.members = {};
-    
-    group.members[request.newMemberPhone] = {
-      memberId: request.newMemberPhone,
-      name: request.newMemberName,
-      role: 'member',
-      memberFinancials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
-      accounts: defaultAccounts,
-      processedDeductions: [],
-      createdAt: new Date().toISOString()
-    };
-    
-    request.status = 'approved';
-    request.approvedAt = new Date().toISOString();
-  } else if (action === 'reject') {
-    request.status = 'rejected';
-    request.rejectedAt = new Date().toISOString();
-  }
-  
-  writeJSON(memberFile, data);
-  
-  res.json({ success: true, request });
-});
 
-// POST /request-role-change - Request to change member role (promote/demote/replace official or trustee)
-router.post("/request-role-change", (req, res) => {
-  const { groupName, requesterPhone, requesterName, targetMemberPhone, newRole, reason } = req.body;
-  
-  if (!groupName || !targetMemberPhone || !newRole) {
-    return res.status(400).json({ success: false, error: "Missing required fields" });
-  }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
-  }
-  
-  let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundKey = key;
-      break;
-    }
-  }
-  
-  if (!foundKey) {
-    return res.status(404).json({ success: false, error: "Group not found" });
-  }
-  
-  const group = data.group[foundKey];
-  
-  // Check if target member exists
-  if (!group.members || !group.members[targetMemberPhone]) {
-    return res.status(404).json({ success: false, error: "Target member not found" });
-  }
-  
-  const targetMember = group.members[targetMemberPhone];
-  const currentRole = targetMember.role || 'member';
-  
-  // Initialize requests array if not exists
-  if (!group.requests) group.requests = {};
-  if (!group.requests.roleChange) group.requests.roleChange = [];
-  
-  // Check for duplicate pending request for same target and role
-  const existingRequest = group.requests.roleChange.find(r => 
-    r.targetMemberPhone === targetMemberPhone && r.newRole === newRole && r.status === 'pending'
+   const request = targetGroup.requests.addMember[requestIndex];
+
+  // Check if this member already exists in the group (prevent double processing)
+  const allMemberKeys = Object.keys(targetGroup).filter(k =>
+    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
   );
-  if (existingRequest) {
-    return res.status(400).json({ success: false, error: "A pending request already exists for this role change" });
+  const existingMemberInGroup = allMemberKeys.find(key => {
+    const person = targetGroup[key];
+    return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(request.newMemberPhone);
+  });
+  if (existingMemberInGroup) {
+    return res.status(400).json({ success: false, error: "Member already exists in this group" });
   }
-  
-  // Add the request
-  const newRequest = {
-    id: Date.now().toString(),
-    type: 'roleChange',
-    requesterPhone: requesterPhone || '',
-    requesterName: requesterName || '',
-    targetMemberPhone,
-    targetMemberName: targetMember.name,
-    currentRole,
-    newRole,
-    reason: reason || '',
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
-  
-  group.requests.roleChange.push(newRequest);
-  writeJSON(memberFile, data);
-  
-  res.json({ success: true, request: newRequest });
-});
 
-// POST /approve-role-change - Approve or reject role change request
-router.post("/approve-role-change", (req, res) => {
-  const { groupName, requestId, action } = req.body;
-  
-  if (!groupName || !requestId) {
-    return res.status(400).json({ success: false, error: "Missing required fields" });
-  }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
-  }
-  
-  let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundKey = key;
-      break;
-    }
-  }
-  
-  if (!foundKey) {
-    return res.status(404).json({ success: false, error: "Group not found" });
-  }
-  
-  const group = data.group[foundKey];
-  
-  if (!group.requests || !group.requests.roleChange) {
-    return res.status(404).json({ success: false, error: "No requests found" });
-  }
-  
-  const requestIndex = group.requests.roleChange.findIndex(r => r.id === requestId);
-  if (requestIndex === -1) {
-    return res.status(404).json({ success: false, error: "Request not found" });
-  }
-  
-  const request = group.requests.roleChange[requestIndex];
-  
   if (action === 'approve') {
-    // Update the member's role
-    if (group.members && group.members[request.targetMemberPhone]) {
-      group.members[request.targetMemberPhone].role = request.newRole;
+     // Determine next member number
+     const memberKeys = Object.keys(targetGroup).filter(k =>
+       k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+     );
+     const nextIndex = memberKeys.length + 1;
+
+     // Add new member to general.json as member_N
+     // Rebuild the group object to maintain proper key order:
+     // all trustee_*/official_*/member_* keys first, then 'principles', then other metadata
+     const newMemberKey = `member_${nextIndex}`;
+     const newMemberData = {
+       phone: request.newMemberPhone,
+       name: request.newMemberName,
+       id: request.id || null,
+       type: 'member'
+     };
+     // Include regional info if present
+     if (request.county)     newMemberData.county = request.county;
+     if (request.constituency) newMemberData.constituency = request.constituency;
+     if (request.ward)    newMemberData.ward = request.ward;
+
+     // Reconstruct targetGroup with proper key ordering
+     const newGroup = {};
+     // First, copy all existing member keys (trustee_*, official_*, member_*) maintaining hierarchy order
+     const allKeys = Object.keys(targetGroup);
+     const trusteeKeys = allKeys.filter(k => k.startsWith('trustee_')).sort();
+     const officialKeys = allKeys.filter(k => k.startsWith('official_')).sort();
+      const memberExistingKeys = allKeys.filter(k => k.startsWith('member_')).sort();
+     // Add them in order: trustees, officials, then regular members
+      [...trusteeKeys, ...officialKeys, ...memberExistingKeys].forEach(k => {
+       newGroup[k] = targetGroup[k];
+     });
+     // Add the new member
+     newGroup[newMemberKey] = newMemberData;
+     // Copy principles and all other non-member keys
+     allKeys.forEach(k => {
+       if (!k.startsWith('trustee_') && !k.startsWith('official_') && !k.startsWith('member_')) {
+         newGroup[k] = targetGroup[k];
+       }
+     });
+     // Replace targetGroup contents with new ordered object
+     Object.keys(targetGroup).forEach(k => delete targetGroup[k]);
+     Object.assign(targetGroup, newGroup);
+
+     // Also add member to member.json for financial tracking
+    let memberData = readJSON(memberFile, defaultMemberStructure());
+    if (!memberData.group) memberData.group = {};
+
+    let memberGroupKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
+    if (!memberGroupKey) {
+      const groupNum = Object.keys(memberData.group).length + 1;
+      memberGroupKey = "ACC" + groupNum;
+      memberData.group[memberGroupKey] = {
+        groupNumber: groupNum,
+        groupName: groupName,
+        groupFinancials: { totalOpeningBalance: 0, totalAmountIn: 0, totalAmountOut: 0, totalClosingBalance: 0, availableWithdrawalBalance: 0 },
+        accountSchema: {
+          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
+          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
+          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
+        },
+        members: {}
+      };
     }
-    
+
+    const memberGroup = memberData.group[memberGroupKey];
+    if (!memberGroup.members) memberGroup.members = {};
+
+    if (!memberGroup.members[request.newMemberPhone]) {
+      const defaultAccounts = {
+        "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+        "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+        "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+        "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+      };
+      memberGroup.members[request.newMemberPhone] = {
+        memberId: request.newMemberPhone,
+        name: request.newMemberName,
+        role: 'member',
+        memberFinancials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+        accounts: defaultAccounts,
+        processedDeductions: [],
+        createdAt: new Date().toISOString()
+      };
+      writeJSON(memberFile, memberData);
+    }
+
     request.status = 'approved';
     request.approvedAt = new Date().toISOString();
   } else if (action === 'reject') {
     request.status = 'rejected';
     request.rejectedAt = new Date().toISOString();
   }
-  
-  writeJSON(memberFile, data);
-  
-  res.json({ success: true, request });
+
+  // Write back to general.json
+  writeJSON(generalFile, generalData);
+
+   res.json({ success: true, request });
 });
 
+// GET /member/get-by-phone - Get member details by phone number from data.json
+router.get("/get-by-phone", (req, res) => {
+  const { phone } = req.query;
+  if (!phone) {
+    return res.status(400).json({ success: false, error: "Phone number is required" });
+  }
+
+  const dataFile = path.join(__dirname, "../data.json");
+  const users = readJSON(dataFile, []);
+
+  // Normalize the phone number for comparison
+  const normalizeKenyanPhone = (p = "") => {
+    let digits = String(p).replace(/\D/g, "");
+    if (digits.startsWith("254")) digits = digits.substring(3);
+    if (digits.startsWith("0")) digits = digits.substring(1);
+    if (digits.length > 9) digits = digits.slice(-9);
+    return digits;
+  };
+
+  const normalizedPhone = normalizeKenyanPhone(phone);
+  const user = users.find(u => normalizeKenyanPhone(u.phoneNumber) === normalizedPhone);
+
+  if (!user) {
+    return res.json({ success: false, member: null });
+  }
+
+  const memberName = `${user.FirstName} ${user.MiddleName || ''} ${user.LastName}`.replace(/\s+/g, ' ').trim();
+  return res.json({ 
+    success: true, 
+    member: { 
+      name: memberName,
+      idNumber: user.idNumber || ""
+    } 
+  });
+});
 module.exports = router;
