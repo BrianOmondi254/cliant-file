@@ -521,21 +521,57 @@
         </div>
         <div class="id-status-chip">Active</div>
       </div>
-      <div class="id-stats">
-        <div class="id-stat">
-          <div class="id-stat-label">Index</div>
-          <div class="id-stat-value"><%= memberIndex || '—' %></div>
-        </div>
-        <div class="id-stat">
-          <div class="id-stat-label">Role</div>
-          <div class="id-stat-value">Member</div>
-        </div>
-        <div class="id-stat">
-          <div class="id-stat-label">Account</div>
-            <div class="id-stat-value" title="<%= accountNumber || '' %>"><%= accountNumber || '—' %></div>
+       <div class="id-stats">
+         <div class="id-stat">
+           <div class="id-stat-label">Index</div>
+           <div class="id-stat-value"><%= memberIndex || '—' %></div>
+         </div>
+         <div class="id-stat">
+           <div class="id-stat-label">Role</div>
+           <div class="id-stat-value">Member</div>
+         </div>
+         <div class="id-stat">
+           <div class="id-stat-label">Account</div>
+             <div class="id-stat-value" title="<%= accountNumber || '—' %>"><%= accountNumber || '—' %></div>
+           </div>
+         </div>
+          <% 
+          let greatestMemberN = 0;
+          let greatestOfficialN = 0;
+          let greatestTrusteeN = 0;
+          if (group && group.members) {
+            Object.values(group.members).forEach(m => {
+              const n = parseInt(m.memberNumber || '0');
+              if (m.role === 'member' && n > greatestMemberN) greatestMemberN = n;
+              if (m.role === 'official' && n > greatestOfficialN) greatestOfficialN = n;
+              if (m.role === 'trustee' && n > greatestTrusteeN) greatestTrusteeN = n;
+            });
+          }
+          %>
+          <% if (greatestMemberN > 0) { %>
+          <div class="id-stat">
+            <div class="id-stat-label">Member</div>
+            <div class="id-stat-value"><%= greatestMemberN %></div>
           </div>
-        </div>
-      </div>
+          <% } %>
+          <% if (greatestOfficialN > 0) { %>
+          <div class="id-stat">
+            <div class="id-stat-label">Official</div>
+            <div class="id-stat-value" style="color: var(--accent);"><%= greatestOfficialN %></div>
+          </div>
+          <% } %>
+          <% if (greatestTrusteeN > 0) { %>
+          <div class="id-stat">
+            <div class="id-stat-label">Trustee</div>
+            <div class="id-stat-value" style="color: var(--primary);">+<%= greatestTrusteeN %></div>
+          </div>
+          <% } %>
+          <% if (group && group.totalProposedMembers !== undefined) { %>
+          <div class="id-stat">
+            <div class="id-stat-label">Proposed</div>
+            <div class="id-stat-value" style="color: var(--accent);">+<%= group.totalProposedMembers %></div>
+          </div>
+          <% } %>
   
       <!-- ── QUICK ACTIONS ── -->
       <div class="section-label">Quick Actions</div>

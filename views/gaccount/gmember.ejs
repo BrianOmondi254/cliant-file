@@ -3,61 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Membership - <%= group ? group.groupName : 'Group' %></title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <title>Membership – <%= group ? group.groupName : 'Group' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
+    /* ─── Design Tokens ─────────────────────────────── */
     :root {
-      --bg:        #f1f5f9;
-      --surface:   #ffffff;
-      --card:      #f8fafc;
-      --border:    #e2e8f0;
-      --primary:   #0f9d58;
-      --primary-dk:#0b7d46;
-      --accent:    #f59e0b;
-      --text:      #1e293b;
-      --muted:     #64748b;
-      --faint:     #94a3b8;
-      --radius:    14px;
-      --radius-sm: 8px;
-      --shadow:    0 4px 20px rgba(0,0,0,0.1);
-      --focus-ring:rgba(15,157,88,0.15);
-      --danger:    #ef4444;
+      --bg:          #f1f5f9;
+      --surface:     #ffffff;
+      --card:        #f8fafc;
+      --border:      #e2e8f0;
+      --primary:     #0f9d58;
+      --primary-dk:  #0b7d46;
+      --primary-lt:  #dcfce7;
+      --accent:      #f59e0b;
+      --danger:      #ef4444;
+      --danger-lt:   #fee2e2;
+      --violet:      #7c3aed;
+      --violet-lt:   #ede9fe;
+      --blue:        #1d4ed8;
+      --blue-lt:     #dbeafe;
+      --text:        #1e293b;
+      --muted:       #64748b;
+      --faint:       #94a3b8;
+      --radius:      14px;
+      --radius-sm:   8px;
+      --shadow:      0 4px 20px rgba(0,0,0,.10);
+      --focus-ring:  rgba(15,157,88,.18);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'DM Sans', sans-serif;
-      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      background: linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
       min-height: 100vh;
-      font-size: 15px;
       display: flex;
       justify-content: center;
       align-items: flex-start;
       padding: 2px;
       color: var(--text);
+      font-size: 15px;
     }
 
+    /* ─── Page Shell ────────────────────────────────── */
     .page-wrapper {
       width: calc(100% - 4px);
       max-width: 640px;
       background: var(--surface);
-      border-radius: 5px;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      border-radius: 6px;
+      box-shadow: 0 25px 60px rgba(0,0,0,.35);
       overflow: hidden;
-      animation: slideUp .5s ease-out;
       min-height: calc(100vh - 4px);
       display: flex;
       flex-direction: column;
+      animation: fadeUp .45s cubic-bezier(.16,1,.3,1) both;
     }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* ─── Sticky Header ─────────────────────────────── */
     .header {
-      background: linear-gradient(135deg, #0f9d58, #34d399);
+      background: linear-gradient(135deg, #0f9d58 0%, #34d399 100%);
       padding: 16px 20px;
       display: flex;
       align-items: center;
@@ -65,14 +75,13 @@
       position: sticky;
       top: 0;
       z-index: 200;
-      overflow: hidden;
     }
-    .header::before {
+    .header::after {
       content: '';
       position: absolute;
-      top: -50%; right: -20%;
-      width: 200px; height: 200px;
-      background: rgba(255,255,255,.08);
+      top: -60%; right: -10%;
+      width: 220px; height: 220px;
+      background: rgba(255,255,255,.07);
       border-radius: 50%;
       pointer-events: none;
     }
@@ -87,23 +96,20 @@
       font-size: 14px;
       flex-shrink: 0;
       transition: background .2s;
-      position: relative;
+      position: relative; z-index: 1;
     }
-    .header-back:hover { background: rgba(255,255,255,.28); }
+    .header-back:hover { background: rgba(255,255,255,.3); }
+    .header-text { position: relative; z-index: 1; }
     .header-title {
       font-family: 'Syne', sans-serif;
-      font-size: 17px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: -0.3px;
-      position: relative;
+      font-size: 17px; font-weight: 700;
+      color: #fff; letter-spacing: -.3px;
     }
     .header-subtitle {
       font-size: 12px;
       color: rgba(255,255,255,.85);
       font-weight: 500;
       margin-top: 1px;
-      position: relative;
     }
     .header-badge {
       margin-left: auto;
@@ -111,21 +117,32 @@
       border: 1px solid rgba(255,255,255,.35);
       color: #fff;
       border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: .3px;
-      position: relative;
+      padding: 4px 12px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .4px;
+      position: relative; z-index: 1;
       white-space: nowrap;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: .4; }
     }
 
+    /* ─── Content Area ──────────────────────────────── */
     .content { padding: 20px; flex: 1; background: var(--bg); }
 
+    /* ─── Stats Grid ────────────────────────────────── */
     .stats-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 22px;
     }
     .stat-card {
       background: #fff;
@@ -133,31 +150,73 @@
       border-radius: var(--radius-sm);
       padding: 14px 12px;
       text-align: center;
+      transition: transform .15s, box-shadow .15s;
     }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
     .stat-value {
       font-family: 'Syne', sans-serif;
-      font-size: 20px;
-      font-weight: 800;
+      font-size: 22px; font-weight: 800;
       color: var(--primary);
     }
     .stat-label {
-      font-size: 10px;
-      font-weight: 600;
+      font-size: 10px; font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: .5px;
+      letter-spacing: .6px;
       margin-top: 4px;
     }
 
+    /* ─── Section Label ─────────────────────────────── */
     .section-label {
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 10px; font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-bottom: 10px;
     }
 
+    /* ─── Action Buttons ────────────────────────────── */
+    .actions-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: background .2s, border-color .2s, transform .15s;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 600;
+      text-decoration: none;
+      width: 100%;
+    }
+    .action-btn:hover {
+      background: #f0fdf4;
+      border-color: var(--primary);
+      transform: translateX(3px);
+    }
+    .action-btn:active { transform: translateX(1px); }
+    .btn-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .btn-icon.green  { background: #dcfce7; color: #15803d; }
+    .btn-icon.blue   { background: #dbeafe; color: #1d4ed8; }
+    .btn-icon.amber  { background: #fef3c7; color: #b45309; }
+    .btn-icon.violet { background: #ede9fe; color: #6d28d9; }
+    .btn-text { flex: 1; }
+    .btn-label { display: block; font-weight: 700; font-size: 14px; }
+    .btn-hint  { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+    .btn-arrow { color: var(--faint); font-size: 12px; }
+
+    /* ─── Member Cards ──────────────────────────────── */
     .member-card {
       display: flex;
       align-items: center;
@@ -167,38 +226,35 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       margin-bottom: 10px;
-      transition: border-color .2s, background .2s;
+      transition: border-color .2s, background .2s, transform .15s;
       cursor: pointer;
     }
-    .member-card:hover { background: #f0fdf4; border-color: #86efac; }
+    .member-card:hover {
+      background: #f0fdf4;
+      border-color: #86efac;
+      transform: translateX(3px);
+    }
     .member-avatar {
       width: 44px; height: 44px;
       border-radius: 50%;
       background: linear-gradient(135deg, #0f9d58, #34d399);
       display: flex; align-items: center; justify-content: center;
       font-family: 'Syne', sans-serif;
-      font-size: 16px;
-      font-weight: 800;
+      font-size: 16px; font-weight: 800;
       color: #fff;
       flex-shrink: 0;
     }
     .member-info { flex: 1; min-width: 0; }
     .member-name {
-      font-size: 14px;
-      font-weight: 700;
+      font-size: 14px; font-weight: 700;
       color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .member-phone {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
+    .member-phone { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ─── Role Chips ────────────────────────────────── */
     .role-chip {
-      font-size: 10px;
-      font-weight: 700;
+      font-size: 10px; font-weight: 700;
       padding: 4px 10px;
       border-radius: 20px;
       letter-spacing: .3px;
@@ -210,98 +266,67 @@
     .chip-violet { background: #ede9fe; color: #6d28d9;  border: 1px solid #c4b5fd; }
     .chip-gray   { background: #f1f5f9; color: #64748b;  border: 1px solid #e2e8f0; }
 
-    .action-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 16px;
-      background: #fff;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      cursor: pointer;
-      text-align: left;
-      transition: background .2s, border-color .2s;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      text-decoration: none;
-      width: 100%;
-    }
-    .action-btn:hover {
-      background: #f0fdf4;
-      border-color: var(--primary);
-    }
-    .btn-icon {
-      width: 34px; height: 34px;
-      border-radius: var(--radius-sm);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-    .btn-icon.green  { background: #dcfce7; color: #15803d; }
-    .btn-icon.blue   { background: #dbeafe; color: #1d4ed8; }
-    .btn-icon.amber  { background: #fef3c7; color: #b45309; }
-    .btn-icon.violet { background: #ede9fe; color: #6d28d9; }
-    .btn-text { flex: 1; }
-    .btn-label { display: block; font-weight: 600; }
-    .btn-hint  { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 2px; }
-    .btn-arrow { color: var(--faint); font-size: 12px; }
-
+    /* ─── Empty State ───────────────────────────────── */
     .empty-state {
       text-align: center;
       padding: 40px 20px;
       color: var(--faint);
     }
-    .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; color: #cbd5e1; }
+    .empty-state i { font-size: 38px; margin-bottom: 12px; display: block; color: #cbd5e1; }
     .empty-state p { font-size: 14px; }
 
-    /* Overlay Modal */
+    /* ─── Overlay & Modal ───────────────────────────── */
     .overlay {
       display: none;
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,.55);
       z-index: 1000;
-      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
       padding: 20px;
-      backdrop-filter: blur(3px);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
-    .overlay.open { display: flex; align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
 
     .modal {
       background: #fff;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 16px;
       width: 100%;
       max-width: 460px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.25);
-      animation: slideUp .25s ease;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+      animation: modalIn .28s cubic-bezier(.16,1,.3,1) both;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
     }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
+    .modal-wide { max-width: 560px; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(20px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .modal-header {
-      background: linear-gradient(135deg, #0f9d58, #34d399);
-      padding: 14px 18px;
+      padding: 16px 18px;
       display: flex;
       align-items: center;
       gap: 10px;
+      border-radius: 16px 16px 0 0;
+      flex-shrink: 0;
     }
     .modal-header-icon {
-      width: 30px; height: 30px;
-      border-radius: var(--radius-sm);
+      width: 32px; height: 32px;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px;
-      background: rgba(255,255,255,.2);
+      font-size: 14px;
+      background: rgba(255,255,255,.22);
       color: #fff;
     }
     .modal-title {
       font-family: 'Syne', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 15px; font-weight: 700;
       flex: 1;
       color: #fff;
     }
@@ -309,20 +334,26 @@
       background: rgba(255,255,255,.2);
       border: none;
       color: #fff;
-      width: 28px; height: 28px;
+      width: 30px; height: 30px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
       display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.35); }
+
+    .modal-body {
+      padding: 18px;
+      overflow-y: auto;
+      flex: 1;
     }
 
-    .modal-body { padding: 18px; max-height: 70vh; overflow-y: auto; }
-
+    /* ─── Form Fields ───────────────────────────────── */
     .field { margin-bottom: 14px; }
     .field label {
       display: block;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 11px; font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
       letter-spacing: .5px;
@@ -332,20 +363,24 @@
     .field select {
       width: 100%;
       padding: 12px 14px;
-      background: #fff;
+      background: var(--card);
       border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text);
       font-family: 'DM Sans', sans-serif;
       font-size: 14px;
       outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      appearance: none;
     }
     .field input:focus,
     .field select:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 4px var(--focus-ring);
+      background: #fff;
     }
 
+    /* ─── Buttons ───────────────────────────────────── */
     .submit-btn {
       width: 100%;
       padding: 13px;
@@ -354,436 +389,380 @@
       border: none;
       border-radius: var(--radius-sm);
       font-family: 'Syne', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
+      font-size: 14px; font-weight: 700;
       cursor: pointer;
       letter-spacing: .3px;
+      transition: opacity .2s, transform .15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .submit-btn:hover { opacity: .9; }
+    .submit-btn:hover  { opacity: .92; }
+    .submit-btn:active { transform: scale(.98); }
+    .submit-btn:disabled { opacity: .55; cursor: not-allowed; }
 
+    .btn-row { display: flex; gap: 8px; margin-top: 6px; }
+    .btn-row .submit-btn { flex: 1; }
+
+    /* ─── Request Cards (inside modals) ─────────────── */
+    .req-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .req-card-top {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .req-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0f9d58, #34d399);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px; font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .req-avatar.violet { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+    .req-info { flex: 1; min-width: 0; }
+    .req-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .req-phone { font-size: 12px; color: var(--muted); margin-top: 1px; }
+    .req-date  { font-size: 10px; color: var(--faint); margin-top: 2px; }
+
+    .req-meta {
+      font-size: 12px; color: #334155;
+      background: var(--blue-lt);
+      border: 1px solid #bfdbfe;
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      line-height: 1.8;
+    }
+    .req-meta-row { display: flex; gap: 6px; }
+    .req-meta-label { font-weight: 700; color: #1d4ed8; min-width: 130px; }
+
+    .req-approver {
+      font-size: 12px; color: #334155;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      line-height: 1.8;
+    }
+    .req-reason {
+      font-size: 12px; color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .req-conformed {
+      font-size: 11px; color: #059669;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .section-divider {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    /* ─── Toast Notification ────────────────────────── */
+    #toast-container {
+      position: fixed;
+      top: 20px; right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 8px 32px rgba(0,0,0,.18);
+      border-left: 4px solid var(--primary);
+      min-width: 260px;
+      max-width: 340px;
+      pointer-events: all;
+      animation: toastIn .3s cubic-bezier(.16,1,.3,1) both;
+    }
+    .toast.removing { animation: toastOut .3s ease forwards; }
+    .toast.success { border-left-color: var(--primary); }
+    .toast.error   { border-left-color: var(--danger);  }
+    .toast.info    { border-left-color: var(--blue);    }
+    .toast.warning { border-left-color: var(--accent);  }
+    @keyframes toastIn  { from { opacity:0; transform: translateX(40px); } to { opacity:1; transform: translateX(0); } }
+    @keyframes toastOut { from { opacity:1; transform: translateX(0);     } to { opacity:0; transform: translateX(40px); } }
+    .toast-icon { font-size: 18px; flex-shrink: 0; }
+    .toast.success .toast-icon { color: var(--primary); }
+    .toast.error   .toast-icon { color: var(--danger);  }
+    .toast.info    .toast-icon { color: var(--blue);    }
+    .toast.warning .toast-icon { color: var(--accent);  }
+    .toast-content { flex: 1; }
+    .toast-title   { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); }
+    .toast-msg     { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .toast-close   { background: none; border: none; color: var(--faint); cursor: pointer; font-size: 14px; padding: 2px; }
+    .toast-close:hover { color: var(--text); }
+
+    /* ─── Confirm Dialog ────────────────────────────── */
+    #confirmOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 9998;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+    }
+    #confirmOverlay.open { display: flex; }
+    .confirm-box {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%; max-width: 360px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      animation: modalIn .25s cubic-bezier(.16,1,.3,1) both;
+    }
+    .confirm-icon-wrap {
+      padding: 24px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .confirm-icon {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .confirm-icon.warn { background: #fef3c7; color: #b45309; }
+    .confirm-icon.dang { background: #fee2e2; color: var(--danger); }
+    .confirm-body {
+      padding: 0 24px 24px;
+      text-align: center;
+    }
+    .confirm-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .confirm-msg   { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .confirm-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+    .confirm-btn-ok     { background: var(--danger); color: #fff; }
+    .confirm-btn-ok.primary { background: var(--primary); }
+    .confirm-btn-ok:hover { opacity: .88; }
+    .confirm-btn-cancel { background: var(--bg); color: var(--text); }
+    .confirm-btn-cancel:hover { background: var(--border); }
+
+    /* ─── Loading Spinner ───────────────────────────── */
+    .spin { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Responsive ────────────────────────────────── */
     @media (max-width: 380px) {
       .stats-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Confirm Dialog -->
+<div id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon-wrap">
+      <div class="confirm-icon warn" id="confirmIcon"><i class="fas fa-exclamation-triangle"></i></div>
+    </div>
+    <div class="confirm-body">
+      <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+      <div class="confirm-msg"   id="confirmMsg">This action cannot be undone.</div>
+      <div class="confirm-actions">
+        <button class="confirm-btn-cancel" onclick="confirmResolve(false)">Cancel</button>
+        <button class="confirm-btn-ok" id="confirmOkBtn" onclick="confirmResolve(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE WRAPPER ═══════════════════ -->
 <div class="page-wrapper">
-  
+
+  <!-- Header -->
   <div class="header">
     <a href="/member/gcon?groupName=<%= encodeURIComponent(group.groupName) %>" class="header-back">
       <i class="fas fa-arrow-left"></i>
     </a>
-    <div>
+    <div class="header-text">
       <div class="header-title">Group Members</div>
       <div class="header-subtitle"><%= group.groupName %></div>
     </div>
-    <div class="header-badge"><i class="fas fa-circle" style="font-size:7px; margin-right:4px;"></i><%= members.length %></div>
+    <div class="header-badge">
+      <span class="badge-dot"></span>
+      <%= totalProposedMembers || 0 %> members
+    </div>
   </div>
-    
+
+  <!-- Main Content -->
   <div class="content">
-    
+
+    <!-- Stats -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-value"><%= members.length %></div>
-        <div class="stat-label">Members</div>
+        <div class="stat-value"><%= totalProposedMembers || 0 %></div>
+        <div class="stat-label">Total</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value"><%= members.filter(m => m.role === 'official').length %></div>
+        <div class="stat-value">
+          <%= members.filter(m => m.role === 'official').reduce((max, m) => {
+            const n = parseInt(m.memberNumber || '0');
+            return n > max ? n : max;
+          }, 0) || 0 %>
+        </div>
         <div class="stat-label">Officials</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value"><%= members.filter(m => m.role === 'trustee').length %></div>
+        <div class="stat-value">
+          <%= members.filter(m => m.role === 'trustee').reduce((max, m) => {
+            const n = parseInt(m.memberNumber || '0');
+            return n > max ? n : max;
+          }, 0) || 0 %>
+        </div>
         <div class="stat-label">Trustees</div>
       </div>
     </div>
 
+    <!-- Quick Actions -->
     <div class="section-label">Quick Actions</div>
-    <button class="action-btn" onclick="showPendingRequestsModal()" style="margin-bottom: 14px;">
-      <div class="btn-icon amber"><i class="fas fa-clock"></i></div>
-      <div class="btn-text">
-        <span class="btn-label">Approve Membership Requests</span>
-        <span class="btn-hint">Review and approve member join requests</span>
-      </div>
-      <i class="fas fa-chevron-right btn-arrow"></i>
-    </button>
+    <div class="actions-grid">
 
-    <button class="action-btn" onclick="showViewMembersModal()" style="margin-bottom: 14px;">
-      <div class="btn-icon blue"><i class="fas fa-users"></i></div>
-      <div class="btn-text">
-        <span class="btn-label">View All Members</span>
-        <span class="btn-hint">Browse full member list</span>
-      </div>
-      <i class="fas fa-chevron-right btn-arrow"></i>
-    </button>
-
-    <button class="action-btn" onclick="showPendingRequestsModal()" style="margin-bottom: 14px;">
-      <div class="btn-icon amber"><i class="fas fa-clock"></i></div>
-      <div class="btn-text">
-        <span class="btn-label">Approve Membership Requests</span>
-        <span class="btn-hint">Review and approve member join requests</span>
-      </div>
-      <i class="fas fa-chevron-right btn-arrow"></i>
-    </button>
-
-    <button class="action-btn" onclick="showRoleChangeModal()">
-      <div class="btn-icon violet"><i class="fas fa-user-tie"></i></div>
-      <div class="btn-text">
-        <span class="btn-label">Appoint Official/Trustee</span>
-        <span class="btn-hint">Promote member to official or trustee</span>
-      </div>
-      <i class="fas fa-chevron-right btn-arrow"></i>
-    </button>
-
-    <div style="margin-top: 20px;">
-      <div class="section-label">Recent Members</div>
-      <% if (members && members.length > 0) { %>
-        <% members.slice(0, 5).forEach((member, idx) => { %>
-          <% 
-            const roleClass = member.role === 'official' ? 'chip-blue' : (member.role === 'trustee' ? 'chip-green' : (member.role === 'secretary' ? 'chip-violet' : 'chip-gray'));
-            const initials = member.name ? member.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : '?';
-          %>
-          <div class="member-card" onclick="viewMemberDetails('<%= member.phone %>')">
-            <div class="member-avatar"><%= initials %></div>
-            <div class="member-info">
-              <div class="member-name"><%= member.name %></div>
-              <div class="member-phone"><%= member.phone %></div>
-            </div>
-            <span class="role-chip <%= roleClass %>"><%= member.role %></span>
-          </div>
-        <% }); %>
-      <% } else { %>
-        <div class="empty-state">
-          <i class="fas fa-users"></i>
-          <p>No members found</p>
+      <button class="action-btn" onclick="showPendingRequestsModal()">
+        <div class="btn-icon amber"><i class="fas fa-clock"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Approve Membership Requests</span>
+          <span class="btn-hint">Review and approve member join requests</span>
         </div>
-      <% } %>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+
+      <button class="action-btn" onclick="showViewMembersModal()">
+        <div class="btn-icon blue"><i class="fas fa-users"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">View All Members</span>
+          <span class="btn-hint">Browse the full member list</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+
+      <button class="action-btn" onclick="showApprovedMembersModal()">
+        <div class="btn-icon green"><i class="fas fa-user-check"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Approved Members</span>
+          <span class="btn-hint">View all approved group members</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+
+      <button class="action-btn" onclick="showRoleChangeModal()">
+        <div class="btn-icon violet"><i class="fas fa-user-tie"></i></div>
+        <div class="btn-text">
+          <span class="btn-label">Appoint Official / Trustee</span>
+          <span class="btn-hint">Promote a member to official or trustee</span>
+        </div>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </button>
+
     </div>
 
-   </div>
+    <!-- Recent Members -->
+    <div class="section-label">Recent Members</div>
+    <% if (members && members.length > 0) { %>
+      <% members.slice(0, 5).forEach(function(member) {
+        const roleClass = member.role === 'official' ? 'chip-blue'
+                        : member.role === 'trustee'  ? 'chip-green'
+                        : member.role === 'secretary'? 'chip-violet'
+                        : 'chip-gray';
+        const initials = member.name
+          ? member.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()
+          : '?';
+      %>
+        <div class="member-card" onclick="viewMemberDetails('<%= member.phone %>')">
+          <div class="member-avatar"><%= initials %></div>
+          <div class="member-info">
+            <div class="member-name"><%= member.name %></div>
+            <div class="member-phone"><%= member.phone %></div>
+          </div>
+          <span class="role-chip <%= roleClass %>"><%= member.role %></span>
+        </div>
+      <% }); %>
+    <% } else { %>
+      <div class="empty-state">
+        <i class="fas fa-users"></i>
+        <p>No members found</p>
+      </div>
+    <% } %>
 
-   <!-- VIEW MEMBERS MODAL -->
-  <div id="viewMembersOverlay" class="overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-header-icon btn-icon blue"><i class="fas fa-users"></i></div>
-        <div class="modal-title">All Members</div>
-        <button class="modal-close" onclick="closeModal('viewMembersOverlay')">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="modal-body" id="membersListContainer">
-        <!-- Populated by JS -->
-      </div>
+  </div><!-- /.content -->
+</div><!-- /.page-wrapper -->
+
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- 1. View All Members -->
+<div id="viewMembersOverlay" class="overlay">
+  <div class="modal">
+    <div class="modal-header" style="background: linear-gradient(135deg,#1d4ed8,#60a5fa);">
+      <div class="modal-header-icon"><i class="fas fa-users"></i></div>
+      <div class="modal-title">All Members</div>
+      <button class="modal-close" onclick="closeModal('viewMembersOverlay')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="membersListContainer">
+      <div class="empty-state"><i class="fas fa-users"></i><p>No members found</p></div>
     </div>
   </div>
-
 </div>
 
-<script>
-  const groupName = <%- JSON.stringify(group.groupName) %>;
-  const members = <%- JSON.stringify(members) %>;
-
-  function closeModal(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('open');
-  }
-
-  document.querySelectorAll('.overlay').forEach(el => {
-    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
-  });
-
-  function getRoleClass(role) {
-    if (role === 'official') return 'chip-blue';
-    if (role === 'trustee') return 'chip-green';
-    if (role === 'secretary') return 'chip-violet';
-    return 'chip-gray';
-  }
-
-  function getInitials(name) {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  }
-
-  function showViewMembersModal() {
-    const container = document.getElementById('membersListContainer');
-    if (members.length === 0) {
-      container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No members found</p></div>';
-    } else {
-      container.innerHTML = members.map((m, i) => {
-        const roleClass = getRoleClass(m.role);
-        const initials = getInitials(m.name);
-        return '<div class="member-card" style="cursor:pointer;" onclick="viewMemberDetails(\'' + m.phone + '\')">' +
-          '<div class="member-avatar">' + initials + '</div>' +
-          '<div class="member-info">' +
-            '<div class="member-name">' + m.name + '</div>' +
-            '<div class="member-phone">' + m.phone + '</div>' +
-          '</div>' +
-          '<span class="role-chip ' + roleClass + '">' + m.role + '</span>' +
-        '</div>';
-      }).join('');
-    }
-     document.getElementById('viewMembersOverlay').classList.add('open');
-   }
-
-   function viewMemberDetails(phone) {
-    window.location.href = '/member/membership?groupName=' + encodeURIComponent(groupName) + '&memberPhone=' + encodeURIComponent(phone);
-  }
-
-  // PENDING REQUESTS MODAL
-  async function showPendingRequestsModal() {
-    document.getElementById('pendingRequestsOverlay').classList.add('open');
-    loadPendingRequests();
-  }
-
-  async function loadPendingRequests() {
-    const container = document.getElementById('pendingRequestsList');
-    container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading requests...</p></div>';
-    
-    try {
-      const res = await fetch('/member/member-requests?groupName=' + encodeURIComponent(groupName));
-      const data = await res.json();
-      
-      if (!data.success) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>' + (data.error || 'No requests found') + '</p></div>';
-        return;
-      }
-      
-      const addRequests = data.requests.addMember || [];
-      const roleRequests = data.requests.roleChange || [];
-      
-      if (addRequests.length === 0 && roleRequests.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No pending requests</p></div>';
-        return;
-      }
-      
-      let html = '';
-      
-      // Add Member Requests
-      if (addRequests.length > 0) {
-        html += '<div style="font-size:11px; font-weight:700; color:#0f9d58; text-transform:uppercase; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #e2e8f0;">Add Member Requests</div>';
-        html += addRequests.map(req => {
-          const initials = getInitials(req.newMemberName);
-          const date = new Date(req.createdAt).toLocaleDateString();
-          return '<div class="member-card" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:12px;">' +
-            '<div style="display:flex; align-items:center; gap:10px; width:100%;">' +
-              '<div class="member-avatar" style="width:38px; height:38px; font-size:14px;">' + initials + '</div>' +
-              '<div class="member-info" style="flex:1;">' +
-                '<div class="member-name">' + req.newMemberName + '</div>' +
-                '<div class="member-phone">' + req.newMemberPhone + '</div>' +
-                '<div style="font-size:10px; color:#64748b; margin-top:2px;">Requested: ' + date + '</div>' +
-              '</div>' +
-            '</div>' +
-              '<div style="font-size:12px; color:#334155; background:#eff6ff; padding:8px; border-radius:6px; width:100%;">' +
-                '<div><strong>Requester:</strong> ' + (req.requesterName || 'Unknown') + '</div>' +
-                '<div><strong>Requester Phone:</strong> ' + (req.requesterPhone || '—') + '</div>' +
-                '<div><strong>Requester Index:</strong> ' + (req.requesterMemberIndex || '—') + '</div>' +
-                '<div><strong>Requester Member No:</strong> ' + (req.requesterMemberNumber || '—') + '</div>' +
-              '</div>' +
-             (req.approverName || req.approverPhone ? 
-               '<div style="font-size:12px; color:#334155; background:#fef3c7; padding:8px; border-radius:6px; width:100%; margin-top:8px;">' +
-                 '<div><strong>' + (req.status === 'approved' ? 'Approved' : 'Processed') + ' By:</strong> ' + (req.approverName || 'Unknown') + '</div>' +
-                 '<div><strong>Phone:</strong> ' + (req.approverPhone || '—') + '</div>' +
-                '</div>' : '') +
-             (req.reason ? '<div style="font-size:12px; color:#64748b; background:#f8fafc; padding:8px; border-radius:6px; width:100%;"><i class="fas fa-comment" style="margin-right:6px;"></i>' + req.reason + '</div>' : '') +
-             (req.conformed ? '<div style="font-size:11px; color:#059669; background:#ecfdf5; padding:6px 8px; border-radius:6px; width:100%; margin-top:4px;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Member has agreed to group constitution</div>' : '') +
-             '<div style="display:flex; gap:8px; width:100%; margin-top:4px;">' +
-              '<button class="submit-btn" style="flex:1; background:#0f9d58;" onclick="approveRequest(\'' + req.id + '\')"><i class="fas fa-check"></i> Approve</button>' +
-              '<button class="submit-btn" style="flex:1; background:#ef4444;" onclick="rejectRequest(\'' + req.id + '\')"><i class="fas fa-times"></i> Reject</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      }
-      
-      // Role Change Requests
-      if (roleRequests.length > 0) {
-        html += '<div style="font-size:11px; font-weight:700; color:#7c3aed; text-transform:uppercase; margin:16px 0 10px 0; padding-bottom:6px; border-bottom:1px solid #e2e8f0;">Official/Trustee Requests</div>';
-        html += roleRequests.map(req => {
-          const initials = getInitials(req.targetMemberName);
-          const date = new Date(req.createdAt).toLocaleDateString();
-          return '<div class="member-card" style="flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:12px;">' +
-            '<div style="display:flex; align-items:center; gap:10px; width:100%;">' +
-              '<div class="member-avatar" style="width:38px; height:38px; font-size:14px; background:linear-gradient(135deg, #7c3aed, #a78bfa);">' + initials + '</div>' +
-              '<div class="member-info" style="flex:1;">' +
-                '<div class="member-name">' + req.targetMemberName + '</div>' +
-                '<div class="member-phone">' + req.targetMemberPhone + '</div>' +
-                '<div style="font-size:11px; margin-top:4px;"><span class="chip-gray" style="padding:2px 8px; border-radius:10px; font-size:10px; background:#e2e8f0; color:#64748b;">' + req.currentRole + '</span> <i class="fas fa-arrow-right" style="font-size:9px; margin:0 4px;"></i> <span class="chip-violet" style="padding:2px 8px; border-radius:10px; font-size:10px; background:#ede9fe; color:#6d28d9;">' + req.newRole + '</span></div>' +
-                '<div style="font-size:10px; color:#64748b; margin-top:2px;">Requested: ' + date + '</div>' +
-              '</div>' +
-            '</div>' +
-            (req.reason ? '<div style="font-size:12px; color:#64748b; background:#f8fafc; padding:8px; border-radius:6px; width:100%;"><i class="fas fa-comment" style="margin-right:6px;"></i>' + req.reason + '</div>' : '') +
-            '<div style="display:flex; gap:8px; width:100%; margin-top:4px;">' +
-              '<button class="submit-btn" style="flex:1; background:#0f9d58;" onclick="approveRoleRequest(\'' + req.id + '\')"><i class="fas fa-check"></i> Approve</button>' +
-              '<button class="submit-btn" style="flex:1; background:#ef4444;" onclick="rejectRoleRequest(\'' + req.id + '\')"><i class="fas fa-times"></i> Reject</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      }
-      
-      container.innerHTML = html;
-      
-    } catch (err) {
-      container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading requests</p></div>';
-    }
-  }
-
-  async function approveRequest(requestId) {
-    if (!confirm('Are you sure you want to approve this member request?')) return;
-    
-    try {
-      const res = await fetch('/member/approve-member-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName, requestId, action: 'approve' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Member request approved successfully!');
-        loadPendingRequests();
-        window.location.reload();
-      } else {
-        alert('Error: ' + (data.error || 'Failed to approve request'));
-      }
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  }
-
-  async function rejectRequest(requestId) {
-    if (!confirm('Are you sure you want to reject this member request?')) return;
-    
-    try {
-      const res = await fetch('/member/approve-member-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName, requestId, action: 'reject' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Member request rejected.');
-        loadPendingRequests();
-      } else {
-        alert('Error: ' + (data.error || 'Failed to reject request'));
-      }
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  }
-
-  // ROLE CHANGE MODAL
-  async function showRoleChangeModal() {
-    document.getElementById('roleChangeOverlay').classList.add('open');
-  }
-
-  async function submitRoleChangeRequest() {
-    const targetPhone = document.getElementById('roleChangeMember').value;
-    const newRole = document.getElementById('newRoleSelect').value;
-    const reason = document.getElementById('roleChangeReason').value.trim();
-    
-    if (!targetPhone) { alert('Please select a member'); return; }
-    if (!newRole) { alert('Please select a role'); return; }
-    
-    try {
-      const res = await fetch('/member/request-role-change', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          groupName, 
-          targetMemberPhone: targetPhone, 
-          newRole: newRole, 
-          reason: reason 
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Request submitted! The official/trustee appointment will be reviewed for approval.');
-        closeModal('roleChangeOverlay');
-        document.getElementById('roleChangeMember').value = '';
-        document.getElementById('newRoleSelect').value = '';
-        document.getElementById('roleChangeReason').value = '';
-      } else {
-        alert('Error: ' + (data.error || 'Failed to submit request'));
-      }
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  }
-
-  async function approveRoleRequest(requestId) {
-    if (!confirm('Are you sure you want to approve this role change?')) return;
-    
-    try {
-      const res = await fetch('/member/approve-role-change', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName, requestId, action: 'approve' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Role change approved successfully!');
-        loadPendingRequests();
-        window.location.reload();
-      } else {
-        alert('Error: ' + (data.error || 'Failed to approve request'));
-      }
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  }
-
-  async function rejectRoleRequest(requestId) {
-    if (!confirm('Are you sure you want to reject this role change?')) return;
-    
-    try {
-      const res = await fetch('/member/approve-role-change', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupName, requestId, action: 'reject' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Role change rejected.');
-        loadPendingRequests();
-      } else {
-        alert('Error: ' + (data.error || 'Failed to reject request'));
-      }
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  }
-</script>
-
-<!-- PENDING REQUESTS MODAL -->
+<!-- 2. Pending Requests -->
 <div id="pendingRequestsOverlay" class="overlay">
   <div class="modal">
-    <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
-      <div class="modal-header-icon btn-icon amber"><i class="fas fa-clock"></i></div>
+    <div class="modal-header" style="background: linear-gradient(135deg,#f59e0b,#fbbf24);">
+      <div class="modal-header-icon"><i class="fas fa-clock"></i></div>
       <div class="modal-title">Pending Requests</div>
-      <button class="modal-close" onclick="closeModal('pendingRequestsOverlay')">
-        <i class="fas fa-times"></i>
-      </button>
+      <button class="modal-close" onclick="closeModal('pendingRequestsOverlay')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body" id="pendingRequestsList">
-      <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>
+      <div class="empty-state"><i class="fas fa-spinner spin"></i><p>Loading…</p></div>
     </div>
   </div>
 </div>
 
-<!-- ROLE CHANGE MODAL -->
+<!-- 3. Role Change -->
 <div id="roleChangeOverlay" class="overlay">
   <div class="modal">
-    <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);">
-      <div class="modal-header-icon btn-icon violet"><i class="fas fa-user-tie"></i></div>
-      <div class="modal-title">Appoint Official/Trustee</div>
-      <button class="modal-close" onclick="closeModal('roleChangeOverlay')">
-        <i class="fas fa-times"></i>
-      </button>
+    <div class="modal-header" style="background: linear-gradient(135deg,#7c3aed,#a78bfa);">
+      <div class="modal-header-icon"><i class="fas fa-user-tie"></i></div>
+      <div class="modal-title">Appoint Official / Trustee</div>
+      <button class="modal-close" onclick="closeModal('roleChangeOverlay')"><i class="fas fa-times"></i></button>
     </div>
     <div class="modal-body">
       <div class="field">
         <label>Select Member</label>
         <select id="roleChangeMember">
-          <option value="">-- Select Member --</option>
-          <% members.forEach(m => { %>
+          <option value="">— Select member —</option>
+          <% members.forEach(function(m) { %>
             <option value="<%= m.phone %>"><%= m.name %> (<%= m.role %>)</option>
           <% }); %>
         </select>
@@ -791,7 +770,7 @@
       <div class="field">
         <label>New Role</label>
         <select id="newRoleSelect">
-          <option value="">-- Select Role --</option>
+          <option value="">— Select role —</option>
           <option value="official">Official</option>
           <option value="trustee">Trustee</option>
           <option value="secretary">Secretary</option>
@@ -799,49 +778,466 @@
         </select>
       </div>
       <div class="field">
-        <label>Reason (Optional)</label>
+        <label>Reason <span style="font-weight:400; text-transform:none;">(optional)</span></label>
         <input type="text" id="roleChangeReason" placeholder="Enter reason for role change">
       </div>
-      <button class="submit-btn" style="background: linear-gradient(135deg, #7c3aed, #a78bfa);" onclick="submitRoleChangeRequest()">
-        <i class="fas fa-paper-plane" style="margin-right:8px;"></i>Submit Request
+      <button class="submit-btn" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);" onclick="submitRoleChangeRequest()">
+        <i class="fas fa-paper-plane"></i> Submit Request
       </button>
     </div>
-   </div>
- </div>
+  </div>
+</div>
 
- <!-- CONFIRM APPROVAL MODAL -->
- <div id="approveConfirmOverlay" class="overlay">
-   <div class="modal">
-     <div class="modal-header" style="background: linear-gradient(135deg, #0f9d58, #34d399);">
-       <div class="modal-header-icon btn-icon green"><i class="fas fa-check-circle"></i></div>
-       <div class="modal-title">Confirm Member Approval</div>
-       <button class="modal-close" onclick="closeModal('approveConfirmOverlay')">
-         <i class="fas fa-times"></i>
-       </button>
-     </div>
-     <div class="modal-body">
-       <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:14px;">
-         <p style="font-size:12px; color:#166534; margin:0;">
-           <i class="fas fa-info-circle" style="margin-right:6px;"></i>
-           You are about to approve this member request. Please review the details below.
-         </p>
-       </div>
-       
-       <div id="approvalRequestDetails" style="font-size:13px; color:#334155; line-height:1.6;">
-         <!-- Populated by JavaScript -->
-       </div>
-       
-       <div style="display:flex; gap:10px; margin-top:20px;">
-         <button class="submit-btn" style="flex:1; background:#0f9d58;" onclick="executeApproval()">
-           <i class="fas fa-check"></i> Submit Approval
-         </button>
-         <button class="submit-btn" style="flex:1; background:#e2e8f0; color:#64748b;" onclick="closeModal('approveConfirmOverlay')">
-           Cancel
-         </button>
-       </div>
-     </div>
-   </div>
- </div>
+<!-- 4. Approved Members -->
+<div id="approvedMembersOverlay" class="overlay">
+  <div class="modal modal-wide">
+    <div class="modal-header" style="background: linear-gradient(135deg,#0f9d58,#34d399);">
+      <div class="modal-header-icon"><i class="fas fa-user-check"></i></div>
+      <div class="modal-title">Approved Members</div>
+      <button class="modal-close" onclick="closeModal('approvedMembersOverlay')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="approvedMembersList" style="padding:0;">
+      <div class="empty-state" style="padding:40px 20px;">
+        <i class="fas fa-spinner spin"></i>
+        <p>Loading approved members…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+<script>
+  /* ── Data injected from server ── */
+  const groupName = <%- JSON.stringify(group.groupName) %>;
+  const members   = <%- JSON.stringify(members) %>;
+  const group     = <%- JSON.stringify(group) %>;
+
+  /* ══════════════════════════════════════════════
+     TOAST NOTIFICATION SYSTEM
+  ══════════════════════════════════════════════ */
+  const TOAST_ICONS = {
+    success: 'fa-check-circle',
+    error:   'fa-times-circle',
+    info:    'fa-info-circle',
+    warning: 'fa-exclamation-triangle'
+  };
+
+  function toast(type, title, message, duration = 4000) {
+    const container = document.getElementById('toast-container');
+    const id = 'toast-' + Date.now();
+    const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
+
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.id = id;
+    el.innerHTML = `
+      <i class="fas ${icon} toast-icon"></i>
+      <div class="toast-content">
+        <div class="toast-title">${title}</div>
+        ${message ? `<div class="toast-msg">${message}</div>` : ''}
+      </div>
+      <button class="toast-close" onclick="removeToast('${id}')"><i class="fas fa-times"></i></button>
+    `;
+    container.appendChild(el);
+    setTimeout(() => removeToast(id), duration);
+  }
+
+  function removeToast(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('removing');
+    setTimeout(() => el.remove(), 300);
+  }
+
+  /* ══════════════════════════════════════════════
+     CONFIRM DIALOG (replaces browser confirm)
+  ══════════════════════════════════════════════ */
+  let _confirmResolve = null;
+
+  function showConfirm({ title = 'Are you sure?', message = '', danger = true, okLabel = 'Confirm' } = {}) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent   = message;
+    const icon = document.getElementById('confirmIcon');
+    icon.className = 'confirm-icon ' + (danger ? 'dang' : 'warn');
+    icon.innerHTML = `<i class="fas ${danger ? 'fa-trash-alt' : 'fa-exclamation-triangle'}"></i>`;
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.textContent = okLabel;
+    okBtn.style.background = danger ? 'var(--danger)' : 'var(--primary)';
+    document.getElementById('confirmOverlay').classList.add('open');
+    return new Promise(resolve => { _confirmResolve = resolve; });
+  }
+
+  function confirmResolve(result) {
+    document.getElementById('confirmOverlay').classList.remove('open');
+    if (_confirmResolve) { _confirmResolve(result); _confirmResolve = null; }
+  }
+
+  /* ══════════════════════════════════════════════
+     MODAL HELPERS
+  ══════════════════════════════════════════════ */
+  function openModal(id)  { document.getElementById(id)?.classList.add('open');    }
+  function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+  // Close on backdrop click
+  document.querySelectorAll('.overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+  });
+
+  // Close on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
+      confirmResolve(false);
+    }
+  });
+
+  /* ══════════════════════════════════════════════
+     UTILITY HELPERS
+  ══════════════════════════════════════════════ */
+  function getInitials(name) {
+    if (!name) return '?';
+    return name.trim().split(/\s+/).map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  }
+
+  function getRoleClass(role) {
+    const map = { official: 'chip-blue', trustee: 'chip-green', secretary: 'chip-violet' };
+    return map[role] || 'chip-gray';
+  }
+
+  function fmtDate(d) {
+    if (!d) return 'N/A';
+    return new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  /* ══════════════════════════════════════════════
+     1. VIEW ALL MEMBERS MODAL
+  ══════════════════════════════════════════════ */
+  function showViewMembersModal() {
+    const container = document.getElementById('membersListContainer');
+    if (!members.length) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No members found</p></div>';
+    } else {
+      container.innerHTML = members.map(m => `
+        <div class="member-card" onclick="viewMemberDetails('${m.phone}')">
+          <div class="member-avatar">${getInitials(m.name)}</div>
+          <div class="member-info">
+            <div class="member-name">${m.name || '—'}</div>
+            <div class="member-phone">${m.phone || ''}</div>
+          </div>
+          <span class="role-chip ${getRoleClass(m.role)}">${m.role}</span>
+        </div>
+      `).join('');
+    }
+    openModal('viewMembersOverlay');
+  }
+
+  function viewMemberDetails(phone) {
+    window.location.href = '/member/membership?groupName=' + encodeURIComponent(groupName) + '&memberPhone=' + encodeURIComponent(phone);
+  }
+
+  /* ══════════════════════════════════════════════
+     2. PENDING REQUESTS MODAL
+  ══════════════════════════════════════════════ */
+  async function showPendingRequestsModal() {
+    openModal('pendingRequestsOverlay');
+    await loadPendingRequests();
+  }
+
+  async function loadPendingRequests() {
+    const container = document.getElementById('pendingRequestsList');
+    container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner spin"></i><p>Loading requests…</p></div>';
+
+    try {
+      const res  = await fetch('/member/member-requests?groupName=' + encodeURIComponent(groupName));
+      const data = await res.json();
+
+      if (!data.success) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${data.error || 'No requests found'}</p></div>`;
+        return;
+      }
+
+      const addRequests  = data.requests.addMember  || [];
+      const roleRequests = data.requests.roleChange  || [];
+
+      if (!addRequests.length && !roleRequests.length) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="color:#0f9d58;"></i><p>No pending requests — all caught up!</p></div>';
+        return;
+      }
+
+      let html = '';
+
+      /* Add Member Requests */
+      if (addRequests.length) {
+        html += `<div class="section-divider" style="color:#0f9d58;">Add Member Requests (${addRequests.length})</div>`;
+        html += addRequests.map(req => `
+          <div class="req-card">
+            <div class="req-card-top">
+              <div class="req-avatar">${getInitials(req.newMemberName)}</div>
+              <div class="req-info">
+                <div class="req-name">${req.newMemberName || '—'}</div>
+                <div class="req-phone">${req.newMemberPhone || ''}</div>
+                <div class="req-date"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>Requested ${fmtDate(req.createdAt)}</div>
+              </div>
+            </div>
+            <div class="req-meta">
+              <div class="req-meta-row"><span class="req-meta-label">Requester:</span> ${req.requesterName || 'Unknown'}</div>
+              <div class="req-meta-row"><span class="req-meta-label">Phone:</span> ${req.requesterPhone || '—'}</div>
+              <div class="req-meta-row"><span class="req-meta-label">Member Index:</span> ${req.requesterMemberIndex || '—'}</div>
+              <div class="req-meta-row"><span class="req-meta-label">Member No:</span> ${req.requesterMemberNumber || '—'}</div>
+            </div>
+            ${req.approverName || req.approverPhone ? `
+            <div class="req-approver">
+              <div class="req-meta-row"><span class="req-meta-label" style="color:#b45309;">${req.status === 'approved' ? 'Approved By:' : 'Processed By:'}</span> ${req.approverName || 'Unknown'}</div>
+              <div class="req-meta-row"><span class="req-meta-label" style="color:#b45309;">Phone:</span> ${req.approverPhone || '—'}</div>
+            </div>` : ''}
+            ${req.reason ? `<div class="req-reason"><i class="fas fa-comment" style="margin-right:6px; color:#94a3b8;"></i>${req.reason}</div>` : ''}
+            ${req.conformed ? `<div class="req-conformed"><i class="fas fa-check-circle"></i> Member has agreed to group constitution</div>` : ''}
+            <div class="btn-row">
+              <button class="submit-btn" style="background:#0f9d58;" onclick="approveRequest('${req.id}')">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button class="submit-btn" style="background:var(--danger);" onclick="rejectRequest('${req.id}')">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      /* Role Change Requests */
+      if (roleRequests.length) {
+        html += `<div class="section-divider" style="color:#7c3aed; margin-top:20px;">Official / Trustee Requests (${roleRequests.length})</div>`;
+        html += roleRequests.map(req => `
+          <div class="req-card">
+            <div class="req-card-top">
+              <div class="req-avatar violet">${getInitials(req.targetMemberName)}</div>
+              <div class="req-info">
+                <div class="req-name">${req.targetMemberName || '—'}</div>
+                <div class="req-phone">${req.targetMemberPhone || ''}</div>
+                <div style="margin-top:6px; display:flex; align-items:center; gap:6px;">
+                  <span class="role-chip chip-gray">${req.currentRole}</span>
+                  <i class="fas fa-arrow-right" style="font-size:10px; color:#94a3b8;"></i>
+                  <span class="role-chip chip-violet">${req.newRole}</span>
+                </div>
+                <div class="req-date" style="margin-top:4px;"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>Requested ${fmtDate(req.createdAt)}</div>
+              </div>
+            </div>
+            ${req.reason ? `<div class="req-reason"><i class="fas fa-comment" style="margin-right:6px; color:#94a3b8;"></i>${req.reason}</div>` : ''}
+            <div class="btn-row">
+              <button class="submit-btn" style="background:#0f9d58;" onclick="approveRoleRequest('${req.id}')">
+                <i class="fas fa-check"></i> Approve
+              </button>
+              <button class="submit-btn" style="background:var(--danger);" onclick="rejectRoleRequest('${req.id}')">
+                <i class="fas fa-times"></i> Reject
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      container.innerHTML = html;
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:var(--danger);"></i><p>Error loading requests</p></div>';
+    }
+  }
+
+  /* Add Member – Approve */
+  async function approveRequest(requestId) {
+    const ok = await showConfirm({
+      title: 'Approve Member?',
+      message: 'This will add the member to the group. The action cannot be undone.',
+      danger: false,
+      okLabel: 'Yes, Approve'
+    });
+    if (!ok) return;
+
+    try {
+      const res  = await fetch('/member/approve-member-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, requestId, action: 'approve' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('success', 'Member Approved', 'The member has been added to the group.');
+        await loadPendingRequests();
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        toast('error', 'Approval Failed', data.error || 'Could not approve request.');
+      }
+    } catch (err) {
+      toast('error', 'Network Error', err.message);
+    }
+  }
+
+  /* Add Member – Reject */
+  async function rejectRequest(requestId) {
+    const ok = await showConfirm({
+      title: 'Reject Request?',
+      message: 'The member request will be rejected and cannot be restored.',
+      danger: true,
+      okLabel: 'Yes, Reject'
+    });
+    if (!ok) return;
+
+    try {
+      const res  = await fetch('/member/approve-member-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, requestId, action: 'reject' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('info', 'Request Rejected', 'The member request has been rejected.');
+        await loadPendingRequests();
+      } else {
+        toast('error', 'Rejection Failed', data.error || 'Could not reject request.');
+      }
+    } catch (err) {
+      toast('error', 'Network Error', err.message);
+    }
+  }
+
+  /* Role Change – Approve */
+  async function approveRoleRequest(requestId) {
+    const ok = await showConfirm({
+      title: 'Approve Role Change?',
+      message: 'The member\'s role will be updated immediately.',
+      danger: false,
+      okLabel: 'Yes, Approve'
+    });
+    if (!ok) return;
+
+    try {
+      const res  = await fetch('/member/approve-role-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, requestId, action: 'approve' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('success', 'Role Change Approved', 'The member\'s role has been updated.');
+        await loadPendingRequests();
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        toast('error', 'Approval Failed', data.error || 'Could not approve role change.');
+      }
+    } catch (err) {
+      toast('error', 'Network Error', err.message);
+    }
+  }
+
+  /* Role Change – Reject */
+  async function rejectRoleRequest(requestId) {
+    const ok = await showConfirm({
+      title: 'Reject Role Change?',
+      message: 'The role change request will be rejected.',
+      danger: true,
+      okLabel: 'Yes, Reject'
+    });
+    if (!ok) return;
+
+    try {
+      const res  = await fetch('/member/approve-role-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, requestId, action: 'reject' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('info', 'Role Change Rejected', 'The request has been rejected.');
+        await loadPendingRequests();
+      } else {
+        toast('error', 'Rejection Failed', data.error || 'Could not reject role change.');
+      }
+    } catch (err) {
+      toast('error', 'Network Error', err.message);
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     3. ROLE CHANGE MODAL
+  ══════════════════════════════════════════════ */
+  function showRoleChangeModal() {
+    openModal('roleChangeOverlay');
+  }
+
+  async function submitRoleChangeRequest() {
+    const targetPhone = document.getElementById('roleChangeMember').value.trim();
+    const newRole     = document.getElementById('newRoleSelect').value;
+    const reason      = document.getElementById('roleChangeReason').value.trim();
+
+    if (!targetPhone) { toast('warning', 'Select a Member', 'Please choose a member from the list.'); return; }
+    if (!newRole)     { toast('warning', 'Select a Role',   'Please choose the new role.'); return; }
+
+    const btn = document.querySelector('#roleChangeOverlay .submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner spin"></i> Submitting…';
+
+    try {
+      const res  = await fetch('/member/request-role-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName, targetMemberPhone: targetPhone, newRole, reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('success', 'Request Submitted', 'The appointment will be reviewed for approval.');
+        closeModal('roleChangeOverlay');
+        document.getElementById('roleChangeMember').value = '';
+        document.getElementById('newRoleSelect').value    = '';
+        document.getElementById('roleChangeReason').value = '';
+      } else {
+        toast('error', 'Submission Failed', data.error || 'Could not submit request.');
+      }
+    } catch (err) {
+      toast('error', 'Network Error', err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     4. APPROVED MEMBERS MODAL
+  ══════════════════════════════════════════════ */
+  function showApprovedMembersModal() {
+    openModal('approvedMembersOverlay');
+
+    const container = document.getElementById('approvedMembersList');
+    container.innerHTML = '<div class="empty-state" style="padding:40px 20px;"><i class="fas fa-spinner spin"></i><p>Loading approved members…</p></div>';
+
+    try {
+      const approved = (group?.requests?.addMember || []).filter(r => r.status === 'approved' && r.conformed);
+
+      if (!approved.length) {
+        container.innerHTML = '<div class="empty-state" style="padding:40px 20px;"><i class="fas fa-check-circle" style="color:#0f9d58;"></i><p>No approved member requests yet</p></div>';
+        return;
+      }
+
+      container.innerHTML = '<div style="padding:10px 16px;">' + approved.map(req => `
+        <div class="member-card" style="border-left:3px solid var(--accent);">
+          <div class="member-avatar">${getInitials(req.newMemberName)}</div>
+          <div class="member-info">
+            <div class="member-name">${req.newMemberName || '—'}</div>
+            <div class="member-phone">${req.newMemberPhone || req.requesterPhone || ''}</div>
+            <div style="font-size:11px; color:#64748b; margin-top:3px;">
+              <i class="fas fa-id-card" style="margin-right:4px;"></i>ID: ${req.idNumber || '—'}
+              &nbsp;•&nbsp;
+              <i class="fas fa-calendar-check" style="margin-right:4px;"></i>Added: ${fmtDate(req.approvedAt)}
+            </div>
+          </div>
+          <span class="role-chip chip-green">Approved</span>
+        </div>
+      `).join('') + '</div>';
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:var(--danger);"></i><p>Error loading approved members</p></div>';
+    }
+  }
+</script>
 
 </body>
 </html>

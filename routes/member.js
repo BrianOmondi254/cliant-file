@@ -1034,6 +1034,50 @@ router.get("/membership", (req, res) => {
   if (!foundGroup) {
     return res.status(404).send("Group not found");
   }
+
+  // Merge metadata from general.json if available
+  let generalData = readJSON(generalFile, {});
+  const flattenData = (data) => {
+    const result = {};
+    for (const county in data) {
+      const constis = data[county];
+      for (const consti in constis) {
+        const wards = constis[consti];
+        if (Array.isArray(wards)) {
+          for (const item of wards) {
+            if (item && item.groupName) {
+              result[item.groupName] = item;
+            }
+          }
+        } else {
+          for (const ward in wards) {
+            const groups = wards[ward];
+            if (Array.isArray(groups)) {
+              for (const item of groups) {
+                if (item && item.groupName) {
+                  result[item.groupName] = item;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return result;
+  };
+  const allGroups = flattenData(generalData);
+  const generalGroup = allGroups[groupName];
+  if (generalGroup) {
+    if (generalGroup.totalProposedMembers !== undefined) foundGroup.totalProposedMembers = generalGroup.totalProposedMembers;
+    if (generalGroup.principles) foundGroup.principles = generalGroup.principles;
+    if (generalGroup.requests) foundGroup.requests = generalGroup.requests;
+    if (generalGroup.accountNumber) foundGroup.accountNumber = generalGroup.accountNumber;
+    if (generalGroup.phase) foundGroup.phase = generalGroup.phase;
+    if (generalGroup.createdAt) foundGroup.createdAt = generalGroup.createdAt;
+    if (generalGroup.county) foundGroup.county = generalGroup.county;
+    if (generalGroup.constituency) foundGroup.constituency = generalGroup.constituency;
+    if (generalGroup.ward) foundGroup.ward = generalGroup.ward;
+  }
   
   const targetPhone = queryPhone || req.session?.user?.phoneNumber;
   let displayPhone = targetPhone;
@@ -1095,32 +1139,56 @@ router.get("/gmember", (req, res) => {
     return res.status(404).send("Group not found");
   }
 
-  // Fetch requests from general.json
+  // Fetch group and members from general.json (source of truth)
   let generalData = readJSON(generalFile, {});
+  let totalProposedMembers = 0;
+  let groupMembers = [];
+  
   if (generalData && Object.keys(generalData).length > 0) {
     const groupRef = findGroupInGeneral(generalData, groupName);
-    if (groupRef && groupRef.group && groupRef.group.requests) {
-      // Merge requests from general.json
-      foundGroup.requests = groupRef.group.requests;
+    if (groupRef && groupRef.group) {
+      // Use group from general.json as source of truth
+      foundGroup = groupRef.group;
+      
+      // Get totalProposedMembers
+      totalProposedMembers = foundGroup.totalProposedMembers || 0;
+      
+      // Build members list from general.json group members (trustee_*, official_*, member_*)
+      const memberKeys = Object.keys(foundGroup).filter(k =>
+        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+      );
+      
+      groupMembers = memberKeys.map(key => {
+        const m = foundGroup[key];
+        return {
+          phone: m.phone || '',
+          name: m.name || m.title || key,
+          memberId: m.memberId || m.phone || key,
+          role: m.role || m.type || key.split('_')[0],
+          memberNumber: m.memberNumber || '',
+          index: m.index || '',
+          accounts: m.accounts || {},
+          memberFinancials: m.memberFinancials || {}
+        };
+      });
+      
+      // Merge requests if exists
+      if (!foundGroup.requests) {
+        foundGroup.requests = {};
+      }
     } else {
-      foundGroup.requests = foundGroup.requests || {};
+      if (!foundGroup) foundGroup = {};
+      foundGroup.requests = {};
     }
   } else {
-    foundGroup.requests = foundGroup.requests || {};
+    if (!foundGroup) foundGroup = {};
+    foundGroup.requests = {};
   }
-
-  const membersList = foundGroup.members ? Object.entries(foundGroup.members).map(([phone, m]) => ({
-    phone,
-    name: m.name || phone,
-    memberId: m.memberId || phone,
-    role: m.role || 'member',
-    accounts: m.accounts || {},
-    memberFinancials: m.memberFinancials || {}
-  })) : [];
 
   res.render("gaccount/gmember", {
     group: foundGroup,
-    members: membersList,
+    members: groupMembers,
+    totalProposedMembers: totalProposedMembers,
     user: req.session.user
   });
 });
