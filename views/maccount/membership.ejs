@@ -662,19 +662,61 @@
             <label>Phone Number</label>
             <input type="tel" id="newMemberPhone" placeholder="Enter phone number">
           </div>
-          <div class="field">
-            <label>Reason for Request</label>
-            <textarea id="memberReason" rows="3" placeholder="Explain why this member should be added"></textarea>
-          </div>
-          <button class="submit-btn" onclick="submitAddMemberRequest()">
-            <i class="fas fa-paper-plane" style="margin-right:6px;"></i>Submit Request
-          </button>
+           <div class="field">
+             <label>Reason for Request</label>
+             <textarea id="memberReason" rows="3" placeholder="Explain why this member should be added"></textarea>
+           </div>
+           <div class="field">
+             <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+               <input type="checkbox" id="confirmConform" style="width:auto; margin:0;">
+               <span style="font-size:13px;">I confirm this member has read and agrees to the group's constitution and principles</span>
+             </label>
+           </div>
+           <button class="submit-btn" onclick="confirmAndConform()">
+             <i class="fas fa-check-circle" style="margin-right:6px;"></i>Conform
+           </button>
         </div>
-      </div>
-    </div>
-  
-    <!-- ══════════════════════════════════
-         TERMINATION REQUEST MODAL
+     </div>
+   </div>
+   
+   <!-- ══════════════════════════════════
+        CONFIRM ADD MEMBER MODAL
+    ══════════════════════════════════ -->
+   <div id="confirmAddMemberOverlay" class="overlay">
+     <div class="modal">
+       <div class="modal-header" style="background: linear-gradient(135deg, #0f9d58, #34d399);">
+         <div class="modal-header-icon btn-icon green"><i class="fas fa-check-circle"></i></div>
+         <div class="modal-title">Confirm Add Member Request</div>
+         <button class="modal-close" onclick="closeModal('confirmAddMemberOverlay')">
+           <i class="fas fa-times"></i>
+         </button>
+       </div>
+       <div class="modal-body">
+         <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:14px;">
+           <p style="font-size:12px; color:#166534; margin:0;">
+             <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+             Please review the member details below before submitting the request.
+           </p>
+         </div>
+         
+         <div id="confirmMemberDetails" style="font-size:13px; color:#334155; line-height:1.6; margin-bottom:16px;">
+           <!-- Populated by JavaScript -->
+         </div>
+         
+         <div style="display:flex; gap:10px;">
+           <button class="submit-btn" style="flex:1; background:#0f9d58;" onclick="executeAddMemberRequest()">
+             <i class="fas fa-check"></i>Submit Request
+           </button>
+           <button class="submit-btn" style="flex:1; background:#e2e8f0; color:#64748b;" onclick="closeModal('confirmAddMemberOverlay')">
+             Cancel
+           </button>
+         </div>
+       </div>
+     </div>
+   </div>
+   
+   <!-- ══════════════════════════════════
+        TERMINATION REQUEST MODAL
     ══════════════════════════════════ -->
     <div id="terminationOverlay" class="overlay">
       <div class="modal">
@@ -745,13 +787,19 @@
     })();
  
 /* ── MODAL HELPERS ── */
-    function closeModal(id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.classList.remove('open');
-        el.style.display = 'none';
-      }
-    }
+     function closeModal(id) {
+       var el = document.getElementById(id);
+       if (el) {
+         el.classList.remove('open');
+         el.style.display = 'none';
+       }
+     }
+     function openModal(id) {
+       var el = document.getElementById(id);
+       if (el) {
+         el.classList.add('open');
+       }
+     }
     document.querySelectorAll('.overlay').forEach(el => {
       el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
     });
@@ -806,17 +854,21 @@
     }
  
     /* ── ADD MEMBER ── */
+    let pendingAddMemberData = null; // Temporary storage for confirmation
+    
     function showAddMemberRequest() {
       document.getElementById('addMemberOverlay').classList.add('open');
     }
-    async function submitAddMemberRequest() {
+    
+    async function confirmAndConform() {
       const phone  = document.getElementById('newMemberPhone').value.trim();
       const reason = document.getElementById('memberReason').value.trim();
-      if (!phone) { alert('Please enter phone number'); return; }
+      const conformed = document.getElementById('confirmConform').checked;
       
-      // First, fetch member details from data.json by phone number
-      let memberName = "";
-      let idNumber = "";
+      if (!phone) { alert('Please enter phone number'); return; }
+      if (!conformed) { alert('Please confirm the member agrees to the group constitution'); return; }
+      
+      // Fetch member details
       try {
         const memberRes = await fetch(`/member/get-by-phone?phone=${encodeURIComponent(phone)}`, {
           method: 'GET',
@@ -824,18 +876,42 @@
         });
         const memberData = await memberRes.json();
         if (memberData.success && memberData.member) {
-          memberName = memberData.member.name || "";
-          idNumber = memberData.member.idNumber || "";
+          const memberName = memberData.member.name || "";
+          const idNumber = memberData.member.idNumber || "";
+          
+          // Store for submission
+          pendingAddMemberData = { phone, reason, memberName, idNumber };
+          
+          // Populate confirmation modal
+          const detailsHtml = `
+            <div><strong>Name:</strong> ${memberName}</div>
+            <div><strong>Phone:</strong> ${phone}</div>
+            <div><strong>ID Number:</strong> ${idNumber || 'Not provided'}</div>
+            <div><strong>Reason:</strong> ${reason || 'None provided'}</div>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin:12px 0;">
+            <div style="font-size:12px; color:#64748b;">
+              <i class="fas fa-shield-alt" style="margin-right:6px; color:#0f9d58;"></i>
+              By submitting, the new member agrees to the group's constitution and principles.
+            </div>
+          `;
+          document.getElementById('confirmMemberDetails').innerHTML = detailsHtml;
+          openModal('confirmAddMemberOverlay');
         } else {
           alert('Member not found with phone number: ' + phone);
-          return;
         }
       } catch (err) {
         alert('Error fetching member details: ' + err.message);
+      }
+    }
+    
+    async function executeAddMemberRequest() {
+      if (!pendingAddMemberData) {
+        alert('Error: No data to submit. Please try again.');
         return;
       }
       
-      // Now submit the add member request with the fetched details
+      const { phone, reason, memberName, idNumber } = pendingAddMemberData;
+      
       try {
         const res = await fetch('/member/request-add-member', {
           method: 'POST',
@@ -846,24 +922,197 @@
             newMemberPhone: phone, 
             newMemberName: memberName,
             idNumber: idNumber,
-            reason: reason 
+            reason: reason,
+            conformed: true
           })
         });
         const data = await res.json();
         if (data.success) {
            alert('Request submitted successfully!\n\nPhone: ' + phone + '\nName: ' + memberName + '\nID Number: ' + idNumber + '\n\nPending approval from group officials.');
         } else {
-          alert('Error: ' + (data.error || 'Failed to submit request'));
-          return;
+           alert('Error: ' + (data.error || 'Failed to submit request'));
+           return;
         }
       } catch (err) {
         alert('Error: ' + err.message);
         return;
       }
       
+      closeModal('confirmAddMemberOverlay');
       closeModal('addMemberOverlay');
-       ['newMemberPhone','memberReason'].forEach(id => document.getElementById(id).value = '');
+      ['newMemberPhone','memberReason', 'confirmConform'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      pendingAddMemberData = null;
     }
+    
+    async function confirmAndConform() {
+      const phone  = document.getElementById('newMemberPhone').value.trim();
+      const reason = document.getElementById('memberReason').value.trim();
+      const conformed = document.getElementById('confirmConform').checked;
+      
+      if (!phone) { alert('Please enter phone number'); return; }
+      if (!conformed) { alert('Please confirm the member agrees to the group constitution'); return; }
+      
+      // Fetch member details
+      try {
+        const memberRes = await fetch(`/member/get-by-phone?phone=${encodeURIComponent(phone)}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const memberData = await memberRes.json();
+        if (memberData.success && memberData.member) {
+          const memberName = memberData.member.name || "";
+          const idNumber = memberData.member.idNumber || "";
+          
+          // Store for submission
+          pendingAddMemberData = { phone, reason, memberName, idNumber };
+          
+          // Populate confirmation modal
+          const detailsHtml = `
+            <div><strong>Name:</strong> ${memberName}</div>
+            <div><strong>Phone:</strong> ${phone}</div>
+            <div><strong>ID Number:</strong> ${idNumber || 'Not provided'}</div>
+            <div><strong>Reason:</strong> ${reason || 'None provided'}</div>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin:12px 0;">
+            <div style="font-size:12px; color:#64748b;">
+              <i class="fas fa-shield-alt" style="margin-right:6px; color:#0f9d58;"></i>
+              By submitting, the new member agrees to the group's constitution and principles.
+            </div>
+          `;
+          document.getElementById('confirmMemberDetails').innerHTML = detailsHtml;
+          openModal('confirmAddMemberOverlay');
+        } else {
+          alert('Member not found with phone number: ' + phone);
+        }
+      } catch (err) {
+        alert('Error fetching member details: ' + err.message);
+      }
+    }
+    
+    async function executeAddMemberRequest() {
+      if (!pendingAddMemberData) {
+        alert('Error: No data to submit. Please try again.');
+        return;
+      }
+      
+      const { phone, reason, memberName, idNumber } = pendingAddMemberData;
+      
+      try {
+        const res = await fetch('/member/request-add-member', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            groupName: groupName, 
+            requesterPhone: memberPhone,
+            newMemberPhone: phone, 
+            newMemberName: memberName,
+            idNumber: idNumber,
+            reason: reason,
+            conformed: true
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+           alert('Request submitted successfully!\n\nPhone: ' + phone + '\nName: ' + memberName + '\nID Number: ' + idNumber + '\n\nPending approval from group officials.');
+        } else {
+           alert('Error: ' + (data.error || 'Failed to submit request'));
+           return;
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+        return;
+      }
+      
+      closeModal('confirmAddMemberOverlay');
+      closeModal('addMemberOverlay');
+      ['newMemberPhone','memberReason', 'confirmConform'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      pendingAddMemberData = null;
+    }
+      async function confirmAndConform() {
+        const phone  = document.getElementById('newMemberPhone').value.trim();
+        const reason = document.getElementById('memberReason').value.trim();
+        const conformed = document.getElementById('confirmConform').checked;
+        
+        if (!phone) { alert('Please enter phone number'); return; }
+        if (!conformed) { alert('Please confirm the member agrees to the group constitution'); return; }
+        
+        // Fetch member details for confirmation and submission
+        let memberName = "";
+        let idNumber = "";
+        try {
+          const memberRes = await fetch(`/member/get-by-phone?phone=${encodeURIComponent(phone)}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const memberData = await memberRes.json();
+          if (memberData.success && memberData.member) {
+            memberName = memberData.member.name || "";
+            idNumber = memberData.member.idNumber || "";
+          } else {
+            alert('Member not found with phone number: ' + phone);
+            return;
+          }
+        } catch (err) {
+          alert('Error fetching member details: ' + err.message);
+          return;
+        }
+        
+        // Show confirmation dialog
+        const confirmationMessage = 
+          `Confirm Add Member Request?\n\n` +
+          `Name: ${memberName}\n` +
+          `Phone: ${phone}\n` +
+          `ID: ${idNumber || 'Not provided'}\n\n` +
+          `This will send a request to group officials for approval.`;
+        
+        if (!confirm(confirmationMessage)) {
+          return;
+        }
+        
+        // Proceed with submission (pass fetched data to avoid re-fetch)
+        await submitAddMemberRequest(memberName, idNumber, reason);
+      }
+      
+      async function submitAddMemberRequest(memberName, idNumber, reason) {
+        const phone  = document.getElementById('newMemberPhone').value.trim();
+        if (!phone) { alert('Please enter phone number'); return; }
+        
+        // Submit directly (member data already fetched)
+        try {
+          const res = await fetch('/member/request-add-member', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              groupName: groupName, 
+              requesterPhone: memberPhone,
+              newMemberPhone: phone, 
+              newMemberName: memberName,
+              idNumber: idNumber,
+              reason: reason,
+              conformed: true
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+             alert('Request submitted successfully!\n\nPhone: ' + phone + '\nName: ' + memberName + '\nID Number: ' + idNumber + '\n\nPending approval from group officials.');
+          } else {
+             alert('Error: ' + (data.error || 'Failed to submit request'));
+             return;
+          }
+        } catch (err) {
+          alert('Error: ' + err.message);
+          return;
+        }
+        
+        closeModal('addMemberOverlay');
+         ['newMemberPhone','memberReason'].forEach(id => document.getElementById(id).value = '');
+         document.getElementById('confirmConform').checked = false;
+      }
   
     /* ── TERMINATION REQUEST ── */
     function showTerminationRequest() {

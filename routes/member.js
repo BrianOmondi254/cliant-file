@@ -1276,7 +1276,7 @@ router.post("/add-member", (req, res) => {
 
 // POST /request-add-member - Submit a request to add a new member
 router.post("/request-add-member", (req, res) => {
-  const { groupName, requesterPhone, requesterName, newMemberName, newMemberPhone, reason, county, constituency, ward } = req.body;
+  const { groupName, requesterPhone, newMemberName, newMemberPhone, reason, county, constituency, ward, idNumber, conformed } = req.body;
 
   if (!groupName || !newMemberPhone) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
@@ -1321,18 +1321,19 @@ router.post("/request-add-member", (req, res) => {
     return res.status(400).json({ success: false, error: "A request already exists for this phone number (status: " + existingRequest.status + ")" });
   }
 
-  // Add the request
-  const newRequest = {
-    id: Date.now().toString(),
-    type: 'addMember',
-    requesterPhone: requesterPhone || '',
-    requesterName: requesterName || '',
-    newMemberName,
-    newMemberPhone,
-    reason: reason || '',
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
+   // Add the request
+   const newRequest = {
+     id: Date.now().toString(),
+     type: 'addMember',
+     requesterPhone: requesterPhone || '',
+     newMemberName,
+     newMemberPhone,
+     idNumber: idNumber || null,
+     reason: reason || '',
+     conformed: conformed === true || conformed === 'true', // Boolean flag
+     status: 'pending',
+     createdAt: new Date().toISOString()
+   };
 
   targetGroup.requests.addMember.push(newRequest);
 
@@ -1365,10 +1366,78 @@ router.get("/member-requests", (req, res) => {
   const targetGroup = groupRef.group;
   const requests = targetGroup.requests || {};
 
+   // Enrich addMember requests with requester's details from group membership
+   const enrichedAddMemberRequests = (requests.addMember || [])
+     .filter(r => r.status === 'pending')
+     .map(request => {
+       const requesterPhone = request.requesterPhone;
+       
+       // Look up requester in group members (trustee_*, official_*, member_*)
+       const memberKeys = Object.keys(targetGroup).filter(k =>
+         k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+       );
+       
+       let requesterName = request.requesterName || '';
+       let requesterMemberIndex = '';
+       let requesterMemberNumber = '';
+       
+       if (requesterPhone) {
+         // 1. Try to find in group members first (to get index/memberNumber and name)
+         for (const key of memberKeys) {
+           const member = targetGroup[key];
+           if (member && member.phone && normalizeKenyanPhone(member.phone) === normalizeKenyanPhone(requesterPhone)) {
+             requesterName = member.name || requesterName;
+             requesterMemberIndex = member.index || '';
+             requesterMemberNumber = member.memberNumber || '';
+             break;
+           }
+         }
+         
+         // 2. If not found in group members, try to get name from data.json (users)
+         if (!requesterName) {
+           const dataFilePath = path.join(__dirname, "../data.json");
+           try {
+             if (fs.existsSync(dataFilePath)) {
+               const users = JSON.parse(fs.readFileSync(dataFilePath, "utf8"));
+               const user = users.find(u => normalizeKenyanPhone(u.phoneNumber) === normalizeKenyanPhone(requesterPhone));
+               if (user) {
+                 requesterName = [user.FirstName, user.MiddleName, user.LastName].filter(Boolean).join(' ');
+               }
+             }
+           } catch (e) {
+             console.error("Error looking up requester in data.json:", e);
+           }
+         }
+         
+         // 3. If still not found, try agent.json
+         if (!requesterName) {
+           const agentFilePath = path.join(__dirname, "../agent.json");
+           try {
+             if (fs.existsSync(agentFilePath)) {
+               const agents = JSON.parse(fs.readFileSync(agentFilePath, "utf8"));
+               const agent = agents.find(a => normalizeKenyanPhone(a.phoneNumber) === normalizeKenyanPhone(requesterPhone));
+               if (agent) {
+                 requesterName = agent.name;
+               }
+             }
+           } catch (e) {
+             console.error("Error looking up requester in agent.json:", e);
+           }
+         }
+       }
+       
+       return {
+         ...request,
+         requesterName,
+         requesterMemberIndex,
+         requesterMemberNumber
+       };
+     });
+
   res.json({
     success: true,
     requests: {
-      addMember: (requests.addMember || []).filter(r => r.status === 'pending'),
+      addMember: enrichedAddMemberRequests,
       roleChange: (requests.roleChange || []).filter(r => r.status === 'pending'),
       termination: (requests.termination || []).filter(r => r.status === 'pending')
     }
@@ -1406,7 +1475,26 @@ router.post("/approve-member-request", (req, res) => {
     return res.status(404).json({ success: false, error: "Request not found" });
   }
 
-   const request = targetGroup.requests.addMember[requestIndex];
+  const request = targetGroup.requests.addMember[requestIndex];
+
+  // Authorization: Check if logged-in user is a trustee or official of this group
+  const userPhone = req.session?.user?.phoneNumber;
+  if (!userPhone) {
+    return res.status(401).json({ success: false, error: "Not logged in" });
+  }
+
+  // Check if user is trustee or official in the group
+  const isAuthorized = Object.keys(targetGroup).some(key => {
+    if (key.startsWith('trustee_') || key.startsWith('official_')) {
+      const member = targetGroup[key];
+      return member && member.phone && normalizeKenyanPhone(member.phone) === normalizeKenyanPhone(userPhone);
+    }
+    return false;
+  });
+
+  if (!isAuthorized) {
+    return res.status(403).json({ success: false, error: "Only trustees or officials can approve/reject member requests" });
+  }
 
   // Check if this member already exists in the group (prevent double processing)
   const allMemberKeys = Object.keys(targetGroup).filter(k =>
@@ -1420,106 +1508,253 @@ router.post("/approve-member-request", (req, res) => {
     return res.status(400).json({ success: false, error: "Member already exists in this group" });
   }
 
-  if (action === 'approve') {
-     // Determine next member number
-     const memberKeys = Object.keys(targetGroup).filter(k =>
-       k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-     );
-     const nextIndex = memberKeys.length + 1;
+   if (action === 'approve') {
+      // === ADD NEW MEMBER TO GROUP ===
+      // Determine next member number based on existing members
+      const memberKeys = Object.keys(targetGroup).filter(k =>
+        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+      );
+      const nextIndex = memberKeys.length + 1;
+      const newMemberKey = `member_${nextIndex}`;
 
-     // Add new member to general.json as member_N
-     // Rebuild the group object to maintain proper key order:
-     // all trustee_*/official_*/member_* keys first, then 'principles', then other metadata
-     const newMemberKey = `member_${nextIndex}`;
-     const newMemberData = {
-       phone: request.newMemberPhone,
-       name: request.newMemberName,
-       id: request.id || null,
-       type: 'member'
-     };
-     // Include regional info if present
-     if (request.county)     newMemberData.county = request.county;
-     if (request.constituency) newMemberData.constituency = request.constituency;
-     if (request.ward)    newMemberData.ward = request.ward;
-
-     // Reconstruct targetGroup with proper key ordering
-     const newGroup = {};
-     // First, copy all existing member keys (trustee_*, official_*, member_*) maintaining hierarchy order
-     const allKeys = Object.keys(targetGroup);
-     const trusteeKeys = allKeys.filter(k => k.startsWith('trustee_')).sort();
-     const officialKeys = allKeys.filter(k => k.startsWith('official_')).sort();
-      const memberExistingKeys = allKeys.filter(k => k.startsWith('member_')).sort();
-     // Add them in order: trustees, officials, then regular members
-      [...trusteeKeys, ...officialKeys, ...memberExistingKeys].forEach(k => {
-       newGroup[k] = targetGroup[k];
-     });
-     // Add the new member
-     newGroup[newMemberKey] = newMemberData;
-     // Copy principles and all other non-member keys
-     allKeys.forEach(k => {
-       if (!k.startsWith('trustee_') && !k.startsWith('official_') && !k.startsWith('member_')) {
-         newGroup[k] = targetGroup[k];
-       }
-     });
-     // Replace targetGroup contents with new ordered object
-     Object.keys(targetGroup).forEach(k => delete targetGroup[k]);
-     Object.assign(targetGroup, newGroup);
-
-     // Also add member to member.json for financial tracking
-    let memberData = readJSON(memberFile, defaultMemberStructure());
-    if (!memberData.group) memberData.group = {};
-
-    let memberGroupKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
-    if (!memberGroupKey) {
-      const groupNum = Object.keys(memberData.group).length + 1;
-      memberGroupKey = "ACC" + groupNum;
-      memberData.group[memberGroupKey] = {
-        groupNumber: groupNum,
-        groupName: groupName,
-        groupFinancials: { totalOpeningBalance: 0, totalAmountIn: 0, totalAmountOut: 0, totalClosingBalance: 0, availableWithdrawalBalance: 0 },
-        accountSchema: {
-          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
-          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-        },
-        members: {}
-      };
-    }
-
-    const memberGroup = memberData.group[memberGroupKey];
-    if (!memberGroup.members) memberGroup.members = {};
-
-    if (!memberGroup.members[request.newMemberPhone]) {
-      const defaultAccounts = {
-        "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-        "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-        "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-        "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
-      };
-      memberGroup.members[request.newMemberPhone] = {
-        memberId: request.newMemberPhone,
+      // Build new member object
+      const newMemberData = {
+        phone: request.newMemberPhone,
         name: request.newMemberName,
-        role: 'member',
-        memberFinancials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
-        accounts: defaultAccounts,
-        processedDeductions: [],
-        createdAt: new Date().toISOString()
+        id: request.id || null,
+        type: 'member',
+        index: String(nextIndex),
+        memberNumber: String(nextIndex).padStart(3, '0'), // "001", "002", etc.
+        idNumber: request.idNumber || null // Store ID number from request
       };
-      writeJSON(memberFile, memberData);
+
+      // Include regional info if present in request
+      if (request.county)     newMemberData.county = request.county;
+      if (request.constituency) newMemberData.constituency = request.constituency;
+      if (request.ward)    newMemberData.ward = request.ward;
+
+       // Reconstruct group with proper key ordering
+       // Goal: preserve original order, but ensure the member block is sorted and
+       // that 'requests' appears immediately after the member block (before principles)
+       const newGroup = {};
+       const allKeys = Object.keys(targetGroup);
+       
+       // Helper: extract numeric suffix from keys like "trustee_3", "member_10"
+       const getSuffixNum = (key) => {
+         const match = key.match(/_(\d+)$/);
+         return match ? parseInt(match[1], 10) : 0;
+       };
+
+       // Helper: determine if a key is a member-type key
+       const isMemberKey = (k) => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_');
+
+       // Sort member keys by: type priority (trustee→official→member), then numeric suffix
+       const memberPriority = (k) => {
+         if (k.startsWith('trustee_')) return 0;
+         if (k.startsWith('official_')) return 1;
+         return 2; // member_
+       };
+       const existingMemberKeys = allKeys.filter(isMemberKey);
+       const allMemberKeys = [...existingMemberKeys, newMemberKey].sort((a, b) => {
+         const priA = memberPriority(a);
+         const priB = memberPriority(b);
+         if (priA !== priB) return priA - priB;
+         return getSuffixNum(a) - getSuffixNum(b);
+       });
+
+       // Find the boundaries of the member block in the original key order
+       const firstMemberIdx = allKeys.findIndex(isMemberKey);
+       const lastMemberIdx = allKeys.reduce((last, k, idx) => isMemberKey(k) ? idx : last, -1);
+
+       // Build the final key order array
+       const finalOrder = [];
+       // 1. Keys that appear before the member block (excluding 'requests' which we'll handle separately)
+       if (firstMemberIdx > 0) {
+         for (let i = 0; i < firstMemberIdx; i++) {
+           const k = allKeys[i];
+           if (k !== 'requests') finalOrder.push(k);
+         }
+       }
+       // 2. Insert the sorted member block (existing members + new member)
+       allMemberKeys.forEach(k => finalOrder.push(k));
+       // 3. Insert 'requests' immediately after members if it exists
+       if (targetGroup.requests !== undefined) {
+         finalOrder.push('requests');
+       }
+       // 4. Append the remaining keys that were originally after the member block (excluding 'requests')
+       if (lastMemberIdx >= 0) {
+         for (let i = lastMemberIdx + 1; i < allKeys.length; i++) {
+           const k = allKeys[i];
+           if (k !== 'requests') finalOrder.push(k);
+         }
+       }
+
+       // Populate newGroup according to the final order
+       finalOrder.forEach(k => {
+         if (k === newMemberKey) {
+           newGroup[k] = newMemberData;
+         } else if (isMemberKey(k)) {
+           newGroup[k] = targetGroup[k];
+         } else if (k === 'requests') {
+           newGroup.requests = targetGroup.requests;
+         } else {
+           newGroup[k] = targetGroup[k];
+         }
+       });
+
+       // Replace targetGroup contents with new ordered object
+       Object.keys(targetGroup).forEach(k => delete targetGroup[k]);
+       Object.assign(targetGroup, newGroup);
+
+      // Also add to member.json for financial tracking
+      const memberFile = path.join(__dirname, "../member.json");
+      let memberData = readJSON(memberFile, { group: {} });
+      if (!memberData.group) memberData.group = {};
+
+      let memberGroupKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
+      if (!memberGroupKey) {
+        const groupNum = Object.keys(memberData.group).length + 1;
+        memberGroupKey = "ACC" + groupNum;
+        memberData.group[memberGroupKey] = {
+          groupNumber: groupNum,
+          groupName: groupName,
+          groupFinancials: { totalOpeningBalance: 0, totalAmountIn: 0, totalAmountOut: 0, totalClosingBalance: 0, availableWithdrawalBalance: 0 },
+          accountSchema: {
+            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
+            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
+            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
+          },
+          members: {}
+        };
+      }
+
+      const memberGroup = memberData.group[memberGroupKey];
+      if (!memberGroup.members) memberGroup.members = {};
+
+      if (!memberGroup.members[request.newMemberPhone]) {
+        const defaultAccounts = {
+          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
+          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
+        };
+        memberGroup.members[request.newMemberPhone] = {
+          memberId: request.newMemberPhone,
+          name: request.newMemberName,
+          role: 'member',
+          idNumber: request.idNumber || null, // Store ID number
+          memberFinancials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+          accounts: defaultAccounts,
+          processedDeductions: [],
+          createdAt: new Date().toISOString()
+        };
+        writeJSON(memberFile, memberData);
+      }
+
+      // === GET APPROVER INFO ===
+      const approverPhone = req.session?.user?.phoneNumber || "Unknown";
+      let approverName = "System User";
+      
+      const dataFile = path.join(__dirname, "../data.json");
+      if (fs.existsSync(dataFile)) {
+        try {
+          const users = JSON.parse(fs.readFileSync(dataFile, "utf8"));
+          const foundUser = users.find(u => 
+            normalizeKenyanPhone(u.phoneNumber) === normalizeKenyanPhone(approverPhone)
+          );
+          if (foundUser) {
+            approverName = [foundUser.FirstName, foundUser.MiddleName, foundUser.LastName]
+              .filter(Boolean)
+              .join(' ');
+          }
+        } catch (e) {
+          console.error("Error looking up user in data.json:", e);
+        }
+      }
+      
+      if (approverName === "System User") {
+        const agentFile = path.join(__dirname, "../agent.json");
+        if (fs.existsSync(agentFile)) {
+          try {
+            const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
+            const foundAgent = agents.find(a => 
+              normalizeKenyanPhone(a.phoneNumber) === normalizeKenyanPhone(approverPhone)
+            );
+            if (foundAgent) approverName = foundAgent.name;
+          } catch (e) {
+            console.error("Error looking up agent in agent.json:", e);
+          }
+        }
+      }
+      
+       request.approverPhone = approverPhone;
+       request.approverName = approverName;
+       request.status = 'approved';
+       request.approvedAt = new Date().toISOString();
+
+       // Update totalProposedMembers in the group (increment by 1)
+       const memberCount = Object.keys(targetGroup).filter(k =>
+         k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+       ).length;
+       targetGroup.totalProposedMembers = memberCount;
+     } else if (action === 'reject') {
+      // === RECORD WHO REJECTED ===
+      const approverPhone = req.session?.user?.phoneNumber || "Unknown";
+      let approverName = "System User";
+      
+      const dataFile = path.join(__dirname, "../data.json");
+      if (fs.existsSync(dataFile)) {
+        try {
+          const users = JSON.parse(fs.readFileSync(dataFile, "utf8"));
+          const foundUser = users.find(u => 
+            normalizeKenyanPhone(u.phoneNumber) === normalizeKenyanPhone(approverPhone)
+          );
+          if (foundUser) {
+            approverName = [foundUser.FirstName, foundUser.MiddleName, foundUser.LastName]
+              .filter(Boolean)
+              .join(' ');
+          }
+        } catch (e) {
+          console.error("Error looking up user in data.json:", e);
+        }
+      }
+      
+      if (approverName === "System User") {
+        const agentFile = path.join(__dirname, "../agent.json");
+        if (fs.existsSync(agentFile)) {
+          try {
+            const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
+            const foundAgent = agents.find(a => 
+              normalizeKenyanPhone(a.phoneNumber) === normalizeKenyanPhone(approverPhone)
+            );
+            if (foundAgent) approverName = foundAgent.name;
+          } catch (e) {
+            console.error("Error looking up agent in agent.json:", e);
+          }
+        }
+      }
+      
+      request.approverPhone = approverPhone;
+      request.approverName = approverName;
+      request.status = 'rejected';
+      request.rejectedAt = new Date().toISOString();
     }
 
-    request.status = 'approved';
-    request.approvedAt = new Date().toISOString();
-  } else if (action === 'reject') {
-    request.status = 'rejected';
-    request.rejectedAt = new Date().toISOString();
-  }
+   // Write back to general.json
+   writeJSON(generalFile, generalData);
 
-  // Write back to general.json
-  writeJSON(generalFile, generalData);
-
-   res.json({ success: true, request });
+   // Return updated request list to help frontend sync
+   const updatedRequests = targetGroup.requests || {};
+   res.json({ 
+     success: true, 
+     request,
+     requests: {
+       addMember: (updatedRequests.addMember || []).filter(r => r.status === 'pending'),
+       roleChange: (updatedRequests.roleChange || []).filter(r => r.status === 'pending'),
+       termination: (updatedRequests.termination || []).filter(r => r.status === 'pending')
+     }
+   });
 });
 
 // GET /member/get-by-phone - Get member details by phone number from data.json

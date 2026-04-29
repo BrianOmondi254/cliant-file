@@ -1022,16 +1022,16 @@
               <input type="text" id="t${idx}_memberNumber" placeholder="Enter member number" maxlength="20" required>
             </div>
           </div>
-          <div class="input-group" style="margin-bottom:var(--card-gap);">
-            <label>Phone Number</label>
-            <div class="input-wrapper">
-              <input type="tel" id="t${idx}_phone"
-                ${isChairperson ? 'value="<%= group.phone %>" readonly class="locked"' : 'placeholder="Enter phone number"'}
-                maxlength="12">
-              ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
-            </div>
-            ${isChairperson ? '<div class="compliance-note"><i class="fas fa-info-circle"></i> Chairperson phone pre-filled</div>' : ''}
-          </div>
+           <div class="input-group" style="margin-bottom:var(--card-gap);">
+             <label>Phone Number</label>
+             <div class="input-wrapper">
+               <input type="tel" id="t${idx}_phone"
+                 ${isChairperson ? `value="${groupData.trustee_1 && groupData.trustee_1.phone ? groupData.trustee_1.phone : ''}" readonly class="locked"` : `placeholder="Enter phone number"`}
+                 maxlength="12">
+               ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
+             </div>
+             ${isChairperson ? '<div class="compliance-note"><i class="fas fa-info-circle"></i> Chairperson phone pre-filled from group data</div>' : ''}
+           </div>
           <div class="input-group">
             <label>ID Number <span style="font-weight:500; text-transform:none; letter-spacing:0;">(optional)</span></label>
             <div class="input-wrapper">
@@ -1317,21 +1317,19 @@
         const allPhones = [], phoneErrors = [];
         let hasEmptyMemberNumber = false, emptyMemberName = '';
 
-        for (let i=0; i<STD_TRUSTEES; i++) {
-          const idx         = i+1;
-          const name        = document.getElementById(`t${idx}_name`)?.value.trim() || '';
-          if (name.split(/\s+/).length < 3) { showNotification(`Full Name for Trustee ${idx} must have 3 names (First Middle Last).`); return; }
-          const memberNumber= document.getElementById(`t${idx}_memberNumber`)?.value.trim() || '';
-          const phone       = document.getElementById(`t${idx}_phone`)?.value.trim() || '';
-          const title       = document.getElementById(`t${idx}_title`)?.value.trim() || '';
-          if (!title)        { showNotification(`Title is required for Trustee ${idx}. Please select a title.`); return; }
-          if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = title; }
-          if (i===0) { if (isValidPhone(phone)) allPhones.push({ phone, name:`Trustee ${idx} (${title})` }); }
-          else {
-            if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Trustee ${idx} (${title})`)); return; }
-            allPhones.push({ phone, name:`Trustee ${idx} (${title})` });
-          }
-        }
+         for (let i=0; i<STD_TRUSTEES; i++) {
+           const idx         = i+1;
+           const memberNumber= document.getElementById(`t${idx}_memberNumber`)?.value.trim() || '';
+           const phone       = document.getElementById(`t${idx}_phone`)?.value.trim() || '';
+           const title       = document.getElementById(`t${idx}_title`)?.value.trim() || '';
+           if (!title)        { showNotification(`Title is required for Trustee ${idx}. Please select a title.`); return; }
+           if (!memberNumber) { hasEmptyMemberNumber = true; emptyMemberName = `Trustee ${idx}`; }
+           if (i===0) { if (isValidPhone(phone)) allPhones.push({ phone, name:`Trustee ${idx}` }); }
+           else {
+             if (!isValidPhone(phone)) { showNotification(getPhoneErrorMessage(`Trustee ${idx}`)); return; }
+             allPhones.push({ phone, name:`Trustee ${idx}` });
+           }
+         }
 
         let hasOfficialTitle = false, hasOfficialNumber = false, missingOfficialInfo = '';
         for (let i=0; i<currentOfficialsCount; i++) {

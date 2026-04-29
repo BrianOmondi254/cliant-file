@@ -1555,6 +1555,70 @@
           },
           "processedDeductions": [],
           "name": "brian oluoch"
+        },
+        "0740404040": {
+          "memberId": "0740404040",
+          "name": "Brian Omondi 0m0ndi",
+          "role": "member",
+          "idNumber": "35951444",
+          "memberFinancials": {
+            "openingBalance": 0,
+            "amountIn": 0,
+            "amountOut": 0,
+            "closingBalance": 0
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              "expectedAmount": "100",
+              "financials": {
+                "openingBalance": 0,
+                "amountIn": 0,
+                "amountOut": 0,
+                "closingBalance": 0
+              },
+              "transactionHistory": []
+            }
+          },
+          "processedDeductions": [],
+          "createdAt": "2026-04-29T14:07:45.946Z"
         }
       }
     },

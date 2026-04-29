@@ -7,7 +7,7 @@
         "createdAt": "2026-04-24T16:52:32.761Z",
         "agentProcessed": "0740001141",
         "phase": 3,
-        "totalProposedMembers": 3,
+        "totalProposedMembers": 4,
         "groupType": "Women's Group",
         "groupCertificateNumber": "1234",
         "constitutionStartKey": "1744",
@@ -37,6 +37,34 @@
           "phone": "0746001141",
           "id": "35951454",
           "name": "brian omolo omolo"
+        },
+        "member_4": {
+          "phone": "0740404040",
+          "name": "Brian Omondi 0m0ndi",
+          "id": "1777473355418",
+          "type": "member",
+          "index": "4",
+          "memberNumber": "004",
+          "idNumber": "35951444"
+        },
+        "requests": {
+          "addMember": [
+            {
+              "id": "1777473355418",
+              "type": "addMember",
+              "requesterPhone": "0740415992",
+              "newMemberName": "Brian Omondi 0m0ndi",
+              "newMemberPhone": "0740404040",
+              "idNumber": "35951444",
+              "reason": "",
+              "conformed": true,
+              "status": "approved",
+              "createdAt": "2026-04-29T14:35:55.418Z",
+              "approverPhone": "0740415992",
+              "approverName": "brian omondi okeyo",
+              "approvedAt": "2026-04-29T14:36:57.551Z"
+            }
+          ]
         },
         "principles": {
           "otherContributions": [

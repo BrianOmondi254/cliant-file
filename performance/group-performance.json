@@ -4,10 +4,10 @@
       "totals": {
         "phase1": 6,
         "phase2": 0,
-        "phase3": 1,
+        "phase3": 2,
         "phase4": 0,
         "phase5": 0,
-        "totalMembers": 3
+        "totalMembers": 6
       },
       "hourly": {
         "2026-04-24-19": {
@@ -33,6 +33,14 @@
           "phase4": 0,
           "phase5": 0,
           "totalMembers": 0
+        },
+        "2026-04-29-14": {
+          "phase1": 0,
+          "phase2": 0,
+          "phase3": 1,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 3
         }
       },
       "weekly": {
@@ -47,20 +55,20 @@
         "2026-W18": {
           "phase1": 6,
           "phase2": -1,
-          "phase3": 1,
+          "phase3": 2,
           "phase4": 0,
           "phase5": 0,
-          "totalMembers": 0
+          "totalMembers": 3
         }
       },
       "monthly": {
         "2026-04": {
           "phase1": 6,
           "phase2": 0,
-          "phase3": 1,
+          "phase3": 2,
           "phase4": 0,
           "phase5": 0,
-          "totalMembers": 3
+          "totalMembers": 6
         }
       },
       "constituencies": {
@@ -68,10 +76,10 @@
           "totals": {
             "phase1": 6,
             "phase2": 0,
-            "phase3": 1,
+            "phase3": 2,
             "phase4": 0,
             "phase5": 0,
-            "totalMembers": 3
+            "totalMembers": 6
           },
           "hourly": {
             "2026-04-24-19": {
@@ -97,6 +105,14 @@
               "phase4": 0,
               "phase5": 0,
               "totalMembers": 0
+            },
+            "2026-04-29-14": {
+              "phase1": 0,
+              "phase2": 0,
+              "phase3": 1,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 3
             }
           },
           "weekly": {
@@ -111,20 +127,20 @@
             "2026-W18": {
               "phase1": 6,
               "phase2": -1,
-              "phase3": 1,
+              "phase3": 2,
               "phase4": 0,
               "phase5": 0,
-              "totalMembers": 0
+              "totalMembers": 3
             }
           },
           "monthly": {
             "2026-04": {
               "phase1": 6,
               "phase2": 0,
-              "phase3": 1,
+              "phase3": 2,
               "phase4": 0,
               "phase5": 0,
-              "totalMembers": 3
+              "totalMembers": 6
             }
           },
           "wards": {
@@ -132,10 +148,10 @@
               "totals": {
                 "phase1": 6,
                 "phase2": 0,
-                "phase3": 1,
+                "phase3": 2,
                 "phase4": 0,
                 "phase5": 0,
-                "totalMembers": 3
+                "totalMembers": 6
               },
               "hourly": {
                 "2026-04-24-19": {
@@ -161,6 +177,14 @@
                   "phase4": 0,
                   "phase5": 0,
                   "totalMembers": 0
+                },
+                "2026-04-29-14": {
+                  "phase1": 0,
+                  "phase2": 0,
+                  "phase3": 1,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 3
                 }
               },
               "weekly": {
@@ -175,20 +199,20 @@
                 "2026-W18": {
                   "phase1": 6,
                   "phase2": -1,
-                  "phase3": 1,
+                  "phase3": 2,
                   "phase4": 0,
                   "phase5": 0,
-                  "totalMembers": 0
+                  "totalMembers": 3
                 }
               },
               "monthly": {
                 "2026-04": {
                   "phase1": 6,
                   "phase2": 0,
-                  "phase3": 1,
+                  "phase3": 2,
                   "phase4": 0,
                   "phase5": 0,
-                  "totalMembers": 3
+                  "totalMembers": 6
                 }
               }
             }
@@ -222,6 +246,14 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-04-29-14": {
+        "phase1": 0,
+        "phase2": 0,
+        "phase3": 1,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 3
       }
     },
     "weekly": {
@@ -236,29 +268,29 @@
       "2026-W18": {
         "phase1": 6,
         "phase2": -1,
-        "phase3": 1,
+        "phase3": 2,
         "phase4": 0,
         "phase5": 0,
-        "totalMembers": 0
+        "totalMembers": 3
       }
     },
     "monthly": {
       "2026-04": {
         "phase1": 6,
         "phase2": 0,
-        "phase3": 1,
+        "phase3": 2,
         "phase4": 0,
         "phase5": 0,
-        "totalMembers": 3
+        "totalMembers": 6
       }
     },
     "totals": {
       "phase1": 6,
       "phase2": 0,
-      "phase3": 1,
+      "phase3": 2,
       "phase4": 0,
       "phase5": 0,
-      "totalMembers": 3
+      "totalMembers": 6
     }
   }
 }

@@ -20,7 +20,7 @@
             "unknown": 2
           }
         },
-        "groups": 6
+        "groups": 7
       },
       "hourly": {
         "2026-04-25-14": {
@@ -64,6 +64,27 @@
             }
           },
           "groups": 6
+        },
+        "2026-04-29-14": {
+          "agents": 0,
+          "dealers": 0,
+          "members": {
+            "total": 0,
+            "gender": {
+              "male": 0,
+              "female": 0,
+              "unknown": 0
+            },
+            "ageBracket": {
+              "18-25": 0,
+              "26-35": 0,
+              "36-45": 0,
+              "46-55": 0,
+              "56+": 0,
+              "unknown": 0
+            }
+          },
+          "groups": 1
         }
       },
       "weekly": {
@@ -86,7 +107,7 @@
               "unknown": 2
             }
           },
-          "groups": 6
+          "groups": 7
         }
       },
       "monthly": {
@@ -109,7 +130,7 @@
               "unknown": 2
             }
           },
-          "groups": 6
+          "groups": 7
         }
       },
       "constituencies": {
@@ -133,7 +154,7 @@
                 "unknown": 2
               }
             },
-            "groups": 6
+            "groups": 7
           },
           "hourly": {
             "2026-04-25-14": {
@@ -177,6 +198,27 @@
                 }
               },
               "groups": 6
+            },
+            "2026-04-29-14": {
+              "agents": 0,
+              "dealers": 0,
+              "members": {
+                "total": 0,
+                "gender": {
+                  "male": 0,
+                  "female": 0,
+                  "unknown": 0
+                },
+                "ageBracket": {
+                  "18-25": 0,
+                  "26-35": 0,
+                  "36-45": 0,
+                  "46-55": 0,
+                  "56+": 0,
+                  "unknown": 0
+                }
+              },
+              "groups": 1
             }
           },
           "weekly": {
@@ -199,7 +241,7 @@
                   "unknown": 2
                 }
               },
-              "groups": 6
+              "groups": 7
             }
           },
           "monthly": {
@@ -222,7 +264,7 @@
                   "unknown": 2
                 }
               },
-              "groups": 6
+              "groups": 7
             }
           },
           "wards": {
@@ -338,7 +380,7 @@
                     "unknown": 2
                   }
                 },
-                "groups": 6
+                "groups": 7
               },
               "hourly": {
                 "2026-04-28-17": {
@@ -361,6 +403,27 @@
                     }
                   },
                   "groups": 6
+                },
+                "2026-04-29-14": {
+                  "agents": 0,
+                  "dealers": 0,
+                  "members": {
+                    "total": 0,
+                    "gender": {
+                      "male": 0,
+                      "female": 0,
+                      "unknown": 0
+                    },
+                    "ageBracket": {
+                      "18-25": 0,
+                      "26-35": 0,
+                      "36-45": 0,
+                      "46-55": 0,
+                      "56+": 0,
+                      "unknown": 0
+                    }
+                  },
+                  "groups": 1
                 }
               },
               "weekly": {
@@ -383,7 +446,7 @@
                       "unknown": 2
                     }
                   },
-                  "groups": 6
+                  "groups": 7
                 }
               },
               "monthly": {
@@ -406,7 +469,7 @@
                       "unknown": 2
                     }
                   },
-                  "groups": 6
+                  "groups": 7
                 }
               }
             }
@@ -1319,6 +1382,27 @@
           }
         },
         "groups": 6
+      },
+      "2026-04-29-14": {
+        "agents": 0,
+        "dealers": 0,
+        "members": {
+          "total": 0,
+          "gender": {
+            "male": 0,
+            "female": 0,
+            "unknown": 0
+          },
+          "ageBracket": {
+            "18-25": 0,
+            "26-35": 0,
+            "36-45": 0,
+            "46-55": 0,
+            "56+": 0,
+            "unknown": 0
+          }
+        },
+        "groups": 1
       }
     },
     "weekly": {
@@ -1341,7 +1425,7 @@
             "unknown": 5
           }
         },
-        "groups": 6
+        "groups": 7
       }
     },
     "monthly": {
@@ -1364,7 +1448,7 @@
             "unknown": 5
           }
         },
-        "groups": 6
+        "groups": 7
       }
     },
     "totals": {
@@ -1386,7 +1470,7 @@
           "unknown": 5
         }
       },
-      "groups": 6
+      "groups": 7
     }
   }
 }

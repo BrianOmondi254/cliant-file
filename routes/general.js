@@ -559,21 +559,21 @@ router.post("/verify-members", (req, res) => {
         status: "not-found"
       };
 
-      if (user) {
-        const fullName = [user.FirstName, user.MiddleName, user.LastName].filter(Boolean).join(' ');
-        const idMatch = id && String(user.idNumber).trim() === String(id).trim();
-        resMember.name = fullName;
-        resMember.verified = idMatch || false;
-        resMember.status = idMatch ? "verified" : (id ? "mismatch" : "partial");
-      } else {
-        const gen = generalMembersMap.get(normalized);
-        if (gen) {
-          resMember.name = gen.name;
-          resMember.verified = id && gen.id && String(gen.id).trim() === String(id).trim() || false;
-          resMember.status = resMember.verified ? "verified" : "mismatch";
-          resMember.source = "general";
-        }
-      }
+       if (user) {
+         const fullName = [user.FirstName, user.MiddleName, user.LastName].filter(Boolean).join(' ');
+         const idMatch = id && String(user.idNumber).trim() === String(id).trim();
+         resMember.name = fullName;
+         resMember.verified = true; // Found by phone number is sufficient for verification
+         resMember.status = idMatch ? "verified" : (id ? "mismatch" : "partial");
+       } else {
+         const gen = generalMembersMap.get(normalized);
+         if (gen) {
+           resMember.name = gen.name;
+           resMember.verified = true; // Found by phone number is sufficient for verification
+           resMember.status = id && gen.id && String(gen.id).trim() === String(id).trim() ? "verified" : "mismatch";
+           resMember.source = "general";
+         }
+       }
       return resMember;
     });
 

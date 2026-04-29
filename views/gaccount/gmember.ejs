@@ -573,14 +573,20 @@
                 '<div style="font-size:10px; color:#64748b; margin-top:2px;">Requested: ' + date + '</div>' +
               '</div>' +
             '</div>' +
-            '<div style="font-size:12px; color:#334155; background:#eff6ff; padding:8px; border-radius:6px; width:100%;">' +
-              '<div><strong>Requester:</strong> ' + (req.requesterName || 'Unknown') + '</div>' +
-              '<div><strong>Requester Phone:</strong> ' + (req.requesterPhone || '—') + '</div>' +
-              '<div><strong>Requester Index:</strong> ' + (req.requesterMemberIndex || '—') + '</div>' +
-              '<div><strong>Requester Member No:</strong> ' + (req.requesterMemberNumber || '—') + '</div>' +
-            '</div>' +
-            (req.reason ? '<div style="font-size:12px; color:#64748b; background:#f8fafc; padding:8px; border-radius:6px; width:100%;"><i class="fas fa-comment" style="margin-right:6px;"></i>' + req.reason + '</div>' : '') +
-            '<div style="display:flex; gap:8px; width:100%; margin-top:4px;">' +
+              '<div style="font-size:12px; color:#334155; background:#eff6ff; padding:8px; border-radius:6px; width:100%;">' +
+                '<div><strong>Requester:</strong> ' + (req.requesterName || 'Unknown') + '</div>' +
+                '<div><strong>Requester Phone:</strong> ' + (req.requesterPhone || '—') + '</div>' +
+                '<div><strong>Requester Index:</strong> ' + (req.requesterMemberIndex || '—') + '</div>' +
+                '<div><strong>Requester Member No:</strong> ' + (req.requesterMemberNumber || '—') + '</div>' +
+              '</div>' +
+             (req.approverName || req.approverPhone ? 
+               '<div style="font-size:12px; color:#334155; background:#fef3c7; padding:8px; border-radius:6px; width:100%; margin-top:8px;">' +
+                 '<div><strong>' + (req.status === 'approved' ? 'Approved' : 'Processed') + ' By:</strong> ' + (req.approverName || 'Unknown') + '</div>' +
+                 '<div><strong>Phone:</strong> ' + (req.approverPhone || '—') + '</div>' +
+                '</div>' : '') +
+             (req.reason ? '<div style="font-size:12px; color:#64748b; background:#f8fafc; padding:8px; border-radius:6px; width:100%;"><i class="fas fa-comment" style="margin-right:6px;"></i>' + req.reason + '</div>' : '') +
+             (req.conformed ? '<div style="font-size:11px; color:#059669; background:#ecfdf5; padding:6px 8px; border-radius:6px; width:100%; margin-top:4px;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Member has agreed to group constitution</div>' : '') +
+             '<div style="display:flex; gap:8px; width:100%; margin-top:4px;">' +
               '<button class="submit-btn" style="flex:1; background:#0f9d58;" onclick="approveRequest(\'' + req.id + '\')"><i class="fas fa-check"></i> Approve</button>' +
               '<button class="submit-btn" style="flex:1; background:#ef4444;" onclick="rejectRequest(\'' + req.id + '\')"><i class="fas fa-times"></i> Reject</button>' +
             '</div>' +
@@ -800,7 +806,42 @@
         <i class="fas fa-paper-plane" style="margin-right:8px;"></i>Submit Request
       </button>
     </div>
-  </div>
-</div>
+   </div>
+ </div>
+
+ <!-- CONFIRM APPROVAL MODAL -->
+ <div id="approveConfirmOverlay" class="overlay">
+   <div class="modal">
+     <div class="modal-header" style="background: linear-gradient(135deg, #0f9d58, #34d399);">
+       <div class="modal-header-icon btn-icon green"><i class="fas fa-check-circle"></i></div>
+       <div class="modal-title">Confirm Member Approval</div>
+       <button class="modal-close" onclick="closeModal('approveConfirmOverlay')">
+         <i class="fas fa-times"></i>
+       </button>
+     </div>
+     <div class="modal-body">
+       <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:14px;">
+         <p style="font-size:12px; color:#166534; margin:0;">
+           <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+           You are about to approve this member request. Please review the details below.
+         </p>
+       </div>
+       
+       <div id="approvalRequestDetails" style="font-size:13px; color:#334155; line-height:1.6;">
+         <!-- Populated by JavaScript -->
+       </div>
+       
+       <div style="display:flex; gap:10px; margin-top:20px;">
+         <button class="submit-btn" style="flex:1; background:#0f9d58;" onclick="executeApproval()">
+           <i class="fas fa-check"></i> Submit Approval
+         </button>
+         <button class="submit-btn" style="flex:1; background:#e2e8f0; color:#64748b;" onclick="closeModal('approveConfirmOverlay')">
+           Cancel
+         </button>
+       </div>
+     </div>
+   </div>
+ </div>
+
 </body>
 </html>
