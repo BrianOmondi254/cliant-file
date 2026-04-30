@@ -102,5 +102,45 @@
     "title": "Group Creation",
     "content": "Group Creation Request: ONE SACCO . Submitted by Processor: 0740001141. Chairperson Phone: 0760606060. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
     "createdAt": "2026-04-28T14:33:33.206Z"
+  },
+  {
+    "groupName": "kisumu brother shg group",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Your application for kisumu brother shg group is pending. Agent available at your location. Contact: 0740001141",
+    "createdAt": "2026-04-30T12:12:28.236Z"
+  },
+  {
+    "groupName": "kisumu brother shg group",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Group Creation Request: kisumu brother shg group. Submitted by Processor: 0740001141. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
+    "createdAt": "2026-04-30T12:12:28.243Z"
+  },
+  {
+    "groupName": "kisumu brother shg group",
+    "to": "0740415992",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: kisumu brother shg group has been activated by Agent brian siaya agent. \nRole: Chairperson\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-30T12:13:50.193Z"
+  },
+  {
+    "groupName": "kisumu brother shg group",
+    "to": "0700051102",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: kisumu brother shg group has been activated by Agent brian siaya agent. \nRole: Ass. Chairperson\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-30T12:13:50.206Z"
+  },
+  {
+    "groupName": "kisumu brother shg group",
+    "to": "0746001141",
+    "type": "registration_activated",
+    "title": "Registration Success",
+    "content": "Registration Complete: kisumu brother shg group has been activated by Agent brian siaya agent. \nRole: member\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
+    "createdAt": "2026-04-30T12:13:50.213Z"
   }
 ]

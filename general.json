@@ -155,6 +155,50 @@
         "principlesSetAt": "2026-04-25T12:44:16.216Z",
         "accountNumber": "2540422491234002",
         "pin": "1744"
+      },
+      {
+        "groupName": "kisumu brother shg group",
+        "groupType": "Women's Group",
+        "accountNumber": "0740415992",
+        "pin": "2133",
+        "createdAt": "2026-04-30T12:13:50.038Z",
+        "agentProcessed": "0740001141",
+        "phase": 2,
+        "totalProposedMembers": 3,
+        "trustee_1": {
+          "index": "1",
+          "type": "trustee",
+          "title": "Chairperson",
+          "memberNumber": "001",
+          "phone": "0740415992",
+          "id": "35951449",
+          "name": "brian omondi okeyo"
+        },
+        "official_2": {
+          "index": "2",
+          "type": "official",
+          "title": "Ass. Chairperson",
+          "memberNumber": "002",
+          "phone": "0700051102",
+          "id": "35951444",
+          "name": "brian ba ba"
+        },
+        "member_3": {
+          "index": "3",
+          "type": "member",
+          "memberNumber": "003",
+          "phone": "0746001141",
+          "id": "35951454",
+          "name": "brian omolo omolo"
+        },
+        "requests": {
+          "addMember": []
+        },
+        "groupCertificateNumber": "1234",
+        "constitutionStartKey": "2133",
+        "constitutionKeyGeneratedAt": "2026-04-30T12:13:50.179Z",
+        "principlesSetAt": "2026-04-30T12:13:50.182Z",
+        "principles": {}
       }
     ]
   }
