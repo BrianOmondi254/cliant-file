@@ -827,11 +827,32 @@
     }
 
     /* ─── Navigation ─── */
-    function nextStep(from) {
-      if (!validateStep(from)) return;
-      if (from === 6) { buildReview(); }
-      showPanel(from + 1);
-    }
+     function nextStep(from) {
+       if (!validateStep(from)) return;
+       if (from === 1) {
+         showStep1Confirmation();
+       }
+       if (from === 6) { buildReview(); }
+       showPanel(from + 1);
+     }
+
+     function showStep1Confirmation() {
+       const periodSelect = document.getElementById('endSavingPeriod');
+       const periodText = periodSelect.options[periodSelect.selectedIndex].text;
+       const freqSelect = document.getElementById('groupInterval');
+       const freqText = freqSelect.options[freqSelect.selectedIndex].text;
+       let dayText = '';
+       if (freqSelect.value === 'weekly' || freqSelect.value === 'monthly') {
+         const daySelect = document.getElementById('contributionDay');
+         dayText = daySelect.options[daySelect.selectedIndex].text;
+       }
+       let message = `Group is set to operator within ${periodText}. Contribution set to ${freqText}`;
+       if (dayText) {
+         message += ` on ${dayText}`;
+       }
+       message += '.';
+       alert(message);
+     }
 
     function prevStep(from) {
       showPanel(from - 1);
