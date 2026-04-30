@@ -1193,6 +1193,59 @@ router.get("/gmember", (req, res) => {
   });
 });
 
+router.get("/gloan", (req, res) => {
+  const { groupName } = req.query;
+  
+  if (!groupName) {
+    return res.redirect("/");
+  }
+  
+  // Mock data for frontend-only operation
+  const mockGroup = { 
+    groupName,
+    interestRate: 5,
+    maxLoanTerm: 12,
+    penaltyRate: 2
+  };
+  const mockUser = req.session.user || { 
+    name: "Mock User",
+    memberName: "Mock User",
+    phoneNumber: "254700000000"
+  };
+  
+  res.render("gaccount/gloan", {
+    group: mockGroup,
+    user: mockUser,
+    loans: [],
+    activeLoans: [],
+    repaidLoans: [],
+    totalLoans: 0,
+    loanFund: 0,
+    totalDisbursed: 0,
+    totalRepaid: 0,
+    availableBalance: 0,
+    overdueLoans: [],
+    rolledLoans: [],
+    expiredLoans: [],
+    pendingRequests: [],
+    memberMaxLoan: 10000,
+    memberSavings: 5000,
+    memberOutstanding: 0,
+    loanScore: "Excellent",
+    initials: "MU",
+    dueLoans: [],
+    paidOnTimeCt: 0,
+    activeCt: 0,
+    paidLateCt: 0,
+    rolledCt: 0,
+    overdueCt: 0,
+    expiredCt: 0,
+    totalRepaid: 0,
+    totalDisbursed: 0,
+    transactions: []
+  });
+});
+
 router.get("/gcon", (req, res) => {
   const { groupName } = req.query;
   

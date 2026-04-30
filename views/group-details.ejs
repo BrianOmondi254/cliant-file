@@ -513,7 +513,7 @@
                         <div id="groupAccountButtons" style="display: flex; flex-direction: column; gap: 10px;">
                             <a href="/member/gcon?groupName=<%= encodeURIComponent(group.groupName) %>" class="action-button"><i class="fas fa-donate"></i> Contribution</a>
                              <a href="/member/gmember?groupName=<%= encodeURIComponent(group.groupName) %>" class="action-button"><i class="fas fa-users"></i> Membership</a>
-                            <a href="#" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
+                             <a href="/member/gloan?groupName=<%= encodeURIComponent(group.groupName) %>" class="action-button"><i class="fas fa-money-bill-wave"></i> Loan</a>
                             <a href="#" class="action-button" onclick="switchTab('performance')"><i class="fas fa-chart-line"></i> Performance</a>
                             <a href="#" class="action-button"><i class="fas fa-receipt"></i> A/C Statement</a>
                             <a href="#" class="action-button" onclick="switchTab('accountDetails')"><i class="fas fa-cogs"></i> A/C Details</a>
