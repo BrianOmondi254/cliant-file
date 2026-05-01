@@ -752,9 +752,20 @@
                 <div id="customRoundsDiv" style="display:none;">
                   <label class="field-label">Number of Rounds</label>
                   <input type="number" id="customRoundsCount" placeholder="e.g. 5" class="field-input">
-                </div>
-              </div>
-            </div>
+               </div>
+             </div>
+
+             <!-- Loan Configuration Notification -->
+             <div id="step4Notification" style="display:none; margin-top:15px; padding:12px; background:#fff3cd; border:1px solid #ffc107; border-radius:8px;">
+               <p id="step4NotificationText" style="font-size:12px; color:#856404; margin:0 0 10px 0; line-height:1.6;">
+                 <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
+               </p>
+               <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                 <input type="checkbox" id="step4AckCheckbox" style="width:18px; height:18px; accent-color:#856404;">
+                 <label for="step4AckCheckbox" style="font-size:12px; color:#856404; font-weight:600; margin:0;">I confirm I have read and understood</label>
+               </div>
+             </div>
+           </div>
           </div>
 
           <div class="nav-row">
@@ -965,34 +976,112 @@
          }
        }
 
-       // Special handling for step 3: registration fee confirmation
-       if (from === 3) {
-         const checkbox = document.getElementById('step3AckCheckbox');
-         const notification = document.getElementById('step3Notification');
-         const regChoice = document.getElementById('regChoiceSelect').value;
+       // Special handling for step 4: loan configuration confirmation
+       if (from === 4) {
+         const checkbox = document.getElementById('step4AckCheckbox');
+         const notification = document.getElementById('step4Notification');
 
          // If checkbox not checked, show notification and block
          if (!checkbox.checked) {
            if (notification) {
-             let message = '';
+             // Gather all loan configuration values
+             const qualifyType = document.getElementById('loanQualifyType');
+             const qualifyText = qualifyType.options[qualifyType.selectedIndex].text;
 
-             if (regChoice === 'charged') {
-               // Get all confirmed accounts
-               const accounts = window.confirmedAccounts || [];
+             const loanCategory = document.getElementById('loanCategory');
+             const categoryText = loanCategory.options[loanCategory.selectedIndex].text;
 
-               if (accounts.length > 0) {
-                 // Build account list
-                 const accountList = accounts.map(acc =>
-                   'Account No. ' + acc.accountNumber + ': ' + acc.accountName + ' - KES ' + acc.expectedAmount
-                 ).join('; ');
+             const repaymentDuration = document.getElementById('loanRepaymentDuration').value;
+             const repaymentAlign = document.getElementById('loanRepaymentAlignment');
+             const alignText = repaymentAlign.options[repaymentAlign.selectedIndex].text;
 
-                 message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
-                   'Members are subjected to pay registration fee and are required to contribute to the accounts set: ' +
-                   accountList + '.';
-               } else {
-                 message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
-                   'Members are subjected to pay registration fee and are required to contribute to the account name and amount set.';
+             const rolloverMethod = document.getElementById('loanRolloverMethod');
+             const rolloverText = rolloverMethod.options[rolloverMethod.selectedIndex].text;
+             const maxRollovers = document.getElementById('loanMaxRollovers').value;
+
+             const interestRate = document.getElementById('loanInterestRate').value;
+             const limitBasis = document.getElementById('loanLimitBasis');
+             const basisText = limitBasis.options[limitBasis.selectedIndex].text;
+             const limitMultiplier = document.getElementById('loanLimitMultiplier').value;
+             const maxCount = document.getElementById('loanMaxCount').value;
+
+             // Qualification details
+             let qualDetails = '';
+             const qualifyVal = qualifyType.value;
+             if (qualifyVal === 'duration' || qualifyVal === 'both') {
+               const days = document.getElementById('loanDays').value;
+               qualDetails += (qualDetails ? ', ' : '') + 'Waiting Period: ' + days + ' days';
+             }
+             if (qualifyVal === 'saving' || qualifyVal === 'both') {
+               const target = document.getElementById('loanTargetAmount').value;
+               qualDetails += (qualDetails ? ', ' : '') + 'Target Saving: KES ' + target;
+             }
+
+             // Guarantee method (only for long term)
+             let guaranteeText = '';
+             if (loanCategory.value === 'long') {
+             const guaranteeMethod = document.getElementById('loanGuaranteeMethod');
+             guaranteeText = 'Guarantee: ' + guaranteeMethod.options[guaranteeMethod.selectedIndex].text + '. ';
+           }
+
+             // Long term specific
+             let longTermDetails = '';
+             if (loanCategory.value === 'long') {
+               const paymentPeriod = document.getElementById('longTermPaymentPeriod').value;
+               const paymentMethod = document.getElementById('longTermPaymentMethod');
+               const methodText = paymentMethod.options[paymentMethod.selectedIndex].text;
+               longTermDetails = 'Payment Period: ' + paymentPeriod + ' months. Method: ' + methodText + '. ';
+               
+               if (paymentMethod.value === 'installment') {
+                 const scheduleType = document.getElementById('installmentScheduleType');
+                 const scheduleText = scheduleType.options[scheduleType.selectedIndex].text;
+                 longTermDetails += 'Installment Schedule: ' + scheduleText + '. ';
+                 if (scheduleType.value === 'set_rounds') {
+                   const rounds = document.getElementById('customRoundsCount').value;
+                   longTermDetails += 'Rounds: ' + rounds + '. ';
+                 }
                }
+             }
+
+             // Build full message
+             let message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
+               'Loan Configuration Summary:<br>' +
+               '• Qualification: ' + qualifyText + (qualDetails ? ' (' + qualDetails + ')' : '') + '<br>' +
+               '• Loan Type: ' + categoryText + '. ' + guaranteeText +
+               '• Repayment: ' + repaymentDuration + ' days, ' + alignText + '<br>' +
+               '• Rollover: ' + rolloverText + ' (Max: ' + maxRollovers + ')<br>' +
+               '• Interest Rate: ' + interestRate + '%<br>' +
+               '• Limit Basis: ' + basisText + ', Multiplier: ' + limitMultiplier + '<br>' +
+               '• Max Concurrent Loans: ' + maxCount;
+
+             if (longTermDetails) {
+               message += '<br>' + longTermDetails;
+             }
+
+             message += '. All members must adhere to these loan settings.';
+
+             document.getElementById('step4NotificationText').innerHTML = message;
+             checkbox.checked = false;
+             notification.style.display = 'block';
+             setTimeout(() => {
+               notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             }, 100);
+           }
+           return; // Block progression
+         }
+
+         // Checkbox is checked - hide notification and proceed
+         if (notification) {
+           notification.style.display = 'none';
+         }
+       }
+
+       if (from === 1) {
+         showStep1Confirmation();
+       }
+       if (from === 6) { buildReview(); }
+       showPanel(from + 1);
+     }
              } else if (regChoice === 'not_charged') {
                const accounts = window.confirmedAccounts || [];
                if (accounts.length > 0) {
@@ -1116,11 +1205,53 @@
          }
          return true;
        }
-      if (step === 4) {
-        const repDays = document.getElementById('loanRepaymentDuration').value;
-        if (!repDays || +repDays <= 0) { alert('Please enter Loan Repayment Duration'); return false; }
-        return true;
-      }
+       if (step === 4) {
+         const repDays = document.getElementById('loanRepaymentDuration').value;
+         if (!repDays || +repDays <= 0) { alert('Please enter Loan Repayment Duration'); return false; }
+
+         const loanQualifyType = document.getElementById('loanQualifyType').value;
+         if (!loanQualifyType) { alert('Please select Fast Loan Qualification type'); return false; }
+
+         if (loanQualifyType === 'duration' || loanQualifyType === 'both') {
+           const days = document.getElementById('loanDays').value;
+           if (!days || +days <= 0) { alert('Please enter Waiting Period (Days)'); return false; }
+         }
+         if (loanQualifyType === 'saving' || loanQualifyType === 'both') {
+           const target = document.getElementById('loanTargetAmount').value;
+           if (!target || +target <= 0) { alert('Please enter Targeted Saving Amount'); return false; }
+         }
+
+         const loanCategory = document.getElementById('loanCategory').value;
+         if (!loanCategory) { alert('Please select Primary Loan Type'); return false; }
+
+         if (loanCategory === 'long') {
+           const guaranteeMethod = document.getElementById('loanGuaranteeMethod').value;
+           if (!guaranteeMethod) { alert('Please select Guarantee Method'); return false; }
+
+           const paymentPeriod = document.getElementById('longTermPaymentPeriod').value;
+           if (!paymentPeriod || +paymentPeriod <= 0) { alert('Please enter Long Term Payment Period'); return false; }
+
+           const paymentMethod = document.getElementById('longTermPaymentMethod').value;
+           if (!paymentMethod) { alert('Please select Loan Payment Method'); return false; }
+
+           if (paymentMethod === 'installment') {
+             const scheduleType = document.getElementById('installmentScheduleType').value;
+             if (!scheduleType) { alert('Please select Installment Schedule'); return false; }
+             if (scheduleType === 'set_rounds') {
+               const rounds = document.getElementById('customRoundsCount').value;
+               if (!rounds || +rounds <= 0) { alert('Please enter Number of Rounds'); return false; }
+             }
+           }
+         }
+
+         const interestRate = document.getElementById('loanInterestRate').value;
+         if (interestRate === '' || +interestRate < 0) { alert('Please enter a valid Interest Rate'); return false; }
+
+         const maxCount = document.getElementById('loanMaxCount').value;
+         if (!maxCount || +maxCount <= 0) { alert('Please enter Max Concurrent Active Loans'); return false; }
+
+         return true;
+       }
       return true; // steps 5, 6 – no strict requirement
     }
 
