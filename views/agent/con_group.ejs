@@ -552,11 +552,22 @@
             <label class="field-label">Member Removal Threshold (%)</label>
             <input type="number" id="removeThreshold" value="75" class="field-input">
 
-            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-              <input type="checkbox" id="requireNote" style="width:18px; height:18px; accent-color:#008080;">
-              <label for="requireNote" style="font-size:11px; color:#475569;">Require response note for removals</label>
-            </div>
-          </div>
+             <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+               <input type="checkbox" id="requireNote" style="width:18px; height:18px; accent-color:#008080;">
+               <label for="requireNote" style="font-size:11px; color:#475569;">Require response note for removals</label>
+             </div>
+
+             <!-- Notification paragraph -->
+             <div id="step2Notification" style="display:none; margin-top:15px; padding:12px; background:#fff3cd; border:1px solid #ffc107; border-radius:8px;">
+               <p style="font-size:12px; color:#856404; margin:0 0 10px 0; line-height:1.5;">
+                 <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
+                 Members are subject to the defined quotas for notifications regarding member removal and account editing.
+               </p>
+               <button onclick="acknowledgeStep2Notification()" class="btn" style="background:#856404; padding:8px 16px; font-size:12px;">
+                 <i class="fas fa-check"></i> OK, I Understand
+               </button>
+             </div>
+           </div>
 
           <div class="nav-row">
             <button class="btn btn-back" onclick="prevStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
@@ -906,14 +917,36 @@
       updateProgress(step);
     }
 
-    /* ─── Navigation ─── */
+     /* ─── Navigation ─── */
      function nextStep(from) {
        if (!validateStep(from)) return;
+
+       // Show notification when leaving step 2
+       if (from === 2) {
+         const notification = document.getElementById('step2Notification');
+         if (notification) {
+           notification.style.display = 'block';
+           // Scroll to show the notification
+           notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
+         }
+         return; // Don't proceed until user acknowledges
+       }
+
        if (from === 1) {
          showStep1Confirmation();
        }
        if (from === 6) { buildReview(); }
        showPanel(from + 1);
+     }
+
+     // Function to acknowledge the step 2 notification and proceed
+     function acknowledgeStep2Notification() {
+       const notification = document.getElementById('step2Notification');
+       if (notification) {
+         notification.style.display = 'none';
+       }
+       // Proceed to step 3
+       showPanel(3);
      }
 
       function showStep1Confirmation() {
