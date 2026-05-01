@@ -922,31 +922,36 @@
      function nextStep(from) {
        if (!validateStep(from)) return;
 
-       // Show notification when leaving step 2
+       // Special handling for step 2: require checkbox acknowledgment
        if (from === 2) {
+         const checkbox = document.getElementById('step2AckCheckbox');
          const notification = document.getElementById('step2Notification');
-         if (notification) {
-           // Populate the notification with actual threshold values
-           const fastPct = document.getElementById('fastThreshold').value;
-           const editPct = document.getElementById('editThreshold').value;
-           const removePct = document.getElementById('removeThreshold').value;
 
-           document.getElementById('notifFastPct').textContent = fastPct + '%';
-           document.getElementById('notifEditPct').textContent = editPct + '%';
-           document.getElementById('notifRemovePct').textContent = removePct + '%';
+         // If checkbox not checked, show notification and block
+         if (!checkbox.checked) {
+           if (notification) {
+             // Populate the notification with actual threshold values
+             const fastPct = document.getElementById('fastThreshold').value;
+             const editPct = document.getElementById('editThreshold').value;
+             const removePct = document.getElementById('removeThreshold').value;
 
-           // Reset checkbox
-           document.getElementById('step2AckCheckbox').checked = false;
+             document.getElementById('notifFastPct').textContent = fastPct + '%';
+             document.getElementById('notifEditPct').textContent = editPct + '%';
+             document.getElementById('notifRemovePct').textContent = removePct + '%';
 
-           notification.style.display = 'block';
-           // Show first two panels stacked
-           showPanel(2);
-           // Scroll to show the notification
-           setTimeout(() => {
-             notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
-           }, 100);
+             checkbox.checked = false;
+             notification.style.display = 'block';
+             setTimeout(() => {
+               notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             }, 100);
+           }
+           return; // Block progression
          }
-         return; // Don't proceed until user acknowledges
+
+         // Checkbox is checked - hide notification and proceed
+         if (notification) {
+           notification.style.display = 'none';
+         }
        }
 
        if (from === 1) {
@@ -954,18 +959,6 @@
        }
        if (from === 6) { buildReview(); }
        showPanel(from + 1);
-     }
-
-     // Function to proceed after checkbox is checked
-     function acknowledgeStep2Notification() {
-       const checkbox = document.getElementById('step2AckCheckbox');
-       if (!checkbox.checked) {
-         alert('Please check the confirmation box to continue');
-         return;
-       }
-       // Hide notification and proceed to step 3
-       document.getElementById('step2Notification').style.display = 'none';
-       showPanel(3);
      }
 
       function showStep1Confirmation() {
