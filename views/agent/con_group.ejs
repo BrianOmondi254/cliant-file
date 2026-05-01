@@ -559,13 +559,17 @@
 
              <!-- Notification paragraph -->
              <div id="step2Notification" style="display:none; margin-top:15px; padding:12px; background:#fff3cd; border:1px solid #ffc107; border-radius:8px;">
-               <p style="font-size:12px; color:#856404; margin:0 0 10px 0; line-height:1.5;">
+               <p id="step2NotificationText" style="font-size:12px; color:#856404; margin:0 0 10px 0; line-height:1.5;">
                  <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
-                 Members are subject to the defined quotas for notifications regarding member removal and account editing.
+                 Members are subject to the defined quotas for notifications:
+                 <br>• Member removal requires <span id="notifRemovePct">75%</span> agreement
+                 <br>• Account editing requires <span id="notifEditPct">75%</span> agreement
+                 <br>• Quick constitution edits require <span id="notifFastPct">60%</span> agreement
                </p>
-               <button onclick="acknowledgeStep2Notification()" class="btn" style="background:#856404; padding:8px 16px; font-size:12px;">
-                 <i class="fas fa-check"></i> OK, I Understand
-               </button>
+               <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                 <input type="checkbox" id="step2AckCheckbox" style="width:18px; height:18px; accent-color:#856404;">
+                 <label for="step2AckCheckbox" style="font-size:12px; color:#856404; font-weight:600; margin:0;">I confirm I have read and understood</label>
+               </div>
              </div>
            </div>
 
@@ -925,9 +929,25 @@
        if (from === 2) {
          const notification = document.getElementById('step2Notification');
          if (notification) {
+           // Populate the notification with actual threshold values
+           const fastPct = document.getElementById('fastThreshold').value;
+           const editPct = document.getElementById('editThreshold').value;
+           const removePct = document.getElementById('removeThreshold').value;
+
+           document.getElementById('notifFastPct').textContent = fastPct + '%';
+           document.getElementById('notifEditPct').textContent = editPct + '%';
+           document.getElementById('notifRemovePct').textContent = removePct + '%';
+
+           // Reset checkbox
+           document.getElementById('step2AckCheckbox').checked = false;
+
            notification.style.display = 'block';
+           // Show first two panels stacked
+           showPanel(2);
            // Scroll to show the notification
-           notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
+           setTimeout(() => {
+             notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
+           }, 100);
          }
          return; // Don't proceed until user acknowledges
        }
@@ -939,13 +959,15 @@
        showPanel(from + 1);
      }
 
-     // Function to acknowledge the step 2 notification and proceed
+     // Function to proceed after checkbox is checked
      function acknowledgeStep2Notification() {
-       const notification = document.getElementById('step2Notification');
-       if (notification) {
-         notification.style.display = 'none';
+       const checkbox = document.getElementById('step2AckCheckbox');
+       if (!checkbox.checked) {
+         alert('Please check the confirmation box to continue');
+         return;
        }
-       // Proceed to step 3
+       // Hide notification and proceed to step 3
+       document.getElementById('step2Notification').style.display = 'none';
        showPanel(3);
      }
 
