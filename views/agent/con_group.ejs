@@ -975,13 +975,28 @@
          if (!checkbox.checked) {
            if (notification) {
              let message = '';
-             if (regChoice === 'charged') {
-               message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> Members are subjected to pay registration fee and are required to contribute to the account name and amount set.';
-             } else if (regChoice === 'not_charged') {
-               message = '<i class="fas fa-info-circle" style="margin-right:6px;"></i> Members are NOT subjected to registration fee. They can optionally contribute to any account based on the whole set of account values.';
-             }
-             document.getElementById('step3NotificationText').innerHTML = message;
 
+             if (regChoice === 'charged') {
+               // Get registration account details
+               const accounts = window.confirmedAccounts || [];
+               const regAccount = accounts.find(acc => acc.accountName.toLowerCase() === 'registration');
+
+               if (regAccount) {
+                 message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
+                   'Members are subjected to pay registration fee of KES ' + regAccount.expectedAmount +
+                   ' to Account No. ' + regAccount.accountNumber + ' (' + regAccount.accountName + '). ' +
+                   'Members are also required to contribute to the account name and amount set.';
+               } else {
+                 message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
+                   'Members are subjected to pay registration fee. ' +
+                   'Members are also required to contribute to the account name and amount set.';
+               }
+             } else if (regChoice === 'not_charged') {
+               message = '<i class="fas fa-info-circle" style="margin-right:6px;"></i> ' +
+                 'Members are NOT subjected to registration fee. They can optionally contribute to any account based on the whole set of account values.';
+             }
+
+             document.getElementById('step3NotificationText').innerHTML = message;
              checkbox.checked = false;
              notification.style.display = 'block';
              setTimeout(() => {
