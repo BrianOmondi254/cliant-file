@@ -1727,9 +1727,9 @@
                 style="margin-top:0; background:#ffffff; color:#1e293b; border:none; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
                 <div
                   style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-top: 5px;">
-                  <h3 id="detailsGroupName" onclick="hideCurrentGroupDetails()"
-                    style="margin:0; font-size:18px; text-align:left; font-weight:700; border:none; cursor:pointer;"
-                    title="Click to collapse">Group Name</h3>
+                   <h3 id="detailsGroupName" onclick="viewGroupPerformance()"
+                     style="margin:0; font-size:18px; text-align:left; font-weight:700; border:none; cursor:pointer; color:#008080;"
+                     title="Click to view group performance">Group Name</h3>
                   <span class="badge"
                     style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; font-size:9px;">DETAILS</span>
                 </div>
@@ -1822,16 +1822,10 @@
 
                <!-- Main Continue Action (New) -->
                <div id="detailsContinueAction" class="hidden" style="margin-top: 20px; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
-                 <div style="display:flex; gap:10px; justify-content:center;">
-                   <button id="viewPerformanceBtn" onclick="handleViewPerformance()"
-                     style="background: #5f9ea0; color: white; border-radius: 14px; padding: 11px 22px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(95, 158, 160, 0.15);">
-                     <i class="fas fa-chart-line"></i> View Performance
-                   </button>
-                   <button id="detailsContinueBtn" onclick="handleDetailsContinue()"
-                     style="background: #008080; color: white; border-radius: 14px; padding: 11px 22px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(0, 128, 128, 0.15);">
-                     Continue <i class="fas fa-arrow-right" style="font-size: 11px;"></i>
-                   </button>
-                 </div>
+                 <button id="detailsContinueBtn" onclick="handleDetailsContinue()"
+                   style="width: auto; min-width: 140px; margin: 0 auto; background: #008080; color: white; border-radius: 14px; padding: 11px 22px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(0, 128, 128, 0.15);">
+                   Continue <i class="fas fa-arrow-right" style="font-size: 11px;"></i>
+                 </button>
                </div>
 
               <!-- Constitution setup is handled by /agent/con-group (con_group.ejs) -->
@@ -3175,7 +3169,7 @@
        window.location.href = '/agent/con-group?name=' + encodeURIComponent(groupName);
      }
 
-     function handleViewPerformance() {
+     function viewGroupPerformance() {
        const groupName = window.selectedGroupForDetails;
        if (!groupName) {
          console.warn('No group selected for performance');
