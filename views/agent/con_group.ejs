@@ -481,19 +481,39 @@
                </select>
              </div>
 
-             <!-- Week of Month selection (shown when monthly is selected) -->
-             <div id="weekOfMonthContainer" style="display:none; margin-top:8px;">
-               <label class="field-label">Week of Month</label>
-               <select id="weekOfMonth" class="field-select" onchange="updateDayOfWeekOptions()">
-                 <option value="" disabled selected>Select Week</option>
-                 <option value="1st_week">1st Week</option>
-                 <option value="2nd_week">2nd Week</option>
-                 <option value="3rd_week">3rd Week</option>
-                 <option value="4th_week">4th Week</option>
-               </select>
-             </div>
+              <!-- Month selection (shown when yearly is selected) -->
+              <div id="monthContainer" style="display:none; margin-top:8px;">
+                <label class="field-label">Month</label>
+                <select id="contributionMonth" class="field-select" onchange="updateMonthDetail()">
+                  <option value="" disabled selected>Select Month</option>
+                  <option value="january">January</option>
+                  <option value="february">February</option>
+                  <option value="march">March</option>
+                  <option value="april">April</option>
+                  <option value="may">May</option>
+                  <option value="june">June</option>
+                  <option value="july">July</option>
+                  <option value="august">August</option>
+                  <option value="september">September</option>
+                  <option value="october">October</option>
+                  <option value="november">November</option>
+                  <option value="december">December</option>
+                </select>
+              </div>
 
-              <!-- Day of Week selection (shown when a week of month is selected) -->
+              <!-- Week of Month selection (shown when monthly is selected OR when yearly+month selected) -->
+              <div id="weekOfMonthContainer" style="display:none; margin-top:8px;">
+                <label class="field-label">Week of Month</label>
+                <select id="weekOfMonth" class="field-select" onchange="updateDayOfWeekOptions()">
+                  <option value="" disabled selected>Select Week</option>
+                  <option value="1st_week">1st Week</option>
+                  <option value="2nd_week">2nd Week</option>
+                  <option value="3rd_week">3rd Week</option>
+                  <option value="4th_week">4th Week</option>
+                </select>
+              </div>
+
+              <!-- Day of Week selection (shown when weekly selected OR when monthly+week selected OR when yearly+month+week selected) -->
               <div id="dayOfWeekContainer" style="display:none; margin-top:8px;">
                 <label class="field-label">Day of Week</label>
                 <select id="dayOfWeek" class="field-select">
@@ -507,26 +527,6 @@
                   <option value="sunday">Sunday</option>
                 </select>
               </div>
-
-               <!-- Month selection (shown when yearly is selected) -->
-               <div id="monthContainer" style="display:none; margin-top:8px;">
-                 <label class="field-label">Month</label>
-                 <select id="contributionMonth" class="field-select" onchange="updateMonthDetail()">
-                   <option value="" disabled selected>Select Month</option>
-                   <option value="january">January</option>
-                   <option value="february">February</option>
-                   <option value="march">March</option>
-                   <option value="april">April</option>
-                   <option value="may">May</option>
-                   <option value="june">June</option>
-                   <option value="july">July</option>
-                   <option value="august">August</option>
-                   <option value="september">September</option>
-                   <option value="october">October</option>
-                   <option value="november">November</option>
-                   <option value="december">December</option>
-                 </select>
-               </div>
           </div>
 
           <div class="nav-row">
