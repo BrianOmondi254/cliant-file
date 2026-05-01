@@ -2780,22 +2780,28 @@
       }
     }
 
-    function handleGroupClick(groupName, headerEl = null) {
-      const group = window.managedGroups.find(g => g.groupName === groupName);
-      if (!group) return;
+     function handleGroupClick(groupName, headerEl = null) {
+       const group = window.managedGroups.find(g => g.groupName === groupName);
+       if (!group) return;
 
-      // REDIRECT IF PHASE 2 (PENDING APPROVAL) GROUPS TO con-group ROUTE
-      if (group.phase == 2) {
-        window.location.href = `/agent/con-group?groupName=${encodeURIComponent(groupName)}`;
-        return;
-      }
+       // REDIRECT IF PHASE 2 (PENDING APPROVAL) GROUPS TO con-group ROUTE
+       if (group.phase == 2) {
+         window.location.href = `/agent/con-group?groupName=${encodeURIComponent(groupName)}`;
+         return;
+       }
 
-      // REDIRECT IF NEW REQUEST (NO POPULATED MEMBERS)
-      const isPopulated = group.trustee_2 || group.member_1 || group.official_1;
-      if (!isPopulated) {
-        window.location.href = `/agent/new-group?groupName=${encodeURIComponent(groupName)}`;
-        return;
-      }
+       // REDIRECT IF PHASE 3+ (ACTIVE) GROUPS TO group-performance ROUTE
+       if (group.phase >= 3) {
+         window.location.href = `/agent/group-performance?groupName=${encodeURIComponent(groupName)}`;
+         return;
+       }
+
+       // REDIRECT IF NEW REQUEST (NO POPULATED MEMBERS)
+       const isPopulated = group.trustee_2 || group.member_1 || group.official_1;
+       if (!isPopulated) {
+         window.location.href = `/agent/new-group?groupName=${encodeURIComponent(groupName)}`;
+         return;
+       }
       
       const detailsView = document.getElementById('groupDetailsView');
 
