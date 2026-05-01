@@ -1077,13 +1077,18 @@
         if (!rt || rt < 51 || rt > 99) { alert('Member Removal Threshold must be 51–99%'); return false; }
         return true;
       }
-      if (step === 3) {
-        if (!window.confirmedAccounts || window.confirmedAccounts.length === 0) {
-          alert('Please confirm accounts by clicking the OK / Confirm button first');
-          return false;
-        }
-        return true;
-      }
+       if (step === 3) {
+         const regChoice = document.getElementById('regChoiceSelect').value;
+         if (!regChoice) {
+           alert('Please select whether a registration fee is charged');
+           return false;
+         }
+         if (!window.confirmedAccounts || window.confirmedAccounts.length === 0) {
+           alert('Please confirm accounts by clicking the OK / Confirm button first');
+           return false;
+         }
+         return true;
+       }
       if (step === 4) {
         const repDays = document.getElementById('loanRepaymentDuration').value;
         if (!repDays || +repDays <= 0) { alert('Please enter Loan Repayment Duration'); return false; }
