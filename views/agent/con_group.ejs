@@ -423,30 +423,90 @@
                 <option value="3-years">3 Years</option>
                 <option value="4-years">4 Years</option>
                 <option value="5-years">5 Years</option>
-              </select>
-            </div>
+               </select>
+             </div>
 
-            <label class="field-label">Contribution Interval</label>
-            <div class="field-with-icon" style="margin-bottom:14px;">
-              <i class="fas fa-history"></i>
-              <select id="groupInterval" class="field-select" style="padding-left:40px; margin-bottom:0;" onchange="updateIntervalDetail()">
-                <option value="" disabled selected>Select Frequency</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
+             <label class="field-label">Contribution Interval</label>
+             <div class="field-with-icon" style="margin-bottom:14px;">
+               <i class="fas fa-history"></i>
+               <select id="groupInterval" class="field-select" style="padding-left:40px; margin-bottom:0;" onchange="updateIntervalDetail()">
+                 <option value="" disabled selected>Select Frequency</option>
+                 <option value="daily">Daily</option>
+                 <option value="weekly">Weekly</option>
+                 <option value="monthly">Monthly</option>
+                 <option value="yearly">Yearly</option>
+               </select>
+             </div>
 
-            <div id="intervalDetailContainer" style="display:none; margin-top:8px;">
-              <label class="field-label" id="intervalDetailLabel">Day of Week</label>
-              <select id="contributionDay" class="field-select">
-                <option value="monday">Monday</option>
-                <option value="wednesday">Wednesday</option>
-                <option value="friday">Friday</option>
-                <option value="saturday">Saturday</option>
-              </select>
-            </div>
+             <script>
+               // Hide yearly option when end saving period is 6 months or 1 year
+               document.getElementById('endSavingPeriod').addEventListener('change', function() {
+                 const period = this.value;
+                 const intervalSelect = document.getElementById('groupInterval');
+                 const yearlyOption = intervalSelect.querySelector('option[value="yearly"]');
+
+                 if (period === '6-months' || period === '1-year') {
+                   yearlyOption.style.display = 'none';
+                   // If yearly is currently selected, reset to empty
+                   if (intervalSelect.value === 'yearly') {
+                     intervalSelect.value = '';
+                     updateIntervalDetail();
+                   }
+                 } else {
+                   yearlyOption.style.display = 'block';
+                 }
+               });
+
+               // Initial check on page load
+               document.addEventListener('DOMContentLoaded', function() {
+                 const period = document.getElementById('endSavingPeriod').value;
+                 const yearlyOption = document.querySelector('#groupInterval option[value="yearly"]');
+                 if (period === '6-months' || period === '1-year') {
+                   yearlyOption.style.display = 'none';
+                 }
+               });
+             </script>
+
+             <div id="intervalDetailContainer" style="display:none; margin-top:8px;">
+               <label class="field-label" id="intervalDetailLabel">Day of Week</label>
+               <select id="contributionDay" class="field-select">
+                 <option value="" disabled selected>Select Day</option>
+                 <option value="monday">Monday</option>
+                 <option value="tuesday">Tuesday</option>
+                 <option value="wednesday">Wednesday</option>
+                 <option value="thursday">Thursday</option>
+                 <option value="friday">Friday</option>
+                 <option value="saturday">Saturday</option>
+                 <option value="sunday">Sunday</option>
+               </select>
+             </div>
+
+             <!-- Week of Month selection (shown when monthly is selected) -->
+             <div id="weekOfMonthContainer" style="display:none; margin-top:8px;">
+               <label class="field-label">Week of Month</label>
+               <select id="weekOfMonth" class="field-select" onchange="updateDayOfWeekOptions()">
+                 <option value="" disabled selected>Select Week</option>
+                 <option value="1st_week">1st Week</option>
+                 <option value="2nd_week">2nd Week</option>
+                 <option value="3rd_week">3rd Week</option>
+                 <option value="4th_week">4th Week</option>
+               </select>
+             </div>
+
+             <!-- Day of Week selection (shown when a week of month is selected) -->
+             <div id="dayOfWeekContainer" style="display:none; margin-top:8px;">
+               <label class="field-label">Day of Week</label>
+               <select id="dayOfWeek" class="field-select">
+                 <option value="" disabled selected>Select Day</option>
+                 <option value="monday">Monday</option>
+                 <option value="tuesday">Tuesday</option>
+                 <option value="wednesday">Wednesday</option>
+                 <option value="thursday">Thursday</option>
+                 <option value="friday">Friday</option>
+                 <option value="saturday">Saturday</option>
+                 <option value="sunday">Sunday</option>
+               </select>
+             </div>
           </div>
 
           <div class="nav-row">
@@ -836,37 +896,55 @@
        showPanel(from + 1);
      }
 
-     function showStep1Confirmation() {
-       const periodSelect = document.getElementById('endSavingPeriod');
-       const periodText = periodSelect.options[periodSelect.selectedIndex].text;
-       const freqSelect = document.getElementById('groupInterval');
-       const freqText = freqSelect.options[freqSelect.selectedIndex].text;
-       let dayText = '';
-       if (freqSelect.value === 'weekly' || freqSelect.value === 'monthly') {
-         const daySelect = document.getElementById('contributionDay');
-         dayText = daySelect.options[daySelect.selectedIndex].text;
-       }
-       let message = `Group is set to operator within ${periodText}. Contribution set to ${freqText}`;
-       if (dayText) {
-         message += ` on ${dayText}`;
-       }
-       message += '.';
-       alert(message);
-     }
+      function showStep1Confirmation() {
+        const periodSelect = document.getElementById('endSavingPeriod');
+        const periodText = periodSelect.options[periodSelect.selectedIndex].text;
+        const freqSelect = document.getElementById('groupInterval');
+        const freqText = freqSelect.options[freqSelect.selectedIndex].text;
+        let detailText = '';
+
+        if (freqSelect.value === 'weekly') {
+          const daySelect = document.getElementById('contributionDay');
+          detailText = daySelect.options[daySelect.selectedIndex].text;
+        } else if (freqSelect.value === 'monthly') {
+          const weekSelect = document.getElementById('weekOfMonth');
+          const daySelect = document.getElementById('dayOfWeek');
+          const weekText = weekSelect.options[weekSelect.selectedIndex].text;
+          const dayText = daySelect.options[daySelect.selectedIndex].text;
+          detailText = weekText + ' on ' + dayText;
+        }
+
+        let message = `Group is set to operator within ${periodText}. Contribution set to ${freqText}`;
+        if (detailText) {
+          message += ' on ' + detailText;
+        }
+        message += '.';
+        alert(message);
+      }
 
     function prevStep(from) {
       showPanel(from - 1);
     }
 
-    /* ─── Validation per step ─── */
-    function validateStep(step) {
-      if (step === 1) {
-        const period = document.getElementById('endSavingPeriod').value;
-        const freq   = document.getElementById('groupInterval').value;
-        if (!period) { alert('Please select End Saving Period'); return false; }
-        if (!freq)   { alert('Please select Contribution Interval'); return false; }
-        return true;
-      }
+     /* ─── Validation per step ─── */
+     function validateStep(step) {
+       if (step === 1) {
+         const period = document.getElementById('endSavingPeriod').value;
+         const freq   = document.getElementById('groupInterval').value;
+         if (!period) { alert('Please select End Saving Period'); return false; }
+         if (!freq)   { alert('Please select Contribution Interval'); return false; }
+
+         if (freq === 'weekly') {
+           const day = document.getElementById('contributionDay').value;
+           if (!day) { alert('Please select Day of Week'); return false; }
+         } else if (freq === 'monthly') {
+           const week = document.getElementById('weekOfMonth').value;
+           const day = document.getElementById('dayOfWeek').value;
+           if (!week) { alert('Please select Week of Month'); return false; }
+           if (!day)  { alert('Please select Day of Week'); return false; }
+         }
+         return true;
+       }
       if (step === 2) {
         const ft = +document.getElementById('fastThreshold').value;
         const et = +document.getElementById('editThreshold').value;
@@ -894,20 +972,41 @@
     /* ─── Interval detail ─── */
     function updateIntervalDetail() {
       const freq = document.getElementById('groupInterval').value;
-      const container = document.getElementById('intervalDetailContainer');
-      const lbl = document.getElementById('intervalDetailLabel');
-      const sel  = document.getElementById('contributionDay');
+      const weeklyContainer = document.getElementById('intervalDetailContainer');
+      const weeklyLabel = document.getElementById('intervalDetailLabel');
+      const weeklySel = document.getElementById('contributionDay');
+      const monthWeekContainer = document.getElementById('weekOfMonthContainer');
+      const monthDayContainer = document.getElementById('dayOfWeekContainer');
+      const weekSelect = document.getElementById('weekOfMonth');
+      const daySelect = document.getElementById('dayOfWeek');
+
+      // Reset all
+      weeklyContainer.style.display = 'none';
+      monthWeekContainer.style.display = 'none';
+      monthDayContainer.style.display = 'none';
 
       if (freq === 'weekly') {
-        lbl.textContent = 'Day of Week';
-        sel.innerHTML = '<option value="monday">Monday</option><option value="wednesday">Wednesday</option><option value="friday">Friday</option><option value="saturday">Saturday</option>';
-        container.style.display = 'block';
+        weeklyLabel.textContent = 'Day of Week';
+        weeklySel.innerHTML = '<option value="" disabled selected>Select Day</option><option value="monday">Monday</option><option value="tuesday">Tuesday</option><option value="wednesday">Wednesday</option><option value="thursday">Thursday</option><option value="friday">Friday</option><option value="saturday">Saturday</option><option value="sunday">Sunday</option>';
+        weeklyContainer.style.display = 'block';
       } else if (freq === 'monthly') {
-        lbl.textContent = 'Week of Month';
-        sel.innerHTML = '<option value="1st_week">1st Week</option><option value="2nd_week">2nd Week</option><option value="3rd_week">3rd Week</option><option value="4th_week">4th Week</option>';
-        container.style.display = 'block';
+        // Show week of month selector
+        monthWeekContainer.style.display = 'block';
+        // Reset selections
+        weekSelect.value = '';
+        daySelect.value = '';
+      }
+    }
+
+    // Called when a week of month is selected - shows day of week dropdown
+    function updateDayOfWeekOptions() {
+      const weekSelect = document.getElementById('weekOfMonth');
+      const monthDayContainer = document.getElementById('dayOfWeekContainer');
+
+      if (weekSelect.value) {
+        monthDayContainer.style.display = 'block';
       } else {
-        container.style.display = 'none';
+        monthDayContainer.style.display = 'none';
       }
     }
 
