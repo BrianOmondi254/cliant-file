@@ -508,25 +508,25 @@
                 </select>
               </div>
 
-              <!-- Month selection (shown when yearly is selected) -->
-              <div id="monthContainer" style="display:none; margin-top:8px;">
-                <label class="field-label">Month</label>
-                <select id="contributionMonth" class="field-select">
-                  <option value="" disabled selected>Select Month</option>
-                  <option value="january">January</option>
-                  <option value="february">February</option>
-                  <option value="march">March</option>
-                  <option value="april">April</option>
-                  <option value="may">May</option>
-                  <option value="june">June</option>
-                  <option value="july">July</option>
-                  <option value="august">August</option>
-                  <option value="september">September</option>
-                  <option value="october">October</option>
-                  <option value="november">November</option>
-                  <option value="december">December</option>
-                </select>
-              </div>
+               <!-- Month selection (shown when yearly is selected) -->
+               <div id="monthContainer" style="display:none; margin-top:8px;">
+                 <label class="field-label">Month</label>
+                 <select id="contributionMonth" class="field-select" onchange="updateMonthDetail()">
+                   <option value="" disabled selected>Select Month</option>
+                   <option value="january">January</option>
+                   <option value="february">February</option>
+                   <option value="march">March</option>
+                   <option value="april">April</option>
+                   <option value="may">May</option>
+                   <option value="june">June</option>
+                   <option value="july">July</option>
+                   <option value="august">August</option>
+                   <option value="september">September</option>
+                   <option value="october">October</option>
+                   <option value="november">November</option>
+                   <option value="december">December</option>
+                 </select>
+               </div>
           </div>
 
           <div class="nav-row">
@@ -934,7 +934,12 @@
           detailText = weekText + ' on ' + dayText;
         } else if (freqSelect.value === 'yearly') {
           const monthSelect = document.getElementById('contributionMonth');
-          detailText = monthSelect.options[monthSelect.selectedIndex].text;
+          const weekSelect = document.getElementById('weekOfMonth');
+          const daySelect = document.getElementById('dayOfWeek');
+          const monthText = monthSelect.options[monthSelect.selectedIndex].text;
+          const weekText = weekSelect.options[weekSelect.selectedIndex].text;
+          const dayText = daySelect.options[daySelect.selectedIndex].text;
+          detailText = monthText + ', ' + weekText + ' on ' + dayText;
         }
 
         let message = `Group is set to operator within ${periodText}. Contribution set to ${freqText}`;
@@ -967,7 +972,11 @@
            if (!day)  { alert('Please select Day of Week'); return false; }
          } else if (freq === 'yearly') {
            const month = document.getElementById('contributionMonth').value;
+           const week = document.getElementById('weekOfMonth').value;
+           const day = document.getElementById('dayOfWeek').value;
            if (!month) { alert('Please select Month'); return false; }
+           if (!week)  { alert('Please select Week of Month'); return false; }
+           if (!day)   { alert('Please select Day of Week'); return false; }
          }
          return true;
        }
@@ -1013,6 +1022,10 @@
       monthWeekContainer.style.display = 'none';
       monthDayContainer.style.display = 'none';
       monthContainer.style.display = 'none';
+      weeklySel.value = '';
+      weekSelect.value = '';
+      daySelect.value = '';
+      monthSelect.value = '';
 
       if (freq === 'weekly') {
         weeklyLabel.textContent = 'Day of Week';
@@ -1021,13 +1034,9 @@
       } else if (freq === 'monthly') {
         // Show week of month selector
         monthWeekContainer.style.display = 'block';
-        // Reset selections
-        weekSelect.value = '';
-        daySelect.value = '';
       } else if (freq === 'yearly') {
         // Show month selector
         monthContainer.style.display = 'block';
-        monthSelect.value = '';
       }
     }
 
@@ -1040,6 +1049,25 @@
         monthDayContainer.style.display = 'block';
       } else {
         monthDayContainer.style.display = 'none';
+      }
+    }
+
+    // Called when a month is selected (for yearly) - shows week of month dropdown
+    function updateMonthDetail() {
+      const monthSelect = document.getElementById('contributionMonth');
+      const weekContainer = document.getElementById('weekOfMonthContainer');
+      const dayContainer = document.getElementById('dayOfWeekContainer');
+      const weekSelect = document.getElementById('weekOfMonth');
+      const daySelect = document.getElementById('dayOfWeek');
+
+      if (monthSelect.value) {
+        weekContainer.style.display = 'block';
+        // Reset day selection and hide it (week changed)
+        daySelect.value = '';
+        dayContainer.style.display = 'none';
+      } else {
+        weekContainer.style.display = 'none';
+        dayContainer.style.display = 'none';
       }
     }
 
