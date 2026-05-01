@@ -1178,11 +1178,97 @@ router.get("/conform", (req, res) => {
     });
   }
   
-  res.render("agent/conform", {
-    group: group,
-    user: req.session.user,
-    userMap: userMap
-  });
-});
+   res.render("agent/conform", {
+     group: group,
+     user: req.session.user,
+     userMap: userMap
+   });
+ });
+
+ // GET /agent/group-performance - Display group performance dashboard
+ router.get("/group-performance", (req, res) => {
+   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+     return res.redirect("/login");
+   }
+
+   const { groupName } = req.query;
+   if (!groupName) {
+     return res.redirect("/agent");
+   }
+
+   const agents = loadJSON(agentFile);
+   const general = flattenData(loadJSON(generalFile, {}));
+   const membersData = loadJSON(path.join(__dirname, "../member.json"), {});
+   const users = loadJSON(dataFile);
+
+   const currentPhoneNumber = req.session.user.phoneNumber;
+   const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+
+   if (!agent) {
+     return res.redirect("/agent");
+   }
+
+   // Find the specific group in general.json
+   const group = general.find(g => g.groupName === groupName);
+   if (!group) {
+     return res.redirect("/agent");
+   }
+
+   // Create user lookup map
+   const userMap = new Map();
+   if (Array.isArray(users)) {
+     users.forEach(u => {
+       const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
+       if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
+     });
+   }
+
+   // Find corresponding group in member.json by matching groupName
+   let groupMembersData = {};
+   if (membersData.group) {
+     Object.values(membersData.group).forEach(g => {
+       if (g.groupName === groupName) {
+         groupMembersData = g.members || {};
+       }
+     });
+   }
+
+   // Enhance group with member details from member.json
+   const enrichedMembers = {};
+   Object.keys(groupMembersData).forEach(memberId => {
+     const memberData = groupMembersData[memberId];
+     const normalizedPhone = normPhone(memberId);
+     const memberName = userMap.get(normalizedPhone) || memberData.name || 'Unknown';
+
+     enrichedMembers[memberId] = {
+       ...memberData,
+       name: memberName,
+       phone: memberId
+     };
+   });
+
+   // Attach enriched members to group object
+   group.members = enrichedMembers;
+
+   // Get performance data for this group's county/constituency/ward if available
+   const perfData = require("../performance/group-performance").readPerformance();
+   const county = group.county;
+   const constituency = group.constituency;
+   const ward = group.ward;
+
+   let groupPerf = null;
+   if (perfData.counties[county] && perfData.counties[county].constituencies[constituency] &&
+       perfData.counties[county].constituencies[constituency].wards[ward]) {
+     groupPerf = perfData.counties[county].constituencies[constituency].wards[ward];
+   }
+
+   res.render("agent/group_performance", {
+     agent: agent,
+     group: group,
+     user: req.session.user,
+     userMap: userMap,
+     performance: groupPerf
+   });
+ });
 
 module.exports = router;

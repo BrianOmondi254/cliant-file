@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Group Performance | Agent Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --primary: #0f9d58;
+      --primary-dark: #0b7d46;
+      --primary-light: #ecfdf5;
+      --secondary: #4285f4;
+      --secondary-light: #e8f0fe;
+      --accent: #5f9ea0;
+      --dark: #1e293b;
+      --slate: #64748b;
+      --light: #f8fafc;
+      --white: #ffffff;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --shadow: 0 10px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1);
+      --shadow-lg: 0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      min-height: 100vh;
+      padding: 3px;
+      color: var(--dark);
+    }
+
+    .container {
+      background: var(--white);
+      width: 100%;
+      max-width: 900px;
+      border-radius: 5px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      position: relative;
+      animation: slideIn .5s cubic-bezier(.4,0,.2,1);
+      z-index: 100;
+      padding: 0 2px;
+      margin-bottom: 10px;
+      padding-bottom: 30px;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), #34d399);
+      padding: 25px 22px;
+      color: var(--white);
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.5px; }
+    .header p { font-size: 12px; opacity: .9; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+
+    .back-btn {
+      position: absolute; top: 20px; left: 16px;
+      color: var(--white); text-decoration: none; font-size: 16px; opacity: .8; transition: opacity .2s;
+    }
+    .back-btn:hover { opacity: 1; }
+
+    .content { padding: 20px; padding-bottom: 40px; }
+
+    /* Group Info Card */
+    .group-info-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .group-info-card h3 {
+      font-size: 14px;
+      color: var(--dark);
+      margin-bottom: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .info-label {
+      font-size: 10px;
+      color: var(--slate);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .info-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    /* Summary Cards */
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .summary-card {
+      background: var(--white);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .summary-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .summary-card.primary .summary-card-icon { background: var(--primary-light); color: var(--primary); }
+    .summary-card.secondary .summary-card-icon { background: var(--secondary-light); color: var(--secondary); }
+    .summary-card.accent .summary-card-icon { background: #e0f2f1; color: var(--accent); }
+    .summary-card.warning .summary-card-icon { background: #fff3cd; color: var(--warning); }
+
+    .summary-card-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark);
+      margin-bottom: 2px;
+    }
+
+    .summary-card-label {
+      font-size: 10px;
+      color: var(--slate);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* Section Headers */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .section-header i {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .section-header h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Member Table */
+    .member-table-container {
+      background: var(--white);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .member-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .member-table th {
+      background: #f8fafc;
+      padding: 10px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--slate);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .member-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .member-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .member-table tr:hover {
+      background: var(--light);
+    }
+
+    .member-name {
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .member-phone {
+      font-size: 11px;
+      color: var(--slate);
+    }
+
+    .amount {
+      font-weight: 700;
+      color: var(--primary);
+      text-align: right;
+    }
+
+    .amount.negative {
+      color: var(--danger);
+    }
+
+    /* Chart Container */
+    .chart-container {
+      background: var(--white);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 200px;
+      margin-top: 10px;
+    }
+
+    /* Account Breakdown */
+    .account-breakdown {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .account-item {
+      background: var(--white);
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .account-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--slate);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .account-amount {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--dark);
+    }
+
+    .account-expected {
+      font-size: 10px;
+      color: var(--slate);
+      margin-top: 2px;
+    }
+
+    /* Transaction Item */
+    .transaction-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .transaction-item:last-child {
+      border-bottom: none;
+    }
+
+    .transaction-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .transaction-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .transaction-icon.in {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .transaction-icon.out {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    .transaction-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .transaction-desc {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .transaction-date {
+      font-size: 10px;
+      color: var(--slate);
+    }
+
+    .transaction-amount {
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .transaction-amount.in {
+      color: var(--primary);
+    }
+
+    .transaction-amount.out {
+      color: var(--danger);
+    }
+
+    /* No Data */
+    .no-data {
+      text-align: center;
+      padding: 30px;
+      color: var(--slate);
+      font-size: 12px;
+    }
+
+    .no-data i {
+      font-size: 40px;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+
+    /* Empty State */
+    .empty-state {
+      background: var(--light);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      color: var(--slate);
+      font-size: 12px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 10px;
+      color: var(--slate);
+      border-top: 1px solid #e2e8f0;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="/agent" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+      <h1><%= group.groupName %></h1>
+      <p>Group Performance Dashboard</p>
+    </div>
+
+    <div class="content">
+
+      <!-- Group Info -->
+      <div class="group-info-card">
+        <h3><i class="fas fa-building"></i> Group Information</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Location</span>
+            <span class="info-value"><%= group.ward %>, <%= group.constituency %></span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Phase</span>
+            <span class="info-value">Phase <%= group.phase || 1 %></span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Total Members</span>
+            <span class="info-value"><%= group.totalProposedMembers || Object.keys(group.members || {}).length %></span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Status</span>
+            <span class="info-value" style="color: var(--primary); font-weight: 700;">Active</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="summary-card primary">
+          <div class="summary-card-icon"><i class="fas fa-users"></i></div>
+          <div class="summary-card-value" id="totalMembers">0</div>
+          <div class="summary-card-label">Total Members</div>
+        </div>
+        <div class="summary-card secondary">
+          <div class="summary-card-icon"><i class="fas fa-wallet"></i></div>
+          <div class="summary-card-value" id="totalSavings">KES 0</div>
+          <div class="summary-card-label">Total Savings</div>
+        </div>
+        <div class="summary-card accent">
+          <div class="summary-card-icon"><i class="fas fa-chart-line"></i></div>
+          <div class="summary-card-value" id="totalContributions">KES 0</div>
+          <div class="summary-card-label">Contributions</div>
+        </div>
+        <div class="summary-card warning">
+          <div class="summary-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
+          <div class="summary-card-value" id="activeLoans">0</div>
+          <div class="summary-card-label">Active Loans</div>
+        </div>
+      </div>
+
+      <!-- Member Performance Table -->
+      <div class="member-table-container">
+        <div class="section-header">
+          <i class="fas fa-users"></i>
+          <h3>Member Performance</h3>
+        </div>
+        <div id="memberTableContent">
+          <!-- Table will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Account Breakdown -->
+      <div class="section-header">
+        <i class="fas fa-coins"></i>
+        <h3>Account Breakdown</h3>
+      </div>
+      <div class="account-breakdown" id="accountBreakdown">
+        <!-- Account items will be populated by JavaScript -->
+      </div>
+
+      <!-- Transaction History Chart -->
+      <div class="chart-container">
+        <div class="section-header">
+          <i class="fas fa-chart-bar"></i>
+          <h3>Transaction History (By Date)</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="transactionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Member Growth Chart -->
+      <div class="chart-container">
+        <div class="section-header">
+          <i class="fas fa-user-plus"></i>
+          <h3>Member Growth Over Time</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="memberGrowthChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Contribution Distribution -->
+      <div class="chart-container">
+        <div class="section-header">
+          <i class="fas fa-pie-chart"></i>
+          <h3>Contribution Distribution</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="contributionChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Recent Transactions List -->
+      <div class="member-table-container">
+        <div class="section-header">
+          <i class="fas fa-history"></i>
+          <h3>Recent Transactions</h3>
+        </div>
+        <div id="transactionListContent">
+          <!-- Transactions will be populated by JavaScript -->
+        </div>
+      </div>
+
+      <div class="footer">
+        Generated on <%= new Date().toLocaleString() %> | Group Performance Dashboard
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Data passed from server
+    const group = <%- JSON.stringify(group) %>;
+    const members = <%- JSON.stringify(group.members || {}) %>;
+    const memberFinancials = <%- JSON.stringify(group.memberFinancials || []) %>;
+
+    // Process and render data
+    document.addEventListener('DOMContentLoaded', function() {
+      renderSummary();
+      renderMemberTable();
+      renderAccountBreakdown();
+      renderTransactionHistory();
+      renderMemberGrowthChart();
+      renderContributionChart();
+      renderTransactionList();
+    });
+
+    function formatCurrency(amount) {
+      return 'KES ' + (amount || 0).toLocaleString();
+    }
+
+    function renderSummary() {
+      const memberIds = Object.keys(members);
+      const totalMembers = memberIds.length;
+
+      let totalSavings = 0;
+      let totalContributions = 0;
+      let activeLoans = 0;
+
+      memberIds.forEach(memberId => {
+        const member = members[memberId];
+        if (member && member.accounts) {
+          Object.values(member.accounts).forEach(acc => {
+            if (acc.financials) {
+              totalSavings += parseFloat(acc.financials.closingBalance || 0);
+              totalContributions += parseFloat(acc.financials.amountIn || 0);
+            }
+          });
+        }
+      });
+
+      document.getElementById('totalMembers').textContent = totalMembers;
+      document.getElementById('totalSavings').textContent = formatCurrency(totalSavings);
+      document.getElementById('totalContributions').textContent = formatCurrency(totalContributions);
+      document.getElementById('activeLoans').textContent = activeLoans; // Placeholder
+    }
+
+    function renderMemberTable() {
+      const container = document.getElementById('memberTableContent');
+      const memberIds = Object.keys(members);
+
+      if (memberIds.length === 0) {
+        container.innerHTML = '<div class="no-data"><i class="fas fa-users-slash"></i><p>No members registered</p></div>';
+        return;
+      }
+
+      let html = `
+        <table class="member-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Member Name</th>
+              <th>Phone</th>
+              <th style="text-align:right;">Savings</th>
+              <th style="text-align:right;">Contributions</th>
+              <th style="text-align:right;">Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      memberIds.forEach((memberId, index) => {
+        const member = members[memberId];
+        if (!member) return;
+
+        const savingsAcc = member.accounts && member.accounts['001'];
+        const savings = savingsAcc ? parseFloat(savingsAcc.financials?.closingBalance || 0) : 0;
+        const contributions = savingsAcc ? parseFloat(savingsAcc.financials?.amountIn || 0) : 0;
+
+        html += `
+          <tr>
+            <td>${index + 1}</td>
+            <td class="member-name">${member.name || 'Unknown'}</td>
+            <td class="member-phone">${member.phone || 'N/A'}</td>
+            <td class="amount">${formatCurrency(savings)}</td>
+            <td class="amount">${formatCurrency(contributions)}</td>
+            <td class="amount">${formatCurrency(savings)}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function renderAccountBreakdown() {
+      const container = document.getElementById('accountBreakdown');
+      const accountSchema = group.accountSchema || {};
+
+      if (Object.keys(accountSchema).length === 0) {
+        container.innerHTML = '<div class="empty-state">No account configuration</div>';
+        return;
+      }
+
+      let html = '';
+      Object.values(accountSchema).forEach(acc => {
+        html += `
+          <div class="account-item">
+            <div class="account-name">${acc.accountName}</div>
+            <div class="account-amount">KES ${acc.expectedAmount}</div>
+            <div class="account-expected">Expected per member</div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderTransactionHistory() {
+      const ctx = document.getElementById('transactionChart');
+      if (!ctx) return;
+
+      // Collect all transactions from members
+      const allTransactions = [];
+      Object.values(members).forEach(member => {
+        if (member && member.accounts) {
+          Object.values(member.accounts).forEach(acc => {
+            if (acc.transactionHistory && Array.isArray(acc.transactionHistory)) {
+              acc.transactionHistory.forEach(tx => {
+                allTransactions.push({
+                  date: tx.date || tx.createdAt,
+                  amount: parseFloat(tx.amount || 0),
+                  type: tx.type || tx.transactionType || 'credit',
+                  description: tx.description || tx.narative || acc.accountName
+                });
+              });
+            }
+          });
+        }
+      });
+
+      if (allTransactions.length === 0) {
+        // Show empty chart with message
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['No transactions'],
+            datasets: [{
+              label: 'Amount',
+              data: [0],
+              backgroundColor: '#e2e8f0'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              annotation: {
+                annotations: {
+                  line1: {
+                    type: 'label',
+                    content: ['No transaction data available'],
+                    position: 'center'
+                  }
+                }
+              }
+            }
+          }
+        });
+        return;
+      }
+
+      // Group transactions by date
+      const dateGroups = {};
+      allTransactions.forEach(tx => {
+        const date = tx.date ? tx.date.substring(0, 10) : 'Unknown';
+        if (!dateGroups[date]) dateGroups[date] = { in: 0, out: 0 };
+        if (tx.type === 'debit' || tx.type === 'withdrawal') {
+          dateGroups[date].out += tx.amount;
+        } else {
+          dateGroups[date].in += tx.amount;
+        }
+      });
+
+      const sortedDates = Object.keys(dateGroups).sort();
+      const inData = sortedDates.map(d => dateGroups[d].in);
+      const outData = sortedDates.map(d => dateGroups[d].out);
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sortedDates,
+          datasets: [
+            {
+              label: 'In',
+              data: inData,
+              backgroundColor: '#0f9d58'
+            },
+            {
+              label: 'Out',
+              data: outData,
+              backgroundColor: '#ef4444'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true }
+          },
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    function renderMemberGrowthChart() {
+      const ctx = document.getElementById('memberGrowthChart');
+      if (!ctx) return;
+
+      // Try to get performance data from group-performance.json
+      // For now show simple member count
+      const memberIds = Object.keys(members);
+      const totalMembers = memberIds.length;
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Current'],
+          datasets: [{
+            label: 'Members',
+            data: [totalMembers],
+            borderColor: '#0f9d58',
+            backgroundColor: 'rgba(15, 157, 88, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    function renderContributionChart() {
+      const ctx = document.getElementById('contributionChart');
+      if (!ctx) return;
+
+      // Aggregate contributions by account type
+      const accountTotals = {};
+      Object.values(members).forEach(member => {
+        if (member && member.accounts) {
+          Object.values(member.accounts).forEach(acc => {
+            const name = acc.accountName || 'Unknown';
+            const amount = parseFloat(acc.financials?.amountIn || 0);
+            accountTotals[name] = (accountTotals[name] || 0) + amount;
+          });
+        }
+      });
+
+      const labels = Object.keys(accountTotals);
+      const data = Object.values(accountTotals);
+      const colors = ['#0f9d58', '#4285f4', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+      if (labels.length === 0) {
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['No Data'],
+            datasets: [{
+              data: [1],
+              backgroundColor: '#e2e8f0'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false
+          }
+        });
+        return;
+      }
+
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors.slice(0, labels.length)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    function renderTransactionList() {
+      const container = document.getElementById('transactionListContent');
+      const allTransactions = [];
+
+      Object.values(members).forEach(member => {
+        if (member && member.accounts) {
+          Object.values(member.accounts).forEach(acc => {
+            if (acc.transactionHistory && Array.isArray(acc.transactionHistory)) {
+              acc.transactionHistory.forEach(tx => {
+                allTransactions.push({
+                  date: tx.date || tx.createdAt,
+                  memberName: member.name || 'Unknown',
+                  accountName: acc.accountName,
+                  amount: parseFloat(tx.amount || 0),
+                  type: tx.type || tx.transactionType || 'credit',
+                  description: tx.description || 'Transaction'
+                });
+              });
+            }
+          });
+        }
+      });
+
+      if (allTransactions.length === 0) {
+        container.innerHTML = '<div class="no-data"><i class="fas fa-receipt"></i><p>No transactions recorded yet</p></div>';
+        return;
+      }
+
+      // Sort by date descending
+      allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // Take latest 20
+      const recentTx = allTransactions.slice(0, 20);
+
+      let html = '';
+      recentTx.forEach(tx => {
+        const isIn = tx.type !== 'debit' && tx.type !== 'withdrawal';
+        const iconClass = isIn ? 'in' : 'out';
+        const icon = isIn ? 'fa-arrow-down' : 'fa-arrow-up';
+        const amountClass = isIn ? 'in' : 'out';
+        const formattedDate = tx.date ? new Date(tx.date).toLocaleDateString() : 'Unknown';
+
+        html += `
+          <div class="transaction-item">
+            <div class="transaction-left">
+              <div class="transaction-icon ${iconClass}">
+                <i class="fas ${icon}"></i>
+              </div>
+              <div class="transaction-details">
+                <span class="transaction-desc">${tx.description} - ${tx.accountName} (${tx.memberName})</span>
+                <span class="transaction-date">${formattedDate}</span>
+              </div>
+            </div>
+            <div class="transaction-amount ${amountClass}">
+              ${isIn ? '+' : '-'} ${formatCurrency(tx.amount)}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+  </script>
+</body>
+
+</html>
