@@ -474,18 +474,18 @@
         </div>
       </div>
 
-      <!-- Member Performance Table -->
-      <div class="member-table-container">
-        <div class="section-header">
-          <i class="fas fa-users"></i>
-          <h3>Member Performance</h3>
-        </div>
-        <div id="memberTableContent">
-          <!-- Table will be populated by JavaScript -->
-        </div>
+    <!-- Group Performance Summary (replaces Member Performance Table) -->
+    <div class="member-table-container">
+      <div class="section-header">
+        <i class="fas fa-chart-line"></i>
+        <h3>Group Performance by <%= group.principles?.intervals?.frequency ? group.principles.intervals.frequency.charAt(0).toUpperCase() + group.principles.intervals.frequency.slice(1) : 'Contribution' %> Interval</h3>
       </div>
+      <div id="groupPerformanceContent">
+        <!-- Group metrics will be populated by JavaScript -->
+      </div>
+    </div>
 
-      <!-- Account Breakdown -->
+    <!-- Account Breakdown -->
       <div class="section-header">
         <i class="fas fa-coins"></i>
         <h3>Account Breakdown</h3>
@@ -551,15 +551,15 @@
     const memberFinancials = <%- JSON.stringify(group.memberFinancials || []) %>;
 
     // Process and render data
-    document.addEventListener('DOMContentLoaded', function() {
-      renderSummary();
-      renderMemberTable();
-      renderAccountBreakdown();
-      renderTransactionHistory();
-      renderMemberGrowthChart();
-      renderContributionChart();
-      renderTransactionList();
-    });
+     document.addEventListener('DOMContentLoaded', function() {
+       renderSummary();
+       renderGroupPerformance();
+       renderAccountBreakdown();
+       renderTransactionHistory();
+       renderMemberGrowthChart();
+       renderContributionChart();
+       renderTransactionList();
+     });
 
     function formatCurrency(amount) {
       return 'KES ' + (amount || 0).toLocaleString();
@@ -591,49 +591,131 @@
       document.getElementById('activeLoans').textContent = activeLoans; // Placeholder
     }
 
-    function renderMemberTable() {
-      const container = document.getElementById('memberTableContent');
+    function renderGroupPerformance() {
+      const container = document.getElementById('groupPerformanceContent');
       const memberIds = Object.keys(members);
+      const totalMembers = memberIds.length;
 
-      if (memberIds.length === 0) {
-        container.innerHTML = '<div class="no-data"><i class="fas fa-users-slash"></i><p>No members registered</p></div>';
-        return;
-      }
+      // Get group's contribution interval
+      const intervals = group.principles?.intervals || {};
+      const frequency = intervals.frequency || 'Not Set';
+      const period = intervals.period || '';
+      const endSavingPeriod = intervals.endSavingPeriod || '';
 
-      let html = `
-        <table class="member-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Member Name</th>
-              <th style="text-align:right;">Savings</th>
-              <th style="text-align:right;">Contributions</th>
-              <th style="text-align:right;">Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+      // Calculate group totals
+      let totalSavings = 0;
+      let totalContributions = 0;
+      let totalWithdrawals = 0;
+      let expectedPerCycle = 0;
 
-      memberIds.forEach((memberId, index) => {
+      memberIds.forEach(memberId => {
         const member = members[memberId];
-        if (!member) return;
-
-        const savingsAcc = member.accounts && member.accounts['001'];
-        const savings = savingsAcc ? parseFloat(savingsAcc.financials?.closingBalance || 0) : 0;
-        const contributions = savingsAcc ? parseFloat(savingsAcc.financials?.amountIn || 0) : 0;
-
-        html += `
-          <tr>
-            <td>${index + 1}</td>
-            <td class="member-name">${member.name || 'Unknown'}</td>
-            <td class="amount">${formatCurrency(savings)}</td>
-            <td class="amount">${formatCurrency(contributions)}</td>
-            <td class="amount">${formatCurrency(savings)}</td>
-          </tr>
-        `;
+        if (member && member.accounts) {
+          Object.values(member.accounts).forEach(acc => {
+            if (acc.financials) {
+              totalSavings += parseFloat(acc.financials.closingBalance || 0);
+              totalContributions += parseFloat(acc.financials.amountIn || 0);
+              totalWithdrawals += parseFloat(acc.financials.amountOut || 0);
+            }
+          });
+        }
       });
 
-      html += '</tbody></table>';
+      // Calculate expected contribution per cycle
+      const accountSchema = group.accountSchema || {};
+      const expectedAmounts = Object.values(accountSchema).map(acc => parseFloat(acc.expectedAmount) || 0);
+      expectedPerCycle = expectedAmounts.reduce((sum, amt) => sum + amt, 0);
+
+      // Build interval display text
+      let intervalText = frequency.charAt(0).toUpperCase() + frequency.slice(1);
+      if (frequency === 'weekly' && period) {
+        intervalText += ` on ${period.charAt(0).toUpperCase() + period.slice(1)}`;
+      } else if (frequency === 'monthly' && period) {
+        intervalText += ` (${period.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())})`;
+      } else if (frequency === 'yearly' && period) {
+        intervalText += ` in ${period.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+      }
+
+      // Build HTML
+      let html = `
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+
+          <!-- Contribution Interval Card -->
+          <div style="background: linear-gradient(135deg, #e0f2f1, #ecfdf5); padding: 15px; border-radius: 10px; border: 1px solid #5f9ea0;">
+            <div style="font-size: 11px; font-weight: 700; color: #00695c; text-transform: uppercase; margin-bottom: 8px;">
+              <i class="fas fa-clock" style="margin-right: 5px;"></i> Contribution Schedule
+            </div>
+            <div style="font-size: 16px; font-weight: 800; color: #008080; margin-bottom: 4px;">
+              ${intervalText}
+            </div>
+            ${endSavingPeriod ? `
+              <div style="font-size: 12px; color: #475569;">
+                Saving Period: ${endSavingPeriod.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Group Metrics Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Total Members</div>
+              <div style="font-size: 20px; font-weight: 800; color: #1e293b;">${totalMembers}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Group Expected Cycle</div>
+              <div style="font-size: 16px; font-weight: 800; color: #0f9d58;">${formatCurrency(expectedPerCycle)}</div>
+              <div style="font-size: 10px; color: #64748b;">per ${frequency} contribution</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Total Contributions</div>
+              <div style="font-size: 18px; font-weight: 800; color: #0f9d58;">${formatCurrency(totalContributions)}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Current Savings</div>
+              <div style="font-size: 18px; font-weight: 800; color: #0f9d58;">${formatCurrency(totalSavings)}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Avg Per Member</div>
+              <div style="font-size: 18px; font-weight: 800; color: #64748b;">${formatCurrency(totalMembers ? totalSavings / totalMembers : 0)}</div>
+            </div>
+            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Total Withdrawals</div>
+              <div style="font-size: 18px; font-weight: 800; color: #ef4444;">${formatCurrency(totalWithdrawals)}</div>
+            </div>
+          </div>
+
+          <!-- Contribution Statistics -->
+          <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">
+              <i class="fas fa-chart-bar" style="color: #008080; margin-right: 8px;"></i> Group Contribution Statistics
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 12px;">
+              <div>
+                <span style="color: #64748b;">Total Expected (since start):</span>
+                <span style="font-weight: 800; color: #1e293b; float: right;">${formatCurrency(totalContributions + totalSavings)}</span>
+              </div>
+              <div>
+                <span style="color: #64748b;">Net Balance:</span>
+                <span style="font-weight: 800; color: #0f9d58; float: right;">${formatCurrency(totalSavings - totalWithdrawals)}</span>
+              </div>
+              <div>
+                <span style="color: #64748b;">Collection Efficiency:</span>
+                <span style="font-weight: 800; color: #0f9d58; float: right;">
+                  ${totalMembers && expectedPerCycle > 0 ? Math.round((totalContributions / (totalMembers * expectedPerCycle)) * 100) : 0}%
+                </span>
+              </div>
+              <div>
+                <span style="color: #64748b;">Expected Cycle Count:</span>
+                <span style="font-weight: 800; color: #64748b; float: right;">
+                  ${totalMembers > 0 ? (totalContributions / (totalMembers * expectedPerCycle)).toFixed(1) : 0}
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      `;
+
       container.innerHTML = html;
     }
 
