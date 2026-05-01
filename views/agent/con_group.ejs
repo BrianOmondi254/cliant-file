@@ -977,23 +977,35 @@
              let message = '';
 
              if (regChoice === 'charged') {
-               // Get registration account details
+               // Get all confirmed accounts
                const accounts = window.confirmedAccounts || [];
-               const regAccount = accounts.find(acc => acc.accountName.toLowerCase() === 'registration');
 
-               if (regAccount) {
+               if (accounts.length > 0) {
+                 // Build account list
+                 const accountList = accounts.map(acc =>
+                   'Account No. ' + acc.accountNumber + ': ' + acc.accountName + ' - KES ' + acc.expectedAmount
+                 ).join('; ');
+
                  message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
-                   'Members are subjected to pay registration fee of KES ' + regAccount.expectedAmount +
-                   ' to Account No. ' + regAccount.accountNumber + ' (' + regAccount.accountName + '). ' +
-                   'Members are also required to contribute to the account name and amount set.';
+                   'Members are subjected to pay registration fee and are required to contribute to the accounts set: ' +
+                   accountList + '.';
                } else {
                  message = '<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i> ' +
-                   'Members are subjected to pay registration fee. ' +
-                   'Members are also required to contribute to the account name and amount set.';
+                   'Members are subjected to pay registration fee and are required to contribute to the account name and amount set.';
                }
              } else if (regChoice === 'not_charged') {
-               message = '<i class="fas fa-info-circle" style="margin-right:6px;"></i> ' +
-                 'Members are NOT subjected to registration fee. They can optionally contribute to any account based on the whole set of account values.';
+               const accounts = window.confirmedAccounts || [];
+               if (accounts.length > 0) {
+                 const accountList = accounts.map(acc =>
+                   'Account No. ' + acc.accountNumber + ': ' + acc.accountName + ' - KES ' + acc.expectedAmount
+                 ).join('; ');
+                 message = '<i class="fas fa-info-circle" style="margin-right:6px;"></i> ' +
+                   'Members are NOT subjected to registration fee. They can optionally contribute to any account based on the whole set of account values: ' +
+                   accountList + '.';
+               } else {
+                 message = '<i class="fas fa-info-circle" style="margin-right:6px;"></i> ' +
+                   'Members are NOT subjected to registration fee. They can optionally contribute to any account based on the whole set of account values.';
+               }
              }
 
              document.getElementById('step3NotificationText').innerHTML = message;
