@@ -1,0 +1,13 @@
+{
+  "personalAccounts": {},
+  "accountTypes": {
+    "001": { "accountId": "001", "accountName": "Savings", "expectedAmount": "100" },
+    "002": { "accountId": "002", "accountName": "Registration", "expectedAmount": "100" },
+    "003": { "accountId": "003", "accountName": "latenes", "expectedAmount": "100" },
+    "004": { "accountId": "004", "accountName": "welfare", "expectedAmount": "100" }
+  },
+  "metadata": {
+    "createdAt": "2026-05-02T00:00:00.000Z",
+    "lastUpdated": "2026-05-02T00:00:00.000Z"
+  }
+}
