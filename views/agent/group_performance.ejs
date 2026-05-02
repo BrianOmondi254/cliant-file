@@ -318,46 +318,9 @@
       gap: 8px;
     }
 
-    .meta-item { display: flex; align-items: center; gap: 6px; }
+.meta-item { display: flex; align-items: center; gap: 6px; }
 
-    /* --- Transaction List --- */
-    .transaction-list {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .transaction-item {
-      display: flex;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .transaction-item:last-child { border-bottom: none; }
-
-    .tx-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 12px;
-      flex-shrink: 0;
-    }
-
-    .tx-icon.in { background: var(--primary-light); color: var(--primary); }
-    .tx-icon.out { background: var(--danger-light); color: var(--danger); }
-
-    .tx-details { flex-grow: 1; }
-    .tx-title { font-size: 13px; font-weight: 600; color: var(--dark); }
-    .tx-sub { font-size: 11px; color: var(--slate); }
-    
-    .tx-amount { font-size: 14px; font-weight: 700; }
-    .tx-amount.in { color: var(--primary); }
-    .tx-amount.out { color: var(--danger); }
-
-    /* --- Toast Notification --- */
+     /* --- Toast Notification --- */
     .toast {
       position: fixed;
       bottom: 20px;
@@ -408,54 +371,54 @@
      <div class="app-container">
      
       <!-- Header -->
-      <header class="header">
-        <div class="header-nav" style="display: flex; align-items: center; justify-content: center; position: relative;">
-          <button class="back-btn" onclick="goBack()" aria-label="Go Back" style="position: absolute; left: 0;">
-            <i class="fas fa-arrow-left"></i>
-          </button>
-          <h1 id="groupNameDisplay" style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin: 0;"><%- group?.groupName || (groupData?.groupName) || 'Loading Group...' %></h1>
-        </div>
-     </header>
+<header class="header">
+         <div class="header-nav" style="display: flex; align-items: center; justify-content: center; position: relative;">
+           <button class="back-btn" onclick="goBack()" aria-label="Go Back" style="position: absolute; left: 0;">
+             <i class="fas fa-arrow-left"></i>
+           </button>
+           <h1 id="groupNameDisplay" style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin: 0;"><%- group?.groupName || (groupData?.groupName) || 'Loading Group...' %></h1>
+         </div>
+      </header>
 
-      <!-- Summary Stats -->
-      <div class="summary-grid">
-        <div class="stat-card stat-blue">
-          <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-          <div class="stat-value"><%= 'KES ' + Number(totalClosingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
-          <div class="stat-label">Account Balance</div>
-        </div>
-        <div class="stat-card stat-teal">
-          <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
-          <div class="stat-value"><%= 'KES ' + Number(totalAmountIn || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
-          <div class="stat-label">Contributions</div>
-        </div>
-        <div class="stat-card stat-green">
-          <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
-          <div class="stat-value"><%= 'KES ' + Number(benefitAccountsTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
-          <div class="stat-label">Account Benefit</div>
-        </div>
-        <div class="stat-card stat-orange">
-          <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
-          <div class="stat-value" id="activeLoans">0</div>
-          <div class="stat-label">Active Loans</div>
-        </div>
-      </div>
+<!-- Summary Stats -->
+       <div class="summary-grid">
+         <div class="stat-card stat-blue">
+           <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+           <div class="stat-value"><%= 'KES ' + Number(totalClosingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
+           <div class="stat-label">Balance</div>
+         </div>
+         <div class="stat-card stat-teal">
+           <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+           <div class="stat-value"><%= 'KES ' + Number(totalAmountIn || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
+           <div class="stat-label">Contributions</div>
+         </div>
+         <div class="stat-card stat-green">
+           <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+           <div class="stat-value"><%= 'KES ' + Number(benefitAccountsTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
+           <div class="stat-label">Benefit</div>
+         </div>
+         <div class="stat-card stat-orange">
+           <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+           <div class="stat-value" id="activeLoans">0</div>
+           <div class="stat-label">Loans</div>
+         </div>
+       </div>
 
-     <!-- Group Performance Section -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <i class="fas fa-chart-bar" style="background: var(--primary-light); color: var(--primary);"></i>
-          Performance Overview
-        </div>
-        <span class="badge badge-green" id="statusBadge">Active</span>
-      </div>
+<!-- Group Performance Section -->
+     <div class="card">
+       <div class="card-header">
+         <div class="card-title">
+           <i class="fas fa-chart-bar" style="background: var(--primary-light); color: var(--primary);"></i>
+           Performance
+         </div>
+         <span class="badge badge-green" id="statusBadge">Active</span>
+       </div>
 
-      <!-- Schedule Info -->
-      <div class="schedule-box">
-        <div class="schedule-header">
-          <i class="far fa-clock"></i> Contribution Schedule
-        </div>
+       <!-- Schedule Info -->
+       <div class="schedule-box">
+         <div class="schedule-header">
+           <i class="far fa-clock"></i> Schedule
+         </div>
         <div class="schedule-main" id="scheduleFrequency">Calculating...</div>
         <div class="schedule-meta">
           <div class="meta-item"><i class="far fa-calendar-alt"></i> <span id="dateRange">--</span></div>
@@ -463,121 +426,98 @@
         </div>
       </div>
 
-       <!-- Performance Metrics Grid (Mini) -->
-       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
-         <div style="background: var(--light); padding: 12px; border-radius: 8px;">
-           <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Expected Per Cycle</div>
-           <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="expectedPerCycle">KES 0</div>
-         </div>
-         <div style="background: var(--light); padding: 12px; border-radius: 8px;">
-           <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Avg. Per Member</div>
-           <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="avgPerMember">KES 0</div>
+<!-- Performance Metrics Grid (Mini) -->
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
+          <div style="background: var(--light); padding: 12px; border-radius: 8px;">
+            <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Per Cycle</div>
+            <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="expectedPerCycle">KES 0</div>
+          </div>
+          <div style="background: var(--light); padding: 12px; border-radius: 8px;">
+            <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Avg Member</div>
+            <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="avgPerMember">KES 0</div>
+          </div>
+        </div>
+
+<!-- Account Breakdown Section -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <div class="card-title">
+              <i class="fas fa-wallet" style="background: var(--primary-light); color: var(--primary);"></i>
+              Accounts
+            </div>
+          </div>
+          <div class="table-responsive">
+<table id="accountBreakdownTable">
+               <thead>
+                 <tr>
+                   <th>ID</th>
+                   <th>Name</th>
+                   <th class="text-right">Balance</th>
+                   <th class="text-right">In</th>
+                   <th class="text-right">Out</th>
+                 </tr>
+               </thead>
+              <tbody>
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
          </div>
        </div>
 
-       <!-- Account Breakdown Section -->
-       <div class="card" style="margin-top: 20px;">
-         <div class="card-header">
-           <div class="card-title">
-             <i class="fas fa-wallet" style="background: var(--primary-light); color: var(--primary);"></i>
-             Account Balances Summary
+<!-- Cycles Table -->
+<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 13px; font-weight: 700; color: var(--dark);">Cycle</h3>
+          <button onclick="showToast('Exporting CSV...', 'success')" style="background:none; border:none; color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer;">
+            <i class="fas fa-download"></i> Export
+          </button>
+        </div>
+      
+<div class="table-responsive">
+         <table id="cyclesTable">
+           <thead>
+             <tr>
+               <th>Cycle</th>
+               <th class="text-right">Amount</th>
+             </tr>
+           </thead>
+           <tbody>
+             <!-- Populated by JS -->
+           </tbody>
+         </table>
+       </div>
+      
+<div style="margin-top: 15px; text-align: center; font-size: 11px; color: var(--slate); background: var(--light); padding: 10px; border-radius: 6px;">
+         Total Collection: <span id="totalGrandTotal" class="font-bold text-green">KES 0</span>
+       </div>
+    </div>
+
+<!-- Charts Section -->
+     <div class="card">
+       <div class="card-header">
+         <div class="card-title">
+           <i class="fas fa-chart-pie" style="background: var(--secondary-light); color: var(--secondary);"></i>
+           Analytics
+         </div>
+       </div>
+       
+<div style="display: grid; gap: 20px;">
+           <div>
+             <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 10px; font-weight: 600;">Transaction Group</h4>
+             <div class="chart-wrapper">
+               <canvas id="transactionChart"></canvas>
+             </div>
            </div>
-         </div>
-         <div class="table-responsive">
-           <table id="accountBreakdownTable">
-             <thead>
-               <tr>
-                 <th>Account ID</th>
-                 <th>Account Name</th>
-                 <th class="text-right">Closing Balance</th>
-                 <th class="text-right">Total In</th>
-                 <th class="text-right">Total Out</th>
-                 <th class="text-right">Members</th>
-               </tr>
-             </thead>
-             <tbody>
-               <!-- Populated by JS -->
-             </tbody>
-           </table>
-         </div>
-       </div>
-
-      <!-- Cycles Table -->
-      <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="font-size: 13px; font-weight: 700; color: var(--dark);">Contribution Cycles</h3>
-        <button onclick="showToast('Exporting CSV...', 'success')" style="background:none; border:none; color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer;">
-          <i class="fas fa-download"></i> Export
-        </button>
-      </div>
-      
-      <div class="table-responsive">
-        <table id="cyclesTable">
-          <thead>
-            <tr>
-              <th>Cycle</th>
-              <th>Date</th>
-              <th class="text-right">Expected</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Populated by JS -->
-          </tbody>
-        </table>
-      </div>
-      
-      <div style="margin-top: 15px; text-align: center; font-size: 11px; color: var(--slate); background: var(--light); padding: 10px; border-radius: 6px;">
-        Total Expected Collection: <span id="totalGrandTotal" class="font-bold text-green">KES 0</span>
-      </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <i class="fas fa-chart-pie" style="background: var(--secondary-light); color: var(--secondary);"></i>
-          Analytics
-        </div>
-      </div>
-      
-      <div style="display: grid; gap: 20px;">
-        <div>
-          <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 10px; font-weight: 600;">Transaction History (In vs Out)</h4>
-          <div class="chart-wrapper">
-            <canvas id="transactionChart"></canvas>
+           
+<div style="border-top: 1px solid var(--border); padding-top: 20px;">
+            <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 10px; font-weight: 600;">Closing Balance</h4>
+            <div class="chart-wrapper">
+              <canvas id="memberGrowthChart"></canvas>
+            </div>
           </div>
-        </div>
-        
-        <div style="border-top: 1px solid var(--border); padding-top: 20px;">
-          <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 10px; font-weight: 600;">Member Growth</h4>
-          <div class="chart-wrapper">
-            <canvas id="memberGrowthChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
+         </div>
+</div>
 
-    <!-- Transactions List -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <i class="fas fa-history" style="background: var(--warning-light); color: var(--warning);"></i>
-          Recent Transactions
-        </div>
-      </div>
-      <div class="transaction-list" id="transactionList">
-        <!-- Populated by JS -->
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer style="text-align: center; color: var(--slate); font-size: 11px; margin-top: 30px;">
-      <p>Generated on <span id="currentDate"></span></p>
-      <p>Group Performance Dashboard v2.0</p>
-    </footer>
-
-  </div>
-
-  <!-- Toast Container -->
+   <!-- Toast Container -->
   <div id="toast" class="toast">
     <i class="fas fa-info-circle"></i>
     <span id="toastMessage">Notification</span>
@@ -589,15 +529,13 @@
        let groupData = <%- JSON.stringify(groupData || {}) %>;
        let group = <%- JSON.stringify(group || {}) %>;
 
-      // Initialization
-      document.addEventListener('DOMContentLoaded', () => {
-        initData();
-        calculateAndRenderAll();
-        renderPerformanceSection();
-        initCharts();
-        renderTransactionList();
-        document.getElementById('currentDate').textContent = new Date().toLocaleString();
-      });
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+          initData();
+          calculateAndRenderAll();
+          renderPerformanceSection();
+          initCharts();
+        });
 
       function calculateAndRenderAll() {
         // Build account-wise totals from member accounts
@@ -614,14 +552,12 @@
                     accountName: account.accountName || 'Unknown',
                     closingBalance: 0,
                     amountIn: 0,
-                    amountOut: 0,
-                    memberCount: 0
+                    amountOut: 0
                   };
                 }
                 accountWiseTotals[accountId].closingBalance += parseFloat(account.financials?.closingBalance || 0);
                 accountWiseTotals[accountId].amountIn += parseFloat(account.financials?.amountIn || 0);
                 accountWiseTotals[accountId].amountOut += parseFloat(account.financials?.amountOut || 0);
-                accountWiseTotals[accountId].memberCount++;
               });
             }
           });
@@ -667,7 +603,7 @@
         const accounts = Object.values(accountWiseTotals).sort((a, b) => a.accountId.localeCompare(b.accountId));
 
         if (accounts.length === 0) {
-          tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 10px;">No account data available</td></tr>';
+          tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 10px;">No account data available</td></tr>';
           return;
         }
 
@@ -680,7 +616,6 @@
               <td class="text-right font-bold">${formatCurrency(acc.closingBalance)}</td>
               <td class="text-right text-green">+${formatCurrency(acc.amountIn)}</td>
               <td class="text-right text-red">-${formatCurrency(acc.amountOut)}</td>
-              <td class="text-right">${acc.memberCount}</td>
             </tr>
           `;
         });
@@ -698,7 +633,6 @@
             <td class="text-right text-green">${formatCurrency(grandTotals.closingBalance)}</td>
             <td class="text-right text-green">${formatCurrency(grandTotals.amountIn)}</td>
             <td class="text-right text-red">${formatCurrency(grandTotals.amountOut)}</td>
-            <td class="text-right">${accounts.length}</td>
           </tr>
         `;
 
@@ -764,18 +698,7 @@
         // Limit to 12 cycles for display purposes to avoid massive tables in demo
         if (cycleCount >= 12) break; 
 
-        const cycleDate = new Date(current);
-        let label = '';
-        
-        if (frequency === 'monthly') {
-          label = cycleDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        } else if (frequency === 'weekly') {
-          label = cycleDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        } else {
-          label = cycleDate.toLocaleDateString();
-        }
-
-        cycles.push({ date: label, cycleNum: cycleCount + 1 });
+        cycles.push({ cycleNum: cycleCount + 1 });
         grandTotal += expectedPerCycle;
 
         // Advance date
@@ -787,7 +710,7 @@
         cycleCount++;
       }
 
-      document.getElementById('cyclesCount').textContent = `${cycleCount} Cycles`;
+      document.getElementById('cyclesCount').textContent = cycleCount;
       document.getElementById('totalGrandTotal').textContent = formatCurrency(grandTotal);
 
       let html = '';
@@ -795,14 +718,13 @@
         html += `
           <tr>
             <td><span class="badge badge-green">Cycle ${cycle.cycleNum}</span></td>
-            <td>${cycle.date}</td>
             <td class="text-right font-bold">${formatCurrency(expectedPerCycle)}</td>
           </tr>
         `;
       });
 
       if (cycleCount === 0) {
-        html = `<tr><td colspan="3" style="text-align:center; padding: 20px;">No cycles configured</td></tr>`;
+        html = `<tr><td colspan="2" style="text-align:center; padding: 20px;">No cycles configured</td></tr>`;
       }
 
       tableBody.innerHTML = html;
@@ -837,19 +759,19 @@
         }
       });
 
-      // 2. Member Growth (Line Chart)
+      // 2. Member Growth (Line Chart) - Closing Balance per Cycle
       const ctxGrowth = document.getElementById('memberGrowthChart').getContext('2d');
-      // Mocking growth data
-      const growthData = [1, 3, 3, 5, 5, 5];
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      // Mocked closing balance data per cycle
+      const balanceData = [0, 5000, 12000, 25000, 45000, 80000];
+      const cycleNumbers = ['1', '2', '3', '4', '5', '6'];
       
       new Chart(ctxGrowth, {
         type: 'line',
         data: {
-          labels: months,
+          labels: cycleNumbers,
           datasets: [{
-            label: 'Members',
-            data: growthData,
+            label: 'Closing Balance',
+            data: balanceData,
             borderColor: '#4285f4',
             backgroundColor: 'rgba(66, 133, 244, 0.1)',
             fill: true,
@@ -862,66 +784,39 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'KES ' + Number(context.parsed.y).toLocaleString();
+                }
+              }
+            }
+          },
+          scales: { 
+            y: { 
+              beginAtZero: true, 
+              ticks: { 
+                stepSize: 20000,
+                callback: function(value) {
+                  return 'KES ' + Number(value).toLocaleString();
+                }
+              } 
+            }, 
+            x: { 
+              grid: { display: false },
+              title: {
+                display: true,
+                text: 'Cycle Number'
+              }
+            } 
+          }
         }
-      });
-    }
-
-    // --- Transaction List ---
-     function renderTransactionList() {
-       const container = document.getElementById('transactionList');
-       if (!groupData || !groupData.members) {
-         container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--slate);">No data available</div>`;
-         return;
-       }
-       const allTx = [];
-
-       // Flatten data
-       Object.values(groupData.members).forEach(member => {
-         Object.values(member.accounts).forEach(acc => {
-           if (acc.transactionHistory) {
-             acc.transactionHistory.forEach(tx => {
-               allTx.push({
-                 ...tx,
-                 memberName: member.name,
-                 accountName: groupData.accountSchema?.[Object.keys(member.accounts).find(k => member.accounts[k] === acc)]?.accountName || 'Account'
-               });
-             });
-           }
-         });
-       });
-
-       // Sort descending
-       allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-       if (allTx.length === 0) {
-         container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--slate);">No transactions found</div>`;
-         return;
-       }
-
-       let html = '';
-       allTx.slice(0, 10).forEach(tx => {
-         const isIn = tx.type === 'credit';
-         html += `
-           <div class="transaction-item">
-             <div class="tx-icon ${isIn ? 'in' : 'out'}">
-               <i class="fas fa-arrow-${isIn ? 'down' : 'up'}"></i>
-             </div>
-             <div class="tx-details">
-               <div class="tx-title">${tx.description}</div>
-               <div class="tx-sub">${tx.memberName} • ${tx.accountName}</div>
-             </div>
-             <div class="tx-amount ${isIn ? 'in' : 'out'}">
-               ${isIn ? '+' : '-'} ${formatCurrency(tx.amount)}
-             </div>
-           </div>
-         `;
-       });
-       container.innerHTML = html;
+});
      }
 
-    // --- Utilities ---
+     // --- Utilities ---
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
       const msg = document.getElementById('toastMessage');
