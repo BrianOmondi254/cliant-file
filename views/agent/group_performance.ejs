@@ -283,43 +283,6 @@
       width: 100%;
     }
 
-    /* --- Contribution Schedule Box --- */
-    .schedule-box {
-      background: linear-gradient(135deg, #e0f2f1, #f0fdf4);
-      border: 1px solid #a7f3d0;
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    
-    .schedule-header {
-      font-size: 11px;
-      font-weight: 700;
-      color: #0f766e;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .schedule-main {
-      font-size: 18px;
-      font-weight: 800;
-      color: #0d9488;
-      margin-bottom: 8px;
-    }
-
-    .schedule-meta {
-      font-size: 12px;
-      color: #334155;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-.meta-item { display: flex; align-items: center; gap: 6px; }
-
      /* --- Toast Notification --- */
     .toast {
       position: fixed;
@@ -405,37 +368,13 @@
        </div>
 
 <!-- Group Performance Section -->
-     <div class="card">
-       <div class="card-header">
-         <div class="card-title">
-           <i class="fas fa-chart-bar" style="background: var(--primary-light); color: var(--primary);"></i>
-           Performance
-         </div>
-         <span class="badge badge-green" id="statusBadge">Active</span>
-       </div>
-
-       <!-- Schedule Info -->
-       <div class="schedule-box">
-         <div class="schedule-header">
-           <i class="far fa-clock"></i> Schedule
-         </div>
-        <div class="schedule-main" id="scheduleFrequency">Calculating...</div>
-        <div class="schedule-meta">
-          <div class="meta-item"><i class="far fa-calendar-alt"></i> <span id="dateRange">--</span></div>
-          <div class="meta-item"><i class="fas fa-layer-group"></i> <span id="cyclesCount">0 cycles</span></div>
-        </div>
-      </div>
-
-<!-- Performance Metrics Grid (Mini) -->
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
-          <div style="background: var(--light); padding: 12px; border-radius: 8px;">
-            <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Per Cycle</div>
-            <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="expectedPerCycle">KES 0</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fas fa-chart-bar" style="background: var(--primary-light); color: var(--primary);"></i>
+            Performance
           </div>
-          <div style="background: var(--light); padding: 12px; border-radius: 8px;">
-            <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Avg Member</div>
-            <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="avgPerMember">KES 0</div>
-          </div>
+          <span class="badge badge-green" id="statusBadge">Active</span>
         </div>
 
 <!-- Account Breakdown Section -->
@@ -473,23 +412,21 @@
         </div>
       
 <div class="table-responsive">
-         <table id="cyclesTable">
-           <thead>
-             <tr>
-               <th>Cycle</th>
-               <th class="text-right">Amount</th>
-             </tr>
-           </thead>
-           <tbody>
-             <!-- Populated by JS -->
-           </tbody>
-         </table>
-       </div>
-      
-<div style="margin-top: 15px; text-align: center; font-size: 11px; color: var(--slate); background: var(--light); padding: 10px; border-radius: 6px;">
-         Total Collection: <span id="totalGrandTotal" class="font-bold text-green">KES 0</span>
-       </div>
-    </div>
+          <table id="cyclesTable">
+            <thead>
+              <tr>
+                <th>Cycle</th>
+                <th class="text-right">am in</th>
+                <th class="text-right">am out</th>
+                <th class="text-right">balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+     </div>
 
 <!-- Charts Section -->
      <div class="card">
@@ -654,83 +591,66 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (duration === '1-year') endDate.setFullYear(endDate.getFullYear() + 1);
       else if (duration === '2-years') endDate.setFullYear(endDate.getFullYear() + 2);
 
-      // Text Updates
-      document.getElementById('dateRange').textContent = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
-      document.getElementById('scheduleFrequency').textContent = frequency.charAt(0).toUpperCase() + frequency.slice(1);
-
-       // Calculate Expected per Cycle
-       const accounts = Object.values(groupData?.accountSchema || {});
-       const expectedPerCycle = accounts.reduce((sum, acc) => sum + (parseFloat(acc.expectedAmount) || 0), 0);
-       const totalMembers = Object.keys(groupData?.members || {}).length;
-       
-       document.getElementById('expectedPerCycle').textContent = formatCurrency(expectedPerCycle);
-       document.getElementById('avgPerMember').textContent = formatCurrency(totalMembers > 0 ? (totalSavingsGlobal / totalMembers) : 0);
-
-     // Generate Cycles
-     generateCyclesTable(startDate, endDate, frequency, expectedPerCycle);
+       // Generate Cycles Table
+      generateCyclesTable(startDate, endDate, frequency);
      
      const statusBadge = document.getElementById('statusBadge');
      if (statusBadge) {
        statusBadge.textContent = groupData?.status || 'Active';
      }
-    }
-    
-     // Helper to keep track of savings for avg calc
-     let totalSavingsGlobal = 0;
-     // (Total savings is calculated again in renderSummary, but we need it here too for the avg display)
-     // A quick re-calc just for scope cleanliness:
-     if (groupData?.members) {
-       Object.values(groupData.members).forEach(m => {
-         if (m.accounts) {
-           Object.values(m.accounts).forEach(a => totalSavingsGlobal += parseFloat(a.financials?.closingBalance || 0));
-         }
-       });
-     }
-
-    function generateCyclesTable(startDate, endDate, frequency, expectedPerCycle) {
-      const tableBody = document.querySelector('#cyclesTable tbody');
-      const cycles = [];
-      let current = new Date(startDate);
-      let grandTotal = 0;
-      let cycleCount = 0;
-
-      while (current <= endDate) {
-        // Limit to 12 cycles for display purposes to avoid massive tables in demo
-        if (cycleCount >= 12) break; 
-
-        cycles.push({ cycleNum: cycleCount + 1 });
-        grandTotal += expectedPerCycle;
-
-        // Advance date
-        if (frequency === 'daily') current.setDate(current.getDate() + 1);
-        else if (frequency === 'weekly') current.setDate(current.getDate() + 7);
-        else if (frequency === 'monthly') current.setMonth(current.getMonth() + 1);
-        else if (frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
-
-        cycleCount++;
       }
 
-      document.getElementById('cyclesCount').textContent = cycleCount;
-      document.getElementById('totalGrandTotal').textContent = formatCurrency(grandTotal);
+ function generateCyclesTable(startDate, endDate, frequency) {
+        const tableBody = document.querySelector('#cyclesTable tbody');
+        const cycles = [];
+        let current = new Date(startDate);
+        let grandTotalIn = 0;
+        let grandTotalOut = 0;
+        let cycleCount = 0;
+        let runningBalance = 0;
+        // Default expected per cycle (fallback)
+        const expectedPerCycle = 10000;
 
-      let html = '';
-      cycles.forEach(cycle => {
-        html += `
-          <tr>
-            <td><span class="badge badge-green">Cycle ${cycle.cycleNum}</span></td>
-            <td class="text-right font-bold">${formatCurrency(expectedPerCycle)}</td>
-          </tr>
-        `;
-      });
+        while (current <= endDate) {
+          // Limit to 12 cycles for display purposes to avoid massive tables in demo
+          if (cycleCount >= 12) break; 
 
-      if (cycleCount === 0) {
-        html = `<tr><td colspan="2" style="text-align:center; padding: 20px;">No cycles configured</td></tr>`;
+          cycles.push({ cycleNum: cycleCount + 1 });
+          grandTotalIn += expectedPerCycle;
+          // For demo purposes, let's assume some amount out (e.g., 20% of amount in)
+          grandTotalOut += expectedPerCycle * 0.2;
+
+          // Advance date
+          if (frequency === 'daily') current.setDate(current.getDate() + 1);
+          else if (frequency === 'weekly') current.setDate(current.getDate() + 7);
+          else if (frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+          else if (frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+
+          cycleCount++;
+        }
+
+        let html = '';
+        cycles.forEach((cycle, index) => {
+          const amountIn = expectedPerCycle;
+          const amountOut = expectedPerCycle * 0.2; // 20% outflow for demo
+          runningBalance += (amountIn - amountOut);
+          
+          html += `
+            <tr>
+              <td><span class="badge badge-green">Cycle ${cycle.cycleNum}</span></td>
+              <td class="text-right font-bold">${formatCurrency(amountIn)}</td>
+              <td class="text-right font-bold">${formatCurrency(amountOut)}</td>
+              <td class="text-right font-bold">${formatCurrency(runningBalance)}</td>
+            </tr>
+          `;
+        });
+
+        if (cycleCount === 0) {
+          html = `<tr><td colspan="4" style="text-align:center; padding: 20px;">No cycles configured</td></tr>`;
+        }
+
+        tableBody.innerHTML = html;
       }
-
-      tableBody.innerHTML = html;
-    }
-
-    // --- Chart.js Integration ---
     function initCharts() {
        // 1. Transaction History (Bar Chart)
        const ctxTx = document.getElementById('transactionChart').getContext('2d');
