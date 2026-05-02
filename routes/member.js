@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const router = express.Router();
-const memberFile = path.join(__dirname, "../member.json");
+const memberFile = path.join(__dirname, "../tran_account/member.json");
 const generalFile = path.join(__dirname, "../general.json");
 const dataFile = path.join(__dirname, "../data.json");
 
@@ -51,9 +51,9 @@ const restructureData = (data) => {
   return result;
 };
 
-const defaultMemberStructure = () => ({
-  group: {}
-});
+ const defaultMemberStructure = () => ({
+   groups: {}
+ });
 
 const normalizeKenyanPhone = (p = "") => {
   let digits = String(p).replace(/\D/g, "");
@@ -155,132 +155,241 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
    return { index: "", memberNumber: "", phone: "" };
  };
 
- const flattenData = (data) => {
-  const groups = [];
-  for (const county in data) {
-    const constis = data[county];
-    for (const consti in constis) {
-      const wardArray = constis[consti];
-      if (Array.isArray(wardArray)) {
-        for (const item of wardArray) {
-          if (item && typeof item === 'object' && item.groupName) {
-            // Also attach location info from the keys
-            item._county = county;
-            item._constituency = consti;
-            groups.push(item);
+  const flattenData = (data) => {
+    const groups = [];
+    for (const county in data) {
+      const constis = data[county];
+      for (const consti in constis) {
+        const wardArray = constis[consti];
+        if (Array.isArray(wardArray)) {
+          for (const item of wardArray) {
+            if (item && typeof item === 'object' && item.groupName) {
+              // Also attach location info from the keys
+              item._county = county;
+              item._constituency = consti;
+              groups.push(item);
+            }
           }
         }
       }
     }
-  }
-  return groups;
-};
-
-const syncFromGeneral = () => {
-  const generalData = readJSON(generalFile, {});
-  if (!generalData || Object.keys(generalData).length === 0) {
-    return;
-  }
-  
-  const dataFile = path.join(__dirname, "../data.json");
-  const usersData = readJSON(dataFile, []);
-  const getUserName = (phone) => {
-    const u = usersData.find(user => user.phoneNumber === phone || user.phoneNumber === '0' + phone || user.phoneNumber === '+254' + phone.substring(1));
-    return u ? `${u.FirstName} ${u.LastName}`.trim() : null;
+    return groups;
   };
-  
-  const allGroups = flattenData(generalData);
-  const memberData = readJSON(memberFile, defaultMemberStructure());
-  
-  // Ensure group object exists
-  if (!memberData.group) {
-    memberData.group = {};
-  }
-  
-  allGroups.forEach(group => {
-    const groupName = group.groupName;
-    if (!groupName) return;
-    
-    const memberKeys = Object.keys(group).filter(k =>
-      k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-    );
-    
-    const membersObj = {};
-    memberKeys.forEach(key => {
-      const item = group[key];
-      if (item && item.phone) {
-        // Get name from data.json users
-        const memberName = getUserName(item.phone) || item.title || key.replace(/_/g, ' ').replace(/(\d+)/, '#$1');
-        
-        membersObj[item.phone] = {
-          memberId: item.phone,
-          name: memberName,
-          memberFinancials: {
-            openingBalance: 0,
-            amountIn: 0,
-            amountOut: 0,
-            closingBalance: 0
-          },
-          accounts: {
-            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
-          },
-          processedDeductions: []
-        };
-      }
-    });
-    
-    if (memberData.group[groupName]) {
-      // Add new members to existing group and update existing members with names
-      Object.keys(membersObj).forEach(phone => {
-        if (!memberData.group[groupName].members[phone]) {
-          memberData.group[groupName].members[phone] = membersObj[phone];
-        } else if (membersObj[phone].name) {
-          // Update name for existing member
-          memberData.group[groupName].members[phone].name = membersObj[phone].name;
-        }
+
+  // Generate account templates with dateIntervalCycle for a group
+  const generateAccountTemplates = (group) => {
+    const intervals = group.principles?.intervals || {};
+    const frequency = intervals.frequency || '';
+    const endSavingPeriod = intervals.endSavingPeriod || '1-year';
+    const startRaw = group.principlesSetAt || group.createdAt || new Date().toISOString();
+    const startDate = new Date(startRaw);
+    const endDate = new Date(startDate);
+
+    // Adjust end date based on duration
+    if (endSavingPeriod === '6-months') endDate.setMonth(endDate.getMonth() + 6);
+    else if (endSavingPeriod === '1-year') endDate.setFullYear(endDate.getFullYear() + 1);
+    else if (endSavingPeriod === '2-years') endDate.setFullYear(endDate.getFullYear() + 2);
+    else if (endSavingPeriod === '3-years') endDate.setFullYear(endDate.getFullYear() + 3);
+    else if (endSavingPeriod === '4-years') endDate.setFullYear(endDate.getFullYear() + 4);
+    else if (endSavingPeriod === '5-years') endDate.setFullYear(endDate.getFullYear() + 5);
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+
+    // Build a map of expectedAmount from otherContributions
+    const contribMap = {};
+    if (group.principles?.otherContributions && Array.isArray(group.principles.otherContributions)) {
+      group.principles.otherContributions.forEach(c => {
+        contribMap[c.accountNumber] = c.expectedAmount;
       });
-    } else {
-      // Try to find by groupName in existing keys
-      let foundKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
-      if (foundKey) {
-        Object.keys(membersObj).forEach(phone => {
-          if (!memberData.group[foundKey].members[phone]) {
-            memberData.group[foundKey].members[phone] = membersObj[phone];
-          } else if (membersObj[phone].name) {
-            memberData.group[foundKey].members[phone].name = membersObj[phone].name;
-          }
+    }
+
+    // Calculate total rounds based on frequency
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const diffDays = Math.floor((endDate - startDate) / msPerDay);
+    let totalRounds = 0;
+    if (frequency === 'daily') totalRounds = Math.floor(diffDays) + 1;
+    else if (frequency === 'weekly') totalRounds = Math.floor(diffDays / 7) + 1;
+    else if (frequency === 'monthly') {
+      const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+      totalRounds = months;
+    } else if (frequency === 'yearly') totalRounds = (endDate.getFullYear() - startDate.getFullYear()) + 1;
+
+    // Default account definitions
+    const defaultAccts = {
+      "001": { accountId: "001", accountName: "Saving" },
+      "002": { accountId: "002", accountName: "Registration" },
+      "003": { accountId: "003", accountName: "latenes" },
+      "004": { accountId: "004", accountName: "welfare" }
+    };
+
+    const templates = {};
+    Object.keys(defaultAccts).forEach(id => {
+      const acc = defaultAccts[id];
+      const expectedAmount = contribMap[id] || "100";
+
+      // Build rounds array
+      const rounds = [];
+      let current = new Date(startDate);
+      for (let i = 1; i <= totalRounds; i++) {
+        const roundDate = formatDate(current);
+        rounds.push({
+          roundNumber: i,
+          scheduledDate: roundDate,
+          status: 'pending',
+          amount: parseFloat(expectedAmount),
+          contributingMembers: []
         });
-      } else {
-        // Create new group structure
-        const groupNum = Object.keys(memberData.group).length + 1;
-        const accountNum = group.accountNumber || "ACC" + groupNum;
-        memberData.group[accountNum] = {
+
+        // Advance to next cycle date
+        if (frequency === 'daily') current.setDate(current.getDate() + 1);
+        else if (frequency === 'weekly') current.setDate(current.getDate() + 7);
+        else if (frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+        else if (frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+      }
+
+      templates[id] = {
+        accountId: acc.accountId,
+        accountName: acc.accountName,
+        expectedAmount: expectedAmount,
+        financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+        transactionHistory: [],
+        dateIntervalCycle: {
+          frequency,
+          period: frequency === 'weekly' ? (intervals.period || '') : frequency === 'monthly' ? (intervals.dayOfWeek || intervals.period || '') : frequency === 'yearly' ? (intervals.month || '') : '',
+          weekOfMonth: intervals.weekOfMonth || '',
+          month: intervals.month || '',
+          startDate: formatDate(startDate),
+          endDate: formatDate(endDate),
+          totalRounds: totalRounds,
+          expectedAmountPerRound: expectedAmount,
+          totalExpectedAmount: (parseFloat(expectedAmount) * totalRounds).toString(),
+          rounds: rounds
+        }
+      };
+    });
+
+    return templates;
+  };
+
+  // Compute per-round contribution breakdown for an account from transaction history
+  const computeRoundContributions = (account) => {
+    const cycle = account.dateIntervalCycle;
+    if (!cycle || !cycle.rounds || !Array.isArray(cycle.rounds)) return [];
+    const contributions = {};
+    cycle.rounds.forEach(r => { contributions[r.roundNumber] = 0; });
+
+    if (account.transactionHistory && Array.isArray(account.transactionHistory)) {
+      account.transactionHistory.forEach(tx => {
+        const txDate = new Date(tx.date);
+        let targetRound = null;
+        // Find the most recent round whose scheduledDate <= txDate
+        for (let i = cycle.rounds.length - 1; i >= 0; i--) {
+          const r = cycle.rounds[i];
+          const sched = new Date(r.scheduledDate);
+          if (txDate >= sched) { targetRound = r; break; }
+        }
+        if (targetRound) contributions[targetRound.roundNumber] += parseFloat(tx.amount) || 0;
+      });
+    }
+
+    return Object.keys(contributions)
+      .map(num => {
+        const roundNum = parseInt(num, 10);
+        const contributed = contributions[num];
+        const expected = parseFloat(cycle.expectedAmountPerRound) || 0;
+        const status = expected > 0 && contributed >= expected ? 'completed' : 'pending';
+        return { roundNumber: roundNum, contributedAmount: contributed, status: status };
+      })
+      .sort((a, b) => a.roundNumber - b.roundNumber);
+  };
+
+  const syncFromGeneral = () => {
+   const generalData = readJSON(generalFile, {});
+   if (!generalData || Object.keys(generalData).length === 0) {
+     return;
+   }
+
+   const dataFile = path.join(__dirname, "../data.json");
+   const usersData = readJSON(dataFile, []);
+   const getUserName = (phone) => {
+     const u = usersData.find(user => user.phoneNumber === phone || user.phoneNumber === '0' + phone || user.phoneNumber === '+254' + phone.substring(1));
+     return u ? `${u.FirstName} ${u.LastName}`.trim() : null;
+   };
+
+   const allGroups = flattenData(generalData);
+   const memberData = readJSON(memberFile, defaultMemberStructure());
+
+   if (!memberData.groups) memberData.groups = {};
+
+   allGroups.forEach(group => {
+     const groupName = group.groupName;
+     if (!groupName) return;
+
+     // Find or create group entry
+     let groupAccountNum = Object.keys(memberData.groups).find(key => memberData.groups[key].groupName === groupName);
+     if (!groupAccountNum) {
+       const groupNum = Object.keys(memberData.groups).length + 1;
+       groupAccountNum = group.accountNumber || "ACC" + groupNum;
+        memberData.groups[groupAccountNum] = {
           groupNumber: groupNum,
           groupName: groupName,
-          groupFinancials: {
-            totalOpeningBalance: 0,
-            totalAmountIn: 0,
-            totalAmountOut: 0,
-            totalClosingBalance: 0,
-            availableWithdrawalBalance: 0
-          },
-          accountSchema: {
-            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
-            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-          },
-          members: membersObj
-        };
-      }
-    }
-  });
-  
-  writeJSON(memberFile, memberData);
-};
+          members: {}
+       };
+     }
+
+      const currentGroup = memberData.groups[groupAccountNum];
+
+      // Generate account templates with dateIntervalCycle for this group
+      const accountTemplates = generateAccountTemplates(group);
+
+      // Extract members from general group structure (trustee_, official_, member_)
+      const memberKeys = Object.keys(group).filter(k =>
+        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+      );
+
+      memberKeys.forEach(key => {
+        const item = group[key];
+        if (item && item.phone) {
+          const memberId = item.phone;
+          const normalizedId = memberId.toString().trim();
+          const memberName = getUserName(normalizedId) || item.title || key.replace(/_/g, ' ').replace(/(\d+)/, '#$1');
+
+          if (!currentGroup.members[normalizedId]) {
+            // New member: assign fresh templates with cycles
+            currentGroup.members[normalizedId] = {
+              memberId: normalizedId,
+              name: memberName,
+              memberFinancials: {
+                openingBalance: 0,
+                amountIn: 0,
+                amountOut: 0,
+                closingBalance: 0
+              },
+              accounts: JSON.parse(JSON.stringify(accountTemplates)), // deep clone templates
+              processedDeductions: []
+            };
+          } else {
+            // Existing member: ensure accounts have dateIntervalCycle (merge if missing)
+            const existing = currentGroup.members[normalizedId];
+            existing.name = memberName;
+            if (existing.accounts) {
+              Object.keys(accountTemplates).forEach(accId => {
+                if (existing.accounts[accId] && !existing.accounts[accId].dateIntervalCycle) {
+                  existing.accounts[accId].dateIntervalCycle = accountTemplates[accId].dateIntervalCycle;
+                }
+                // If account doesn't exist at all, add it with cycle
+                if (!existing.accounts[accId]) {
+                  existing.accounts[accId] = accountTemplates[accId];
+                }
+              });
+            }
+          }
+        }
+      });
+   });
+
+    writeJSON(memberFile, memberData);
+  };
 
 router.post("/sync", (req, res) => {
   try {
@@ -299,8 +408,8 @@ router.get("/", (req, res) => {
 router.get("/group/:groupNumber", (req, res) => {
   const { groupNumber } = req.params;
   const data = readJSON(memberFile, defaultMemberStructure());
-  const groupKey = Object.keys(data.group).find(k => data.group[k].groupNumber == groupNumber);
-  const group = groupKey ? data.group[groupKey] : null;
+  const groupKey = Object.keys(data.groups).find(k => data.groups[k].groupNumber == groupNumber);
+  const group = groupKey ? data.groups[groupKey] : null;
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
@@ -310,8 +419,8 @@ router.get("/group/:groupNumber", (req, res) => {
 router.get("/group/:groupNumber/member/:memberId", (req, res) => {
   const { groupNumber, memberId } = req.params;
   const data = readJSON(memberFile, defaultMemberStructure());
-  const groupKey = Object.keys(data.group).find(k => data.group[k].groupNumber == groupNumber);
-  const group = groupKey ? data.group[groupKey] : null;
+  const groupKey = Object.keys(data.groups).find(k => data.groups[k].groupNumber == groupNumber);
+  const group = groupKey ? data.groups[groupKey] : null;
   if (!group || !group.members || !group.members[memberId]) {
     return res.status(404).json({ error: "Member not found" });
   }
@@ -325,31 +434,18 @@ router.post("/init", (req, res) => {
 });
 
 router.post("/group", (req, res) => {
-  const { groupNumber, accountNumber, groupName, otherContributions } = req.body;
+  const { groupNumber, accountNumber, groupName } = req.body;
   const data = readJSON(memberFile, defaultMemberStructure());
-  
-  const accountNum = accountNumber || "ACC" + (Object.keys(data.group).length + 1);
-  
+
+  const accountNum = accountNumber || "ACC" + (Object.keys(data.groups).length + 1);
+
   const newGroup = {
-    groupNumber: groupNumber || Object.keys(data.group).length + 1,
+    groupNumber: groupNumber || Object.keys(data.groups).length + 1,
     groupName: groupName || "",
-    groupFinancials: {
-      totalOpeningBalance: 0,
-      totalAmountIn: 0,
-      totalAmountOut: 0,
-      totalClosingBalance: 0,
-      availableWithdrawalBalance: 0
-    },
-    accountSchema: otherContributions || {
-      "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
-      "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-      "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-      "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-    },
     members: {}
   };
-  
-  data.group[accountNum] = newGroup;
+
+  data.groups[accountNum] = newGroup;
   writeJSON(memberFile, data);
   res.json({ success: true, group: newGroup });
 });
@@ -357,38 +453,89 @@ router.post("/group", (req, res) => {
 router.post("/group/:groupNumber/member", (req, res) => {
   const { groupNumber } = req.params;
   const { memberId, accounts } = req.body;
-  
+
   if (!memberId) {
     return res.status(400).json({ error: "memberId is required" });
   }
-  
+
   const data = readJSON(memberFile, defaultMemberStructure());
-  const groupKey = Object.keys(data.group).find(k => data.group[k].groupNumber == groupNumber);
-  const group = groupKey ? data.group[groupKey] : null;
-  
+  const groupKey = Object.keys(data.groups).find(k => data.groups[k].groupNumber == groupNumber);
+  const group = groupKey ? data.groups[groupKey] : null;
+
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-  
-  const defaultAccounts = {
-    "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-    "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-    "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-    "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
-  };
-  
+
+  // Determine accounts to assign
+  let accountsToUse = accounts;
+  if (!accountsToUse) {
+    // Attempt to generate templates from general.json using group's principles
+    try {
+      const generalData = readJSON(generalFile, {});
+      const flatGroups = flattenData(generalData);
+      const genGroup = flatGroups.find(g => g.groupName === group.groupName);
+      if (genGroup) {
+        accountsToUse = generateAccountTemplates(genGroup);
+      } else {
+        // Fallback: basic default with minimal cycle info
+        const today = new Date();
+        const nextMonth = new Date(today);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        const fmt = d => d.toISOString().split('T')[0];
+        const baseCycle = {
+          frequency: 'monthly',
+          startDate: fmt(today),
+          endDate: fmt(nextMonth),
+          totalRounds: 1,
+          expectedAmountPerRound: "100",
+          totalExpectedAmount: "100",
+          rounds: [{ roundNumber: 1, scheduledDate: fmt(today), status: 'pending', amount: 100, contributingMembers: [] }]
+        };
+        accountsToUse = {
+          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
+          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
+          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
+          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle }
+        };
+      }
+    } catch (e) {
+      // Fallback if error reading general.json
+      const today = new Date();
+      const nextMonth = new Date(today);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const fmt = d => d.toISOString().split('T')[0];
+      const baseCycle = {
+        frequency: 'monthly',
+        startDate: fmt(today),
+        endDate: fmt(nextMonth),
+        totalRounds: 1,
+        expectedAmountPerRound: "100",
+        totalExpectedAmount: "100",
+        rounds: [{ roundNumber: 1, scheduledDate: fmt(today), status: 'pending', amount: 100, contributingMembers: [] }]
+      };
+      accountsToUse = {
+        "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
+        "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
+        "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
+        "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle }
+      };
+    }
+  }
+
+  if (!group.members) group.members = {};
   group.members[memberId] = {
     memberId: memberId,
+    name: "", // will be set later via name sync
     memberFinancials: {
       openingBalance: 0,
       amountIn: 0,
       amountOut: 0,
       closingBalance: 0
     },
-    accounts: accounts || defaultAccounts,
+    accounts: accountsToUse,
     processedDeductions: []
   };
-  
+
   writeJSON(memberFile, data);
   res.json({ success: true, member: group.members[memberId] });
 });
@@ -396,17 +543,18 @@ router.post("/group/:groupNumber/member", (req, res) => {
 router.put("/group/:groupNumber/member/:memberId/account/:accountNumber/transaction", (req, res) => {
   const { groupNumber, memberId, accountNumber } = req.params;
   const transactionData = req.body;
-  
+
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.group.find(g => g.groupNumber == groupNumber);
-  
+  const groupKey = Object.keys(data.groups).find(k => data.groups[k].groupNumber == groupNumber);
+  const group = groupKey ? data.groups[groupKey] : null;
+
   if (!group || !group.members || !group.members[memberId] || !group.members[memberId].accounts || !group.members[memberId].accounts[accountNumber]) {
     return res.status(404).json({ error: "Account not found" });
   }
-  
+
   const account = group.members[memberId].accounts[accountNumber];
-  account.transactions = transactionData;
-  
+  account.transactionHistory = transactionData.transactions || transactionData || [];
+
   writeJSON(memberFile, data);
   res.json({ success: true, account });
 });
@@ -414,48 +562,57 @@ router.put("/group/:groupNumber/member/:memberId/account/:accountNumber/transact
 router.put("/group/:groupNumber/contribution/:accountNumber/transaction", (req, res) => {
   const { groupNumber, accountNumber } = req.params;
   const transactionData = req.body;
-  
+
   const data = readJSON(memberFile, defaultMemberStructure());
-  const group = data.group.find(g => g.groupNumber == groupNumber);
-  
-  if (!group || !group.otherContributions || !group.otherContributions[accountNumber]) {
-    return res.status(404).json({ error: "Contribution account not found" });
+  const groupKey = Object.keys(data.groups).find(k => data.groups[k].groupNumber == groupNumber);
+  const group = groupKey ? data.groups[groupKey] : null;
+
+  if (!group) {
+    return res.status(404).json({ error: "Group not found" });
   }
-  
+
+  // Initialize otherContributions if not exists
+  if (!group.otherContributions) {
+    group.otherContributions = {};
+  }
+  if (!group.otherContributions[accountNumber]) {
+    group.otherContributions[accountNumber] = { accountNumber: accountNumber, transactions: [] };
+  }
+
   group.otherContributions[accountNumber].transactions = transactionData;
-  
+
   writeJSON(memberFile, data);
   res.json({ success: true, contribution: group.otherContributions[accountNumber] });
 });
 
-router.get("/structure", (req, res) => {
-  res.json(defaultMemberStructure());
-});
+ router.get("/structure", (req, res) => {
+   res.json(defaultMemberStructure());
+ });
 
 router.post("/verify-group", (req, res) => {
   const { groupName } = req.body;
-  
+
   let data = readJSON(memberFile, defaultMemberStructure());
-  
-  if (!data.group || Object.keys(data.group).length === 0) {
+
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     return res.status(404).json({ error: "No groups in member.json" });
   }
-  
+
   // Find group by groupName
   let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
       foundKey = key;
       break;
     }
   }
-  
-  const group = foundKey ? data.group[foundKey] : null;
-  
+
+  const group = foundKey ? data.groups[foundKey] : null;
+
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-  
+
   res.json({
     groupNumber: group.groupNumber,
     groupName: group.groupName,
@@ -467,7 +624,7 @@ router.post("/group-by-name", (req, res) => {
   const { groupName } = req.body;
 
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
@@ -475,10 +632,10 @@ router.post("/group-by-name", (req, res) => {
   // Find group by groupName
   let foundKey = null;
   let foundGroup = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
       foundKey = key;
-      foundGroup = data.group[key];
+      foundGroup = data.groups[key];
       break;
     }
   }
@@ -694,7 +851,7 @@ router.post("/process-deduction", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
@@ -702,10 +859,10 @@ router.post("/process-deduction", (req, res) => {
   // Find group by groupName
   let foundKey = null;
   let foundGroup = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
       foundKey = key;
-      foundGroup = data.group[key];
+      foundGroup = data.groups[key];
       break;
     }
   }
@@ -724,7 +881,7 @@ router.post("/process-deduction", (req, res) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   // Store reference for updates
-  const groupRef = data.group[foundKey];
+  const groupRef = data.groups[foundKey];
   
   let transactionCount = 0;
   
@@ -835,11 +992,6 @@ router.post("/process-deduction", (req, res) => {
     member.memberFinancials.amountOut = (member.memberFinancials.amountOut || 0) + amount;
     member.memberFinancials.closingBalance = (member.memberFinancials.openingBalance || 0) + (member.memberFinancials.amountIn || 0) - (member.memberFinancials.amountOut || 0);
     
-    // Update group financials
-    groupRef.groupFinancials.totalAmountOut = (group.groupFinancials.totalAmountOut || 0) + amount;
-    groupRef.groupFinancials.totalClosingBalance = (group.groupFinancials.totalOpeningBalance || 0) + (group.groupFinancials.totalAmountIn || 0) - (group.groupFinancials.totalAmountOut || 0);
-    groupRef.groupFinancials.availableWithdrawalBalance = group.groupFinancials.totalClosingBalance;
-    
     transactionCount++;
   });
   
@@ -855,7 +1007,7 @@ router.get("/contribution", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
@@ -863,9 +1015,9 @@ router.get("/contribution", (req, res) => {
   // Find group by groupName
   let foundGroup = null;
   let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundGroup = data.group[key];
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
+      foundGroup = data.groups[key];
       foundKey = key;
       break;
     }
@@ -955,16 +1107,16 @@ router.get("/loan", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
   
   let foundGroup = null;
   let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundGroup = data.group[key];
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
+      foundGroup = data.groups[key];
       foundKey = key;
       break;
     }
@@ -1016,16 +1168,16 @@ router.get("/membership", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
   
   let foundGroup = null;
   let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundGroup = data.group[key];
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
+      foundGroup = data.groups[key];
       foundKey = key;
       break;
     }
@@ -1122,15 +1274,15 @@ router.get("/gmember", (req, res) => {
   }
 
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
 
   let foundGroup = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundGroup = data.group[key];
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
+      foundGroup = data.groups[key];
       break;
     }
   }
@@ -1254,15 +1406,15 @@ router.get("/gcon", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
   
   let foundGroup = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
-      foundGroup = data.group[key];
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
+      foundGroup = data.groups[key];
       break;
     }
   }
@@ -1327,14 +1479,14 @@ router.post("/add-member", (req, res) => {
   }
   
   let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.group || Object.keys(data.group).length === 0) {
+  if (!data.groups || Object.keys(data.groups).length === 0) {
     syncFromGeneral();
     data = readJSON(memberFile, defaultMemberStructure());
   }
   
   let foundKey = null;
-  for (const key in data.group) {
-    if (data.group[key].groupName === groupName) {
+  for (const key in data.groups) {
+    if (data.groups[key].groupName === groupName) {
       foundKey = key;
       break;
     }
@@ -1344,7 +1496,7 @@ router.post("/add-member", (req, res) => {
     return res.status(404).json({ success: false, error: "Group not found" });
   }
   
-  const group = data.group[foundKey];
+  const group = data.groups[foundKey];
   
   // Check if member already exists
   if (group.members && group.members[phone]) {
@@ -1728,29 +1880,22 @@ router.post("/approve-member-request", (req, res) => {
        Object.assign(targetGroup, newGroup);
 
       // Also add to member.json for financial tracking
-      const memberFile = path.join(__dirname, "../member.json");
-      let memberData = readJSON(memberFile, { group: {} });
-      if (!memberData.group) memberData.group = {};
+const memberFile = path.join(__dirname, "../tran_account/member.json");
+       let memberData = readJSON(memberFile, { groups: {} });
+      if (!memberData.groups) memberData.groups = {};
 
-      let memberGroupKey = Object.keys(memberData.group).find(k => memberData.group[k].groupName === groupName);
+      let memberGroupKey = Object.keys(memberData.groups).find(k => memberData.groups[k].groupName === groupName);
       if (!memberGroupKey) {
-        const groupNum = Object.keys(memberData.group).length + 1;
+        const groupNum = Object.keys(memberData.groups).length + 1;
         memberGroupKey = "ACC" + groupNum;
-        memberData.group[memberGroupKey] = {
+        memberData.groups[memberGroupKey] = {
           groupNumber: groupNum,
           groupName: groupName,
-          groupFinancials: { totalOpeningBalance: 0, totalAmountIn: 0, totalAmountOut: 0, totalClosingBalance: 0, availableWithdrawalBalance: 0 },
-          accountSchema: {
-            "001": { accountId: "001", accountName: "Saving", expectedAmount: "100" },
-            "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-            "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-            "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-          },
           members: {}
         };
       }
 
-      const memberGroup = memberData.group[memberGroupKey];
+      const memberGroup = memberData.groups[memberGroupKey];
       if (!memberGroup.members) memberGroup.members = {};
 
       if (!memberGroup.members[request.newMemberPhone]) {

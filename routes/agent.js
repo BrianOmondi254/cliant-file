@@ -1185,90 +1185,157 @@ router.get("/conform", (req, res) => {
    });
  });
 
- // GET /agent/group-performance - Display group performance dashboard
- router.get("/group-performance", (req, res) => {
-   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
-     return res.redirect("/login");
-   }
+  // GET /agent/group-performance - Display group performance dashboard
+  router.get("/group-performance", (req, res) => {
+    if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+      return res.redirect("/login");
+    }
 
-   const { groupName } = req.query;
-   if (!groupName) {
-     return res.redirect("/agent");
-   }
+     const { groupName } = req.query;
+     if (!groupName) {
+       return res.redirect("/agent");
+     }
 
-   const agents = loadJSON(agentFile);
-   const general = flattenData(loadJSON(generalFile, {}));
-   const membersData = loadJSON(path.join(__dirname, "../member.json"), {});
-   const users = loadJSON(dataFile);
+     const generalData = loadJSON(generalFile, {});
+     const flatGroups = flattenData(generalData);
+     const group = flatGroups.find(g => g.groupName === groupName);
 
-   const currentPhoneNumber = req.session.user.phoneNumber;
-   const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+     if (!group) {
+       return res.status(404).send("Group not found");
+     }
 
-   if (!agent) {
-     return res.redirect("/agent");
-   }
+     const agents = loadJSON(agentFile);
+     const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
+     const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
+     const users = loadJSON(dataFile);
 
-   // Find the specific group in general.json
-   const group = general.find(g => g.groupName === groupName);
-   if (!group) {
-     return res.redirect("/agent");
-   }
+     const currentPhoneNumber = req.session.user.phoneNumber;
+     const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
 
-   // Create user lookup map
-   const userMap = new Map();
-   if (Array.isArray(users)) {
-     users.forEach(u => {
-       const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
-       if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
-     });
-   }
+     if (!agent) {
+       return res.redirect("/agent");
+     }
 
-   // Find corresponding group in member.json by matching groupName
-   let groupMembersData = {};
-   if (membersData.group) {
-     Object.values(membersData.group).forEach(g => {
-       if (g.groupName === groupName) {
-         groupMembersData = g.members || {};
-       }
-     });
-   }
+     // Create user lookup map
+     const userMap = new Map();
+    if (Array.isArray(users)) {
+      users.forEach(u => {
+        const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
+        if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
+      });
+    }
 
-   // Enhance group with member details from member.json
-   const enrichedMembers = {};
-   Object.keys(groupMembersData).forEach(memberId => {
-     const memberData = groupMembersData[memberId];
-     const normalizedPhone = normPhone(memberId);
-     const memberName = userMap.get(normalizedPhone) || memberData.name || 'Unknown';
+      // Find corresponding group in member.json by matching groupName (case-insensitive, trim whitespace)
+      let groupMembersData = {};
+      let groupFinancials = {};
+      let groupAccountSchema = {};
+      if (membersData.groups) {
+        const normalizedGroupName = normStr(groupName);
+        const matchingGroup = Object.values(membersData.groups).find(g =>
+          g.groupName && normStr(g.groupName) === normalizedGroupName
+        );
+        if (matchingGroup) {
+          groupMembersData = matchingGroup.members || {};
+          groupFinancials = matchingGroup.groupFinancials || {};
+          groupAccountSchema = matchingGroup.accountSchema || {};
+        }
+      } else if (membersData.group) {
+        // Fallback to old structure
+        const normalizedGroupName = normStr(groupName);
+        const matchingGroup = Object.values(membersData.group).find(g =>
+          g.groupName && normStr(g.groupName) === normalizedGroupName
+        );
+        if (matchingGroup) {
+          groupMembersData = matchingGroup.members || {};
+          groupFinancials = matchingGroup.groupFinancials || {};
+          groupAccountSchema = matchingGroup.accountSchema || {};
+        }
+      }
 
-     enrichedMembers[memberId] = {
-       ...memberData,
-       name: memberName,
-       phone: memberId
-     };
-   });
+    // Enhance group with member details from member.json
+    const enrichedMembers = {};
+    Object.keys(groupMembersData).forEach(memberId => {
+      const memberData = groupMembersData[memberId];
+      const normalizedPhone = normPhone(memberId);
+      const memberName = userMap.get(normalizedPhone) || memberData.name || 'Unknown';
 
-   // Attach enriched members to group object
-   group.members = enrichedMembers;
+      enrichedMembers[memberId] = {
+        ...memberData,
+        name: memberName,
+        phone: memberId
+      };
+    });
 
-   // Get performance data for this group's county/constituency/ward if available
-   const perfData = require("../performance/group-performance").readPerformance();
-   const county = group.county;
-   const constituency = group.constituency;
-   const ward = group.ward;
+     // Attach enriched members, group financials, and account schema to group object
+     group.members = enrichedMembers;
+     group.groupFinancials = groupFinancials;
+     group.accountSchema = groupAccountSchema;
 
-   let groupPerf = null;
-   if (perfData.counties[county] && perfData.counties[county].constituencies[constituency] &&
-       perfData.counties[county].constituencies[constituency].wards[ward]) {
-     groupPerf = perfData.counties[county].constituencies[constituency].wards[ward];
-   }
+      // Extract Savings account closing balance from group.json
+      let savingsClosingBalance = 0;
+      let totalGroupClosingBalance = 0;
+      let totalGroupAmountIn = 0;
+      let benefitAccountsTotal = 0;
+      const groupDataKey = Object.keys(groupAccountsData.groupData || {}).find(key =>
+        groupAccountsData.groupData[key] &&
+        groupAccountsData.groupData[key].groupName &&
+        normStr(groupAccountsData.groupData[key].groupName) === normStr(groupName)
+      );
 
-   res.render("agent/group_performance", {
-     agent: agent,
-     group: group,
-     user: req.session.user,
-     userMap: userMap,
-     performance: groupPerf
-   });
- });
+      if (groupDataKey && groupAccountsData.groupData[groupDataKey].groupFinancials) {
+        const groupFinancials = groupAccountsData.groupData[groupDataKey].groupFinancials;
+        totalGroupClosingBalance = parseFloat(groupFinancials.totalClosingBalance) || 0;
+        totalGroupAmountIn = parseFloat(groupFinancials.totalAmountIn) || 0;
+
+        // accountWise is nested inside groupFinancials
+        const accountWise = groupFinancials.accountWise || {};
+        const savingAccount = accountWise["001"];
+        if (savingAccount) {
+          savingsClosingBalance = parseFloat(savingAccount.closingBalance) || 0;
+        }
+
+        // Calculate Benefit Accounts Total from principles.balancing.benefitAccounts
+        const benefitAccountNames = (group.principles?.balancing?.benefitAccounts || []);
+        Object.values(accountWise).forEach(acc => {
+          if (benefitAccountNames.includes(acc.accountName)) {
+            benefitAccountsTotal += parseFloat(acc.closingBalance) || 0;
+          }
+        });
+      }
+
+    // Get performance data for this group's county/constituency/ward if available
+    const perfData = require("../performance/group-performance").readPerformance();
+    const county = group.county;
+    const constituency = group.constituency;
+    const ward = group.ward;
+
+     let groupPerf = null;
+     if (perfData.counties[county] && perfData.counties[county].constituencies[constituency] &&
+         perfData.counties[county].constituencies[constituency].wards[ward]) {
+       groupPerf = perfData.counties[county].constituencies[constituency].wards[ward];
+     }
+
+     // Merge group base data with performance data (if exists)
+     // Performance data should not overwrite group-level fields like totalProposedMembers, groupFinancials
+     const mergedGroupData = groupPerf ? { ...group, ...groupPerf } : group;
+
+     // Ensure critical group-level fields are preserved
+     mergedGroupData.totalProposedMembers = group.totalProposedMembers;
+     mergedGroupData.groupFinancials = group.groupFinancials;
+
+      res.render("agent/group_performance", {
+        agent: agent,
+        group: group,
+        user: req.session.user,
+        userMap: userMap,
+        performance: groupPerf,
+        groupData: mergedGroupData,
+        totalMembers: group.totalProposedMembers, // explicit separate variable
+        savingsClosingBalance: savingsClosingBalance,
+        totalClosingBalance: totalGroupClosingBalance,
+        totalAmountIn: totalGroupAmountIn,
+        benefitAccountsTotal: benefitAccountsTotal
+      });
+  });
 
 module.exports = router;

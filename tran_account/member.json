@@ -1,0 +1,331 @@
+{
+  "groups": {
+    "2540422491234002": {
+      "groupNumber": 1,
+      "groupName": "ONE SACCO",
+      "members": {
+        "0700051102": {
+          "memberId": "0700051102",
+          "name": "brian ba",
+          "memberFinancials": {
+            "openingBalance": 200,
+            "amountIn": 600,
+            "amountOut": 100,
+            "closingBalance": 700
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              
+              "financials": {
+                "openingBalance": 100,
+                "amountIn": 500,
+                "amountOut": 50,
+                "closingBalance": 550,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 500, "status": "completed" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-21",
+                  "type": "credit",
+                  "amount": 300,
+                  "description": "Weekly contribution"
+                },
+                {
+                  "date": "2026-04-28",
+                  "type": "credit",
+                  "amount": 200,
+                  "description": "Weekly contribution"
+                }
+              ]
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              
+              "financials": {
+                "openingBalance": 50,
+                "amountIn": 50,
+                "amountOut": 0,
+                "closingBalance": 100,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 50, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-24",
+                  "type": "credit",
+                  "amount": 50,
+                  "description": "Registration fee"
+                }
+              ]
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              
+              "financials": {
+                "openingBalance": 30,
+                "amountIn": 30,
+                "amountOut": 30,
+                "closingBalance": 30,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 30, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-23",
+                  "type": "credit",
+                  "amount": 30,
+                  "description": "Latenes payment"
+                }
+              ]
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              
+              "financials": {
+                "openingBalance": 20,
+                "amountIn": 20,
+                "amountOut": 20,
+                "closingBalance": 20,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 20, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-26",
+                  "type": "credit",
+                  "amount": 20,
+                  "description": "Welfare contribution"
+                }
+              ]
+            }
+          },
+          "processedDeductions": []
+        },
+        "0746001141": {
+          "memberId": "0746001141",
+          "name": "brian omolo",
+          "memberFinancials": {
+            "openingBalance": 150,
+            "amountIn": 450,
+            "amountOut": 50,
+            "closingBalance": 550
+          },
+          "accounts": {
+            "001": {
+              "accountId": "001",
+              "accountName": "Saving",
+              
+              "financials": {
+                "openingBalance": 80,
+                "amountIn": 320,
+                "amountOut": 30,
+                "closingBalance": 370,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 320, "status": "completed" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-19",
+                  "type": "credit",
+                  "amount": 200,
+                  "description": "Weekly contribution"
+                },
+                {
+                  "date": "2026-04-26",
+                  "type": "credit",
+                  "amount": 120,
+                  "description": "Weekly contribution"
+                }
+              ]
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              
+              "financials": {
+                "openingBalance": 30,
+                "amountIn": 30,
+                "amountOut": 0,
+                "closingBalance": 60,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 30, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-24",
+                  "type": "credit",
+                  "amount": 30,
+                  "description": "Registration fee"
+                }
+              ]
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              
+              "financials": {
+                "openingBalance": 20,
+                "amountIn": 50,
+                "amountOut": 10,
+                "closingBalance": 60,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 50, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-22",
+                  "type": "credit",
+                  "amount": 50,
+                  "description": "Latenes payment"
+                }
+              ]
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              
+              "financials": {
+                "openingBalance": 20,
+                "amountIn": 50,
+                "amountOut": 10,
+                "closingBalance": 60,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 50, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-27",
+                  "type": "credit",
+                  "amount": 50,
+                  "description": "Welfare contribution"
+                }
+              ]
+            }
+          },
+          "processedDeductions": []
+        },
+        "0740404040": {
+          "memberId": "0740404040",
+          "name": "Brian 0m0ndi",
+          "memberFinancials": {
+            "openingBalance": 100,
+            "amountIn": 300,
+            "amountOut": 0,
+            "closingBalance": 400
+          },
+          "accounts": {
+            "001": {
+               "accountId": "001",
+               "accountName": "Saving",
+               
+               "financials": {
+                 "openingBalance": 50,
+                 "amountIn": 250,
+                 "amountOut": 0,
+                 "closingBalance": 300,
+                 "roundContributions": [
+                   { "roundNumber": 1, "contributedAmount": 250, "status": "completed" }
+                 ]
+               },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-20",
+                  "type": "credit",
+                  "amount": 150,
+                  "description": "Weekly contribution"
+                },
+                {
+                  "date": "2026-04-27",
+                  "type": "credit",
+                  "amount": 100,
+                  "description": "Weekly contribution"
+                }
+              ]
+            },
+            "002": {
+              "accountId": "002",
+              "accountName": "Registration",
+              
+              "financials": {
+                "openingBalance": 20,
+                "amountIn": 20,
+                "amountOut": 0,
+                "closingBalance": 40,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 20, "status": "pending" }
+                ] 
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-24",
+                  "type": "credit",
+                  "amount": 20,
+                  "description": "Registration fee"
+                }
+              ]
+            },
+            "003": {
+              "accountId": "003",
+              "accountName": "latenes",
+              
+              "financials": {
+                "openingBalance": 15,
+                "amountIn": 15,
+                "amountOut": 0,
+                "closingBalance": 30,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 15, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-23",
+                  "type": "credit",
+                  "amount": 15,
+                  "description": "Latenes payment"
+                }
+              ]
+            },
+            "004": {
+              "accountId": "004",
+              "accountName": "welfare",
+              
+              "financials": {
+                "openingBalance": 15,
+                "amountIn": 15,
+                "amountOut": 0,
+                "closingBalance": 30,
+                "roundContributions": [
+                  { "roundNumber": 1, "contributedAmount": 15, "status": "pending" }
+                ]
+              },
+              "transactionHistory": [
+                {
+                  "date": "2026-04-26",
+                  "type": "credit",
+                  "amount": 15,
+                  "description": "Welfare contribution"
+                }
+              ]
+            }
+          },
+          "processedDeductions": []
+        }
+      }
+    }
+  }
+}

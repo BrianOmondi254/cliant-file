@@ -5,13 +5,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Group Performance | Agent Portal</title>
+  
+  <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root {
+      /* Color Palette - Modern & Professional */
       --primary: #0f9d58;
       --primary-dark: #0b7d46;
       --primary-light: #ecfdf5;
@@ -23,982 +27,918 @@
       --light: #f8fafc;
       --white: #ffffff;
       --danger: #ef4444;
+      --danger-light: #fee2e2;
       --warning: #f59e0b;
-      --shadow: 0 10px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1);
-      --shadow-lg: 0 20px 25px -5px rgba(0,0,0,.1), 0 10px 10px -5px rgba(0,0,0,.1);
+      --warning-light: #fef3c7;
+      --border: #e2e8f0;
+      
+      /* Shadows */
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      
+      /* Radius */
+      --radius: 12px;
+      --radius-sm: 8px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
-      display: flex;
-      justify-content: center;
-      align-items: stretch;
-      min-height: 100vh;
-      padding: 3px;
+      background-color: #f1f5f9;
       color: var(--dark);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 40px;
     }
 
-    .container {
-      background: var(--white);
-      width: 100%;
+    /* --- Layout --- */
+    .app-container {
       max-width: 900px;
-      border-radius: 5px;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      position: relative;
-      animation: slideIn .5s cubic-bezier(.4,0,.2,1);
-      z-index: 100;
-      padding: 0 2px;
-      margin-bottom: 10px;
-      padding-bottom: 30px;
+      margin: 0 auto;
+      padding: 15px;
     }
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(30px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
+    /* --- Header --- */
     .header {
-      background: linear-gradient(135deg, var(--primary), #34d399);
-      padding: 25px 22px;
+      background: linear-gradient(135deg, var(--primary), #059669);
       color: var(--white);
-      text-align: center;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      border-radius: 5px 5px 0 0;
+      padding: 24px 20px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
     }
 
-    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 5px; letter-spacing: -.5px; }
-    .header p { font-size: 12px; opacity: .9; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 200px;
+      height: 200px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
 
     .back-btn {
-      position: absolute; top: 20px; left: 16px;
-      color: var(--white); text-decoration: none; font-size: 16px; opacity: .8; transition: opacity .2s;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .back-btn:hover { opacity: 1; }
+    .back-btn:hover { background: rgba(255,255,255,0.3); }
 
-    .content { padding: 20px; padding-bottom: 40px; }
-
-    /* Group Info Card */
-    .group-info-card {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border-radius: 12px;
-      padding: 15px;
-      margin-bottom: 20px;
-      border: 1px solid #e2e8f0;
+    .header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
     }
 
-    .group-info-card h3 {
-      font-size: 14px;
-      color: var(--dark);
-      margin-bottom: 12px;
-      font-weight: 700;
+    .header-subtitle {
+      font-size: 12px;
+      opacity: 0.9;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      font-weight: 600;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .info-label {
-      font-size: 10px;
-      color: var(--slate);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
-
-    .info-value {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--dark);
-    }
-
-    /* Summary Cards */
-    .summary-cards {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .summary-card {
+    /* --- Cards & Containers --- */
+    .card {
       background: var(--white);
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 12px;
-      text-align: center;
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      transition: transform 0.2s ease;
     }
 
-    .summary-card-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .summary-card.primary .summary-card-icon { background: var(--primary-light); color: var(--primary); }
-    .summary-card.secondary .summary-card-icon { background: var(--secondary-light); color: var(--secondary); }
-    .summary-card.accent .summary-card-icon { background: #e0f2f1; color: var(--accent); }
-    .summary-card.warning .summary-card-icon { background: #fff3cd; color: var(--warning); }
-
-    .summary-card-value {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--dark);
-      margin-bottom: 2px;
-    }
-
-    .summary-card-label {
-      font-size: 10px;
-      color: var(--slate);
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    /* Section Headers */
-    .section-header {
+    .card-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #e2e8f0;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
     }
 
-    .section-header i {
-      background: var(--primary-light);
-      color: var(--primary);
-      padding: 8px;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .section-header h3 {
+    .card-title {
       font-size: 14px;
       font-weight: 700;
       color: var(--dark);
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    /* Member Table */
-    .member-table-container {
-      background: var(--white);
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      overflow: hidden;
+    .card-title i {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* --- Summary Grid --- */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
       margin-bottom: 20px;
     }
 
-    .member-table {
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      right: -10px;
+      bottom: -10px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      opacity: 0.1;
+      z-index: 0;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 12px;
+      z-index: 1;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--dark);
+      margin-bottom: 4px;
+      z-index: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--slate);
+      font-weight: 600;
+      text-transform: uppercase;
+      z-index: 1;
+    }
+
+    /* Variants */
+    .stat-green .stat-icon { background: var(--primary-light); color: var(--primary); }
+    .stat-green::after { background: var(--primary); }
+    
+    .stat-blue .stat-icon { background: var(--secondary-light); color: var(--secondary); }
+    .stat-blue::after { background: var(--secondary); }
+    
+    .stat-teal .stat-icon { background: #e0f2f1; color: var(--accent); }
+    .stat-teal::after { background: var(--accent); }
+    
+    .stat-orange .stat-icon { background: var(--warning-light); color: var(--warning); }
+    .stat-orange::after { background: var(--warning); }
+
+    /* --- Tables --- */
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
+      white-space: nowrap;
     }
 
-    .member-table th {
-      background: #f8fafc;
-      padding: 10px;
+    th {
+      background: var(--light);
+      padding: 12px 16px;
       text-align: left;
       font-weight: 700;
       color: var(--slate);
-      font-size: 10px;
       text-transform: uppercase;
+      font-size: 10px;
       letter-spacing: 0.5px;
-      border-bottom: 2px solid #e2e8f0;
+      border-bottom: 1px solid var(--border);
     }
 
-    .member-table td {
-      padding: 10px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .member-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .member-table tr:hover {
-      background: var(--light);
-    }
-
-    .member-name {
-      font-weight: 600;
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
       color: var(--dark);
     }
 
-    .member-phone {
-      font-size: 11px;
-      color: var(--slate);
-    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background-color: #f8fafc; }
 
-    .amount {
-      font-weight: 700;
-      color: var(--primary);
-      text-align: right;
-    }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: 700; }
+    .text-green { color: var(--primary); }
+    .text-red { color: var(--danger); }
 
-    .amount.negative {
-      color: var(--danger);
-    }
-
-    /* Chart Container */
-    .chart-container {
-      background: var(--white);
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-
+    /* --- Charts --- */
     .chart-wrapper {
       position: relative;
-      height: 200px;
-      margin-top: 10px;
+      height: 250px;
+      width: 100%;
     }
 
-    /* Account Breakdown */
-    .account-breakdown {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+    /* --- Contribution Schedule Box --- */
+    .schedule-box {
+      background: linear-gradient(135deg, #e0f2f1, #f0fdf4);
+      border: 1px solid #a7f3d0;
+      border-radius: var(--radius-sm);
+      padding: 16px;
       margin-bottom: 20px;
     }
-
-    .account-item {
-      background: var(--white);
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 12px;
-    }
-
-    .account-name {
+    
+    .schedule-header {
       font-size: 11px;
-      font-weight: 600;
-      color: var(--slate);
+      font-weight: 700;
+      color: #0f766e;
       text-transform: uppercase;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    .account-amount {
-      font-size: 16px;
+    .schedule-main {
+      font-size: 18px;
       font-weight: 800;
-      color: var(--dark);
+      color: #0d9488;
+      margin-bottom: 8px;
     }
 
-    .account-expected {
-      font-size: 10px;
-      color: var(--slate);
-      margin-top: 2px;
+    .schedule-meta {
+      font-size: 12px;
+      color: #334155;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
 
-    /* Transaction Item */
+    .meta-item { display: flex; align-items: center; gap: 6px; }
+
+    /* --- Transaction List --- */
+    .transaction-list {
+      display: flex;
+      flex-direction: column;
+    }
+
     .transaction-item {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
     }
 
-    .transaction-item:last-child {
-      border-bottom: none;
-    }
+    .transaction-item:last-child { border-bottom: none; }
 
-    .transaction-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .transaction-icon {
-      width: 32px;
-      height: 32px;
+    .tx-icon {
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      margin-right: 12px;
+      flex-shrink: 0;
     }
 
-    .transaction-icon.in {
-      background: var(--primary-light);
-      color: var(--primary);
-    }
+    .tx-icon.in { background: var(--primary-light); color: var(--primary); }
+    .tx-icon.out { background: var(--danger-light); color: var(--danger); }
 
-    .transaction-icon.out {
-      background: #fee2e2;
-      color: var(--danger);
-    }
+    .tx-details { flex-grow: 1; }
+    .tx-title { font-size: 13px; font-weight: 600; color: var(--dark); }
+    .tx-sub { font-size: 11px; color: var(--slate); }
+    
+    .tx-amount { font-size: 14px; font-weight: 700; }
+    .tx-amount.in { color: var(--primary); }
+    .tx-amount.out { color: var(--danger); }
 
-    .transaction-details {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .transaction-desc {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--dark);
-    }
-
-    .transaction-date {
-      font-size: 10px;
-      color: var(--slate);
-    }
-
-    .transaction-amount {
+    /* --- Toast Notification --- */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      box-shadow: var(--shadow-lg);
       font-size: 14px;
-      font-weight: 800;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .toast.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
 
-    .transaction-amount.in {
-      color: var(--primary);
-    }
+    .toast-success { background: var(--primary); }
+    .toast-error { background: var(--danger); }
 
-    .transaction-amount.out {
-      color: var(--danger);
-    }
-
-    /* No Data */
-    .no-data {
-      text-align: center;
-      padding: 30px;
-      color: var(--slate);
-      font-size: 12px;
-    }
-
-    .no-data i {
-      font-size: 40px;
-      margin-bottom: 10px;
-      opacity: 0.5;
-    }
-
-    /* Empty State */
-    .empty-state {
-      background: var(--light);
-      border-radius: 10px;
-      padding: 20px;
-      text-align: center;
-      color: var(--slate);
-      font-size: 12px;
-    }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 15px;
+    /* --- Utility --- */
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
       font-size: 10px;
-      color: var(--slate);
-      border-top: 1px solid #e2e8f0;
-      margin-top: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-green { background: var(--primary-light); color: var(--primary); }
+    
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 20px; }
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div class="header">
-      <a href="/agent" class="back-btn"><i class="fas fa-arrow-left"></i></a>
-      <h1><%= group.groupName %></h1>
-      <p>Group Performance Dashboard</p>
+
+     <div class="app-container">
+     
+      <!-- Header -->
+      <header class="header">
+        <div class="header-nav" style="display: flex; align-items: center; justify-content: center; position: relative;">
+          <button class="back-btn" onclick="goBack()" aria-label="Go Back" style="position: absolute; left: 0;">
+            <i class="fas fa-arrow-left"></i>
+          </button>
+          <h1 id="groupNameDisplay" style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin: 0;"><%- group?.groupName || (groupData?.groupName) || 'Loading Group...' %></h1>
+        </div>
+     </header>
+
+      <!-- Summary Stats -->
+      <div class="summary-grid">
+        <div class="stat-card stat-blue">
+          <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+          <div class="stat-value"><%= 'KES ' + Number(totalClosingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
+          <div class="stat-label">Account Balance</div>
+        </div>
+        <div class="stat-card stat-teal">
+          <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+          <div class="stat-value"><%= 'KES ' + Number(totalAmountIn || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
+          <div class="stat-label">Contributions</div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+          <div class="stat-value"><%= 'KES ' + Number(benefitAccountsTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) %></div>
+          <div class="stat-label">Account Benefit</div>
+        </div>
+        <div class="stat-card stat-orange">
+          <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+          <div class="stat-value" id="activeLoans">0</div>
+          <div class="stat-label">Active Loans</div>
+        </div>
+      </div>
+
+     <!-- Group Performance Section -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fas fa-chart-bar" style="background: var(--primary-light); color: var(--primary);"></i>
+          Performance Overview
+        </div>
+        <span class="badge badge-green" id="statusBadge">Active</span>
+      </div>
+
+      <!-- Schedule Info -->
+      <div class="schedule-box">
+        <div class="schedule-header">
+          <i class="far fa-clock"></i> Contribution Schedule
+        </div>
+        <div class="schedule-main" id="scheduleFrequency">Calculating...</div>
+        <div class="schedule-meta">
+          <div class="meta-item"><i class="far fa-calendar-alt"></i> <span id="dateRange">--</span></div>
+          <div class="meta-item"><i class="fas fa-layer-group"></i> <span id="cyclesCount">0 cycles</span></div>
+        </div>
+      </div>
+
+       <!-- Performance Metrics Grid (Mini) -->
+       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
+         <div style="background: var(--light); padding: 12px; border-radius: 8px;">
+           <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Expected Per Cycle</div>
+           <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="expectedPerCycle">KES 0</div>
+         </div>
+         <div style="background: var(--light); padding: 12px; border-radius: 8px;">
+           <div style="font-size: 10px; color: var(--slate); font-weight: 700; text-transform: uppercase;">Avg. Per Member</div>
+           <div style="font-size: 16px; font-weight: 700; color: var(--dark);" id="avgPerMember">KES 0</div>
+         </div>
+       </div>
+
+       <!-- Account Breakdown Section -->
+       <div class="card" style="margin-top: 20px;">
+         <div class="card-header">
+           <div class="card-title">
+             <i class="fas fa-wallet" style="background: var(--primary-light); color: var(--primary);"></i>
+             Account Balances Summary
+           </div>
+         </div>
+         <div class="table-responsive">
+           <table id="accountBreakdownTable">
+             <thead>
+               <tr>
+                 <th>Account ID</th>
+                 <th>Account Name</th>
+                 <th class="text-right">Closing Balance</th>
+                 <th class="text-right">Total In</th>
+                 <th class="text-right">Total Out</th>
+                 <th class="text-right">Members</th>
+               </tr>
+             </thead>
+             <tbody>
+               <!-- Populated by JS -->
+             </tbody>
+           </table>
+         </div>
+       </div>
+
+      <!-- Cycles Table -->
+      <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 13px; font-weight: 700; color: var(--dark);">Contribution Cycles</h3>
+        <button onclick="showToast('Exporting CSV...', 'success')" style="background:none; border:none; color: var(--primary); font-size: 12px; font-weight: 600; cursor: pointer;">
+          <i class="fas fa-download"></i> Export
+        </button>
+      </div>
+      
+      <div class="table-responsive">
+        <table id="cyclesTable">
+          <thead>
+            <tr>
+              <th>Cycle</th>
+              <th>Date</th>
+              <th class="text-right">Expected</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="margin-top: 15px; text-align: center; font-size: 11px; color: var(--slate); background: var(--light); padding: 10px; border-radius: 6px;">
+        Total Expected Collection: <span id="totalGrandTotal" class="font-bold text-green">KES 0</span>
+      </div>
     </div>
 
-    <div class="content">
-
-      <!-- Group Info -->
-      <div class="group-info-card">
-        <h3><i class="fas fa-building"></i> Group Information</h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="info-label">Location</span>
-            <span class="info-value"><%= group.ward %>, <%= group.constituency %></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Phase</span>
-            <span class="info-value">Phase <%= group.phase || 1 %></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Total Members</span>
-            <span class="info-value"><%= group.totalProposedMembers || Object.keys(group.members || {}).length %></span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Status</span>
-            <span class="info-value" style="color: var(--primary); font-weight: 700;">Active</span>
-          </div>
+    <!-- Charts Section -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fas fa-chart-pie" style="background: var(--secondary-light); color: var(--secondary);"></i>
+          Analytics
         </div>
       </div>
-
-      <!-- Summary Cards -->
-      <div class="summary-cards">
-        <div class="summary-card primary">
-          <div class="summary-card-icon"><i class="fas fa-users"></i></div>
-          <div class="summary-card-value" id="totalMembers">0</div>
-          <div class="summary-card-label">Total Members</div>
+      
+      <div style="display: grid; gap: 20px;">
+        <div>
+          <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 10px; font-weight: 600;">Transaction History (In vs Out)</h4>
+          <div class="chart-wrapper">
+            <canvas id="transactionChart"></canvas>
+          </div>
         </div>
-        <div class="summary-card secondary">
-          <div class="summary-card-icon"><i class="fas fa-wallet"></i></div>
-          <div class="summary-card-value" id="totalSavings">KES 0</div>
-          <div class="summary-card-label">Total Savings</div>
+        
+        <div style="border-top: 1px solid var(--border); padding-top: 20px;">
+          <h4 style="font-size: 12px; color: var(--slate); margin-bottom: 10px; font-weight: 600;">Member Growth</h4>
+          <div class="chart-wrapper">
+            <canvas id="memberGrowthChart"></canvas>
+          </div>
         </div>
-        <div class="summary-card accent">
-          <div class="summary-card-icon"><i class="fas fa-chart-line"></i></div>
-          <div class="summary-card-value" id="totalContributions">KES 0</div>
-          <div class="summary-card-label">Contributions</div>
-        </div>
-        <div class="summary-card warning">
-          <div class="summary-card-icon"><i class="fas fa-hand-holding-usd"></i></div>
-          <div class="summary-card-value" id="activeLoans">0</div>
-          <div class="summary-card-label">Active Loans</div>
-        </div>
-      </div>
-
-    <!-- Group Performance Summary (replaces Member Performance Table) -->
-    <div class="member-table-container">
-      <div class="section-header">
-        <i class="fas fa-chart-line"></i>
-        <h3>Group Performance by <%= group.principles?.intervals?.frequency ? group.principles.intervals.frequency.charAt(0).toUpperCase() + group.principles.intervals.frequency.slice(1) : 'Contribution' %> Interval</h3>
-      </div>
-      <div id="groupPerformanceContent">
-        <!-- Group metrics will be populated by JavaScript -->
       </div>
     </div>
 
-    <!-- Account Breakdown -->
-      <div class="section-header">
-        <i class="fas fa-coins"></i>
-        <h3>Account Breakdown</h3>
-      </div>
-      <div class="account-breakdown" id="accountBreakdown">
-        <!-- Account items will be populated by JavaScript -->
-      </div>
-
-      <!-- Transaction History Chart -->
-      <div class="chart-container">
-        <div class="section-header">
-          <i class="fas fa-chart-bar"></i>
-          <h3>Transaction History (By Date)</h3>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="transactionChart"></canvas>
+    <!-- Transactions List -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="fas fa-history" style="background: var(--warning-light); color: var(--warning);"></i>
+          Recent Transactions
         </div>
       </div>
-
-      <!-- Member Growth Chart -->
-      <div class="chart-container">
-        <div class="section-header">
-          <i class="fas fa-user-plus"></i>
-          <h3>Member Growth Over Time</h3>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="memberGrowthChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Contribution Distribution -->
-      <div class="chart-container">
-        <div class="section-header">
-          <i class="fas fa-pie-chart"></i>
-          <h3>Contribution Distribution</h3>
-        </div>
-        <div class="chart-wrapper">
-          <canvas id="contributionChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Recent Transactions List -->
-      <div class="member-table-container">
-        <div class="section-header">
-          <i class="fas fa-history"></i>
-          <h3>Recent Transactions</h3>
-        </div>
-        <div id="transactionListContent">
-          <!-- Transactions will be populated by JavaScript -->
-        </div>
-      </div>
-
-      <div class="footer">
-        Generated on <%= new Date().toLocaleString() %> | Group Performance Dashboard
+      <div class="transaction-list" id="transactionList">
+        <!-- Populated by JS -->
       </div>
     </div>
+
+    <!-- Footer -->
+    <footer style="text-align: center; color: var(--slate); font-size: 11px; margin-top: 30px;">
+      <p>Generated on <span id="currentDate"></span></p>
+      <p>Group Performance Dashboard v2.0</p>
+    </footer>
+
   </div>
 
-  <script>
-    // Data passed from server
-    const group = <%- JSON.stringify(group) %>;
-    const members = <%- JSON.stringify(group.members || {}) %>;
-    const memberFinancials = <%- JSON.stringify(group.memberFinancials || []) %>;
+  <!-- Toast Container -->
+  <div id="toast" class="toast">
+    <i class="fas fa-info-circle"></i>
+    <span id="toastMessage">Notification</span>
+   </div>
 
-    // Process and render data
-     document.addEventListener('DOMContentLoaded', function() {
-       renderSummary();
-       renderGroupPerformance();
-       renderAccountBreakdown();
-       renderTransactionHistory();
-       renderMemberGrowthChart();
-       renderContributionChart();
-       renderTransactionList();
-     });
+   <script>
+       // --- 2. LOGIC & FUNCTIONS ---
+
+       let groupData = <%- JSON.stringify(groupData || {}) %>;
+       let group = <%- JSON.stringify(group || {}) %>;
+
+      // Initialization
+      document.addEventListener('DOMContentLoaded', () => {
+        initData();
+        calculateAndRenderAll();
+        renderPerformanceSection();
+        initCharts();
+        renderTransactionList();
+        document.getElementById('currentDate').textContent = new Date().toLocaleString();
+      });
+
+      function calculateAndRenderAll() {
+        // Build account-wise totals from member accounts
+        const accountWiseTotals = {};
+
+        if (groupData?.members) {
+          Object.values(groupData.members).forEach(member => {
+            if (member.accounts) {
+              Object.values(member.accounts).forEach(account => {
+                const accountId = account.accountId;
+                if (!accountWiseTotals[accountId]) {
+                  accountWiseTotals[accountId] = {
+                    accountId: accountId,
+                    accountName: account.accountName || 'Unknown',
+                    closingBalance: 0,
+                    amountIn: 0,
+                    amountOut: 0,
+                    memberCount: 0
+                  };
+                }
+                accountWiseTotals[accountId].closingBalance += parseFloat(account.financials?.closingBalance || 0);
+                accountWiseTotals[accountId].amountIn += parseFloat(account.financials?.amountIn || 0);
+                accountWiseTotals[accountId].amountOut += parseFloat(account.financials?.amountOut || 0);
+                accountWiseTotals[accountId].memberCount++;
+              });
+            }
+          });
+        }
+
+        // Sum all account balances for total savings and contributions
+        let totalSavings = 0;
+        let totalContributions = 0;
+        Object.values(accountWiseTotals).forEach(acc => {
+          totalSavings += acc.closingBalance;
+          totalContributions += acc.amountIn;
+        });
+
+        const activeLoans = 2; // Hardcoded for mock visual
+
+        // Update Summary Stats (only activeLoans is set client-side)
+        document.getElementById('activeLoans').textContent = activeLoans;
+
+        // Render Account Breakdown Table
+        renderAccountBreakdown(accountWiseTotals);
+      }
+
+      function initData() {
+        // Header already rendered server-side via EJS, only set JS fallback if needed
+        const groupNameEl = document.getElementById('groupNameDisplay');
+        const gd = groupData || {};
+        const g = group || {};
+        // If header elements are empty, populate them from available data
+        if (groupNameEl && !groupNameEl.textContent.replace(/<[^>]*>/g, '').trim()) {
+          groupNameEl.innerHTML = g.groupName || gd.groupName || 'Unknown Group';
+        }
+      }
 
     function formatCurrency(amount) {
-      return 'KES ' + (amount || 0).toLocaleString();
+      return 'KES ' + Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
 
-    function renderSummary() {
-      const memberIds = Object.keys(members);
-      const totalMembers = memberIds.length;
+      // --- Account Breakdown ---
+      function renderAccountBreakdown(accountWiseTotals) {
+        const tableBody = document.querySelector('#accountBreakdownTable tbody');
+        if (!tableBody) return;
 
-      let totalSavings = 0;
-      let totalContributions = 0;
-      let activeLoans = 0;
+        const accounts = Object.values(accountWiseTotals).sort((a, b) => a.accountId.localeCompare(b.accountId));
 
-      memberIds.forEach(memberId => {
-        const member = members[memberId];
-        if (member && member.accounts) {
-          Object.values(member.accounts).forEach(acc => {
-            if (acc.financials) {
-              totalSavings += parseFloat(acc.financials.closingBalance || 0);
-              totalContributions += parseFloat(acc.financials.amountIn || 0);
-            }
-          });
+        if (accounts.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 10px;">No account data available</td></tr>';
+          return;
         }
-      });
 
-      document.getElementById('totalMembers').textContent = totalMembers;
-      document.getElementById('totalSavings').textContent = formatCurrency(totalSavings);
-      document.getElementById('totalContributions').textContent = formatCurrency(totalContributions);
-      document.getElementById('activeLoans').textContent = activeLoans; // Placeholder
-    }
+        let html = '';
+        accounts.forEach(acc => {
+          html += `
+            <tr>
+              <td><span class="badge badge-green">${acc.accountId}</span></td>
+              <td>${acc.accountName}</td>
+              <td class="text-right font-bold">${formatCurrency(acc.closingBalance)}</td>
+              <td class="text-right text-green">+${formatCurrency(acc.amountIn)}</td>
+              <td class="text-right text-red">-${formatCurrency(acc.amountOut)}</td>
+              <td class="text-right">${acc.memberCount}</td>
+            </tr>
+          `;
+        });
 
-    function renderGroupPerformance() {
-      const container = document.getElementById('groupPerformanceContent');
-      const memberIds = Object.keys(members);
-      const totalMembers = memberIds.length;
+        // Grand total row
+        const grandTotals = accounts.reduce((sum, acc) => ({
+          closingBalance: sum.closingBalance + acc.closingBalance,
+          amountIn: sum.amountIn + acc.amountIn,
+          amountOut: sum.amountOut + acc.amountOut
+        }), { closingBalance: 0, amountIn: 0, amountOut: 0 });
 
-      // Get group's contribution interval
-      const intervals = group.principles?.intervals || {};
-      const frequency = intervals.frequency || 'Not Set';
-      const period = intervals.period || '';
-      const endSavingPeriod = intervals.endSavingPeriod || '';
+        html += `
+          <tr style="background: var(--light); font-weight: 700;">
+            <td colspan="2" class="text-right">Grand Total</td>
+            <td class="text-right text-green">${formatCurrency(grandTotals.closingBalance)}</td>
+            <td class="text-right text-green">${formatCurrency(grandTotals.amountIn)}</td>
+            <td class="text-right text-red">${formatCurrency(grandTotals.amountOut)}</td>
+            <td class="text-right">${accounts.length}</td>
+          </tr>
+        `;
 
-      // Calculate group totals
-      let totalSavings = 0;
-      let totalContributions = 0;
-      let totalWithdrawals = 0;
-      let expectedPerCycle = 0;
-
-      memberIds.forEach(memberId => {
-        const member = members[memberId];
-        if (member && member.accounts) {
-          Object.values(member.accounts).forEach(acc => {
-            if (acc.financials) {
-              totalSavings += parseFloat(acc.financials.closingBalance || 0);
-              totalContributions += parseFloat(acc.financials.amountIn || 0);
-              totalWithdrawals += parseFloat(acc.financials.amountOut || 0);
-            }
-          });
-        }
-      });
-
-      // Calculate expected contribution per cycle
-      const accountSchema = group.accountSchema || {};
-      const expectedAmounts = Object.values(accountSchema).map(acc => parseFloat(acc.expectedAmount) || 0);
-      expectedPerCycle = expectedAmounts.reduce((sum, amt) => sum + amt, 0);
-
-      // Build interval display text
-      let intervalText = frequency.charAt(0).toUpperCase() + frequency.slice(1);
-      if (frequency === 'weekly' && period) {
-        intervalText += ` on ${period.charAt(0).toUpperCase() + period.slice(1)}`;
-      } else if (frequency === 'monthly' && period) {
-        intervalText += ` (${period.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())})`;
-      } else if (frequency === 'yearly' && period) {
-        intervalText += ` in ${period.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+        tableBody.innerHTML = html;
       }
 
-      // Build HTML
-      let html = `
-        <div style="display: flex; flex-direction: column; gap: 15px;">
+      // --- Performance & Cycles Logic ---
+     function renderPerformanceSection() {
+       const intervals = groupData?.principles?.intervals || {};
+       const frequency = intervals.frequency || 'Not Set';
+       
+       // Calculate Dates
+       const startDate = new Date(groupData?.constitutionStartKey || groupData?.createdAt || Date.now());
+       const endDate = new Date(startDate);
+      
+      // Calculate end date based on saving period
+      const duration = intervals.endSavingPeriod || '1-year';
+      if (duration === '6-months') endDate.setMonth(endDate.getMonth() + 6);
+      else if (duration === '1-year') endDate.setFullYear(endDate.getFullYear() + 1);
+      else if (duration === '2-years') endDate.setFullYear(endDate.getFullYear() + 2);
 
-          <!-- Contribution Interval Card -->
-          <div style="background: linear-gradient(135deg, #e0f2f1, #ecfdf5); padding: 15px; border-radius: 10px; border: 1px solid #5f9ea0;">
-            <div style="font-size: 11px; font-weight: 700; color: #00695c; text-transform: uppercase; margin-bottom: 8px;">
-              <i class="fas fa-clock" style="margin-right: 5px;"></i> Contribution Schedule
-            </div>
-            <div style="font-size: 16px; font-weight: 800; color: #008080; margin-bottom: 4px;">
-              ${intervalText}
-            </div>
-            ${endSavingPeriod ? `
-              <div style="font-size: 12px; color: #475569;">
-                Saving Period: ${endSavingPeriod.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </div>
-            ` : ''}
-          </div>
+      // Text Updates
+      document.getElementById('dateRange').textContent = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+      document.getElementById('scheduleFrequency').textContent = frequency.charAt(0).toUpperCase() + frequency.slice(1);
 
-          <!-- Group Metrics Grid -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Total Members</div>
-              <div style="font-size: 20px; font-weight: 800; color: #1e293b;">${totalMembers}</div>
-            </div>
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Group Expected Cycle</div>
-              <div style="font-size: 16px; font-weight: 800; color: #0f9d58;">${formatCurrency(expectedPerCycle)}</div>
-              <div style="font-size: 10px; color: #64748b;">per ${frequency} contribution</div>
-            </div>
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Total Contributions</div>
-              <div style="font-size: 18px; font-weight: 800; color: #0f9d58;">${formatCurrency(totalContributions)}</div>
-            </div>
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Current Savings</div>
-              <div style="font-size: 18px; font-weight: 800; color: #0f9d58;">${formatCurrency(totalSavings)}</div>
-            </div>
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Avg Per Member</div>
-              <div style="font-size: 18px; font-weight: 800; color: #64748b;">${formatCurrency(totalMembers ? totalSavings / totalMembers : 0)}</div>
-            </div>
-            <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Total Withdrawals</div>
-              <div style="font-size: 18px; font-weight: 800; color: #ef4444;">${formatCurrency(totalWithdrawals)}</div>
-            </div>
-          </div>
+       // Calculate Expected per Cycle
+       const accounts = Object.values(groupData?.accountSchema || {});
+       const expectedPerCycle = accounts.reduce((sum, acc) => sum + (parseFloat(acc.expectedAmount) || 0), 0);
+       const totalMembers = Object.keys(groupData?.members || {}).length;
+       
+       document.getElementById('expectedPerCycle').textContent = formatCurrency(expectedPerCycle);
+       document.getElementById('avgPerMember').textContent = formatCurrency(totalMembers > 0 ? (totalSavingsGlobal / totalMembers) : 0);
 
-          <!-- Contribution Statistics -->
-          <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-            <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">
-              <i class="fas fa-chart-bar" style="color: #008080; margin-right: 8px;"></i> Group Contribution Statistics
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 12px;">
-              <div>
-                <span style="color: #64748b;">Total Expected (since start):</span>
-                <span style="font-weight: 800; color: #1e293b; float: right;">${formatCurrency(totalContributions + totalSavings)}</span>
-              </div>
-              <div>
-                <span style="color: #64748b;">Net Balance:</span>
-                <span style="font-weight: 800; color: #0f9d58; float: right;">${formatCurrency(totalSavings - totalWithdrawals)}</span>
-              </div>
-              <div>
-                <span style="color: #64748b;">Collection Efficiency:</span>
-                <span style="font-weight: 800; color: #0f9d58; float: right;">
-                  ${totalMembers && expectedPerCycle > 0 ? Math.round((totalContributions / (totalMembers * expectedPerCycle)) * 100) : 0}%
-                </span>
-              </div>
-              <div>
-                <span style="color: #64748b;">Expected Cycle Count:</span>
-                <span style="font-weight: 800; color: #64748b; float: right;">
-                  ${totalMembers > 0 ? (totalContributions / (totalMembers * expectedPerCycle)).toFixed(1) : 0}
-                </span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      `;
-
-      container.innerHTML = html;
+     // Generate Cycles
+     generateCyclesTable(startDate, endDate, frequency, expectedPerCycle);
+     
+     const statusBadge = document.getElementById('statusBadge');
+     if (statusBadge) {
+       statusBadge.textContent = groupData?.status || 'Active';
+     }
     }
+    
+     // Helper to keep track of savings for avg calc
+     let totalSavingsGlobal = 0;
+     // (Total savings is calculated again in renderSummary, but we need it here too for the avg display)
+     // A quick re-calc just for scope cleanliness:
+     if (groupData?.members) {
+       Object.values(groupData.members).forEach(m => {
+         if (m.accounts) {
+           Object.values(m.accounts).forEach(a => totalSavingsGlobal += parseFloat(a.financials?.closingBalance || 0));
+         }
+       });
+     }
 
-    function renderAccountBreakdown() {
-      const container = document.getElementById('accountBreakdown');
-      const accountSchema = group.accountSchema || {};
+    function generateCyclesTable(startDate, endDate, frequency, expectedPerCycle) {
+      const tableBody = document.querySelector('#cyclesTable tbody');
+      const cycles = [];
+      let current = new Date(startDate);
+      let grandTotal = 0;
+      let cycleCount = 0;
 
-      if (Object.keys(accountSchema).length === 0) {
-        container.innerHTML = '<div class="empty-state">No account configuration</div>';
-        return;
+      while (current <= endDate) {
+        // Limit to 12 cycles for display purposes to avoid massive tables in demo
+        if (cycleCount >= 12) break; 
+
+        const cycleDate = new Date(current);
+        let label = '';
+        
+        if (frequency === 'monthly') {
+          label = cycleDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } else if (frequency === 'weekly') {
+          label = cycleDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        } else {
+          label = cycleDate.toLocaleDateString();
+        }
+
+        cycles.push({ date: label, cycleNum: cycleCount + 1 });
+        grandTotal += expectedPerCycle;
+
+        // Advance date
+        if (frequency === 'daily') current.setDate(current.getDate() + 1);
+        else if (frequency === 'weekly') current.setDate(current.getDate() + 7);
+        else if (frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+        else if (frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+
+        cycleCount++;
       }
+
+      document.getElementById('cyclesCount').textContent = `${cycleCount} Cycles`;
+      document.getElementById('totalGrandTotal').textContent = formatCurrency(grandTotal);
 
       let html = '';
-      Object.values(accountSchema).forEach(acc => {
+      cycles.forEach(cycle => {
         html += `
-          <div class="account-item">
-            <div class="account-name">${acc.accountName}</div>
-            <div class="account-amount">KES ${acc.expectedAmount}</div>
-            <div class="account-expected">Expected per member</div>
-          </div>
+          <tr>
+            <td><span class="badge badge-green">Cycle ${cycle.cycleNum}</span></td>
+            <td>${cycle.date}</td>
+            <td class="text-right font-bold">${formatCurrency(expectedPerCycle)}</td>
+          </tr>
         `;
       });
 
-      container.innerHTML = html;
-    }
-
-    function renderTransactionHistory() {
-      const ctx = document.getElementById('transactionChart');
-      if (!ctx) return;
-
-      // Collect all transactions from members
-      const allTransactions = [];
-      Object.values(members).forEach(member => {
-        if (member && member.accounts) {
-          Object.values(member.accounts).forEach(acc => {
-            if (acc.transactionHistory && Array.isArray(acc.transactionHistory)) {
-              acc.transactionHistory.forEach(tx => {
-                allTransactions.push({
-                  date: tx.date || tx.createdAt,
-                  amount: parseFloat(tx.amount || 0),
-                  type: tx.type || tx.transactionType || 'credit',
-                  description: tx.description || tx.narative || acc.accountName
-                });
-              });
-            }
-          });
-        }
-      });
-
-      if (allTransactions.length === 0) {
-        // Show empty chart with message
-        new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['No transactions'],
-            datasets: [{
-              label: 'Amount',
-              data: [0],
-              backgroundColor: '#e2e8f0'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              annotation: {
-                annotations: {
-                  line1: {
-                    type: 'label',
-                    content: ['No transaction data available'],
-                    position: 'center'
-                  }
-                }
-              }
-            }
-          }
-        });
-        return;
+      if (cycleCount === 0) {
+        html = `<tr><td colspan="3" style="text-align:center; padding: 20px;">No cycles configured</td></tr>`;
       }
 
-      // Group transactions by date
-      const dateGroups = {};
-      allTransactions.forEach(tx => {
-        const date = tx.date ? tx.date.substring(0, 10) : 'Unknown';
-        if (!dateGroups[date]) dateGroups[date] = { in: 0, out: 0 };
-        if (tx.type === 'debit' || tx.type === 'withdrawal') {
-          dateGroups[date].out += tx.amount;
-        } else {
-          dateGroups[date].in += tx.amount;
-        }
-      });
+      tableBody.innerHTML = html;
+    }
 
-      const sortedDates = Object.keys(dateGroups).sort();
-      const inData = sortedDates.map(d => dateGroups[d].in);
-      const outData = sortedDates.map(d => dateGroups[d].out);
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: sortedDates,
-          datasets: [
-            {
-              label: 'In',
-              data: inData,
-              backgroundColor: '#0f9d58'
-            },
-            {
-              label: 'Out',
-              data: outData,
-              backgroundColor: '#ef4444'
-            }
-          ]
-        },
+    // --- Chart.js Integration ---
+    function initCharts() {
+       // 1. Transaction History (Bar Chart)
+       const ctxTx = document.getElementById('transactionChart').getContext('2d');
+       const txHistory = groupData?.transactionHistory || [];
+       new Chart(ctxTx, {
+         type: 'bar',
+         data: {
+           labels: txHistory.map(t => t.date),
+           datasets: [{
+             label: 'Inflow',
+             data: txHistory.map(t => t.type === 'credit' ? t.amount : 0),
+             backgroundColor: '#0f9d58',
+             borderRadius: 4
+           }, {
+             label: 'Outflow',
+             data: txHistory.map(t => t.type === 'debit' ? t.amount : 0),
+             backgroundColor: '#ef4444',
+             borderRadius: 4
+           }]
+         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            x: { stacked: true },
-            y: { stacked: true, beginAtZero: true }
-          },
-          plugins: {
-            legend: { position: 'bottom' }
-          }
+          plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6 } } },
+          scales: { y: { beginAtZero: true, grid: { borderDash: [2, 4] } }, x: { grid: { display: false } } }
         }
       });
-    }
 
-    function renderMemberGrowthChart() {
-      const ctx = document.getElementById('memberGrowthChart');
-      if (!ctx) return;
-
-      // Try to get performance data from group-performance.json
-      // For now show simple member count
-      const memberIds = Object.keys(members);
-      const totalMembers = memberIds.length;
-
-      new Chart(ctx, {
+      // 2. Member Growth (Line Chart)
+      const ctxGrowth = document.getElementById('memberGrowthChart').getContext('2d');
+      // Mocking growth data
+      const growthData = [1, 3, 3, 5, 5, 5];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+      
+      new Chart(ctxGrowth, {
         type: 'line',
         data: {
-          labels: ['Current'],
+          labels: months,
           datasets: [{
             label: 'Members',
-            data: [totalMembers],
-            borderColor: '#0f9d58',
-            backgroundColor: 'rgba(15, 157, 88, 0.1)',
+            data: growthData,
+            borderColor: '#4285f4',
+            backgroundColor: 'rgba(66, 133, 244, 0.1)',
             fill: true,
-            tension: 0.4
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#fff',
+            pointBorderWidth: 2
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true }
-          },
-          plugins: {
-            legend: { display: false }
-          }
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } }
         }
       });
     }
 
-    function renderContributionChart() {
-      const ctx = document.getElementById('contributionChart');
-      if (!ctx) return;
+    // --- Transaction List ---
+     function renderTransactionList() {
+       const container = document.getElementById('transactionList');
+       if (!groupData || !groupData.members) {
+         container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--slate);">No data available</div>`;
+         return;
+       }
+       const allTx = [];
 
-      // Aggregate contributions by account type
-      const accountTotals = {};
-      Object.values(members).forEach(member => {
-        if (member && member.accounts) {
-          Object.values(member.accounts).forEach(acc => {
-            const name = acc.accountName || 'Unknown';
-            const amount = parseFloat(acc.financials?.amountIn || 0);
-            accountTotals[name] = (accountTotals[name] || 0) + amount;
-          });
-        }
-      });
+       // Flatten data
+       Object.values(groupData.members).forEach(member => {
+         Object.values(member.accounts).forEach(acc => {
+           if (acc.transactionHistory) {
+             acc.transactionHistory.forEach(tx => {
+               allTx.push({
+                 ...tx,
+                 memberName: member.name,
+                 accountName: groupData.accountSchema?.[Object.keys(member.accounts).find(k => member.accounts[k] === acc)]?.accountName || 'Account'
+               });
+             });
+           }
+         });
+       });
 
-      const labels = Object.keys(accountTotals);
-      const data = Object.values(accountTotals);
-      const colors = ['#0f9d58', '#4285f4', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+       // Sort descending
+       allTx.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      if (labels.length === 0) {
-        new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['No Data'],
-            datasets: [{
-              data: [1],
-              backgroundColor: '#e2e8f0'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false
-          }
-        });
-        return;
-      }
+       if (allTx.length === 0) {
+         container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--slate);">No transactions found</div>`;
+         return;
+       }
 
-      new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors.slice(0, labels.length)
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
+       let html = '';
+       allTx.slice(0, 10).forEach(tx => {
+         const isIn = tx.type === 'credit';
+         html += `
+           <div class="transaction-item">
+             <div class="tx-icon ${isIn ? 'in' : 'out'}">
+               <i class="fas fa-arrow-${isIn ? 'down' : 'up'}"></i>
+             </div>
+             <div class="tx-details">
+               <div class="tx-title">${tx.description}</div>
+               <div class="tx-sub">${tx.memberName} • ${tx.accountName}</div>
+             </div>
+             <div class="tx-amount ${isIn ? 'in' : 'out'}">
+               ${isIn ? '+' : '-'} ${formatCurrency(tx.amount)}
+             </div>
+           </div>
+         `;
+       });
+       container.innerHTML = html;
+     }
+
+    // --- Utilities ---
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toastMessage');
+      
+      msg.textContent = message;
+      toast.className = `toast toast-${type} visible`;
+      
+      setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 3000);
     }
 
-    function renderTransactionList() {
-      const container = document.getElementById('transactionListContent');
-      const allTransactions = [];
-
-      Object.values(members).forEach(member => {
-        if (member && member.accounts) {
-          Object.values(member.accounts).forEach(acc => {
-            if (acc.transactionHistory && Array.isArray(acc.transactionHistory)) {
-              acc.transactionHistory.forEach(tx => {
-                allTransactions.push({
-                  date: tx.date || tx.createdAt,
-                  memberName: member.name || 'Unknown',
-                  accountName: acc.accountName,
-                  amount: parseFloat(tx.amount || 0),
-                  type: tx.type || tx.transactionType || 'credit',
-                  description: tx.description || 'Transaction'
-                });
-              });
-            }
-          });
-        }
-      });
-
-      if (allTransactions.length === 0) {
-        container.innerHTML = '<div class="no-data"><i class="fas fa-receipt"></i><p>No transactions recorded yet</p></div>';
-        return;
-      }
-
-      // Sort by date descending
-      allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      // Take latest 20
-      const recentTx = allTransactions.slice(0, 20);
-
-      let html = '';
-      recentTx.forEach(tx => {
-        const isIn = tx.type !== 'debit' && tx.type !== 'withdrawal';
-        const iconClass = isIn ? 'in' : 'out';
-        const icon = isIn ? 'fa-arrow-down' : 'fa-arrow-up';
-        const amountClass = isIn ? 'in' : 'out';
-        const formattedDate = tx.date ? new Date(tx.date).toLocaleDateString() : 'Unknown';
-
-        html += `
-          <div class="transaction-item">
-            <div class="transaction-left">
-              <div class="transaction-icon ${iconClass}">
-                <i class="fas ${icon}"></i>
-              </div>
-              <div class="transaction-details">
-                <span class="transaction-desc">${tx.description} - ${tx.accountName} (${tx.memberName})</span>
-                <span class="transaction-date">${formattedDate}</span>
-              </div>
-            </div>
-            <div class="transaction-amount ${amountClass}">
-              ${isIn ? '+' : '-'} ${formatCurrency(tx.amount)}
-            </div>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html;
+    function goBack() {
+      showToast("Navigating back...", "success");
+      // In a real app: window.history.back();
     }
+
   </script>
 </body>
-
 </html>

@@ -159,11 +159,11 @@
       {
         "groupName": "kisumu brother shg group",
         "groupType": "Women's Group",
-        "accountNumber": "0740415992",
+        "accountNumber": "2540422491234003",
         "pin": "2133",
         "createdAt": "2026-04-30T12:13:50.038Z",
         "agentProcessed": "0740001141",
-        "phase": 2,
+        "phase": 3,
         "totalProposedMembers": 3,
         "trustee_1": {
           "index": "1",
@@ -197,8 +197,202 @@
         "groupCertificateNumber": "1234",
         "constitutionStartKey": "2133",
         "constitutionKeyGeneratedAt": "2026-04-30T12:13:50.179Z",
-        "principlesSetAt": "2026-04-30T12:13:50.182Z",
-        "principles": {}
+        "principlesSetAt": "2026-05-01T10:40:25.739Z",
+        "principles": {
+          "otherContributions": [
+            {
+              "accountNumber": "002",
+              "accountName": "Registration",
+              "expectedAmount": "200"
+            }
+          ],
+          "distribution": {
+            "model": "performance",
+            "performancePct": "70",
+            "officialPct": 0,
+            "targetAccountName": "Group Benefit Account",
+            "targetAccountNumber": "002"
+          },
+          "intervals": {
+            "frequency": "daily",
+            "endSavingPeriod": "6-months",
+            "contributionDay": "",
+            "weekOfMonth": "",
+            "month": ""
+          },
+          "governance": {
+            "fastNotificationThreshold": "60",
+            "editAccountThreshold": "75",
+            "memberRemovalThreshold": "75",
+            "requireResponseNote": false
+          },
+          "deductions": {
+            "primarySource": "savings"
+          },
+          "balancing": {
+            "benefitAccounts": [
+              "Registration",
+              "Loan Interest"
+            ]
+          },
+          "loans": {
+            "qualificationType": "none",
+            "waitingDays": "",
+            "savingTarget": "",
+            "repayment": {
+              "durationDays": "30",
+              "alignment": "collapse",
+              "rolloverMethod": "recount",
+              "maxRollovers": "3"
+            },
+            "interestAndLimits": {
+              "interestRate": "30",
+              "maxActiveLoans": "1",
+              "limitBasis": "savings",
+              "limitMultiplier": "3"
+            },
+            "type": {
+              "category": "short",
+              "guaranteeMethod": "self"
+            }
+          },
+          "closer": {
+            "saving": {
+              "durationDays": "1",
+              "intervalBuffer": "0"
+            },
+            "loan": {
+              "durationDays": "1",
+              "intervalBuffer": "0"
+            }
+          },
+          "confirmedStepNotifications": {
+            "1": [
+              [
+                "Saving Period",
+                "6 Months"
+              ],
+              [
+                "Contribution Frequency",
+                "Daily"
+              ]
+            ],
+            "2": [
+              [
+                "Fast Edit Threshold",
+                "60%"
+              ],
+              [
+                "Account Edit Threshold",
+                "75%"
+              ],
+              [
+                "Member Removal Threshold",
+                "75%"
+              ],
+              [
+                "Removal Response Note",
+                "Not Required"
+              ]
+            ],
+            "3": [
+              [
+                "Registration Fee",
+                "YES – charge registration fee"
+              ],
+              [
+                "Account 002",
+                "Registration – KES 200"
+              ],
+              [
+                "Auto-Generated",
+                "Group Benefit Account (Final Distribution)"
+              ]
+            ],
+            "4": [
+              [
+                "Qualification",
+                "None (Standard Qualification)"
+              ],
+              [
+                "Loan Type",
+                "Short Term Loan"
+              ],
+              [
+                "Repayment Duration",
+                "30 days"
+              ],
+              [
+                "Alignment",
+                "Collapse to Meeting (Nearest day before)"
+              ],
+              [
+                "Rollover Method",
+                "Recount Period"
+              ],
+              [
+                "Max Rollovers",
+                "3"
+              ],
+              [
+                "Interest Rate",
+                "30%"
+              ],
+              [
+                "Limit Basis",
+                "Member Savings Only"
+              ],
+              [
+                "Limit Multiplier",
+                "3x"
+              ],
+              [
+                "Max Concurrent Loans",
+                "1"
+              ]
+            ],
+            "5": [
+              [
+                "Distribution Model",
+                "Members Performance Distribution"
+              ],
+              [
+                "Performance Allocation",
+                "70%"
+              ],
+              [
+                "Benefit Target Account",
+                "Group Benefit Account"
+              ],
+              [
+                "Profit Sources",
+                "Registration, Loan Interest"
+              ],
+              [
+                "Deduction Source",
+                "Member's Savings"
+              ]
+            ],
+            "6": [
+              [
+                "Saving Closer – Duration",
+                "1 day(s) before end"
+              ],
+              [
+                "Saving Closer – Buffer",
+                "0 round(s) before end"
+              ],
+              [
+                "Loan Closer – Duration",
+                "1 day(s) before end"
+              ],
+              [
+                "Loan Closer – Buffer",
+                "0 round(s) before end"
+              ]
+            ]
+          }
+        }
       }
     ]
   }
