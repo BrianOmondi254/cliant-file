@@ -601,7 +601,7 @@ router.post("/verify-group", (req, res) => {
   // Find group by groupName
   let foundKey = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundKey = key;
       break;
     }
@@ -633,7 +633,7 @@ router.post("/group-by-name", (req, res) => {
   let foundKey = null;
   let foundGroup = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundKey = key;
       foundGroup = data.groups[key];
       break;
@@ -860,7 +860,7 @@ router.post("/process-deduction", (req, res) => {
   let foundKey = null;
   let foundGroup = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundKey = key;
       foundGroup = data.groups[key];
       break;
@@ -1016,7 +1016,7 @@ router.get("/contribution", (req, res) => {
   let foundGroup = null;
   let foundKey = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundGroup = data.groups[key];
       foundKey = key;
       break;
@@ -1115,7 +1115,7 @@ router.get("/loan", (req, res) => {
   let foundGroup = null;
   let foundKey = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundGroup = data.groups[key];
       foundKey = key;
       break;
@@ -1176,7 +1176,7 @@ router.get("/membership", (req, res) => {
   let foundGroup = null;
   let foundKey = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundGroup = data.groups[key];
       foundKey = key;
       break;
@@ -1281,7 +1281,7 @@ router.get("/gmember", (req, res) => {
 
   let foundGroup = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundGroup = data.groups[key];
       break;
     }
@@ -1413,7 +1413,7 @@ router.get("/gcon", (req, res) => {
   
   let foundGroup = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundGroup = data.groups[key];
       break;
     }
@@ -1486,7 +1486,7 @@ router.post("/add-member", (req, res) => {
   
   let foundKey = null;
   for (const key in data.groups) {
-    if (data.groups[key].groupName === groupName) {
+    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
       foundKey = key;
       break;
     }
@@ -1884,7 +1884,7 @@ const memberFile = path.join(__dirname, "../tran_account/member.json");
        let memberData = readJSON(memberFile, { groups: {} });
       if (!memberData.groups) memberData.groups = {};
 
-      let memberGroupKey = Object.keys(memberData.groups).find(k => memberData.groups[k].groupName === groupName);
+      let memberGroupKey = Object.keys(memberData.groups).find(k => memberData.groups[k].groupName && memberData.groups[k].groupName.trim() === groupName.trim());
       if (!memberGroupKey) {
         const groupNum = Object.keys(memberData.groups).length + 1;
         memberGroupKey = "ACC" + groupNum;

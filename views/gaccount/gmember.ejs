@@ -105,6 +105,10 @@
       font-size: 17px; font-weight: 700;
       color: #fff; letter-spacing: -.3px;
     }
+    .header-title-container {
+      flex: 1;
+      text-align: center;
+    }
     .header-subtitle {
       font-size: 12px;
       color: rgba(255,255,255,.85);
@@ -606,7 +610,7 @@
     <a href="/member/gcon?groupName=<%= encodeURIComponent(group.groupName) %>" class="header-back">
       <i class="fas fa-arrow-left"></i>
     </a>
-    <div class="header-text">
+    <div class="header-title-container">
       <div class="header-title">Group Members</div>
       <div class="header-subtitle"><%= group.groupName %></div>
     </div>

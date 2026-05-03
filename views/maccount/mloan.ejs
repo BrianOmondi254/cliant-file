@@ -4,48 +4,101 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Loan - <%= group ? group.groupName : 'Group' %></title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', sans-serif;
-      font-size: 16px;
-      background: #f1f5f9;
+      font-family: 'DM Sans', 'Inter', sans-serif;
+      font-size: 15px;
+      background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
       min-height: 100vh;
-      padding: 0;
-      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2px;
       color: #1e293b;
     }
     .container {
       background: #ffffff;
-      width: 100%;
-      max-width: 100%;
+      width: calc(100% - 4px);
+      max-width: 640px;
       margin: 0 auto;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      border-radius: 5px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
       overflow: hidden;
-      padding-bottom: 40px;
+      min-height: calc(100vh - 4px);
+      display: flex;
+      flex-direction: column;
+      animation: slideUp .5s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .header {
       background: linear-gradient(135deg, #0f9d58, #34d399);
-      padding: 20px;
-      color: white;
-      text-align: center;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 200;
+      overflow: hidden;
     }
-    .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 5px; }
-    .header p { font-size: 14px; opacity: 0.9; }
-    .back-link {
+    .header::before {
+      content: '';
       position: absolute;
-      top: 15px;
-      left: 15px;
-      color: white;
-      text-decoration: none;
-      font-size: 18px;
+      top: -50%; right: -20%;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,.08);
+      border-radius: 50%;
+      pointer-events: none;
     }
-    .content { padding: 20px; }
+    .header-back {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.3);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: background .2s;
+      position: relative;
+    }
+    .header-back:hover { background: rgba(255,255,255,.28); }
+    .header-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+      position: relative;
+    }
+    .header-subtitle {
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      font-weight: 500;
+      margin-top: 1px;
+      position: relative;
+    }
+    .header-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,.2);
+      border: 1px solid rgba(255,255,255,.35);
+      color: #fff;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .3px;
+      position: relative;
+      white-space: nowrap;
+    }
+    .content { padding: 20px; flex: 1; background: #f1f5f9; }
     
     .info-card {
       background: #f8fafc;
@@ -250,11 +303,16 @@
 <body>
   <div class="container">
     <div class="header">
-      <a href="/general/group/<%= encodeURIComponent(group.groupName) %>" class="back-link">
+      <a href="/general/group/<%= encodeURIComponent(group.groupName) %>" class="header-back">
         <i class="fas fa-arrow-left"></i>
       </a>
-      <span style="position: absolute; top: 17px; left: 42px; font-size: 16px; font-weight: 700; color: white;">Loan</span>
-      <p><%= group.groupName || 'Group' %></p>
+      <div style="flex:1; text-align:center;">
+        <div class="header-title">My Loan</div>
+        <div class="header-subtitle"><%= group.groupName || 'Group' %></div>
+      </div>
+      <div class="header-badge">
+        <i class="fas fa-circle" style="font-size:7px; margin-right:4px;"></i>Active
+      </div>
     </div>
     
     <div class="content">
