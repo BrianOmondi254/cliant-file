@@ -115,7 +115,8 @@ router.get("/", (req, res) => {
         // Also check if any key matches (important for dealer.json hierarchy)
         const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
         if (keyMatch) return true;
-        return Object.values(data).some(search);
+        // Only recurse into objects/arrays to avoid matching relationship strings (like dealerPhone)
+        return Object.values(data).some(val => (typeof val === 'object' && val !== null) && search(val));
       }
       return false;
     };

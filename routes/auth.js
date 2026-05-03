@@ -329,7 +329,8 @@ router.post("/login", async (req, res) => {
     if (typeof data === 'object') {
       const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
       if (keyMatch) return true;
-      return Object.values(data).some(item => searchInFile(item, phone));
+      // Only recurse into objects/arrays to avoid matching relationship strings (like dealerPhone)
+      return Object.values(data).some(val => (typeof val === 'object' || Array.isArray(val)) && searchInFile(val, phone));
     }
     return false;
   };
