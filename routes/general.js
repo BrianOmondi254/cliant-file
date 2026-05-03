@@ -340,11 +340,44 @@ router.get("/", (req, res) => {
   }
   
   // Pass flat list to frontend for dropdowns etc.
+  // Determine if user is agent or dealer for navigation
+  const agentFile = path.join(__dirname, "../agent.json");
+  const dealerFile = path.join(__dirname, "../dealer.json");
+  const agents = readJSON(agentFile, []);
+  const dealers = readJSON(dealerFile, []);
+
+  const checkItem = (item, phone) => {
+    if (!item) return false;
+    let itemPhone = "";
+    if (typeof item === 'string') itemPhone = item;
+    else if (item.phoneNumber) itemPhone = item.phoneNumber;
+    else if (item.phone) itemPhone = item.phone;
+    return norm(itemPhone) === norm(phone);
+  };
+
+  const searchInFile = (data, phone) => {
+    if (!data) return false;
+    if (checkItem(data, phone)) return true;
+    if (Array.isArray(data)) return data.some(item => searchInFile(item, phone));
+    if (typeof data === 'object') {
+      const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
+      if (keyMatch) return true;
+      return Object.values(data).some(val => (typeof val === 'object' || Array.isArray(val)) && searchInFile(val, phone));
+    }
+    return false;
+  };
+
+  const userPhone = req.session?.user?.phoneNumber;
+  const showAgent = userPhone ? searchInFile(agents, userPhone) : false;
+  const showDealer = userPhone ? searchInFile(dealers, userPhone) : false;
+
   res.render("general_new", {
     groups: allGroups,
     isCreation,
     selectedGroup,
     user: req.session ? req.session.user : null,
+    showAgent,
+    showDealer
   });
 });
 
@@ -1594,7 +1627,43 @@ router.get("/group/:groupName", (req, res) => {
   // PIN status for Group Account tab
   group.pinIsSet = !!group.constitutionStartKey;
 
-  return res.render("group-details", { group, userRole, currentUserPhone: userPhone });
+  // Determine role-based navigation flags
+  const agentFile = path.join(__dirname, "../agent.json");
+  const dealerFile = path.join(__dirname, "../dealer.json");
+  const agents = readJSON(agentFile, []);
+  const dealers = readJSON(dealerFile, []);
+
+  const checkItem = (item, phone) => {
+    if (!item) return false;
+    let itemPhone = "";
+    if (typeof item === 'string') itemPhone = item;
+    else if (item.phoneNumber) itemPhone = item.phoneNumber;
+    else if (item.phone) itemPhone = item.phone;
+    return norm(itemPhone) === norm(phone);
+  };
+
+  const searchInFile = (data, phone) => {
+    if (!data) return false;
+    if (checkItem(data, phone)) return true;
+    if (Array.isArray(data)) return data.some(item => searchInFile(item, phone));
+    if (typeof data === 'object') {
+      const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
+      if (keyMatch) return true;
+      return Object.values(data).some(val => (typeof val === 'object' || Array.isArray(val)) && searchInFile(val, phone));
+    }
+    return false;
+  };
+
+  const showAgent = userPhone ? searchInFile(agents, userPhone) : false;
+  const showDealer = userPhone ? searchInFile(dealers, userPhone) : false;
+
+  return res.render("group-details", { 
+    group, 
+    userRole, 
+    currentUserPhone: userPhone,
+    showAgent,
+    showDealer
+  });
 });
 
 // Redundant verify-members removed (Consolidated at line 310)

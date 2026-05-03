@@ -1405,39 +1405,14 @@
                 </div>
             </div>
 
-            <!-- Quick Stats -->
-            <div class="stats-grid">
-                <div class="stat-card green">
-                    <div class="stat-icon">✅</div>
-                    <div class="stat-value"><%= presentCount %></div>
-                    <div class="stat-label">Present</div>
-                </div>
-                
-                <div class="stat-card red">
-                    <div class="stat-icon">❌</div>
-                    <div class="stat-value"><%= absentCount %></div>
-                    <div class="stat-label">Absent</div>
-                </div>
-                
-                <div class="stat-card amber">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-value"><%= agendaCount %></div>
-                    <div class="stat-label">Agenda Items</div>
-                </div>
-                
-                <div class="stat-card purple">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-value"><%= totalMembers %></div>
-                    <div class="stat-label">Total Members</div>
-                </div>
-            </div>
+            <!-- Quick Stats Removed -->
         </div>
 
         <!-- Attendance Tab -->
         <div id="attendance" class="tab-content">
             <div class="card">
                 <div class="card-header" style="background: #f0fff4; border-bottom: 1px solid #c6f6d5; padding: 16px 5px;">
-                    <h3 class="card-title" style="color: #276749; font-weight: 700;">✅ Roll Call</h3>
+                    <h3 class="card-title" style="color: #276749; font-weight: 700;">✅ Meeting</h3>
                     <p class="card-subtitle" style="color: #2f855a;">
                         <% if (currentMeeting) { %>
                             <%= currentMeeting.title %> - <%= new Date(currentMeeting.date).toLocaleDateString() %>
@@ -1597,7 +1572,7 @@
 
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                                 <h4 style="font-size: 14px; margin: 0; color: #276749; font-weight: 700; padding: 12px; background: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; flex: 1; display: flex; align-items: center; gap: 8px;">
-                                    ✅ Member Roll Call
+                                    ✅ Member Meeting
                                 </h4>
                             </div>
                             
@@ -1777,7 +1752,7 @@
             <div id="proposalBackdrop" class="modal-backdrop" onclick="toggleAgendaProposal()"></div>
 
             <!-- Floating Action Button -->
-            <button class="fab" onclick="toggleAgendaProposal()" title="New Proposal">
+            <button class="fab" onclick="toggleAgendaProposal()" title="<%= currentMeeting ? 'New Proposal' : 'No active meeting' %>">
                 <i class="fas fa-plus"></i>
             </button>
 
@@ -2097,7 +2072,7 @@
              <div>Details</div>
          </button>
          <button class="tab-item" onclick="openTab('attendance')">
-             <div>Roll Call</div>
+             <div>Meeting</div>
          </button>
          <button class="tab-item" onclick="openTab('minutes')">
              <div>Minutes</div>
@@ -2421,6 +2396,10 @@
 
         // Tab switching
         function toggleAgendaProposal() {
+            if (!currentMeetingId) {
+                showNotification('No active meeting selected', 'warning');
+                return;
+            }
             const form = document.getElementById('inlineAgendaForm');
             const backdrop = document.getElementById('proposalBackdrop');
             const fabIcon = document.querySelector('.fab i');
@@ -2648,7 +2627,7 @@
                     document.getElementById('reviewRemarksText').textContent = remarks;
                     document.getElementById('reviewOfficialName').textContent = officialName || officialValue;
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                    showNotification('Meeting Activated - Starting Roll Call');
+                    showNotification('Meeting Activated');
                 }
             } catch (error) {
                 showNotification('Error starting meeting', 'error');
@@ -2886,7 +2865,7 @@
         // Agenda
         async function createAgenda(isInline = false) {
             if (!currentMeetingId) {
-                alert('Please select a meeting first');
+                showNotification('No active meeting selected', 'warning');
                 return;
             }
 

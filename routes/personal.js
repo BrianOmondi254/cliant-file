@@ -629,11 +629,22 @@ router.get("/group/:groupName", (req, res) => {
           remainRounds
       };
       
+      const agentFile = path.join(__dirname, "../agent.json");
+      const dealerFile = path.join(__dirname, "../dealer.json");
+      const agents = readJSON(agentFile, []);
+      const dealers = readJSON(dealerFile, []);
+      
+      const showAgent = !!(req.session.isAgent || search(agents));
+      const showDealer = !!(req.session.isDealer || search(dealers));
+
       res.render("group-details", {
         user: req.session.user,
         userRole: userRole,
         group: group, // Pass the augmented group object
-        alert: null
+        alert: null,
+        showAgent,
+        showDealer,
+        currentUserPhone: req.session.user.phoneNumber
       });
 
     } else {

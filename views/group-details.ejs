@@ -27,7 +27,7 @@
 
         html, body {
             margin: 0;
-            padding: 2px;
+            padding: 0;
             width: 100vw;
             height: 100vh;
             overflow: hidden;
@@ -40,16 +40,16 @@
         }
 
         .main-container {
-            width: calc(100% - 4px);
+            width: 100%;
             background: var(--card);
-            border-radius: 5px;
+            border-radius: 0;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
             overflow: hidden;
             animation: slideUp 0.5s ease-out;
-            height: calc(100vh - 4px);
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 2px;
+            padding: 0;
         }
 
         @keyframes slideUp {
@@ -258,11 +258,15 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
-        /* Removed old absolute nav styles */
-
+        .top-nav{position:relative;display:flex;background:#022c22;border-radius:0;padding:10px 0;box-shadow:inset 0 2px 10px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.2);margin-top: 10px; border:1px solid rgba(15,157,88,0.3);position:relative;overflow:hidden;flex-shrink: 0;}
+        .indicator{position:absolute;height:3px;bottom:0;left:0;background:linear-gradient(90deg, #00f2fe, #4facfe);box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);transition:0.4s cubic-bezier(0.4, 0, 0.2, 1);z-index:2;border-radius:3px 3px 0 0;}
+        .nav-btn{flex:1;text-align:center;padding:5px 0 10px 0;font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);cursor:pointer;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;}
+        .nav-btn:hover{color:#fff;}
+        .nav-btn.active{color:#00f2fe;text-shadow: 0 0 8px rgba(0, 242, 254, 0.3);}
+        
         .members-table {
             width: 100%;
             border-collapse: collapse;
@@ -941,6 +945,35 @@
                 <a href="/personal/myaccount" class="action-button" style="background: var(--text-muted);">Back</a>
             </div>
         <% } %>
+
+        <%
+          const navLinks = [];
+          if (typeof showAgent !== 'undefined' && showAgent) navLinks.push({ name: 'Agent', action: "switchRole('Agent')" });
+          if (typeof showDealer !== 'undefined' && showDealer) navLinks.push({ name: 'Dealer', action: "handleDealerClick()" });
+          navLinks.push({ name: 'General', action: "handleGeneralClick()" });
+          navLinks.push({ name: 'Personal', action: "switchRole('Personal')" });
+          navLinks.push({ name: 'Message', action: "openInbox()" });
+          const activeIndex = -1; 
+        %>
+        <div class="top-nav" style="margin-bottom: 0;">
+          <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%; display: <%= activeIndex === -1 ? 'none' : 'block' %>;"></div>
+          <% navLinks.forEach((link, index) => { %>
+              <div class="nav-btn" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
+                  <%= link.name %>
+                  <% if (link.name === 'Message') { %>
+                      <span id="msgBadge" class="hidden" style="display:inline-block;background:red;color:white;border-radius:50%;padding:2px 5px;font-size:10px;margin-left:4px;">0</span>
+                  <% } %>
+              </div>
+          <% }) %>
+        </div>
+    </div>
+
+    <div id="modalOverlayInbox" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;justify-content:center;align-items:center;z-index:1000;opacity:0;visibility:hidden;transition:all 0.3s ease;">
+        <div style="background:white;padding:2rem 5px;border-radius:5px;width:85%;max-width:400px;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,0.4);max-height:90vh;display:flex;flex-direction:column;position:relative;">
+            <button onclick="closeModalInbox()" style="position:absolute;top:15px;right:15px;background:transparent;border:none;color:#64748b;font-size:1.5rem;cursor:pointer;z-index:10;width:auto;margin:0;padding:0;"><i class="fa-solid fa-xmark"></i></button>
+            <div id="modalTitleInbox" style="margin-bottom:1.5rem;font-size:1.25rem;font-weight:700;color:#1e293b;"></div>
+            <div id="modalBodyInbox" style="flex:1;overflow-y:auto;text-align:left;padding:0 15px;"></div>
+        </div>
     </div>
 
     <!-- ═══════════════════════════════════════════
@@ -1840,6 +1873,48 @@ function showMyAccountDetails() {
                 }
             })
             .catch(err => showToast('Network error: ' + err.message, 'error'));
+
+        /* ========== NAVIGATION & ROLE SWITCHING ========== */
+        function moveIndicator(idx, total) {
+          const ind = document.getElementById('navIndicator');
+          if (ind) {
+              ind.style.display = 'block';
+              ind.style.left = (idx * (100 / total)) + '%';
+          }
+          const btns = document.querySelectorAll('.nav-btn');
+          btns.forEach((b, i) => b.classList.toggle('active', i === idx));
+        }
+
+        function switchRole(role) {
+          if (role === 'Personal') window.location.href = '/personal';
+          if (role === 'Agent') window.location.href = '/personal?role=Agent';
+        }
+
+        function handleDealerClick() {
+          window.location.href = '/personal?role=Dealer';
+        }
+
+        function handleGeneralClick() {
+          window.location.href = '/general';
+        }
+
+        function openInbox() {
+            const modal = document.getElementById('modalOverlayInbox');
+            const title = document.getElementById('modalTitleInbox');
+            const body = document.getElementById('modalBodyInbox');
+            
+            title.innerText = "Inbox";
+            let html = '<div style="text-align:center;padding:40px 20px;color:#94a3b8;"><i class="fa-solid fa-envelope-open" style="font-size:40px;margin-bottom:15px;display:block;opacity:0.3;"></i><p style="font-size:14px;">Your inbox is empty.</p></div>';
+            
+            body.innerHTML = html;
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+        }
+
+        function closeModalInbox() {
+            const modal = document.getElementById('modalOverlayInbox');
+            modal.style.opacity = '0';
+            modal.style.visibility = 'hidden';
         }
     </script>
 </body>
