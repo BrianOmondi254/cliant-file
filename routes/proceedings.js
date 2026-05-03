@@ -147,8 +147,6 @@ router.get("/:groupName", (req, res) => {
   
   if (meetingId) {
     currentMeeting = groupMeetings.find(m => m.id === meetingId);
-  } else if (groupMeetings.length > 0) {
-    currentMeeting = groupMeetings[groupMeetings.length - 1];
   }
   
   // Get attendance for current meeting
@@ -195,6 +193,17 @@ router.get("/:groupName", (req, res) => {
   const currentMinutes = currentMeeting
     ? groupMinutes.filter(m => m.meetingId === currentMeeting.id)
     : [];
+    
+  // Get previous meeting and its minutes
+  let previousMeeting = null;
+  let previousMinutes = [];
+  if (currentMeeting && groupMeetings.length > 0) {
+    const currentIndex = groupMeetings.findIndex(m => m.id === currentMeeting.id);
+    if (currentIndex > 0) {
+      previousMeeting = groupMeetings[currentIndex - 1];
+      previousMinutes = groupMinutes.filter(m => m.meetingId === previousMeeting.id && m.status === 'approved');
+    }
+  }
   
   // Calculate stats
   const presentCount = presentMembers.length;
@@ -210,6 +219,8 @@ router.get("/:groupName", (req, res) => {
   res.render("proccedings", {
     meetings: groupMeetings,
     currentMeeting,
+    previousMeeting,
+    previousMinutes,
     members: groupMembers,
     attendances: currentAttendance,
     presentMembers,
@@ -316,6 +327,31 @@ router.put("/api/meetings/:id", (req, res) => {
   writeJSON(proceedingsFile, proceedingsData);
   
   res.json({ success: true, meeting: proceedingsData.meetings[meetingIndex] });
+});
+
+// DELETE /api/meetings/:id - Delete a meeting and all associated data
+router.delete("/api/meetings/:id", (req, res) => {
+  const { id } = req.params;
+  
+  const proceedingsData = readJSON(proceedingsFile, { meetings: [], members: [], agenda: [], minutes: [], votes: [], comments: [], attendance: [] });
+  
+  // Find meeting
+  const meetingIndex = proceedingsData.meetings.findIndex(m => m.id === id);
+  if (meetingIndex === -1) {
+    return res.status(404).json({ error: "Meeting not found" });
+  }
+  
+  // Remove meeting
+  proceedingsData.meetings.splice(meetingIndex, 1);
+  
+  // Clean up associated data
+  proceedingsData.agenda = proceedingsData.agenda.filter(a => a.meetingId !== id);
+  proceedingsData.minutes = proceedingsData.minutes.filter(m => m.meetingId !== id);
+  proceedingsData.attendance = proceedingsData.attendance.filter(a => a.meetingId !== id);
+  
+  writeJSON(proceedingsFile, proceedingsData);
+  
+  res.json({ success: true });
 });
 
 // DELETE /api/meetings/:id/status - Redundant status route (can be removed if PUT /api/meetings/:id handles it)
@@ -544,6 +580,63 @@ router.post("/api/votes", (req, res) => {
   writeJSON(proceedingsFile, proceedingsData);
   
   res.json({ success: true });
+});
+
+// POST /api/votes/batch - Record multiple votes and comments
+router.post("/api/votes/batch", (req, res) => {
+  const { agendaId, votes, groupName } = req.body;
+  
+  if (!agendaId || !votes || !groupName) {
+    return res.status(400).json({ error: "Agenda ID, votes, and group name are required" });
+  }
+  
+  const proceedingsData = readJSON(proceedingsFile, { meetings: [], members: [], agenda: [], minutes: [], votes: [], comments: [], attendance: [] });
+  
+  votes.forEach(vote => {
+    // Remove existing vote
+    proceedingsData.votes = proceedingsData.votes.filter(
+      v => !(v.agendaId === agendaId && v.memberId === vote.memberId)
+    );
+    
+    // Add new vote
+    proceedingsData.votes.push({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      agendaId,
+      memberId: vote.memberId,
+      voteType: vote.voteType,
+      groupName,
+      createdAt: new Date().toISOString()
+    });
+
+    // Add comment if present
+    if (vote.comment) {
+      proceedingsData.comments = proceedingsData.comments.filter(
+        c => !(c.agendaId === agendaId && c.memberId === vote.memberId)
+      );
+
+      proceedingsData.comments.push({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        agendaId,
+        memberId: vote.memberId,
+        content: vote.comment,
+        stance: vote.voteType, 
+        groupName,
+        createdAt: new Date().toISOString()
+      });
+    }
+  });
+  
+  writeJSON(proceedingsFile, proceedingsData);
+  
+  // Calculate new counts
+  const itemVotes = proceedingsData.votes.filter(v => v.agendaId === agendaId);
+  const counts = {
+    support: itemVotes.filter(v => v.voteType === 'support').length,
+    against: itemVotes.filter(v => v.voteType === 'against').length,
+    abstain: itemVotes.filter(v => v.voteType === 'abstain').length
+  };
+
+  res.json({ success: true, counts });
 });
 
 // POST /api/proceedings/comments - Add a comment

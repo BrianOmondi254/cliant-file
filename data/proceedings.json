@@ -99,38 +99,38 @@
       "createdAt": "2026-04-05T05:57:34.275Z"
     },
     {
-      "id": "1776080291766",
+      "id": "1777821438007",
       "groupName": "ONE SACCO",
-      "title": "fsd",
-      "project": "dcsc",
-      "date": "2026-04-20",
-      "venue": "cdslsd",
-      "startTime": "14:41",
-      "endTime": "14:42",
-      "chairperson": "brian brian but",
-      "secretary": "brian 0luch oluoch",
+      "title": "g",
+      "project": "gff",
+      "date": "2026-05-22",
+      "venue": "mololongo",
+      "startTime": "20:16",
+      "endTime": "18:21",
+      "chairperson": "brian omondi okeyo",
+      "secretary": "brian omolo omolo",
       "chairpersonNote": "",
       "adjournmentNote": "",
       "status": "active",
-      "createdAt": "2026-04-13T11:38:11.766Z",
-      "callToOrderNote": "sdd",
-      "calledByOfficial": "brian brian but",
       "visitors": [
         {
-          "id": "1776088534731",
-          "name": "gfsgd",
-          "phone": "07",
-          "description": "wee",
-          "addedAt": "2026-04-13T13:55:34.731Z"
+          "id": "1777821472752",
+          "name": "sdfds",
+          "phone": "76644",
+          "description": "sfesws",
+          "addedAt": "2026-05-03T15:17:52.752Z"
         },
         {
-          "id": "1777134565988",
-          "name": "brian",
-          "phone": "0740415992",
-          "description": "member of regigistrr of sosiaty",
-          "addedAt": "2026-04-25T16:29:25.988Z"
+          "id": "1777821714366",
+          "name": "gfd",
+          "phone": "8765",
+          "description": "2rtr",
+          "addedAt": "2026-05-03T15:21:54.366Z"
         }
-      ]
+      ],
+      "createdAt": "2026-05-03T15:17:18.007Z",
+      "callToOrderNote": "dfg",
+      "calledByOfficial": "brian omondi okeyo"
     }
   ],
   "members": [
@@ -164,7 +164,24 @@
       "createdAt": "2026-04-04T15:17:24.258Z"
     }
   ],
-  "votes": [],
+  "votes": [
+    {
+      "id": "1777818804935",
+      "agendaId": "1777818670966",
+      "memberId": "35951449",
+      "voteType": "support",
+      "groupName": "ONE SACCO",
+      "createdAt": "2026-05-03T14:33:24.935Z"
+    },
+    {
+      "id": "1777819549009",
+      "agendaId": "1777818670966",
+      "memberId": "35951444",
+      "voteType": "against",
+      "groupName": "ONE SACCO",
+      "createdAt": "2026-05-03T14:45:49.009Z"
+    }
+  ],
   "comments": [],
   "attendance": [
     {
@@ -276,31 +293,40 @@
       "updatedAt": "2026-04-04T13:05:28.154Z"
     },
     {
-      "id": "1777134920094xk66s",
-      "meetingId": "1776080291766",
+      "id": "17778217639983odyv",
+      "meetingId": "1777821438007",
       "memberId": "35951444",
       "groupName": "ONE SACCO",
       "status": "present",
       "apology": "",
-      "updatedAt": "2026-04-25T16:41:05.586Z"
+      "updatedAt": "2026-05-03T15:22:43.999Z"
     },
     {
-      "id": "1777134920097l5m18",
-      "meetingId": "1776080291766",
+      "id": "177782176400299fuz",
+      "meetingId": "1777821438007",
       "memberId": "35951449",
       "groupName": "ONE SACCO",
       "status": "present",
       "apology": "",
-      "updatedAt": "2026-04-25T16:41:05.616Z"
+      "updatedAt": "2026-05-03T15:22:44.002Z"
     },
     {
-      "id": "1777134920097g5zap",
-      "meetingId": "1776080291766",
+      "id": "1777821764002071hr",
+      "meetingId": "1777821438007",
       "memberId": "35951454",
       "groupName": "ONE SACCO",
       "status": "present",
       "apology": "",
-      "updatedAt": "2026-04-25T16:41:05.616Z"
+      "updatedAt": "2026-05-03T15:22:44.002Z"
+    },
+    {
+      "id": "17778217640024ouco",
+      "meetingId": "1777821438007",
+      "memberId": "1777473355418",
+      "groupName": "ONE SACCO",
+      "status": "absent",
+      "apology": "With Apology",
+      "updatedAt": "2026-05-03T15:22:44.002Z"
     }
   ]
 }

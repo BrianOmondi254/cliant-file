@@ -6,6 +6,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Meeting Proceedings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -53,11 +55,23 @@
              left: 0;
              right: 0;
              background: linear-gradient(135deg, #0f9d58 0%, #34d399 100%);
-             color: white;
-             padding: 12px 16px;
+             padding: 16px 20px;
              box-shadow: 0 4px 12px rgba(15, 157, 88, 0.2);
              z-index: 1000;
              border-bottom: 1px solid rgba(255,255,255,0.15);
+             overflow: hidden;
+         }
+
+         .mobile-header::before {
+             content: '';
+             position: absolute;
+             top: -50%;
+             right: -20%;
+             width: 200px;
+             height: 200px;
+             background: rgba(255, 255, 255, 0.08);
+             border-radius: 50%;
+             pointer-events: none;
          }
 
          .header-top {
@@ -65,90 +79,86 @@
              align-items: center;
              justify-content: space-between;
              margin-bottom: 0;
+             position: relative;
+             z-index: 10;
+             gap: 14px;
+         }
+
+         .header-title-container {
+             flex: 1;
+             text-align: center;
+             position: relative;
+             z-index: 1;
          }
 
          .header-title {
-             display: flex;
-             align-items: center;
-             justify-content: center;
-             gap: 10px;
-             font-size: 20px;
-             font-weight: 800;
-             color: white;
-             flex: 1;
-         }
-
-        .header-icon {
-            width: 36px;
-            height: 36px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-
-         .menu-btn {
-             width: 40px;
-             height: 40px;
-             background: rgba(255,255,255,0.15);
-             border: none;
-             border-radius: 10px;
-             color: white;
-             font-size: 20px;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-             cursor: pointer;
-         }
-
-         .menu-btn:hover {
-             background: rgba(255,255,255,0.25);
-         }
-
-         .back-button {
-             width: 40px;
-             height: 40px;
-             background: rgba(255,255,255,0.15);
-             border: none;
-             border-radius: 10px;
-             color: white;
-             font-size: 20px;
+             font-family: 'Syne', sans-serif;
+             font-size: 17px;
              font-weight: 700;
+             color: #fff;
+             letter-spacing: -0.3px;
+             margin: 0;
+             display: block;
+         }
+
+         .header-subtitle {
+             font-size: 12px;
+             color: rgba(255, 255, 255, 0.85);
+             font-weight: 500;
+             margin-top: 1px;
+             font-family: 'Outfit', sans-serif;
+         }
+
+         .header-nav-btn {
+             width: 36px;
+             height: 36px;
+             border-radius: 50%;
+             background: rgba(255, 255, 255, 0.18);
+             border: 1px solid rgba(255, 255, 255, 0.3);
              display: flex;
              align-items: center;
              justify-content: center;
+             color: #fff;
              text-decoration: none;
+             font-size: 14px;
+             flex-shrink: 0;
+             transition: all 0.2s;
+             position: relative;
+             z-index: 10;
              cursor: pointer;
-             transition: all 0.3s ease;
          }
 
-         .back-button:hover {
-             background: rgba(255,255,255,0.25);
-             transform: translateX(-2px);
+         .header-nav-btn:hover {
+             background: rgba(255, 255, 255, 0.28);
+             transform: scale(1.05);
          }
 
         .meeting-quick-select {
-            background: rgba(255,255,255,0.2);
-            padding: 10px 12px;
-            border-radius: 10px;
-            font-size: 13px;
+            background: #ffffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         .meeting-quick-select select {
             flex: 1;
             background: transparent;
             border: none;
-            color: white;
-            font-size: 13px;
+            color: #333;
+            font-size: 12px;
             font-weight: 700;
             outline: none;
             appearance: none;
+            cursor: pointer;
         }
 
         .meeting-quick-select select option {
@@ -158,9 +168,8 @@
 
         /* Main Content */
         .main-content {
-            margin-top: 110px;
-            padding: 16px;
-            padding-bottom: 20px;
+            margin-top: 80px;
+            padding: 16px 5px 20px 5px;
         }
 
          /* Mobile Tabs - Fixed Bottom */
@@ -220,6 +229,7 @@
         /* Tab Content */
         .tab-content {
             display: none;
+            padding: 0 5px;
         }
 
         .tab-content.active {
@@ -238,6 +248,7 @@
         .card-header {
             padding: 16px;
             border-bottom: 1px solid var(--border);
+            position: relative;
         }
 
          .card-header.primary {
@@ -275,7 +286,7 @@
         }
 
         .card-body {
-            padding: 16px;
+            padding: 16px 15px;
         }
 
         /* Collapsible Header */
@@ -704,14 +715,14 @@
         .vote-cards {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 16px;
         }
 
         .vote-card {
             text-align: center;
-            padding: 20px 12px;
-            border-radius: 12px;
+            padding: 12px 8px;
+            border-radius: 10px;
         }
 
         .vote-card.support {
@@ -732,15 +743,62 @@
         }
 
         .vote-count {
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 4px;
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 2px;
+            color: var(--text-primary);
         }
 
         .vote-label {
-            font-size: 12px;
+            font-size: 10px;
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Voting Buttons */
+        .v-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1.5px solid #edf2f7;
+            background: #fff;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0;
+            margin: 0;
+        }
+
+        .v-btn.support:hover, .v-btn.support.active {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(56, 161, 105, 0.2);
+        }
+
+        .v-btn.against:hover, .v-btn.against.active {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(229, 62, 62, 0.2);
+        }
+
+        .v-btn.abstain:hover, .v-btn.abstain.active {
+            background: #718096;
+            border-color: #718096;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(113, 128, 150, 0.2);
+        }
+
+        .v-btn.active {
+            transform: scale(1.1);
         }
 
         /* Minutes */
@@ -758,6 +816,7 @@
             justify-content: space-between;
             align-items: center;
             gap: 12px;
+            cursor: pointer;
         }
 
         .minute-title {
@@ -771,6 +830,7 @@
 
         .minute-body {
             padding: 16px;
+            display: none;
         }
 
         .minute-content {
@@ -795,7 +855,7 @@
 
         .form-input, .form-select, .form-textarea {
             width: 100%;
-            padding: 14px;
+            padding: 14px 15px;
             border: 2px solid var(--border);
             border-radius: 12px;
             font-size: 15px;
@@ -811,6 +871,119 @@
         .form-textarea {
             min-height: 120px;
             resize: vertical;
+        }
+
+        /* Responsive Proposal Form */
+        .proposal-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 16px;
+            gap: 6px;
+        }
+
+        .proposal-label {
+            width: 100%;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .proposal-input {
+            width: 100%;
+        }
+
+        .close-popup {
+            background: rgba(0,0,0,0.05);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .close-popup:hover {
+            background: rgba(0,0,0,0.1);
+            color: var(--danger);
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(56, 161, 105, 0.4);
+            border: 2px solid rgba(255,255,255,0.2);
+            z-index: 1000;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(56, 161, 105, 0.5);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        .fab i {
+            font-size: 24px;
+        }
+
+        #inlineAgendaForm {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 92%;
+            max-width: 450px;
+            z-index: 3000;
+            display: none;
+            box-shadow: none;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            animation: popupScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 2999;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes popupScale {
+            from { transform: translate(-50%, -45%) scale(0.9); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         /* Modal - Full Screen on Mobile */
@@ -1137,26 +1310,12 @@
      <!-- Mobile Header -->
      <header class="mobile-header">
          <div class="header-top">
-              <a href="/personal" class="back-button" title="Back to Dashboard">
-                  ←
-              </a>
-             <div class="header-title" style="flex: 1; text-align: center; font-size: 22px; font-weight: 800;">
-                 <span>Proceedings</span>
+             <a href="/general" class="header-nav-btn" title="Back"><i class="fas fa-arrow-left"></i></a>
+             <div class="header-title-container">
+                 <h2 class="header-title">Proceedings</h2>
+                 <p class="header-subtitle"><%= groupName %></p>
              </div>
-             <button class="menu-btn" onclick="toggleMenuDropdown()">☰</button>
-         </div>
-         
-         <div class="meeting-quick-select">
-             <select id="meetingSelect" onchange="selectMeeting()">
-                 <option value="">-- Select Meeting --</option>
-                 <% if (meetings && meetings.length > 0) { %>
-                     <% meetings.reverse().forEach(function(meeting) { %>
-                         <option value="<%= meeting.id %>" <%= currentMeeting && currentMeeting.id === meeting.id ? 'selected' : '' %>>
-                             <%= meeting.title %> - <%= new Date(meeting.date).toLocaleDateString() %>
-                         </option>
-                     <% }); %>
-                 <% } %>
-             </select>
+             <button class="header-nav-btn" onclick="toggleMenuDropdown()"><i class="fas fa-bars"></i></button>
          </div>
      </header>
 
@@ -1173,6 +1332,23 @@
                     <p class="card-subtitle">
                         <%- currentMeeting && currentMeeting.project ? 'Project: ' + currentMeeting.project : '' %>
                     </p>
+                    <div class="meeting-quick-select" style="display: flex; align-items: center; gap: 8px;">
+                        <select id="meetingSelect" onchange="selectMeeting()" style="flex: 1; border: none; background: transparent; font-size: 12px; font-weight: 700; outline: none; appearance: none; cursor: pointer;">
+                            <option value="">-- Select Meeting --</option>
+                            <% if (meetings && meetings.length > 0) { %>
+                                <% meetings.reverse().forEach(function(meeting) { %>
+                                    <option value="<%= meeting.id %>" <%= currentMeeting && currentMeeting.id === meeting.id ? 'selected' : '' %>>
+                                        <%= meeting.title %> - <%= new Date(meeting.date).toLocaleDateString() %>
+                                    </option>
+                                <% }); %>
+                            <% } %>
+                        </select>
+                        <% if (currentMeeting) { %>
+                            <button id="deleteMeetingBtn" onclick="confirmDeleteMeeting()" style="background: none; border: none; color: #e53e3e; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" title="Delete Meeting" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                                <i class="fas fa-trash-alt" style="font-size: 14px;"></i>
+                            </button>
+                        <% } %>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="info-grid">
@@ -1260,7 +1436,7 @@
         <!-- Attendance Tab -->
         <div id="attendance" class="tab-content">
             <div class="card">
-                <div class="card-header" style="background: #f0fff4; border-bottom: 1px solid #c6f6d5;">
+                <div class="card-header" style="background: #f0fff4; border-bottom: 1px solid #c6f6d5; padding: 16px 5px;">
                     <h3 class="card-title" style="color: #276749; font-weight: 700;">✅ Roll Call</h3>
                     <p class="card-subtitle" style="color: #2f855a;">
                         <% if (currentMeeting) { %>
@@ -1270,12 +1446,12 @@
                         <% } %>
                     </p>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding: 16px 5px;">
                     <% if (currentMeeting && currentMeeting.status !== 'pending') { %>
                         <% var hasCallToOrder = !!(currentMeeting.callToOrderNote && currentMeeting.calledByOfficial); %>
                         <!-- Call to Order Section -->
-                        <div id="callToOrderSection" class="card" style="margin-bottom: 25px; background: #f0fff4; border: 1px solid #c6f6d5;">
-                            <div class="card-body">
+                        <div id="callToOrderSection" class="card" style="margin-bottom: 25px; background: #f0fff4; border: 1px solid #c6f6d5; padding: 0 5px;">
+                            <div class="card-body" style="padding: 16px 5px;">
                                 <h4 style="font-size: 14px; margin-bottom: 12px; color: #276749; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                                     📢 Call to Order
                                 </h4>
@@ -1305,7 +1481,7 @@
                                 </div>
 
                                 <!-- Visitors Section -->
-                                <div class="visitor-section" style="margin-top: 30px; margin-bottom: 25px; padding-top: 20px; border-top: 2px dashed #cbd5e0; background: linear-gradient(to bottom, #f0f9ff, #ffffff); padding: 20px; border-radius: 12px;">
+                                <div class="visitor-section" style="margin-top: 30px; margin-bottom: 25px; border-top: 2px dashed #cbd5e0; background: linear-gradient(to bottom, #f0f9ff, #ffffff); padding: 20px 10px; border-radius: 12px;">
                                     <h4 id="addVisitorHeader" style="font-size: 15px; margin-bottom: 16px; color: #0c4a6e; font-weight: 800; padding: 10px 14px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 8px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(14, 165, 233, 0.1);">
                                         👤 Visitors / Guests
                                     </h4>
@@ -1374,7 +1550,7 @@
                         </div>
 
                         <!-- Member List Section -->
-                        <div id="rollCallContent" style="display: none;">
+                        <div id="rollCallContent" style="display: none; padding: 0 5px;">
                             <!-- Call to Order Summary View -->
                             <div class="card" style="margin-bottom: 15px; background: #f7fafc; border: 1px solid #e2e8f0;">
                                 <div class="card-body" style="padding: 12px;">
@@ -1496,11 +1672,11 @@
                                             <!-- Summary stats will be populated by JS -->
                                         </div>
                                         <div style="display: flex; gap: 10px; margin-top: 12px;">
-                                            <button class="btn btn-primary" onclick="openTab('minutes')" style="flex: 1; padding: 10px; font-size: 14px;">
-                                                Continue to Minutes →
-                                            </button>
                                             <button class="btn btn-secondary" onclick="resetAttendance()" style="flex: 1; padding: 10px; font-size: 14px;">
                                                 Edit Attendance
+                                            </button>
+                                            <button class="btn btn-primary" onclick="continueToMinutes()" style="flex: 1; padding: 10px; font-size: 14px;">
+                                                Continue to Minutes →
                                             </button>
                                         </div>
                                     </div>
@@ -1528,12 +1704,13 @@
 
         <!-- Minutes Tab -->
         <div id="minutes" class="tab-content">
+            <% let minuteCount = 1; %>
             <!-- Call to Order -->
             <% if (currentMeeting && currentMeeting.callToOrderNote) { %>
                 <div class="minute-item" style="border-left: 4px solid #4a5568;">
-                    <div class="minute-header">
+                    <div class="minute-header" onclick="toggleMinute(this)">
                         <div class="minute-title">
-                            <span class="badge" style="background: #4a5568; color: white;">MIN 1</span>
+                            <span class="badge" style="background: #4a5568; color: white;">MIN <%= minuteCount++ %></span>
                             Call to Order
                         </div>
                         <span class="badge badge-success">Official</span>
@@ -1544,13 +1721,27 @@
                 </div>
             <% } %>
 
+            <!-- Previous Minutes Reading -->
+            <div class="minute-item" style="border-left: 4px solid #3182ce;">
+                <div class="minute-header" onclick="toggleMinute(this)">
+                    <div class="minute-title">
+                        <span class="badge" style="background: #3182ce; color: white;">MIN <%= minuteCount++ %></span>
+                        Reading of Previous Minutes
+                    </div>
+                    <span class="badge badge-success">Official</span>
+                </div>
+                <div class="minute-body">
+                    <div class="minute-content"><% if (previousMeeting) { %><% if (previousMinutes && previousMinutes.length > 0) { %>The minutes of the previous meeting held on <%= new Date(previousMeeting.date).toLocaleDateString() %> were read and confirmed by the members present.<% } else { %>Previous meeting had no approved minutes recorded.<% } %><% } else { %>null - no previous group meeting<% } %></div>
+                </div>
+            </div>
+
             <!-- Minutes List -->
             <% if (minutes && minutes.length > 0) { %>
                 <% minutes.forEach(function(minute, index) { %>
                     <div class="minute-item">
-                        <div class="minute-header">
+                        <div class="minute-header" onclick="toggleMinute(this)">
                             <div class="minute-title">
-                                <span class="badge badge-neutral">#<%= index + 1 %></span>
+                                <span class="badge badge-neutral">MIN <%= minuteCount++ %></span>
                                 <%= minute.title %>
                             </div>
                             <span class="badge <%= minute.status === 'approved' ? 'badge-success' : minute.status === 'amended' ? 'badge-warning' : 'badge-neutral' %>">
@@ -1572,91 +1763,214 @@
                         </div>
                     </div>
                 <% }); %>
-            <% } else { %>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="empty-state">
-                            <div class="empty-icon">📄</div>
-                            <div class="empty-title">No Minutes Yet</div>
-                            <div class="empty-subtitle">Add meeting minutes to document proceedings</div>
-                        </div>
-                    </div>
-                </div>
             <% } %>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="openTab('agenda')" style="flex: 1; padding: 10px; font-size: 14px; font-weight: 600;">
+                    Continue to Agenda Items →
+                </button>
+            </div>
         </div>
 
         <!-- Agenda Tab -->
         <div id="agenda" class="tab-content">
+            <!-- Modal Backdrop -->
+            <div id="proposalBackdrop" class="modal-backdrop" onclick="toggleAgendaProposal()"></div>
+
+            <!-- Floating Action Button -->
+            <button class="fab" onclick="toggleAgendaProposal()" title="New Proposal">
+                <i class="fas fa-plus"></i>
+            </button>
+
+            <!-- Inline Agenda Proposal Form -->
+            <div id="inlineAgendaForm" class="card" style="margin-bottom: 24px; border: 1px solid var(--border); border-left: 4px solid var(--primary); background: #fff;">
+                <div class="card-header" style="background: var(--bg-secondary); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="card-title" style="font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--primary); margin: 0;">
+                        <i class="fas fa-edit" style="margin-right: 8px; color: var(--success);"></i> Propose New Agenda
+                    </h3>
+                    <button type="button" class="close-popup" onclick="toggleAgendaProposal()">&times;</button>
+                </div>
+                <div class="card-body">
+                    <div class="proposal-form">
+                        <div class="proposal-row">
+                            <label class="proposal-label">Agenda Title *</label>
+                            <div class="proposal-input">
+                                <input type="text" id="inlineAgendaTitle" class="form-input" placeholder="Proposal Title">
+                            </div>
+                        </div>
+                        <div class="proposal-row">
+                            <label class="proposal-label">Description</label>
+                            <div class="proposal-input">
+                                <textarea id="inlineAgendaDescription" class="form-textarea" placeholder="Detailed description..." style="height: 60px; min-height: 60px;"></textarea>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                            <button class="btn btn-primary" style="width: auto; min-width: 120px; padding: 12px 24px; font-weight: 700;" onclick="createAgenda(true)">
+                                SUBMIT
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <% if (agendaItems && agendaItems.length > 0) { %>
+                <h4 style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-list-ul"></i> Agenda List
+                </h4>
                 <% agendaItems.forEach(function(item, index) { %>
-                    <div class="agenda-item">
-                        <div class="agenda-header">
-                            <div class="agenda-number"><%= index + 1 %></div>
-                            <div class="agenda-content">
-                                <div class="agenda-title">
-                                    <span><%= item.title %></span>
-                                    <span class="badge <%= item.status === 'enacted' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : item.status === 'voted' ? 'badge-info' : 'badge-neutral' %>">
-                                        <%= item.status %>
-                                    </span>
+                    <div class="agenda-item" style="border-radius: 12px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border); background: #fff;">
+                        <div class="agenda-header" onclick="toggleAgenda(this)" style="cursor: pointer; padding: 14px 15px; display: flex; align-items: center; gap: 12px; background: #fff; transition: background 0.2s;">
+                            <div class="agenda-number" style="background: var(--bg-tertiary); color: var(--text-primary); width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;"><%= index + 1 %></div>
+                            <div class="agenda-title" style="flex: 1; font-weight: 600; font-size: 14px; color: var(--text-primary);">
+                                <%= item.title %>
+                            </div>
+                            <span class="badge <%= item.status === 'enacted' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : item.status === 'voted' ? 'badge-info' : 'badge-neutral' %>" style="font-size: 10px; padding: 4px 8px;">
+                                <%= item.status %>
+                            </span>
+                            <i class="fas fa-chevron-down" style="font-size: 12px; color: var(--text-muted); transition: transform 0.3s;"></i>
+                        </div>
+                        
+                        <div class="agenda-body" style="display: none; padding: 15px; background: #fcfcfc; border-top: 1px solid #edf2f7;">
+                            <% if (item.description) { %>
+                                <div class="agenda-description" style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary); line-height: 1.5;"><%= item.description %></div>
+                            <% } %>
+
+                            <div class="agenda-proposers" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; padding: 10px; background: #f7fafc; border-radius: 8px;">
+                                <div class="proposer-item">
+                                    <div class="proposer-label" style="font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Proposer</div>
+                                    <div class="proposer-name" style="font-size: 12px; font-weight: 700; color: var(--text-primary);"><%= getMemberName(item.proposerId) %></div>
                                 </div>
-                                
-                                <% if (item.description) { %>
-                                    <div class="agenda-description"><%= item.description %></div>
+                                <div class="proposer-item">
+                                    <div class="proposer-label" style="font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Seconder</div>
+                                    <div class="proposer-name" style="font-size: 12px; font-weight: 700; color: var(--text-primary);"><%= getMemberName(item.seconderId) %></div>
+                                </div>
+                                <div class="proposer-item">
+                                    <div class="proposer-label" style="font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Third</div>
+                                    <div class="proposer-name" style="font-size: 12px; font-weight: 700; color: var(--text-primary);"><%= getMemberName(item.thirdId) %></div>
+                                </div>
+                            </div>
+
+                                <% if (item.status === 'voted' || item.status === 'enacted' || item.status === 'rejected') { %>
+                                    <div class="voting-section" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #edf2f7;">
+                                        <div class="vote-cards" style="margin-bottom: 16px;">
+                                            <div class="vote-card support">
+                                                <div class="vote-count" id="count-support-<%= item.id %>"><%= item.supportVotes %></div>
+                                                <div class="vote-label">Support</div>
+                                            </div>
+                                            <div class="vote-card against">
+                                                <div class="vote-count" id="count-against-<%= item.id %>"><%= item.againstVotes %></div>
+                                                <div class="vote-label">Against</div>
+                                            </div>
+                                            <div class="vote-card abstain">
+                                                <div class="vote-count" id="count-abstain-<%= item.id %>"><%= item.abstainVotes %></div>
+                                                <div class="vote-label">Abstain</div>
+                                            </div>
+                                        </div>
+
+                                        <% 
+                                            // Assume 'user' object is available from session/locals
+                                            const currentUserName = typeof user !== 'undefined' ? user.name : 'Guest';
+                                            const isOfficial = currentMeeting && (
+                                                currentMeeting.chairperson === currentUserName || 
+                                                currentMeeting.secretary === currentUserName || 
+                                                currentMeeting.calledByOfficial === currentUserName
+                                            );
+                                            
+                                            // Filter members to show: officials see everyone, members see only themselves
+                                            const visibleMembers = isOfficial ? presentMembers : presentMembers.filter(m => m.name === currentUserName);
+                                        %>
+
+                                        <% if (item.status === 'voted' && visibleMembers.length > 0) { %>
+                                            <h4 style="font-weight: 700; margin-bottom: 15px; font-size: 13px; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">
+                                                <%= isOfficial ? 'Record Member Votes' : 'Cast Your Vote' %>
+                                            </h4>
+                                            
+                                            <div class="voting-container-local" id="voting-area-<%= item.id %>">
+                                                <% visibleMembers.forEach(function(member) { %>
+                                                    <% 
+                                                        var memberVote = item.votes ? item.votes.find(v => v.memberId === member.id) : null;
+                                                        var voteType = memberVote ? memberVote.voteType : '';
+                                                        var safeId = member.id.toString().replace(/[^a-zA-Z0-9]/g, '_');
+                                                    %>
+                                                    <div class="member-vote-row" style="background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+                                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                                <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--primary);">
+                                                                    <%= member.name.split(' ').map(n => n[0]).join('').toUpperCase() %>
+                                                                </div>
+                                                                <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);"><%= member.name %></div>
+                                                            </div>
+                                                            <div class="vote-options-local" style="display: flex; gap: 8px;">
+                                                                <button class="v-btn support <%= voteType === 'support' ? 'active' : '' %>" 
+                                                                        onclick="setLocalVote('<%= item.id %>', '<%= member.id %>', 'support', this)"
+                                                                        data-agenda="<%= item.id %>" data-member="<%= member.id %>">✓</button>
+                                                                <button class="v-btn against <%= voteType === 'against' ? 'active' : '' %>"
+                                                                        onclick="setLocalVote('<%= item.id %>', '<%= member.id %>', 'against', this)"
+                                                                        data-agenda="<%= item.id %>" data-member="<%= member.id %>">✗</button>
+                                                                <button class="v-btn abstain <%= voteType === 'abstain' ? 'active' : '' %>"
+                                                                        onclick="setLocalVote('<%= item.id %>', '<%= member.id %>', 'abstain', this)"
+                                                                        data-agenda="<%= item.id %>" data-member="<%= member.id %>">○</button>
+                                                            </div>
+                                                        </div>
+                                                        <textarea class="vote-comment-input" 
+                                                                  id="comment-<%= item.id %>-<%= safeId %>"
+                                                                  placeholder="Add a comment (optional)..."
+                                                                  style="width: 100%; border: 1px solid #edf2f7; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: inherit; resize: none; background: #fcfcfc;"><%= memberVote && memberVote.comment ? memberVote.comment : '' %></textarea>
+                                                    </div>
+                                                <% }); %>
+                                                
+                                                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                                                    <button class="btn btn-primary" onclick="submitVotes('<%= item.id %>')" style="width: auto; padding: 10px 24px;">
+                                                        SUBMIT VOTES
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        <% } %>
+
+                                    </div>
                                 <% } %>
 
-                                <div class="agenda-proposers">
-                                    <div class="proposer-item">
-                                        <div class="proposer-label">Proposer</div>
-                                        <div class="proposer-name"><%= getMemberName(item.proposerId) %></div>
+                                <% if (item.status !== 'enacted' && item.status !== 'rejected') { %>
+                                    <div class="agenda-actions" style="margin-top: 16px;">
+                                        <% if (item.status !== 'voted') { %>
+                                            <button class="btn btn-secondary btn-small" 
+                                                    onclick="updateAgendaStatus('<%= item.id %>', 'discussed')">
+                                                Discussed
+                                            </button>
+                                            <button class="btn btn-secondary btn-small" 
+                                                    onclick="updateAgendaStatus('<%= item.id %>', 'voted')">
+                                                Move to Vote
+                                            </button>
+                                        <% } else { %>
+                                            <button class="btn btn-primary btn-small" 
+                                                    onclick="updateAgendaStatus('<%= item.id %>', 'enacted')">
+                                                Enact
+                                            </button>
+                                            <button class="btn btn-danger btn-small" 
+                                                    onclick="updateAgendaStatus('<%= item.id %>', 'rejected')">
+                                                Reject
+                                            </button>
+                                        <% } %>
                                     </div>
-                                    <div class="proposer-item">
-                                        <div class="proposer-label">Seconder</div>
-                                        <div class="proposer-name"><%= getMemberName(item.seconderId) %></div>
-                                    </div>
-                                    <div class="proposer-item">
-                                        <div class="proposer-label">Third</div>
-                                        <div class="proposer-name"><%= getMemberName(item.thirdId) %></div>
-                                    </div>
-                                </div>
-
-                                <div class="agenda-actions">
-                                    <button class="btn btn-secondary btn-small" 
-                                            onclick="updateAgendaStatus('<%= item.id %>', 'discussed')">
-                                        Discussed
-                                    </button>
-                                    <button class="btn btn-secondary btn-small" 
-                                            onclick="updateAgendaStatus('<%= item.id %>', 'voted')">
-                                        Move to Vote
-                                    </button>
-                                    <button class="btn btn-primary btn-small" 
-                                            onclick="updateAgendaStatus('<%= item.id %>', 'enacted')">
-                                        Enact
-                                    </button>
-                                    <button class="btn btn-danger btn-small" 
-                                            onclick="updateAgendaStatus('<%= item.id %>', 'rejected')">
-                                        Reject
-                                    </button>
-                                </div>
+                                <% } %>
 
                                 <% if (item.comments && item.comments.length > 0) { %>
-                                    <div class="comments-section">
-                                        <h4 class="comments-title">💬 Comments (<%= item.comments.length %>)</h4>
+                                    <div class="comments-section" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #edf2f7;">
+                                        <h5 style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Comments</h5>
                                         <% item.comments.forEach(function(comment) { %>
-                                            <div class="comment-item <%= comment.stance %>">
-                                                <div class="comment-author">
+                                            <div class="comment-item" style="font-size: 12px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #edf2f7; margin-bottom: 8px;">
+                                                <div style="font-weight: 700; color: var(--primary); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
                                                     <%= comment.member.name %>
-                                                    <span class="badge <%= comment.stance === 'support' ? 'badge-success' : comment.stance === 'against' ? 'badge-danger' : 'badge-neutral' %>" style="margin-left: 6px;">
+                                                    <span class="badge <%= comment.stance === 'support' ? 'badge-success' : comment.stance === 'against' ? 'badge-danger' : 'badge-neutral' %>" style="font-size: 9px; padding: 2px 6px;">
                                                         <%= comment.stance %>
                                                     </span>
                                                 </div>
-                                                <div class="comment-text"><%= comment.content %></div>
+                                                <div style="color: var(--text-secondary); line-height: 1.4;"><%= comment.content %></div>
                                             </div>
                                         <% }); %>
                                     </div>
                                 <% } %>
                             </div>
                         </div>
-                    </div>
                 <% }); %>
             <% } else { %>
                 <div class="card">
@@ -1671,96 +1985,7 @@
             <% } %>
         </div>
 
-        <!-- Voting Tab -->
-        <div id="voting" class="tab-content">
-            <% var votingItems = agendaItems ? agendaItems.filter(a => a.status === 'voted' || a.status === 'enacted' || a.status === 'rejected') : []; %>
-            
-            <% if (votingItems.length > 0) { %>
-                <% votingItems.forEach(function(item) { %>
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="flex justify-between items-center">
-                                <h3 class="card-title" style="flex: 1;">➡️ <%= item.title %></h3>
-                                <span class="badge <%= item.status === 'enacted' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : 'badge-info' %>">
-                                    <%= item.status %>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="vote-cards">
-                                <div class="vote-card support">
-                                    <div class="vote-icon">✅</div>
-                                    <div class="vote-count"><%= item.supportVotes %></div>
-                                    <div class="vote-label">Support</div>
-                                </div>
-                                <div class="vote-card against">
-                                    <div class="vote-icon">❌</div>
-                                    <div class="vote-count"><%= item.againstVotes %></div>
-                                    <div class="vote-label">Against</div>
-                                </div>
-                                <div class="vote-card abstain">
-                                    <div class="vote-icon">⚪</div>
-                                    <div class="vote-count"><%= item.abstainVotes %></div>
-                                    <div class="vote-label">Abstain</div>
-                                </div>
-                            </div>
 
-                            <% if (item.status === 'voted') { %>
-                                <h4 style="font-weight: 600; margin-bottom: 12px; font-size: 14px;">Record Votes</h4>
-                                <% presentMembers.forEach(function(member) { %>
-                                    <% 
-                                        var memberVote = item.votes ? item.votes.find(v => v.memberId === member.id) : null;
-                                        var voteType = memberVote ? memberVote.voteType : '';
-                                    %>
-                                    <div class="member-item" style="margin-bottom: 8px;">
-                                        <div class="member-info">
-                                            <div class="member-avatar">
-                                                <%= member.name.split(' ').map(n => n[0]).join('').toUpperCase() %>
-                                            </div>
-                                            <div class="member-details">
-                                                <div class="member-name"><%= member.name %></div>
-                                            </div>
-                                        </div>
-                                        <div class="attendance-btns">
-                                            <button class="att-btn <%= voteType === 'support' ? 'active' : '' %>" 
-                                                    style="<%= voteType === 'support' ? 'background: var(--success); border-color: var(--success); color: white;' : '' %>"
-                                                    onclick="castVote('<%= item.id %>', '<%= member.id %>', 'support')">✓</button>
-                                            <button class="att-btn <%= voteType === 'against' ? 'active' : '' %>"
-                                                    style="<%= voteType === 'against' ? 'background: var(--danger); border-color: var(--danger); color: white;' : '' %>"
-                                                    onclick="castVote('<%= item.id %>', '<%= member.id %>', 'against')">✗</button>
-                                            <button class="att-btn <%= voteType === 'abstain' ? 'active' : '' %>"
-                                                    style="<%= voteType === 'abstain' ? 'background: #718096; border-color: #718096; color: white;' : '' %>"
-                                                    onclick="castVote('<%= item.id %>', '<%= member.id %>', 'abstain')">○</button>
-                                        </div>
-                                    </div>
-                                <% }); %>
-
-                                <div class="flex gap-8 mt-16">
-                                    <button class="btn btn-primary" style="flex: 1;" 
-                                            onclick="updateAgendaStatus('<%= item.id %>', 'enacted')">
-                                        Enact
-                                    </button>
-                                    <button class="btn btn-danger" style="flex: 1;" 
-                                            onclick="updateAgendaStatus('<%= item.id %>', 'rejected')">
-                                        Reject
-                                    </button>
-                                </div>
-                            <% } %>
-                        </div>
-                    </div>
-                <% }); %>
-            <% } else { %>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="empty-state">
-                            <div class="empty-icon">🗳️</div>
-                            <div class="empty-title">No Voting Items</div>
-                            <div class="empty-subtitle">Move agenda items to vote</div>
-                        </div>
-                    </div>
-                </div>
-            <% } %>
-        </div>
 
         <!-- Final Tab -->
         <div id="final" class="tab-content">
@@ -1880,9 +2105,7 @@
          <button class="tab-item" onclick="openTab('agenda')">
              <div>Agenda</div>
          </button>
-         <button class="tab-item" onclick="openTab('voting')">
-             <div>Voting</div>
-         </button>
+
          <button class="tab-item" onclick="openTab('final')">
              <div>Final</div>
          </button>
@@ -1988,6 +2211,29 @@
         </div>
     </div>
 
+    <!-- Delete Meeting Modal -->
+    <div id="deleteMeetingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color: #e53e3e;">Delete Meeting</h3>
+                <p class="modal-subtitle">This action cannot be undone.</p>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMeetingMsg" style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;"></p>
+                <div style="background: #fff5f5; border: 1px solid #feb2b2; padding: 12px; border-radius: 8px; margin-top: 12px; display: flex; gap: 10px; align-items: flex-start;">
+                    <i class="fas fa-exclamation-triangle" style="color: #e53e3e; margin-top: 3px;"></i>
+                    <p style="font-size: 12px; color: #c53030; font-weight: 500;">
+                        Deleting this meeting will permanently remove all associated agenda items, votes, minutes, and attendance records.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('deleteMeetingModal')" style="flex: 1;">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" style="flex: 1; background: #e53e3e; color: white; border: none;">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Project Modal -->
     <div id="projectModal" class="modal">
         <div class="modal-content">
@@ -2077,6 +2323,7 @@
                     </select>
                 </div>
             </div>
+            </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('agendaModal')" style="flex: 1;">Cancel</button>
                 <button class="btn btn-primary" onclick="createAgenda()" style="flex: 2;">Add</button>
@@ -2109,13 +2356,108 @@
         </div>
     </div>
 
+    <!-- Previous Minutes Modal -->
+    <div id="previousMinutesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Reading of Previous Minutes</h3>
+                <p class="modal-subtitle">
+                    <% if (previousMeeting) { %>
+                        <%= previousMeeting.title %> - <%= new Date(previousMeeting.date).toLocaleDateString() %>
+                    <% } %>
+                </p>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <% if (previousMeeting) { %>
+                    <% if (previousMinutes && previousMinutes.length > 0) { %>
+                        <% previousMinutes.forEach(function(pm, idx) { %>
+                            <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #edf2f7;">
+                                <h4 style="font-size: 14px; color: #2d3748; margin-bottom: 8px;">MIN <%= idx + 1 %>: <%= pm.title %></h4>
+                                <p style="font-size: 13px; color: #4a5568; line-height: 1.5; white-space: pre-wrap;"><%= pm.content %></p>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div style="text-align: center; padding: 20px; color: #718096; font-style: italic; font-size: 13px;">
+                            No approved minutes found for the previous meeting.
+                        </div>
+                    <% } %>
+                <% } %>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="proceedToMinutesTab()" style="width: 100%;">Mark as Read & Continue</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function continueToMinutes() {
+            // Check if there is a previous meeting and minutes to show
+            <% if (previousMeeting) { %>
+                document.getElementById('previousMinutesModal').classList.add('active');
+            <% } else { %>
+                openTab('minutes');
+            <% } %>
+        }
+
+        function proceedToMinutesTab() {
+            closeModal('previousMinutesModal');
+            openTab('minutes');
+        }
+
+        function toggleMinute(headerElement) {
+            const body = headerElement.nextElementSibling;
+            if (!body || !body.classList.contains('minute-body')) return;
+            if (body.style.display === 'none' || body.style.display === '') {
+                body.style.display = 'block';
+            } else {
+                body.style.display = 'none';
+            }
+        }
+
         // Global vars
         let currentMeetingId = '<%= currentMeeting ? currentMeeting.id : "" %>';
         const groupName = '<%= groupName %>';
         let attendanceState = {};
 
         // Tab switching
+        function toggleAgendaProposal() {
+            const form = document.getElementById('inlineAgendaForm');
+            const backdrop = document.getElementById('proposalBackdrop');
+            const fabIcon = document.querySelector('.fab i');
+            
+            if (form.style.display === 'none' || !form.style.display) {
+                form.style.display = 'block';
+                backdrop.style.display = 'block';
+                fabIcon.classList.remove('fa-plus');
+                fabIcon.classList.add('fa-times');
+            } else {
+                form.style.display = 'none';
+                backdrop.style.display = 'none';
+                fabIcon.classList.remove('fa-times');
+                fabIcon.classList.add('fa-plus');
+            }
+        }
+
+        function toggleAgenda(header) {
+            const body = header.nextElementSibling;
+            const icon = header.querySelector('.fa-chevron-down');
+            const isActive = body.style.display === 'block';
+            
+            // Close other agendas (optional, but keep it consistent with minutes if they do this)
+            // document.querySelectorAll('.agenda-body').forEach(b => b.style.display = 'none');
+            // document.querySelectorAll('.agenda-header .fa-chevron-down').forEach(i => i.style.transform = 'rotate(0deg)');
+
+            if (isActive) {
+                body.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+                header.style.background = '#fff';
+            } else {
+                body.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+                header.style.background = '#f7fafc';
+            }
+        }
+
         function openTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -2136,7 +2478,7 @@
             // Activate button
             const buttons = document.querySelectorAll('.tab-item');
             buttons.forEach((btn, index) => {
-                const tabs = ['details', 'attendance', 'minutes', 'agenda', 'voting', 'final'];
+                const tabs = ['details', 'attendance', 'minutes', 'agenda', 'final'];
                 if (tabs[index] === tabName) {
                     btn.classList.add('active');
                 }
@@ -2215,8 +2557,14 @@
         // Meeting selection
         function selectMeeting() {
             const select = document.getElementById('meetingSelect');
+            const deleteBtn = document.getElementById('deleteMeetingBtn');
+            
             if (select.value) {
+                if (deleteBtn) deleteBtn.style.display = 'flex';
                 window.location.href = '/proceedings/' + encodeURIComponent(groupName) + '?meetingId=' + select.value;
+            } else {
+                if (deleteBtn) deleteBtn.style.display = 'none';
+                window.location.href = '/proceedings/' + encodeURIComponent(groupName);
             }
         }
 
@@ -2536,20 +2884,23 @@
         }
 
         // Agenda
-        async function createAgenda() {
+        async function createAgenda(isInline = false) {
             if (!currentMeetingId) {
                 alert('Please select a meeting first');
                 return;
             }
 
+            const suffix = isInline ? 'inline' : '';
+            const id = (type) => isInline ? 'inlineAgenda' + type : 'agenda' + type;
+
             const data = {
                 meetingId: currentMeetingId,
                 groupName: groupName,
-                title: document.getElementById('agendaTitle').value,
-                description: document.getElementById('agendaDescription').value,
-                proposerId: document.getElementById('agendaProposer').value,
-                seconderId: document.getElementById('agendaSeconder').value,
-                thirdId: document.getElementById('agendaThird').value
+                title: document.getElementById(isInline ? 'inlineAgendaTitle' : 'agendaTitle').value,
+                description: document.getElementById(isInline ? 'inlineAgendaDescription' : 'agendaDescription').value,
+                proposerId: isInline ? '' : document.getElementById('agendaProposer').value,
+                seconderId: isInline ? '' : document.getElementById('agendaSeconder').value,
+                thirdId: isInline ? '' : document.getElementById('agendaThird').value
             };
 
             if (!data.title) {
@@ -2592,26 +2943,83 @@
             }
         }
 
-        // Voting
-        async function castVote(agendaId, memberId, voteType) {
+        // Voting logic
+        let pendingVotes = {};
+
+        function setLocalVote(agendaId, memberId, voteType, btn) {
+            if (!pendingVotes[agendaId]) pendingVotes[agendaId] = {};
+            
+            // Toggle active state in UI
+            const row = btn.closest('.vote-options-local');
+            row.querySelectorAll('.v-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Store in local state
+            pendingVotes[agendaId][memberId] = voteType;
+        }
+
+        async function submitVotes(agendaId) {
+            const votesForAgenda = pendingVotes[agendaId] || {};
+            const voteData = [];
+
+            // Get comments too
+            const agendaArea = document.getElementById(`voting-area-${agendaId}`);
+            const memberRows = agendaArea.querySelectorAll('.member-vote-row');
+            
+            memberRows.forEach(row => {
+                const buttons = row.querySelector('.v-btn.active');
+                if (!buttons) return; // Skip if no vote cast for this member in this session
+                
+                const memberId = buttons.getAttribute('data-member');
+                const voteType = pendingVotes[agendaId][memberId];
+                const commentInput = row.querySelector('.vote-comment-input');
+                const comment = commentInput ? commentInput.value : '';
+
+                voteData.push({
+                    memberId,
+                    voteType,
+                    comment
+                });
+            });
+
+            if (voteData.length === 0) {
+                showNotification('Please record at least one vote before submitting.', 'error');
+                return;
+            }
+
             try {
-                const response = await fetch('/proceedings/api/votes', {
+                const response = await fetch('/proceedings/api/votes/batch', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         agendaId,
-                        memberId,
-                        voteType,
+                        votes: voteData,
                         groupName
                     })
                 });
-                
-                if (response.ok) {
-                    showNotification('Vote recorded');
-                    setTimeout(() => window.location.reload(), 800);
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Votes and comments recorded successfully');
+                    
+                    // Update counts in UI
+                    if (result.counts) {
+                        const sCount = document.getElementById(`count-support-${agendaId}`);
+                        const aCount = document.getElementById(`count-against-${agendaId}`);
+                        const abCount = document.getElementById(`count-abstain-${agendaId}`);
+                        if (sCount) sCount.textContent = result.counts.support;
+                        if (aCount) aCount.textContent = result.counts.against;
+                        if (abCount) abCount.textContent = result.counts.abstain;
+                    }
+
+                    // Refresh to show new comments below description
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(result.message || 'Error recording votes', 'error');
                 }
             } catch (error) {
-                showNotification('Error casting vote', 'error');
+                console.error('Error submitting votes:', error);
+                showNotification('Network error recording votes', 'error');
             }
         }
 
@@ -2764,6 +3172,45 @@
                 body.style.display = 'none';
                 arrow.classList.remove('open');
             }
+        }
+
+        function confirmDeleteMeeting() {
+            if (!currentMeetingId) return;
+            
+            const meetingTitle = document.querySelector('#meetingSelect option:checked').text;
+            document.getElementById('deleteMeetingMsg').innerHTML = `Are you sure you want to permanently delete <strong>"${meetingTitle}"</strong>?`;
+            
+            // Set the onclick for the confirmation button
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.onclick = async () => {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                
+                try {
+                    const response = await fetch(`/proceedings/api/meetings/${currentMeetingId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        showNotification('Meeting deleted successfully');
+                        setTimeout(() => {
+                            window.location.href = `/proceedings/${encodeURIComponent(groupName)}`;
+                        }, 1000);
+                    } else {
+                        showNotification(result.error || 'Error deleting meeting', 'error');
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = 'Delete';
+                    }
+                } catch (error) {
+                    console.error('Error deleting meeting:', error);
+                    showNotification('Network error deleting meeting', 'error');
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = 'Delete';
+                }
+            };
+            
+            document.getElementById('deleteMeetingModal').classList.add('active');
         }
 
         // Quick actions
