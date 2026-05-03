@@ -313,12 +313,38 @@ router.post("/login", async (req, res) => {
   const agents = readJSON(agentFile, []);
   const dealers = readJSON(dealerFile, []);
 
-  req.session.isAgent = agents.some(a => norm(a.phoneNumber) === norm(user.phoneNumber));
-  req.session.isDealer = dealers.some(d => norm(d.phoneNumber) === norm(user.phoneNumber));
+  const checkItem = (item, phone) => {
+    if (!item) return false;
+    let itemPhone = "";
+    if (typeof item === 'string') itemPhone = item;
+    else if (item.phoneNumber) itemPhone = item.phoneNumber;
+    else if (item.phone) itemPhone = item.phone;
+    return norm(itemPhone) === norm(phone);
+  };
+
+  const searchInFile = (data, phone) => {
+    if (!data) return false;
+    if (checkItem(data, phone)) return true;
+    if (Array.isArray(data)) return data.some(item => searchInFile(item, phone));
+    if (typeof data === 'object') {
+      const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
+      if (keyMatch) return true;
+      return Object.values(data).some(item => searchInFile(item, phone));
+    }
+    return false;
+  };
+
+  req.session.isAgent = searchInFile(agents, user.phoneNumber);
+  req.session.isDealer = searchInFile(dealers, user.phoneNumber);
 
   // If user is an agent, store the agent object and pin status in session
   if (req.session.isAgent) {
-    const agent = agents.find(a => norm(a.phoneNumber) === norm(user.phoneNumber));
+    let agent = null;
+    if (Array.isArray(agents)) {
+      agent = agents.find(a => norm(a.phoneNumber) === norm(user.phoneNumber));
+    } else {
+      agent = { phoneNumber: user.phoneNumber };
+    }
     req.session.agent = agent;
     req.session.hasAgentPin = agent ? (agent.pin && !(typeof agent.pin === 'object' && Object.keys(agent.pin).length === 0)) : false;
   } else {
@@ -328,7 +354,12 @@ router.post("/login", async (req, res) => {
 
   // If user is a dealer, store the dealer object and pin status in session
   if (req.session.isDealer) {
-    const dealer = dealers.find(d => norm(d.phoneNumber) === norm(user.phoneNumber));
+    let dealer = null;
+    if (Array.isArray(dealers)) {
+      dealer = dealers.find(d => norm(d.phoneNumber) === norm(user.phoneNumber));
+    } else {
+      dealer = { phoneNumber: user.phoneNumber }; 
+    }
     req.session.dealer = dealer;
     req.session.hasDealerPin = dealer ? !!dealer.pin : false;
   } else {

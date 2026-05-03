@@ -127,11 +127,11 @@ router.get("/", (req, res) => {
     const dealers = readJSON(dealerFile, []);
     const agents = readJSON(agentFile, []);
 
-    const isDealerInFile = dealers.some(d => norm(d.phoneNumber) === norm(phone));
-    const isAgentInFile = agents.some(a => norm(a.phoneNumber) === norm(phone));
+    const isDealerInFile = search(dealers);
+    const isAgentInFile = search(agents);
 
-    const showDealer = req.session.isDealer || isDealerInFile || false;
-    const showAgent = (req.session.isAgent || isAgentInFile || false) && !showDealer; // Agent should not be dealer
+    const showDealer = !!(req.session.isDealer || isDealerInFile);
+    const showAgent = !!(req.session.isAgent || isAgentInFile); // Removed && !showDealer restriction
     const generalExists = search(generals);
 
 
