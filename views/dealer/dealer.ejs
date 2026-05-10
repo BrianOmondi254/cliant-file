@@ -583,14 +583,17 @@ function cancelOnboarding() {
       <i class="fas fa-wallet"></i>
       <span>Personal</span>
     </a>
-    <a href="/agent" class="nav-item">
-      <i class="fas fa-user-tie"></i>
-      <span>Agent</span>
-    </a>
+    <% if (session && session.isDealer) { %>
     <a href="/dealer" class="nav-item active">
       <i class="fas fa-store"></i>
       <span>Dealer</span>
     </a>
+    <% } else if (session && session.isAgent) { %>
+    <a href="/agent" class="nav-item">
+      <i class="fas fa-user-tie"></i>
+      <span>Agent</span>
+    </a>
+    <% } %>
     <a href="javascript:void(0)" onclick="window.location.href='/personal'" class="nav-item">
       <i class="fas fa-comment-dots"></i>
       <span>Message</span>

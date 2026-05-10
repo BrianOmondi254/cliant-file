@@ -65,6 +65,9 @@ app.use((req, res, next) => {
     console.warn(`🛡️ Blocked direct access attempt to EJS template: ${req.url}`);
     return res.status(403).send('<h1>403 Forbidden</h1><p>Direct access to templates is strictly prohibited.</p>');
   }
+
+  // Expose session to all templates
+  res.locals.session = req.session;
   next();
 });
 

@@ -40,7 +40,7 @@
     "LastName": "agent",
     "email": "omondibrianokenyo@gmail.com",
     "phoneNumber": "0740001141",
-    "password": "$2b$10$1xRkAKsYZOkwBq7lJ2J/oO4iFAsD0joXnwgK0kl9SD52Fzw5ObMca",
+    "password": "$2b$10$OYDLBm/9jvLuSWudh3XUKOVA/D3htoQI4omgCYupDeNgHJ3VC0S.e",
     "gender": "Male",
     "county": "Siaya",
     "constituency": "Ugenya",
@@ -48,7 +48,7 @@
     "ageBracket": "36-45",
     "idNumber": "35951449",
     "createdAt": "2026-01-15T20:28:07.049Z",
-    "lastLogin": "2026-05-10T13:42:35.281Z",
+    "lastLogin": "2026-05-10T14:56:44.437Z",
     "passkey": "65332",
     "personalPin": "1234"
   },

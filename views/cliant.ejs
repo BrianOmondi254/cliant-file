@@ -1923,14 +1923,17 @@ document.addEventListener('DOMContentLoaded', () => app.init());
       <i class="fas fa-wallet"></i>
       <span>Personal</span>
     </a>
+    <% if (typeof showAgent !== 'undefined' && showAgent) { %>
     <a href="/agent" class="nav-item">
       <i class="fas fa-user-tie"></i>
       <span>Agent</span>
     </a>
+    <% } else if (typeof showDealer !== 'undefined' && showDealer) { %>
     <a href="/dealer" class="nav-item">
       <i class="fas fa-store"></i>
       <span>Dealer</span>
     </a>
+    <% } %>
     <a href="javascript:void(0)" onclick="app.openInbox()" class="nav-item">
       <i class="fas fa-comment-dots"></i>
       <span>Message</span>
