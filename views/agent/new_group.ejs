@@ -2029,8 +2029,6 @@
         </button>
       </div>
     </div>
-  </div>
-
   <%
     const navLinks = [];
     if (session && session.isAgent) navLinks.push({ name: 'Agent', action: "window.location.href='/agent'" });
@@ -2040,7 +2038,7 @@
     navLinks.push({ name: 'Message', action: "window.location.href='/personal'" });
     const activeIndex = navLinks.findIndex(l => l.name === 'Agent');
   %>
-  <div class="top-nav" style="margin-bottom: 0;">
+  <div class="top-nav" style="margin-bottom: 0; flex-shrink: 0;">
     <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
     <% navLinks.forEach((link, index) => { %>
         <div class="nav-btn <%= link.name === 'Agent' ? 'active' : '' %>" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
@@ -2048,6 +2046,8 @@
         </div>
     <% }) %>
   </div>
+  </div>
+
   <script>
     function moveIndicator(idx, total) {
       const ind = document.getElementById('navIndicator');

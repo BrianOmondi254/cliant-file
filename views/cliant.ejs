@@ -91,7 +91,7 @@
         <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
 
         <% navLinks.forEach((link, index) => { %>
-            <div class="nav-btn <%= link.name === 'Personal' ? 'active' : '' %> <%= link.name === 'Out' ? 'out' : '' %>" onclick="app.moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
+            <div class="nav-btn <%= link.name === 'Personal' ? 'active' : '' %> <%= link.name === 'Out' ? 'out' : '' %>" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
                 <%= link.name %>
                 <% if (link.name === 'Message') { %>
                     <span id="msgBadge" class="hidden" style="display:inline-block;background:red;color:white;border-radius:50%;padding:2px 5px;font-size:10px;margin-left:4px;">0</span>
@@ -1925,17 +1925,6 @@ function moveIndicator(idx, total) {
 
 document.addEventListener('DOMContentLoaded', () => app.init());
 </script>
-  <!-- BOTTOM NAVIGATION -->
-    <div class="top-nav" style="margin-bottom: 0;">
-        <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
-        <% navLinks.forEach((link, index) => { %>
-            <div class="nav-btn <%= link.name === 'Personal' ? 'active' : '' %>" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
-                <%= link.name %>
-                <% if (link.name === 'Message') { %>
-                    <span id="msgBadge" class="hidden" style="display:inline-block;background:red;color:white;border-radius:50%;padding:2px 5px;font-size:10px;margin-left:4px;">0</span>
-                <% } %>
-            </div>
-        <% }) %>
     </div>
 </body>
 </html>

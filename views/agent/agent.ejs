@@ -1894,6 +1894,22 @@
                </div>
 
               <!-- Constitution setup is handled by /agent/con-group (con_group.ejs) -->
+  <%
+    const navLinks = [];
+    if (session && session.isAgent) navLinks.push({ name: 'Agent', action: "window.location.href='/agent'" });
+    if (session && session.isDealer) navLinks.push({ name: 'Dealer', action: "window.location.href='/dealer'" });
+    navLinks.push({ name: 'General', action: "window.location.href='/general'" });
+    navLinks.push({ name: 'Personal', action: "window.location.href='/personal'" });
+    navLinks.push({ name: 'Message', action: "window.location.href='/personal'" });
+    const activeIndex = navLinks.findIndex(l => l.name === 'Agent');
+  %>
+  <div class="top-nav" style="margin-bottom: 0; flex-shrink: 0;">
+    <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
+    <% navLinks.forEach((link, index) => { %>
+        <div class="nav-btn <%= link.name === 'Agent' ? 'active' : '' %>" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
+            <%= link.name %>
+        </div>
+    <% }) %>
   </div>
   </div>
 
@@ -3770,24 +3786,6 @@
 
   </script>
 
-  <!-- BOTTOM NAVIGATION -->
-  <%
-    const navLinks = [];
-    if (session && session.isAgent) navLinks.push({ name: 'Agent', action: "window.location.href='/agent'" });
-    if (session && session.isDealer) navLinks.push({ name: 'Dealer', action: "window.location.href='/dealer'" });
-    navLinks.push({ name: 'General', action: "window.location.href='/general'" });
-    navLinks.push({ name: 'Personal', action: "window.location.href='/personal'" });
-    navLinks.push({ name: 'Message', action: "window.location.href='/personal'" });
-    const activeIndex = navLinks.findIndex(l => l.name === 'Agent');
-  %>
-  <div class="top-nav" style="margin-bottom: 0;">
-    <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
-    <% navLinks.forEach((link, index) => { %>
-        <div class="nav-btn <%= link.name === 'Agent' ? 'active' : '' %>" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
-            <%= link.name %>
-        </div>
-    <% }) %>
-  </div>
 </body>
 
 </html>
