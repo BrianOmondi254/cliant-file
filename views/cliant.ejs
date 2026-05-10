@@ -1923,6 +1923,10 @@ document.addEventListener('DOMContentLoaded', () => app.init());
       <i class="fas fa-wallet"></i>
       <span>Personal</span>
     </a>
+    <a href="javascript:void(0)" onclick="app.handleGeneralClick()" class="nav-item">
+      <i class="fas fa-layer-group"></i>
+      <span>General</span>
+    </a>
     <% if (typeof showAgent !== 'undefined' && showAgent) { %>
     <a href="/agent" class="nav-item">
       <i class="fas fa-user-tie"></i>
