@@ -59,6 +59,12 @@ app.use(express.json());
 /* 🛡️ Disable Caching to ensure Logout prevents 'Back' button access */
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  
+  // Block direct access to any URL containing '.ejs'
+  if (req.url.toLowerCase().includes('.ejs')) {
+    console.warn(`🛡️ Blocked direct access attempt to EJS template: ${req.url}`);
+    return res.status(403).send('<h1>403 Forbidden</h1><p>Direct access to templates is strictly prohibited.</p>');
+  }
   next();
 });
 

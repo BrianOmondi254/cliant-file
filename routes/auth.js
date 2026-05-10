@@ -268,6 +268,10 @@ router.post("/complete-registration", async (req, res) => {
 
 /* 🔑 Login (GET form) */
 router.get("/login", (req, res) => {
+  // If already logged in, redirect to dashboard to 'hide' the login URL
+  if (req.session && req.session.user) {
+    return res.redirect("/personal");
+  }
   res.render("login", { alert: null });
 });
 
