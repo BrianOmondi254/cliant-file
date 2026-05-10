@@ -59,7 +59,7 @@
         .toast.success{background:#10b981;}
         .toast.error{background:#ef4444;}
         @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: #000000; backdrop-filter: blur(15px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: env(safe-area-inset-bottom, 12px); z-index: 9999; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3); max-width: 545px; margin: 0 auto; } .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #888888; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); text-decoration: none; height: 100%; } .nav-item i { font-size: 1.4rem; transition: transform 0.3s ease; } .nav-item span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; } .nav-item.active { color: #0f9d58; } .nav-item.active i { transform: translateY(-4px); } .nav-item:active { transform: scale(0.9); } .dashboard-main-content { padding-bottom: 100px !important; } .top-nav { display: none !important; } </style>
+    .top-nav { position: relative; display: flex; background: #022c22; border-radius: 0; padding: 10px 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.2); margin-top: 10px; border: 1px solid rgba(15,157,88,0.3); position: relative; overflow: hidden; } .indicator { position: absolute; height: 3px; bottom: 0; left: 0; background: linear-gradient(90deg, #00f2fe, #4facfe); box-shadow: 0 0 15px rgba(0, 242, 254, 0.6); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2; border-radius: 3px 3px 0 0; } .nav-btn { flex: 1; text-align: center; padding: 5px 0 10px 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); cursor: pointer; position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; text-decoration: none; } .nav-btn:hover { color: #fff; } .nav-btn.active { color: #00f2fe; text-shadow: 0 0 8px rgba(0, 242, 254, 0.3); } .nav-btn.out { color: var(--danger); } .nav-btn.out:hover { color: #ef4444; } </style>
 </head>
 <body>
 <%
@@ -1915,33 +1915,27 @@ const app = {
         }
     }
 };
+
+function moveIndicator(idx, total) {
+    const ind = document.getElementById('navIndicator');
+    if (ind) ind.style.left = (idx * (100 / total)) + '%';
+    const btns = document.querySelectorAll('.nav-btn');
+    btns.forEach((b, i) => b.classList.toggle('active', i === idx));
+}
+
 document.addEventListener('DOMContentLoaded', () => app.init());
 </script>
   <!-- BOTTOM NAVIGATION -->
-  <div class="bottom-nav">
-    <a href="/personal" class="nav-item active">
-      <i class="fas fa-wallet"></i>
-      <span>Personal</span>
-    </a>
-    <a href="javascript:void(0)" onclick="app.handleGeneralClick()" class="nav-item">
-      <i class="fas fa-layer-group"></i>
-      <span>General</span>
-    </a>
-    <% if (typeof showAgent !== 'undefined' && showAgent) { %>
-    <a href="/agent" class="nav-item">
-      <i class="fas fa-user-tie"></i>
-      <span>Agent</span>
-    </a>
-    <% } else if (typeof showDealer !== 'undefined' && showDealer) { %>
-    <a href="/dealer" class="nav-item">
-      <i class="fas fa-store"></i>
-      <span>Dealer</span>
-    </a>
-    <% } %>
-    <a href="javascript:void(0)" onclick="app.openInbox()" class="nav-item">
-      <i class="fas fa-comment-dots"></i>
-      <span>Message</span>
-    </a>
-  </div>
+    <div class="top-nav" style="margin-bottom: 0;">
+        <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
+        <% navLinks.forEach((link, index) => { %>
+            <div class="nav-btn <%= link.name === 'Personal' ? 'active' : '' %>" onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
+                <%= link.name %>
+                <% if (link.name === 'Message') { %>
+                    <span id="msgBadge" class="hidden" style="display:inline-block;background:red;color:white;border-radius:50%;padding:2px 5px;font-size:10px;margin-left:4px;">0</span>
+                <% } %>
+            </div>
+        <% }) %>
+    </div>
 </body>
 </html>
