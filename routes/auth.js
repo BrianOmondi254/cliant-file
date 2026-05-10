@@ -279,11 +279,18 @@ router.get("/login", (req, res) => {
 router.post("/login", async (req, res) => {
   const users = readJSON(usersFile, []);
   let loginPhone = (req.body.phoneNumber || "").trim();
+  let loginPassword = req.body.password || "";
+
+  console.log("\n🔐 LOGIN ATTEMPT:");
+  console.log("   Phone entered :", loginPhone, "-> norm:", norm(loginPhone));
+  console.log("   Password length:", loginPassword.length);
+
   const userIndex = users.findIndex(u => {
     return norm(u.phoneNumber) === norm(loginPhone);
   });
 
   if (userIndex === -1) {
+    console.log("   ❌ Phone not found in data.json");
     return res.render("register", {
       message: "Phone number not registered. Please create an account.",
       form: { phoneNumber: req.body.phoneNumber }
@@ -291,8 +298,18 @@ router.post("/login", async (req, res) => {
   }
 
   const user = users[userIndex];
-  const valid = await bcrypt.compare(req.body.password, user.password);
-  if (!valid) return res.render("login", { alert: "Wrong password!" });
+  console.log("   ✅ User found:", user.FirstName, user.LastName);
+  console.log("   Stored hash  :", user.password ? user.password.substring(0, 15) + "..." : "NO PASSWORD FIELD");
+
+  if (!user.password) {
+    console.log("   ❌ No password hash in user record!");
+    return res.render("login", { alert: "Account error: No password set. Contact admin." });
+  }
+
+  const valid = await bcrypt.compare(loginPassword, user.password);
+  console.log("   bcrypt result :", valid ? "✅ MATCH" : "❌ NO MATCH");
+
+  if (!valid) return res.render("login", { alert: "Wrong password! Check your password and try again." });
 
   // Update last login in data.json
   users[userIndex].lastLogin = new Date().toISOString();
@@ -374,6 +391,35 @@ router.post("/login", async (req, res) => {
 
   // ✅ Redirect to personal page (handled by routes/personal.js)
   res.redirect("/personal");
+});
+
+/* 🛠️ Admin: Reset a user's password (POST /admin/reset-password) */
+/* Usage: POST with { adminCode, phoneNumber, newPassword } */
+router.post("/admin/reset-password", async (req, res) => {
+  const { adminCode, phoneNumber, newPassword } = req.body;
+
+  // Protect with the admin code from the login page
+  if (adminCode !== "35951444") {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+
+  if (!phoneNumber || !newPassword) {
+    return res.status(400).json({ error: "Phone and new password required" });
+  }
+
+  const users = readJSON(usersFile, []);
+  const idx = users.findIndex(u => norm(u.phoneNumber) === norm(phoneNumber));
+
+  if (idx === -1) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+  users[idx].password = hashed;
+  writeJSON(usersFile, users);
+
+  console.log("🛠️  Password reset for:", users[idx].phoneNumber);
+  return res.json({ success: true, message: "Password updated for " + users[idx].phoneNumber });
 });
 
 /* 🚪 Logout */
