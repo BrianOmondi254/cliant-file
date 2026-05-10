@@ -37,7 +37,7 @@
       --card-gap: 10px;          /* vertical gap between stacked input-groups inside a card */
       --section-radius: 12px;
     }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(0,0,0,0.05); padding-bottom: env(safe-area-inset-bottom, 12px); z-index: 2000; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08); max-width: 545px; margin: 0 auto; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(15px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(0,0,0,0.05); padding-bottom: env(safe-area-inset-bottom, 12px); z-index: 9999; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08); max-width: 545px; margin: 0 auto; }
     .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #94a3b8; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); text-decoration: none; }
     .nav-item i { font-size: 1.4rem; }
     .nav-item span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
@@ -2030,5 +2030,24 @@
     </div>
   </div>
 
+  <!-- BOTTOM NAVIGATION -->
+  <div class="bottom-nav">
+    <a href="/personal" class="nav-item">
+      <i class="fas fa-wallet"></i>
+      <span>Personal</span>
+    </a>
+    <a href="/agent" class="nav-item active">
+      <i class="fas fa-user-tie"></i>
+      <span>Agent</span>
+    </a>
+    <a href="/dealer" class="nav-item">
+      <i class="fas fa-store"></i>
+      <span>Dealer</span>
+    </a>
+    <a href="javascript:void(0)" onclick="window.location.href='/personal'" class="nav-item">
+      <i class="fas fa-comment-dots"></i>
+      <span>Message</span>
+    </a>
+  </div>
 </body>
-</html><!-- BOTTOM NAVIGATION --><div class=" bottom-nav\><a href=\/dealer\ class=\nav-item\><i class=\fas fa-store\></i><span>Dealer</span></a><a href=\/agent\ class=\nav-item active\><i class=\fas fa-user-tie\></i><span>Agent</span></a><a href=\/personal\ class=\nav-item\><i class=\fas fa-wallet\></i><span>Personal</span></a><a href=\javascript:void 0 \ onclick=\window.location.href=\u0027/personal\u0027\ class=\nav-item\><i class=\fas fa-envelope\></i><span>Message</span></a></div>
+</html>
