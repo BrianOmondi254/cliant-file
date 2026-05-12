@@ -12,7 +12,9 @@
       "agent_creation": 0,
       "personal_account_creation": 0,
       "dealer_creation": 0
-    }
+    },
+    "pin": "$2b$10$4j4S/V7.PTxQDGcFl/Jvku6PC5Wod.czuU.FoxsVg5gDUPM0Rcg0S",
+    "passkey": "6865"
   },
   {
     "phoneNumber": "0740000143",

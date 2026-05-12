@@ -257,13 +257,25 @@
     .stat-icon { width: 50px; height: 50px; background: var(--primary-light); color: var(--primary); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 24px; }
     .stat-text h5 { margin: 0 0 5px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .stat-text h2 { margin: 0; font-size: 28px; font-weight: 700; color: var(--secondary); }
-    .top-nav { position: relative; display: flex; background: #022c22; border-radius: 0; padding: 5px 0; box-shadow: inset 0 2px 10px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.2); border: 1px solid rgba(15,157,88,0.3); position: relative; overflow: hidden; max-height: 50px; } .indicator { position: absolute; height: 3px; bottom: 0; left: 0; background: linear-gradient(90deg, #00f2fe, #4facfe); box-shadow: 0 0 15px rgba(0, 242, 254, 0.6); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2; border-radius: 3px 3px 0 0; } .nav-btn { flex: 1; text-align: center; padding: 5px 0 10px 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); cursor: pointer; position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; text-decoration: none; } .nav-btn:hover { color: #fff; } .nav-btn.active { color: #00f2fe; text-shadow: 0 0 8px rgba(0, 242, 254, 0.3); } .box { padding-bottom: 100px !important; } </style>
+    .top-nav { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: calc(100% - 4px); max-width: 540px; background: rgba(2, 44, 34, 0.95); backdrop-filter: blur(12px); display: flex; padding: 10px 0 25px 0; border-radius: 5px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(15,157,88,0.3); z-index: 10000; overflow: hidden; } .indicator { position: absolute; height: 3px; bottom: 10px; left: 0; background: linear-gradient(90deg, #00f2fe, #4facfe); box-shadow: 0 0 15px rgba(0, 242, 254, 0.6); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2; border-radius: 3px 3px 0 0; } .nav-btn { flex: 1; text-align: center; padding: 5px 0 10px 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); cursor: pointer; position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; text-decoration: none; } .nav-btn:hover { color: #fff; } .nav-btn.active { color: #00f2fe; text-shadow: 0 0 8px rgba(0, 242, 254, 0.3); } .box { padding-bottom: 120px !important; } </style>
 </head>
 <body>
 
 <% if (step === 'not-dealer') { %>
   <div class="box">
-    <div class="header">
+    <div class="unified-header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 20px; color: white; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 5px 5px 0 0; margin: -20px -20px 25px -20px;">
+      <h1 style="font-size: 22px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
+      <p style="font-size: 9px; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 2px;">Dealer Authorized Portal</p>
+      
+      <a href="/logout" title="Logout" style="position: absolute; top: 18px; right: 20px; color: white; font-size: 1.3rem; opacity: 0.9; transition: opacity 0.2s;">
+        <i class="ri-logout-circle-r-line"></i>
+      </a>
+
+      <!-- Decorative abstract spheres -->
+      <div style="position: absolute; top: -50%; right: -10%; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+      <div style="position: absolute; bottom: -50%; left: -5%; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+    </div>
+    <div class="header" style="margin-top: 15px;">
       <div class="icon-circle" style="background: var(--danger-light); color: var(--danger);"><i class="ri-error-warning-line"></i></div>
       <h3>Access Denied</h3>
       <p>You do not have a registered Dealer profile.</p>
@@ -276,7 +288,19 @@
 
 <% if (step === 'create-pin') { %>
   <div class="box">
-    <div class="header">
+    <div class="unified-header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 20px; color: white; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 5px 5px 0 0; margin: -20px -20px 25px -20px;">
+      <h1 style="font-size: 22px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
+      <p style="font-size: 9px; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 2px;">Dealer Security Setup</p>
+
+      <a href="/logout" title="Logout" style="position: absolute; top: 18px; right: 20px; color: white; font-size: 1.3rem; opacity: 0.9; transition: opacity 0.2s;">
+        <i class="ri-logout-circle-r-line"></i>
+      </a>
+
+      <!-- Decorative abstract spheres -->
+      <div style="position: absolute; top: -50%; right: -10%; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+      <div style="position: absolute; bottom: -50%; left: -5%; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+    </div>
+    <div class="header" style="margin-top: 15px;">
       <div class="icon-circle"><i class="ri-shield-check-line"></i></div>
       <h3>Secure Your Account</h3>
       <p>Set a 4-digit PIN to protect your Dealer Portal access.</p>
@@ -305,13 +329,25 @@
 
 <% if (step === 'enter-pin') { %>
   <div class="box">
+    <div class="unified-header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 20px; color: white; text-align: center; position: relative; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; border-radius: 5px 5px 0 0; margin: -20px -20px 25px -20px;">
+      <h1 style="font-size: 22px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
+      <p style="font-size: 9px; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-top: 2px;">Dealer Authorized Portal</p>
+
+      <a href="/logout" title="Logout" style="position: absolute; top: 18px; right: 20px; color: white; font-size: 1.3rem; opacity: 0.9; transition: opacity 0.2s;">
+        <i class="ri-logout-circle-r-line"></i>
+      </a>
+
+      <!-- Decorative abstract spheres -->
+      <div style="position: absolute; top: -50%; right: -10%; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+      <div style="position: absolute; bottom: -50%; left: -5%; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+    </div>
     <% if (message && message.text) { %>
-      <div class="alert <%= message.type %>">
+      <div class="alert <%= message.type %>" style="margin-top: 15px;">
         <i class="<%= message.type === 'error' ? 'ri-error-warning-fill' : 'ri-check-double-line' %>"></i> 
         <%= message.text %>
       </div>
     <% } %>
-    <div class="header">
+    <div class="header" style="margin-top: 15px;">
       <div class="icon-circle"><i class="ri-fingerprint-line"></i></div>
       <h3>Dealer Portal Login</h3>
       <p>Welcome back. Please verify your identity.</p>

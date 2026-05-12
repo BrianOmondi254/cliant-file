@@ -112,8 +112,8 @@
 
     /* ─── CONTENT ─── */
     .content {
-      /* CHANGE 3: padding-bottom 3px → 10px */
-      padding: 12px 12px 10px 12px;
+      /* CHANGE 3: padding-bottom 3px → 120px */
+      padding: 12px 12px 120px 12px;
       position: relative;
       z-index: 10;
     }
@@ -511,6 +511,54 @@
       .section-header   { padding: 10px 12px; font-size: 12px; }
       .payment-options  { grid-template-columns: 1fr; }
     }
+
+    /* ── BOTTOM NAV ── */
+    .top-nav {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 4px);
+      max-width: 540px;
+      background: rgba(2, 44, 34, 0.95);
+      backdrop-filter: blur(12px);
+      display: flex;
+      padding: 10px 0 25px 0;
+      border-radius: 5px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      border: 1px solid rgba(15,157,88,0.3);
+      z-index: 10000;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .indicator {
+      position: absolute;
+      height: 3px;
+      bottom: 10px;
+      left: 0;
+      background: linear-gradient(90deg, #00f2fe, #4facfe);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+      transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 2;
+      border-radius: 3px 3px 0 0;
+    }
+    .nav-btn {
+      flex: 1;
+      text-align: center;
+      padding: 5px 0 10px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+    .nav-btn:hover { color: #fff; }
+    .nav-btn.active { color: #00f2fe; text-shadow: 0 0 8px rgba(0,242,254,0.3); }
   </style>
 </head>
 
