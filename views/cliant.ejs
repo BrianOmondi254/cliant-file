@@ -9,7 +9,7 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tbank Investment</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -24,13 +24,17 @@
             --card-radius: 14px;
             --shadow-sm: 0 2px 6px rgba(0,0,0,0.08);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+            --focus-ring: rgba(12,143,68,0.15);
+            --border: #e2e8f0;
+            --radius: 14px;
+            --radius-sm: 8px;
+            --muted: #64748b;
+            --faint: #94a3b8;
         }
 
         html, body {
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -39,17 +43,11 @@
             box-sizing: border-box;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
 
         /* ── CONTAINER ── */
         .container {
-            width: 100%;
-            max-width: 545px;
+            width: 100%; max-width: 545px;
             background: var(--light);
             border-radius: 0;
             box-shadow: 0 25px 60px rgba(0,0,0,0.2);
@@ -60,15 +58,14 @@
             flex-direction: column;
         }
 
-        /* ── TOP NAV (bottom bar) ── */
+        /* ── BOTTOM NAV ── */
         .top-nav {
             position: fixed;
-            bottom: 15px;
-            left: 50%;
+            bottom: 15px; left: 50%;
             transform: translateX(-50%);
             width: calc(100% - 4px);
             max-width: 540px;
-            background: rgba(2, 44, 34, 0.95);
+            background: rgba(2,44,34,0.95);
             backdrop-filter: blur(12px);
             display: flex;
             padding: 10px 0 25px 0;
@@ -78,109 +75,62 @@
             z-index: 10000;
             overflow: hidden;
         }
-
         .indicator {
             position: absolute;
             height: 3px;
-            bottom: 10px; /* Aligned above the extra padding */
-            left: 0;
+            bottom: 10px; left: 0;
             background: linear-gradient(90deg, #00f2fe, #4facfe);
             box-shadow: 0 0 15px rgba(0,242,254,0.6);
-            transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.4s cubic-bezier(0.4,0,0.2,1);
             z-index: 2;
             border-radius: 3px 3px 0 0;
         }
-
         .nav-btn {
-            flex: 1;
-            text-align: center;
+            flex: 1; text-align: center;
             padding: 5px 0 10px 0;
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 13px; font-weight: 600;
             color: rgba(255,255,255,0.6);
             cursor: pointer;
-            position: relative;
-            z-index: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: relative; z-index: 1;
+            display: flex; align-items: center; justify-content: center;
             text-decoration: none;
         }
-
         .nav-btn:hover { color: #fff; }
         .nav-btn.active { color: #00f2fe; text-shadow: 0 0 8px rgba(0,242,254,0.3); }
         .nav-btn.out { color: var(--danger); }
 
         /* ── HEADER STRIP ── */
-        .app-header {
-            background: linear-gradient(135deg, #0c8f44, #00c76f);
-            padding: 14px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-            flex-shrink: 0;
-            position: relative;
-            overflow: hidden;
-        }
-
+ .app-header {
+              background: linear-gradient(135deg, #0c8f44, #00c76f);
+              padding: 14px 16px;
+              display: flex; justify-content: center; align-items: center;
+              box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+              flex-shrink: 0;
+              position: relative; overflow: hidden;
+          }
         .app-header::after {
-            content: '';
-            position: absolute;
-            top: -60%;
-            right: -10%;
-            width: 160px;
-            height: 160px;
+            content: ''; position: absolute;
+            top: -60%; right: -10%;
+            width: 160px; height: 160px;
             background: rgba(255,255,255,0.08);
             border-radius: 50%;
         }
-
-        .app-header h2 {
-            font-size: 20px;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: -0.5px;
-        }
-
-        .app-header .header-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 1;
-        }
-
-        .header-bell {
-            font-size: 18px;
-            color: rgba(255,255,255,0.85);
-            cursor: pointer;
-        }
-
+         .app-header h2 { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -0.5px; word-spacing: 8px; text-align: center; }
+         .app-header .header-right { display: flex; align-items: center; gap: 10px; z-index: 1; position: absolute; right: 16px; }
+        .header-bell { font-size: 18px; color: rgba(255,255,255,0.85); cursor: pointer; }
         .logout-btn {
-            background: rgba(220,38,38,0.85);
-            border: none;
-            color: white;
-            font-size: 0.8rem;
-            font-weight: bold;
-            padding: 8px;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            transition: all 0.2s;
+            background: rgba(220,38,38,0.85); border: none; color: white;
+            font-size: 0.8rem; font-weight: bold; padding: 8px; border-radius: 50%;
+            cursor: pointer; box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; transition: all 0.2s;
         }
-
         .logout-btn:hover { background: rgba(220,38,38,1); transform: scale(1.05); }
 
         /* ── SCROLLABLE MAIN ── */
         #mainContainer {
-            flex: 1;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--primary) transparent;
+            flex: 1; overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: var(--primary) transparent;
             padding-bottom: 120px;
         }
 
@@ -188,224 +138,380 @@
         .balance-card {
             margin: 14px 14px 0;
             background: linear-gradient(135deg, #0c8f44, #00c76f);
-            color: white;
-            padding: 20px 18px;
+            color: white; padding: 20px 18px;
             border-radius: var(--card-radius);
             box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden;
         }
-
-        .balance-card::before {
-            content: '';
-            position: absolute;
-            top: -40px;
-            right: -30px;
-            width: 130px;
-            height: 130px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-        }
-
-        .balance-card::after {
-            content: '';
-            position: absolute;
-            bottom: -50px;
-            left: -20px;
-            width: 110px;
-            height: 110px;
-            background: rgba(255,255,255,0.07);
-            border-radius: 50%;
-        }
-
-        .balance-card h3 {
-            font-size: 12px;
-            font-weight: 500;
-            opacity: 0.85;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .balance-card .amount {
-            font-size: 28px;
-            font-weight: 800;
-            margin-top: 6px;
-            letter-spacing: -1px;
-        }
-
-        .balance-card .user-name {
-            margin-top: 6px;
-            font-size: 12px;
-            opacity: 0.85;
-            font-weight: 500;
-        }
+        .balance-card::before { content: ''; position: absolute; top: -40px; right: -30px; width: 130px; height: 130px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+        .balance-card::after  { content: ''; position: absolute; bottom: -50px; left: -20px; width: 110px; height: 110px; background: rgba(255,255,255,0.07); border-radius: 50%; }
+        .balance-card h3 { font-size: 12px; font-weight: 500; opacity: 0.85; text-transform: uppercase; letter-spacing: 1px; }
+        .balance-card .amount { font-size: 28px; font-weight: 800; margin-top: 6px; letter-spacing: -1px; }
+        .balance-card .user-name { margin-top: 6px; font-size: 12px; opacity: 0.85; font-weight: 500; }
 
         /* ── ACTION BUTTONS ── */
-        .actions-row {
-            display: flex;
-            justify-content: space-around;
-            margin: 14px 14px 0;
-            gap: 8px;
-        }
-
+        .actions-row { display: flex; justify-content: space-around; margin: 14px 14px 0; gap: 8px; }
         .action-btn {
-            background: white;
-            padding: 12px 8px;
-            border-radius: 12px;
-            flex: 1;
-            text-align: center;
+            background: white; padding: 12px 8px; border-radius: 12px;
+            flex: 1; text-align: center;
             box-shadow: var(--shadow-sm);
-            font-size: 11px;
-            font-weight: 600;
-            color: #444;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.15s;
+            font-size: 11px; font-weight: 600; color: #444;
+            cursor: pointer; transition: background 0.2s, transform 0.15s;
             border: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
         }
-
-        .action-btn .action-icon {
-            font-size: 20px;
-            margin-bottom: 2px;
-        }
-
-        .action-btn:hover {
-            background: #e6fff3;
-            transform: translateY(-2px);
-        }
-
+        .action-btn .action-icon { font-size: 20px; margin-bottom: 2px; }
+        .action-btn:hover { background: #e6fff3; transform: translateY(-2px); }
         .action-btn:active { transform: scale(0.97); }
 
         /* ── SECTION LABEL ── */
-        .section-label {
-            padding: 14px 14px 8px;
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text-dark);
-        }
+        .section-label { padding: 14px 14px 8px; font-size: 15px; font-weight: 700; color: var(--text-dark); }
 
         /* ── ACCOUNT CARDS ── */
         .account-card {
-            background: white;
-            margin: 0 14px 8px;
-            padding: 14px 16px;
+            background: white; margin: 0 14px 8px; padding: 14px 16px;
             border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow-sm);
-            cursor: default;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--shadow-sm); cursor: default;
         }
-
-        .account-card .acc-name {
-            font-weight: 700;
-            font-size: 14px;
-            color: var(--text-dark);
-        }
-
-        .account-card small {
-            color: var(--text-light);
-            font-size: 11px;
-            display: block;
-            margin-top: 2px;
-        }
-
-        .account-card .acc-balance {
-            font-weight: 800;
-            font-size: 15px;
-            color: var(--primary);
-        }
+        .account-card .acc-name { font-weight: 700; font-size: 14px; color: var(--text-dark); }
+        .account-card small { color: var(--text-light); font-size: 11px; display: block; margin-top: 2px; }
+         .account-card .acc-balance { font-weight: 800; font-size: 15px; color: var(--primary); }
+         .account-card.account-card-empty { justify-content: center; text-align: center; }
+         .account-card.account-card-empty .acc-balance { display: none; }
 
         /* ── PERFORMANCE GRID ── */
-        .perf-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin: 0 14px;
-        }
-
-        .perf-stat {
-            background: white;
-            padding: 12px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .perf-stat h4 {
-            font-size: 11px;
-            color: var(--text-light);
-            font-weight: 500;
-        }
-
-        .perf-stat p {
-            margin-top: 5px;
-            font-weight: 800;
-            font-size: 16px;
-            color: var(--text-dark);
-        }
+        .perf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 14px; }
+        .perf-stat { background: white; padding: 12px; border-radius: 10px; text-align: center; box-shadow: var(--shadow-sm); }
+        .perf-stat h4 { font-size: 11px; color: var(--text-light); font-weight: 500; }
+        .perf-stat p  { margin-top: 5px; font-weight: 800; font-size: 16px; color: var(--text-dark); }
 
         /* ── TRANSACTIONS ── */
         .tx-card {
-            background: white;
-            margin: 0 14px 8px;
-            padding: 12px 16px;
+            background: white; margin: 0 14px 8px; padding: 12px 16px;
             border-radius: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: var(--shadow-sm);
-            font-size: 13px;
-            font-weight: 500;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--shadow-sm); font-size: 13px; font-weight: 500;
         }
-
         .tx-card .tx-label { color: var(--text-dark); }
         .tx-card .tx-amount { font-weight: 700; }
         .credit { color: #0c8f44; }
         .debit  { color: #e53935; }
 
-        /* ── GROUP NOTIFICATIONS (preserve existing) ── */
-        .group-notif {
-            margin: 0 14px 12px;
-        }
+        .group-notif { margin: 0 14px 12px; }
 
-        /* ── MODALS ── */
+        /* ═══════════════════════════════════════════
+           NEW MODAL SYSTEM  (membership.ejs design)
+        ═══════════════════════════════════════════ */
         .hidden { display: none !important; }
 
+        /* Overlay */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10001;
+            display: none;
+            overflow-y: auto;
+            padding: 20px;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex !important; }
+
+        /* Modal card */
+        .modal-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            animation: modalSlideUp .25s ease;
+            margin: auto;
+        }
+        @keyframes modalSlideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal gradient header */
+        .modal-hdr {
+            background: linear-gradient(135deg, #0c8f44, #34d399);
+            padding: 14px 18px;
+            display: flex; align-items: center; gap: 10px;
+            position: sticky; top: 0;
+            overflow: hidden;
+        }
+        .modal-hdr::before {
+            content: ''; position: absolute;
+            top: -40%; right: -10%;
+            width: 100px; height: 100px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 50%; pointer-events: none;
+        }
+        .modal-hdr-icon {
+            width: 30px; height: 30px; border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            background: rgba(255,255,255,0.2); color: #fff;
+            position: relative; flex-shrink: 0;
+        }
+        .modal-hdr-back {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: rgba(255,255,255,0.2); border: none;
+            color: #fff; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; flex-shrink: 0; transition: background .2s;
+        }
+        .modal-hdr-back:hover { background: rgba(255,255,255,0.35); }
+        .modal-hdr-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px; font-weight: 700;
+            flex: 1; color: #fff; position: relative;
+        }
+        .modal-hdr-close {
+            background: rgba(255,255,255,0.2); border: none;
+            color: #fff; width: 28px; height: 28px; border-radius: 50%;
+            cursor: pointer; font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .2s; position: relative;
+        }
+        .modal-hdr-close:hover { background: rgba(255,255,255,0.35); }
+
+        /* Modal body */
+        .modal-bdy {
+            padding: 18px;
+            max-height: 70vh; overflow-y: auto;
+            background: #fff;
+        }
+        .modal-bdy::-webkit-scrollbar { width: 4px; }
+        .modal-bdy::-webkit-scrollbar-track { background: transparent; }
+        .modal-bdy::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* ── MEMBERSHIP-STYLE ACTION BUTTONS inside modals ── */
+        .m-action-btn {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 16px;
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-dark);
+            cursor: pointer; text-align: left;
+            transition: background .2s, border-color .2s, box-shadow .2s, transform .1s;
+            font-family: 'DM Sans', 'Outfit', sans-serif;
+            font-size: 13px; font-weight: 600;
+            text-decoration: none;
+            width: 100%; margin-bottom: 8px;
+        }
+        .m-action-btn:active { transform: scale(.98); }
+        .m-action-btn:hover {
+            background: #f0fdf4; border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(12,143,68,.12);
+        }
+        .m-action-btn.accent:hover {
+            background: #fffbeb; border-color: #f59e0b;
+            box-shadow: 0 2px 8px rgba(245,158,11,.12);
+        }
+        .m-action-btn.danger:hover {
+            background: #fef2f2; border-color: #fecaca;
+            box-shadow: 0 2px 8px rgba(239,68,68,.12);
+        }
+        .m-action-btn.violet:hover {
+            background: #f5f3ff; border-color: #c4b5fd;
+            box-shadow: 0 2px 8px rgba(124,58,237,.12);
+        }
+
+        /* btn-icon boxes */
+        .btn-icon-box {
+            width: 34px; height: 34px; border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .bib-green  { background: #dcfce7; color: #15803d; }
+        .bib-blue   { background: #dbeafe; color: #1d4ed8; }
+        .bib-amber  { background: #fef3c7; color: #b45309; }
+        .bib-red    { background: #fee2e2; color: #b91c1c; }
+        .bib-violet { background: #ede9fe; color: #6d28d9; }
+        .bib-teal   { background: #ccfbf1; color: #0f766e; }
+        .bib-rose   { background: #ffe4e6; color: #be123c; }
+        .bib-cyan   { background: #cffafe; color: #0e7490; }
+
+        .btn-text-block { flex: 1; min-width: 0; }
+        .btn-label-text { display: block; }
+        .btn-hint-text  { display: block; font-size: 10px; font-weight: 400; color: var(--muted); margin-top: 1px; }
+        .btn-arrow-icon { color: var(--faint); font-size: 11px; }
+
+        /* ── SECTION LABEL inside modal ── */
+        .m-section-label {
+            font-size: 10px; font-weight: 700; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 10px; margin-top: 18px;
+        }
+
+        /* ── INFO BANNER ── */
+        .m-info-banner {
+            border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;
+            display: flex; gap: 10px; align-items: flex-start;
+            font-size: 12px; line-height: 1.5;
+        }
+        .m-info-banner.green { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .m-info-banner.amber { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; }
+        .m-info-banner.blue  { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+        .m-info-banner.red   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
+        /* ── FORM FIELDS ── */
+        .m-field { margin-bottom: 14px; }
+        .m-field label {
+            display: block; font-size: 11px; font-weight: 700;
+            color: var(--muted); text-transform: uppercase;
+            letter-spacing: .5px; margin-bottom: 6px;
+        }
+        .m-field input,
+        .m-field select,
+        .m-field textarea {
+            width: 100%; padding: 12px 14px;
+            background: #fff; border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text-dark);
+            font-family: 'DM Sans', 'Outfit', sans-serif;
+            font-size: 14px; outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .m-field input:focus,
+        .m-field select:focus,
+        .m-field textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--focus-ring);
+        }
+        .m-field textarea { resize: none; }
+        .m-field input::placeholder,
+        .m-field textarea::placeholder { color: var(--faint); }
+
+        /* ── SUBMIT / PRIMARY BUTTON ── */
+        .m-submit-btn {
+            width: 100%; padding: 13px;
+            background: linear-gradient(135deg, #0c8f44, #34d399);
+            color: #fff; border: none; border-radius: var(--radius-sm);
+            font-family: 'Syne', sans-serif;
+            font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: opacity .2s, transform .1s;
+            letter-spacing: .3px; display: flex;
+            align-items: center; justify-content: center; gap: 8px;
+        }
+        .m-submit-btn:hover { opacity: .9; }
+        .m-submit-btn:active { transform: scale(.98); }
+        .m-submit-btn.secondary {
+            background: #e2e8f0; color: #64748b;
+        }
+        .m-submit-btn.violet {
+            background: linear-gradient(135deg, #7c3aed, #a78bfa);
+        }
+        .m-submit-btn.danger {
+            background: linear-gradient(135deg, #dc2626, #f87171);
+        }
+
+        /* ── DIVIDER ── */
+        .m-divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+        /* ── STAT GRID (for payment summary etc.) ── */
+        .m-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .m-stat-cell {
+            background: #f8fafc; border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 10px 12px;
+        }
+        .m-stat-cell-label { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 4px; }
+        .m-stat-cell-value { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--text-dark); }
+
+        /* ── MEMBER ITEM ── */
+        .m-member-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px;
+            background: #f8fafc; border: 1px solid var(--border);
+            border-radius: var(--radius-sm); margin-bottom: 8px;
+            transition: border-color .2s, background .2s;
+        }
+        .m-member-item:hover { background: #f0fdf4; border-color: #86efac; }
+        .m-member-num {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #dcfce7; border: 1px solid #86efac;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: #15803d; flex-shrink: 0;
+        }
+        .m-member-details { flex: 1; min-width: 0; }
+        .m-member-name { font-size: 13px; font-weight: 600; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .m-member-phone { font-size: 11px; color: var(--muted); margin-top: 1px; }
+        .m-role-chip { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; letter-spacing: .3px; white-space: nowrap; }
+        .chip-green  { background: #dcfce7; color: #15803d;  border: 1px solid #86efac; }
+        .chip-blue   { background: #dbeafe; color: #1d4ed8;  border: 1px solid #93c5fd; }
+        .chip-amber  { background: #fef3c7; color: #b45309;  border: 1px solid #fcd34d; }
+        .chip-violet { background: #ede9fe; color: #6d28d9;  border: 1px solid #c4b5fd; }
+
+        /* ── EMPTY STATE ── */
+        .m-empty-state { text-align: center; padding: 36px 20px; color: var(--faint); }
+        .m-empty-state i { font-size: 32px; margin-bottom: 10px; display: block; color: #cbd5e1; }
+        .m-empty-state p { font-size: 13px; }
+
+        /* ── PAYMENT DARK CARD ── */
+        .m-pay-dark {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            padding: 16px; border-radius: 12px;
+            margin-bottom: 14px; color: white;
+        }
+        .m-pay-dark-title {
+            font-size: 11px; font-weight: 700; text-align: center;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 12px; opacity: 0.8;
+        }
+        .m-pay-row {
+            display: flex; justify-content: space-between;
+            align-items: center; padding: 10px 12px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 8px; margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .m-pay-row-label { opacity: 0.75; font-size: 11px; }
+        .m-pay-row-value { font-weight: 700; color: #fbbf24; font-size: 14px; }
+        .m-pay-total {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 12px;
+            background: rgba(251,191,36,0.18); border-radius: 8px;
+            margin-top: 8px;
+        }
+        .m-pay-total-label { font-size: 12px; font-weight: 700; }
+        .m-pay-total-value { color: #fbbf24; font-weight: 800; font-size: 18px; }
+
+        /* ── TWO-COL BUTTON ROW ── */
+        .m-btn-row { display: flex; gap: 10px; margin-top: 12px; }
+        .m-btn-row .m-submit-btn { flex: 1; }
+
+        /* ── ADDED ACCOUNT PILL ── */
+        .m-added-acc {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            background: #f8fafc; border: 1px solid var(--border);
+            border-radius: 8px; margin-bottom: 6px;
+        }
+        .m-added-acc-name { font-weight: 600; color: var(--text-dark); font-size: 13px; }
+        .m-added-acc-num  { color: var(--muted); font-size: 11px; }
+        .m-added-acc-amt  { color: var(--primary); font-weight: 700; font-size: 13px; margin-left: auto; }
+        .m-remove-btn {
+            background: #fee2e2; border: none; color: #b91c1c;
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 13px; flex-shrink: 0;
+        }
+
+        /* legacy helpers still used by group forms */
         .form-group { margin-bottom: 1rem; text-align: left; }
         .form-label { display: block; margin-bottom: .5rem; font-size: .85rem; font-weight: 600; color: var(--text-main); }
         .form-input { width: 100%; padding: .75rem; border: 1px solid #e2e8f0; border-radius: .5rem; font-size: 1rem; transition: border-color .2s; background: #fff; }
         .form-input:focus { outline: none; border-color: var(--primary); }
-
         .btn { display: inline-flex; justify-content: center; align-items: center; padding: .75rem 1.5rem; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: .95rem; transition: all .2s; width: 100%; gap: .5rem; }
         .btn-primary { background-color: var(--primary); color: white; }
         .btn-primary:hover { background-color: #0a7a3b; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all .3s ease; }
-        .modal-overlay.open { opacity: 1; visibility: visible; }
-        .modal-content { background: white; padding: 2rem 5px; border-radius: 5px; width: 85%; max-width: 400px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.4); transform: translateY(20px); transition: transform .3s ease; max-height: 90vh; display: flex; flex-direction: column; position: relative; border: 1px solid rgba(0,0,0,0.05); }
-        .modal-overlay.open .modal-content { transform: translateY(0); }
-        .modal-close-btn { position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: #64748b; font-size: 1.5rem; cursor: pointer; z-index: 10; }
-        .modal-close-btn:hover { color: #ef4444; }
-        .modal-back-btn { position: absolute; top: 15px; left: 15px; background: transparent; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; z-index: 11; }
-        .modal-back-btn:hover { color: var(--primary); }
-        .modal-header { margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 700; color: #1e293b; padding-left: 35px; padding-right: 35px; }
-        .modal-body { flex: 1; overflow-y: auto; margin-bottom: 0; text-align: left; padding-bottom: 10px; }
-        .modal-list-btn { display: block; width: 100%; padding: 1rem; margin-bottom: .75rem; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: .5rem; cursor: pointer; font-size: .95rem; font-weight: 500; transition: all .2s; text-align: left; }
-        .modal-list-btn:hover { background-color: #f0fdf4; border-color: var(--primary); color: var(--primary); }
-
-        .menu { background: #fff; border-radius: 5px; padding: 8px 0; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-        .menu-item { padding: 18px 22px; font-size: 15px; font-weight: 500; display: flex; justify-content: space-between; align-items: center; cursor: pointer; position: relative; transition: .3s; }
-        .menu-item:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
-        .menu-item:hover { background: #f1f5f9; }
-        .menu-item:active { transform: scale(0.98); }
-        .arrow { font-size: 18px; color: #94a3b8; }
-        .menu-item:hover .arrow { color: var(--primary); }
-
-        #toast-container { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        #toast-container { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: #334155; color: white; padding: 12px 24px; border-radius: 50px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: .9rem; animation: slideUp .3s ease forwards; display: flex; align-items: center; gap: 10px; }
         .toast.success { background: #10b981; }
         .toast.error   { background: #ef4444; }
@@ -424,10 +530,9 @@
 %>
 
 <div class="container">
-
-    <!-- ── HEADER ── -->
+    <!-- HEADER -->
     <div class="app-header">
-        <h2>T-BANK</h2>
+        <h2>T-BANK INVESTMENT</h2>
         <div class="header-right">
             <span class="header-bell" onclick="app.openInbox()">🔔
                 <span id="msgBadgeHeader" class="hidden" style="background:red;color:white;border-radius:50%;padding:1px 5px;font-size:10px;vertical-align:top;"></span>
@@ -438,10 +543,10 @@
         </div>
     </div>
 
-    <!-- ── SCROLLABLE CONTENT ── -->
+    <!-- SCROLLABLE CONTENT -->
     <div id="mainContainer"></div>
 
-    <!-- ── BOTTOM NAV ── -->
+    <!-- BOTTOM NAV -->
     <div class="top-nav">
         <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
         <% navLinks.forEach((link, index) => { %>
@@ -456,13 +561,26 @@
     </div>
 </div>
 
-<!-- ── MODAL ── -->
+<!-- ══════════════════════════════════════════
+     NEW MODAL  (membership.ejs design system)
+═══════════════════════════════════════════ -->
 <div id="modalOverlay" class="modal-overlay">
-    <div class="modal-content">
-        <button id="modalBackBtn" class="modal-back-btn hidden" onclick="app.onModalBack()"><i class="fa-solid fa-arrow-left"></i></button>
-        <button class="modal-close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
-        <div class="modal-header" id="modalTitle">Title</div>
-        <div class="modal-body"  id="modalBody"></div>
+    <div class="modal-card">
+        <!-- gradient header -->
+        <div class="modal-hdr" id="modalHdr">
+            <button id="modalBackBtn" class="modal-hdr-back hidden" onclick="app.onModalBack()">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div class="modal-hdr-icon" id="modalHdrIcon">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div class="modal-hdr-title" id="modalTitle">Title</div>
+            <button class="modal-hdr-close" onclick="app.closeModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <!-- body -->
+        <div class="modal-bdy" id="modalBody"></div>
     </div>
 </div>
 
@@ -503,9 +621,7 @@ const app = {
         errorMessage: ''
     },
 
-    /* ────────────────────────────────────────────
-       INIT
-    ──────────────────────────────────────────── */
+    /* ─── INIT ─── */
     init() {
         if (window.location.protocol === 'file:') {
             alert("Redirecting to http://localhost:3000/personal...");
@@ -540,87 +656,224 @@ const app = {
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
     },
 
-    /* ────────────────────────────────────────────
-       INBOX  (unchanged logic)
-    ──────────────────────────────────────────── */
+    /* ─── INBOX ─── */
     openInbox() {
         const keys      = this.data.constitutionKeys || [];
         const inbox     = this.data.user.inbox || [];
         const groupMsgs = this.data.groupMessages || [];
-        let html = '<div style="text-align:left;">';
+        let html = '';
+
         if (keys.length === 0 && inbox.length === 0 && groupMsgs.length === 0) {
-            html += '<div style="text-align:center;padding:40px 20px;color:#94a3b8;"><i class="fa-solid fa-envelope-open" style="font-size:40px;margin-bottom:15px;display:block;opacity:0.3;"></i><p style="font-size:14px;">Your inbox is empty.</p></div>';
+            html += `<div class="m-empty-state"><i class="fa-solid fa-envelope-open"></i><p>Your inbox is empty.</p></div>`;
         }
+
         if (groupMsgs.length > 0) {
-            html += '<h5 style="margin-bottom:15px;font-size:12px;color:#10b981;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #eee;padding-bottom:5px;">Group Notifications</h5>';
+            html += `<div class="m-section-label"><i class="fa-solid fa-users" style="margin-right:5px;color:#10b981;"></i>Group Notifications</div>`;
             groupMsgs.forEach(m => {
-                html += `<div style="background:#f0fdf4;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #dcfce7;border-left:4px solid #10b981;"><h4 style="color:#065f46;margin-bottom:8px;font-size:14px;font-weight:700;"><i class="fa-solid fa-users" style="color:#10b981;margin-right:8px;"></i>${m.title || 'Group Update'}</h4><div style="font-size:13px;color:#1e293b;line-height:1.5;margin-bottom:10px;white-space:pre-wrap;">${m.content}</div><div style="font-size:11px;color:#059669;">${new Date(m.createdAt).toLocaleString()}</div></div>`;
+                html += `<div style="background:#f0fdf4;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #dcfce7;border-left:4px solid #10b981;">
+                    <h4 style="color:#065f46;margin-bottom:7px;font-size:13px;font-weight:700;"><i class="fa-solid fa-users" style="color:#10b981;margin-right:7px;"></i>${m.title||'Group Update'}</h4>
+                    <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${m.content}</div>
+                    <div style="font-size:10px;color:#059669;">${new Date(m.createdAt).toLocaleString()}</div>
+                </div>`;
             });
         }
+
         if (keys.length > 0) {
-            html += '<h5 style="margin-bottom:15px;font-size:12px;color:var(--primary);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #eee;padding-bottom:5px;">Security Notifications</h5>';
+            html += `<div class="m-section-label"><i class="fa-solid fa-shield-halved" style="margin-right:5px;color:var(--primary);"></i>Security Notifications</div>`;
             keys.forEach(k => {
-                const isAlert = k.type === 'security_alert';
+                const isAlert  = k.type === 'security_alert';
                 const isLegacy = k.type === 'legacy';
                 const borderColor = isAlert ? '#f59e0b' : '#0c8f44';
                 const icon = isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved';
-                html += `<div style="background:#f8fafc;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #e2e8f0;border-left:4px solid ${borderColor};"><h4 style="color:#1e293b;margin-bottom:8px;font-size:14px;font-weight:700;"><i class="fa-solid ${icon}" style="color:${borderColor};margin-right:8px;"></i>${k.groupName}</h4><div style="font-size:13px;color:#475569;line-height:1.5;margin-bottom:10px;white-space:pre-wrap;">${k.content || (isLegacy ? 'Initial Security Configuration Required' : '')}</div>`;
+                html += `<div style="background:#f8fafc;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #e2e8f0;border-left:4px solid ${borderColor};">
+                    <h4 style="color:#1e293b;margin-bottom:7px;font-size:13px;font-weight:700;"><i class="fa-solid ${icon}" style="color:${borderColor};margin-right:7px;"></i>${k.groupName}</h4>
+                    <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content||(isLegacy?'Initial Security Configuration Required':'')}</div>`;
                 if (isLegacy) {
-                    html += `<p style="font-size:11px;color:#64748b;margin-bottom:5px;font-weight:600;">Constitution Start Key:</p><div style="background:#fff;padding:12px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;">${k.key}</div><button class="btn btn-primary mt-4" style="font-size:13px;padding:12px;border-radius:8px;" onclick="app.startGroupSetup('${k.groupName}', '${k.key}')"><i class="fa-solid fa-gears"></i> Initialize Principles</button>`;
+                    html += `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
+                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>
+                    <button class="m-submit-btn" onclick="app.startGroupSetup('${k.groupName}','${k.key}')"><i class="fa-solid fa-gears"></i> Initialize Principles</button>`;
                 }
                 html += `</div>`;
             });
         }
+
         if (inbox.length > 0) {
-            html += '<h5 style="margin-top:20px;margin-bottom:12px;font-size:12px;color:#059669;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #eee;padding-bottom:5px;">Meeting Invitations</h5>';
+            html += `<div class="m-section-label"><i class="fa-solid fa-calendar-check" style="margin-right:5px;color:#059669;"></i>Meeting Invitations</div>`;
             [...inbox].reverse().forEach(msg => {
-                html += `<div style="background:#f0fdf4;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #dcfce7;border-left:4px solid #10b981;"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><h4 style="color:#065f46;font-size:13px;font-weight:700;">📅 ${msg.groupName}</h4><span style="font-size:10px;color:#059669;font-weight:600;">${new Date(msg.date).toLocaleDateString()}</span></div><div style="font-size:12.5px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">${msg.content}</div></div>`;
+                html += `<div style="background:#f0fdf4;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #dcfce7;border-left:4px solid #10b981;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:7px;">
+                        <h4 style="color:#065f46;font-size:13px;font-weight:700;">📅 ${msg.groupName}</h4>
+                        <span style="font-size:10px;color:#059669;font-weight:600;">${new Date(msg.date).toLocaleDateString()}</span>
+                    </div>
+                    <div style="font-size:12px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">${msg.content}</div>
+                </div>`;
             });
         }
-        html += '</div>';
-        this.updateModalContent("Inbox", html);
+
+        this.updateModalContent("Inbox", html, null, 'fa-envelope');
         this.openModal();
         this.updateBadge();
     },
 
-    /* ────────────────────────────────────────────
-       MODAL OPEN  (unchanged logic)
-    ──────────────────────────────────────────── */
+    /* ─── OPEN MODAL (action dispatcher) ─── */
     openModal(arg1, arg2, arg3) {
         document.getElementById('modalOverlay').classList.add('open');
-        this.data.isMultiMemberFlow   = false;
-        this.data.settledMembersData  = {};
-        this.data.errorMessage        = '';
+        this.data.isMultiMemberFlow  = false;
+        this.data.settledMembersData = {};
+        this.data.errorMessage       = '';
 
         if (typeof arg1 === 'string' && typeof arg2 === 'string') {
             this.updateModalContent(arg1, arg2, arg3);
             return;
         }
+
         const action = arg1;
+
+        /* ── Send Money ── */
         if (action === 'Send Money') {
             const groups = this.data.userGroups || [];
             const activeGroups = groups.filter(g => g.phase === 3);
+            let html = '';
             if (activeGroups.length === 0) {
-                this.updateModalContent('Select Group', '<div style="text-align:center;padding:20px;"><p style="text-align:center;color:#6b7280;font-size:14px;">No active Phase 3 groups found.</p></div>');
+                html = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No active Phase 3 groups found.</p></div>`;
             } else {
-                let h = '<div style="text-align:left;margin-bottom:1rem;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Select an <b>Active Group</b> to send money:</p>';
-                activeGroups.forEach(group => { h += `<button class="modal-list-btn" onclick="app.selectGroupForSend('${encodeURIComponent(group.groupName)}')"><i class="fa-solid fa-users" style="color:var(--primary);margin-right:10px;"></i> ${group.groupName}</button>`; });
-                h += '</div>';
-                this.updateModalContent('Select Group', h);
+                html = `<div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Select an <b>Active Group</b> to send money into.</span></div>
+                <div class="m-section-label">Active Groups</div>`;
+                activeGroups.forEach(g => {
+                    html += `<button class="m-action-btn" onclick="app.selectGroupForSend('${encodeURIComponent(g.groupName)}')">
+                        <div class="btn-icon-box bib-green"><i class="fa-solid fa-users"></i></div>
+                        <div class="btn-text-block">
+                            <span class="btn-label-text">${g.groupName}</span>
+                            <span class="btn-hint-text">${g.county||''} ${g.ward ? '• '+g.ward : ''}</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+                    </button>`;
+                });
             }
+            this.updateModalContent('Send Money', html, null, 'fa-paper-plane');
+
+        /* ── Withdraw ── */
         } else if (action === 'Withdraw') {
-            this.updateModalContent('Withdraw Money', '<button class="modal-list-btn" onclick="app.flowWithdrawMpesa()">To M-Pesa</button>');
+            const html = `
+            <div class="m-info-banner green"><i class="fa-solid fa-circle-info"></i><span>Choose your preferred withdrawal method.</span></div>
+            <div class="m-section-label">Withdrawal Options</div>
+            <button class="m-action-btn" onclick="app.flowWithdrawMpesa()">
+                <div class="btn-icon-box bib-green"><i class="fa-brands fa-google-pay"></i></div>
+                <div class="btn-text-block">
+                    <span class="btn-label-text">To M-Pesa</span>
+                    <span class="btn-hint-text">Withdraw directly to mobile money</span>
+                </div>
+                <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+            </button>`;
+            this.updateModalContent('Withdraw Money', html, null, 'fa-money-bill-transfer');
+
+        /* ── Balance ── */
         } else if (action === 'Balance') {
-            this.updateModalContent('Account Balance', '<div class="form-group"><label class="form-label">Enter PIN</label><input type="password" id="checkPin" class="form-input" maxlength="4" placeholder="****"></div><button class="btn btn-primary" onclick="app.processCheckBalance()">Check Balance</button>');
+            const html = `
+            <div class="m-info-banner blue"><i class="fa-solid fa-lock"></i><span>Enter your 4-digit PIN to view your account balance.</span></div>
+            <div class="m-field">
+                <label>Your PIN</label>
+                <input type="password" id="checkPin" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-size:20px;font-weight:700;text-align:center;">
+            </div>
+            <button class="m-submit-btn" onclick="app.processCheckBalance()"><i class="fa-solid fa-eye"></i> View Balance</button>`;
+            this.updateModalContent('Account Balance', html, null, 'fa-wallet');
+
+        /* ── Change PIN ── */
         } else if (action === 'Change PIN') {
-            const h = `<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Manage your Personal PIN:</p><button class="modal-list-btn" onclick="app.showNewPinFormModal()"><div style="display:flex;align-items:center;gap:12px;"><div style="width:32px;height:32px;background:#e6fff3;color:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-lock"></i></div><div><div style="font-weight:700;font-size:14px;color:#1e293b;">Set New PIN</div><div style="font-size:11px;color:#64748b;">Update your existing PIN</div></div></div></button><button class="modal-list-btn" onclick="app.showForgotPinFormModal()"><div style="display:flex;align-items:center;gap:12px;"><div style="width:32px;height:32px;background:#fff7ed;color:#f59e0b;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-question-circle"></i></div><div><div style="font-weight:700;font-size:14px;color:#1e293b;">Forgot PIN</div><div style="font-size:11px;color:#64748b;">Reset via security key</div></div></div></button></div>`;
-            this.updateModalContent('Change PIN', h);
+            const html = `
+            <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Manage your Personal Account PIN.</span></div>
+            <div class="m-section-label">PIN Options</div>
+            <button class="m-action-btn" onclick="app.showNewPinFormModal()">
+                <div class="btn-icon-box bib-green"><i class="fa-solid fa-lock"></i></div>
+                <div class="btn-text-block">
+                    <span class="btn-label-text">Set New PIN</span>
+                    <span class="btn-hint-text">Update your existing PIN</span>
+                </div>
+                <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+            </button>
+            <button class="m-action-btn accent" onclick="app.showForgotPinFormModal()">
+                <div class="btn-icon-box bib-amber"><i class="fa-solid fa-question-circle"></i></div>
+                <div class="btn-text-block">
+                    <span class="btn-label-text">Forgot PIN</span>
+                    <span class="btn-hint-text">Reset via SMS security key</span>
+                </div>
+                <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+            </button>`;
+            this.updateModalContent('Change PIN', html, null, 'fa-key');
+
+        /* ── Statement ── */
         } else if (action === 'Statement') {
-            const h = `<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Review your transaction history:</p><button class="modal-list-btn" onclick="app.flowMiniStatement()"><div style="display:flex;align-items:center;gap:12px;"><div style="width:32px;height:32px;background:#f0fdf4;color:#22c55e;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-list-ul"></i></div><div><div style="font-weight:700;font-size:14px;color:#1e293b;">Mini Statement</div><div style="font-size:11px;color:#64748b;">View recent activity</div></div></div></button><div style="margin-top:20px;border-top:1px dashed #e2e8f0;padding-top:20px;"><button class="modal-list-btn" onclick="app.toggleLongStatementOptions()"><div style="display:flex;align-items:center;gap:12px;"><div style="width:32px;height:32px;background:#eff6ff;color:#3b82f6;border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-file-contract"></i></div><div style="flex:1;text-align:left;"><div style="font-weight:700;font-size:14px;color:#1e293b;">Long Statement (Export)</div><div style="font-size:11px;color:#64748b;">Custom 1-12 month reports</div></div><i id="longStatementChevron" class="fa-solid fa-chevron-down" style="font-size:10px;color:#94a3b8;transition:0.3s;"></i></div></button><div id="longStatementOptions" class="hidden" style="margin-top:10px;background:#fcfcfc;padding:15px;border-radius:12px;border:1px solid #f1f5f9;"><div style="display:flex;gap:10px;align-items:center;"><select id="statementDuration" class="form-input" style="flex:1;padding:10px;font-size:13px;background:#fff;"><option value="1">1 Month</option><option value="3">3 Months</option><option value="6">6 Months</option><option value="12">12 Months</option></select><button class="btn btn-primary" style="flex:1.2;padding:12px;font-size:13px;" onclick="app.flowLongStatement()"><i class="fa-solid fa-file-export"></i> Get Statement</button></div></div></div></div>`;
-            this.updateModalContent('Account Statement', h);
+            const html = `
+            <div class="m-info-banner green"><i class="fa-solid fa-circle-info"></i><span>Review your recent activity or export a detailed report.</span></div>
+            <div class="m-section-label">Statement Options</div>
+            <button class="m-action-btn" onclick="app.flowMiniStatement()">
+                <div class="btn-icon-box bib-green"><i class="fa-solid fa-list-ul"></i></div>
+                <div class="btn-text-block">
+                    <span class="btn-label-text">Mini Statement</span>
+                    <span class="btn-hint-text">View recent activity</span>
+                </div>
+                <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+            </button>
+            <div class="m-divider"></div>
+            <div class="m-section-label">Export Report</div>
+            <button class="m-action-btn accent" onclick="app.toggleLongStatementOptions()">
+                <div class="btn-icon-box bib-blue"><i class="fa-solid fa-file-contract"></i></div>
+                <div class="btn-text-block">
+                    <span class="btn-label-text">Long Statement</span>
+                    <span class="btn-hint-text">Custom 1–12 month export</span>
+                </div>
+                <i class="fa-solid fa-chevron-down btn-arrow-icon" id="longStatementChevron" style="transition:0.3s;"></i>
+            </button>
+            <div id="longStatementOptions" class="hidden" style="margin-top:8px;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #f1f5f9;">
+                <div class="m-field">
+                    <label>Duration</label>
+                    <select id="statementDuration" class="form-input" style="font-size:13px;">
+                        <option value="1">1 Month</option>
+                        <option value="3">3 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="12">12 Months</option>
+                    </select>
+                </div>
+                <button class="m-submit-btn" onclick="app.flowLongStatement()"><i class="fa-solid fa-file-export"></i> Get Statement</button>
+            </div>`;
+            this.updateModalContent('Account Statement', html, null, 'fa-chart-bar');
+
+        /* ── Create Group ── */
         } else if (action === 'Create Group') {
-            const html = `<div style="text-align:left;max-height:70vh;overflow-y:auto;padding-right:5px;"><form id="createGroupForm" onsubmit="return app.handleCreateGroupSubmit(event)"><div id="cAccountStep"><h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;"><i class="fa-solid fa-users-cog"></i> Create Group Account</h4><div class="form-group"><label class="form-label">Group Name</label><input type="text" name="groupName" id="newGroupName" class="form-input" placeholder="e.g. Umoja Savings Group" required></div><div style="border:1px solid #e2e8f0;padding:14px;border-radius:12px;margin-top:14px;background:#f8f9fa;"><h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;"><i class="fa-solid fa-user-tie"></i> Chairperson Details</h4><div class="form-group"><label class="form-label">Chairperson Phone</label><input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="Phone Number" inputmode="numeric" required></div><div class="form-group"><label class="form-label">Chairperson Full Name</label><input type="text" id="newFullNameInput" class="form-input" placeholder="First Middle Last" required oninput="app.parseNewFullName()"></div><small style="color:red;font-size:0.7rem;display:none;" id="newNameError">Please enter exactly 3 names.</small><input type="hidden" name="firstName" id="newFirstName"><input type="hidden" name="secondName" id="newSecondName"><input type="hidden" name="lastName" id="newLastName"></div><div style="display:flex;gap:8px;margin-top:14px;"><button type="button" class="btn" style="flex:1;background:#e2e8f0;color:#333;" onclick="app.handleGeneralClick()"><i class="fa-solid fa-arrow-left"></i> Back</button><button type="button" class="btn btn-primary" style="flex:1;" onclick="app.goToRegions()">Next <i class="fa-solid fa-arrow-right"></i></button></div></div><div id="gRegionsStep" class="hidden"><h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;"><i class="fa-solid fa-map-marked-alt"></i> Group Location</h4><div class="form-group"><label class="form-label">County</label><select name="county" id="newCountySelect" class="form-input" onchange="app.loadNewConstituencies()" required><option value="">-- Select County --</option></select></div><div class="form-group"><label class="form-label">Constituency</label><select name="constituency" id="newConstituencySelect" class="form-input" onchange="app.loadNewWards()" required><option value="">-- Select Constituency --</option></select></div><div class="form-group"><label class="form-label">Ward</label><select name="ward" id="newWardSelect" class="form-input" required><option value="">-- Select Ward --</option></select></div><div style="display:flex;gap:8px;margin-top:14px;"><button type="button" class="btn" style="flex:1;background:#e2e8f0;color:#333;" onclick="app.backToGroupForm()"><i class="fa-solid fa-arrow-left"></i> Back</button><button type="submit" class="btn btn-primary" style="flex:1;">Submit <i class="fa-solid fa-check-circle"></i></button></div></div></form></div>`;
-            this.updateModalContent('Create Group Account', html, () => this.handleGeneralClick());
+            const html = `<div style="max-height:70vh;overflow-y:auto;padding-right:5px;">
+            <form id="createGroupForm" onsubmit="return app.handleCreateGroupSubmit(event)">
+                <div id="cAccountStep">
+                    <div class="m-info-banner green"><i class="fa-solid fa-users-cog"></i><span>Fill in the group and chairperson details to get started.</span></div>
+                    <div class="m-section-label">Group Details</div>
+                    <div class="m-field"><label>Group Name</label><input type="text" name="groupName" id="newGroupName" class="form-input" placeholder="e.g. Umoja Savings Group" required></div>
+                    <div class="m-section-label" style="margin-top:16px;">Chairperson Details</div>
+                    <div class="m-field"><label>Phone Number</label><input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="07XX XXX XXX" inputmode="numeric" required></div>
+                    <div class="m-field">
+                        <label>Full Name (3 names)</label>
+                        <input type="text" id="newFullNameInput" class="form-input" placeholder="First Middle Last" required oninput="app.parseNewFullName()">
+                        <small style="color:red;font-size:0.7rem;display:none;" id="newNameError">Please enter exactly 3 names.</small>
+                    </div>
+                    <input type="hidden" name="firstName"  id="newFirstName">
+                    <input type="hidden" name="secondName" id="newSecondName">
+                    <input type="hidden" name="lastName"   id="newLastName">
+                    <div class="m-btn-row" style="margin-top:16px;">
+                        <button type="button" class="m-submit-btn secondary" onclick="app.handleGeneralClick()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                        <button type="button" class="m-submit-btn" onclick="app.goToRegions()">Next <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                </div>
+                <div id="gRegionsStep" class="hidden">
+                    <div class="m-info-banner green"><i class="fa-solid fa-map-marked-alt"></i><span>Select the group's location (county → constituency → ward).</span></div>
+                    <div class="m-section-label">Group Location</div>
+                    <div class="m-field"><label>County</label><select name="county" id="newCountySelect" class="form-input" onchange="app.loadNewConstituencies()" required><option value="">-- Select County --</option></select></div>
+                    <div class="m-field"><label>Constituency</label><select name="constituency" id="newConstituencySelect" class="form-input" onchange="app.loadNewWards()" required><option value="">-- Select Constituency --</option></select></div>
+                    <div class="m-field"><label>Ward</label><select name="ward" id="newWardSelect" class="form-input" required><option value="">-- Select Ward --</option></select></div>
+                    <div class="m-btn-row" style="margin-top:16px;">
+                        <button type="button" class="m-submit-btn secondary" onclick="app.backToGroupForm()"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                        <button type="submit" class="m-submit-btn"><i class="fa-solid fa-check-circle"></i> Submit</button>
+                    </div>
+                </div>
+            </form></div>`;
+            this.updateModalContent('Create Group Account', html, () => this.handleGeneralClick(), 'fa-users-cog');
             this.initNewCounties();
         }
     },
@@ -629,10 +882,10 @@ const app = {
 
     seedHistory() {
         this.data.transactions = [
-            { type: 'deposit',  acc: 'M-Pesa Deposit',    amt: 1200, date: '10:00 AM' },
-            { type: 'withdraw', acc: 'Send Money',         amt: 350,  date: '09:30 AM' },
-            { type: 'deposit',  acc: 'Receive Payment',   amt: 800,  date: '09:00 AM' },
-            { type: 'withdraw', acc: 'Withdrawal',        amt: 500,  date: '08:45 AM' }
+            { type: 'deposit',  acc: 'M-Pesa Deposit',   amt: 1200, date: '10:00 AM' },
+            { type: 'withdraw', acc: 'Send Money',        amt: 350,  date: '09:30 AM' },
+            { type: 'deposit',  acc: 'Receive Payment',  amt: 800,  date: '09:00 AM' },
+            { type: 'withdraw', acc: 'Withdrawal',       amt: 500,  date: '08:45 AM' }
         ];
     },
 
@@ -647,97 +900,52 @@ const app = {
         this.updateBadge();
     },
 
-    /* ────────────────────────────────────────────
-       PERSONAL VIEW  — redesigned display
-    ──────────────────────────────────────────── */
+    /* ─── PERSONAL VIEW ─── */
     renderPersonalView(container) {
-        if (!this.data.hasPersonalPin) {
-            this.renderCreatePinView(container);
-            return;
-        }
-
+        if (!this.data.hasPersonalPin) { this.renderCreatePinView(container); return; }
         const u    = this.data.user;
         const txns = this.data.transactions || [];
-        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'My Account';
-
-        // Derive display balance (placeholder; replace with real server balance when available)
-        const displayBalance = this.data.balance
-            ? 'KSh ' + Number(this.data.balance).toLocaleString()
-            : 'KSh 0';
 
         let html = '';
 
-        /* ── Group notifications banner (preserve existing) ── */
         if (u.groupNotifications && u.groupNotifications.length > 0) {
             html += '<div class="group-notif" style="margin-top:14px;">';
             u.groupNotifications.forEach(n => {
-                const bg     = n.type === 'registration' ? '#dcfce7' : '#fef3c7';
+                const bg = n.type === 'registration' ? '#dcfce7' : '#fef3c7';
                 const border = n.type === 'registration' ? '#22c55e' : '#f59e0b';
                 const icon   = n.type === 'registration' ? 'fa-check-circle' : 'fa-info-circle';
-                html += `<div style="background:${bg};padding:12px 14px;border-radius:10px;margin-bottom:10px;border:1px solid ${border};border-left:4px solid ${border};"><h4 style="color:#065f46;margin-bottom:6px;font-size:13px;font-weight:700;"><i class="fas ${icon}" style="color:${border};margin-right:6px;"></i>${n.groupName}</h4><div style="font-size:12px;color:#1e293b;line-height:1.5;">${n.message}</div><div style="font-size:10px;color:#64748b;margin-top:4px;">Role: ${n.role} | Index: ${n.index}</div></div>`;
+                html += `<div style="background:${bg};padding:12px 14px;border-radius:10px;margin-bottom:10px;border:1px solid ${border};border-left:4px solid ${border};">
+                    <h4 style="color:#065f46;margin-bottom:6px;font-size:13px;font-weight:700;"><i class="fas ${icon}" style="color:${border};margin-right:6px;"></i>${n.groupName}</h4>
+                    <div style="font-size:12px;color:#1e293b;line-height:1.5;">${n.message}</div>
+                    <div style="font-size:10px;color:#64748b;margin-top:4px;">Role: ${n.role} | Index: ${n.index}</div>
+                </div>`;
             });
             html += '</div>';
         }
 
-
-
-        /* ── Quick action buttons ── */
-        html += `
-        <div class="actions-row">
-            <button class="action-btn" onclick="app.openModal('Send Money')">
-                <span class="action-icon">💸</span>Send
-            </button>
-            <button class="action-btn" onclick="app.openModal('Balance')">
-                <span class="action-icon">📥</span>Balance
-            </button>
-            <button class="action-btn" onclick="app.openModal('Withdraw')">
-                <span class="action-icon">🏧</span>Withdraw
-            </button>
-            <button class="action-btn" onclick="app.openModal('Statement')">
-                <span class="action-icon">📊</span>Statement
-            </button>
+        html += `<div class="actions-row">
+            <button class="action-btn" onclick="app.openModal('Send Money')"><span class="action-icon">💸</span>Send</button>
+            <button class="action-btn" onclick="app.openModal('Balance')"><span class="action-icon">📥</span>Balance</button>
+            <button class="action-btn" onclick="app.openModal('Withdraw')"><span class="action-icon">🏧</span>Withdraw</button>
+            <button class="action-btn" onclick="app.openModal('Statement')"><span class="action-icon">📊</span>Statement</button>
         </div>`;
 
-        /* ── Accounts ── */
-        const groups  = this.data.userGroups || [];
-        const active  = groups.filter(g => parseInt(g.phase) === 3);
-
+        const groups = this.data.userGroups || [];
+        const active = groups.filter(g => parseInt(g.phase) === 3);
         html += `<div class="section-label">Accounts</div>`;
-
         if (active.length > 0) {
             active.forEach(g => {
                 const bal = g.myBalance ? 'KSh ' + Number(g.myBalance).toLocaleString() : 'KSh —';
-                html += `
-                <div class="account-card" onclick="window.location.href='/personal/group/${encodeURIComponent(g.groupName)}'">
-                    <div>
-                        <div class="acc-name">${g.groupName}</div>
-                        <small>${g.county || ''} ${g.ward ? '• ' + g.ward : ''}</small>
-                    </div>
+                html += `<div class="account-card" onclick="window.location.href='/personal/group/${encodeURIComponent(g.groupName)}'">
+                    <div><div class="acc-name">${g.groupName}</div><small>${g.county||''} ${g.ward ? '• '+g.ward : ''}</small></div>
                     <div class="acc-balance">${bal}</div>
                 </div>`;
             });
-        } else {
-            /* fallback placeholder cards */
-            const placeholders = [
-                { name: 'M-Pesa Wallet',   note: 'Main mobile account',  bal: 'KSh —' },
-                { name: 'Savings Wallet',  note: 'Monthly savings',       bal: 'KSh —' },
-                { name: 'Business Wallet', note: 'Shop payments',         bal: 'KSh —' }
-            ];
-            placeholders.forEach(p => {
-                html += `
-                <div class="account-card">
-                    <div>
-                        <div class="acc-name">${p.name}</div>
-                        <small>${p.note}</small>
-                    </div>
-                    <div class="acc-balance">${p.bal}</div>
-                </div>`;
-            });
-        }
+         } else {
+             html += `<div class="account-card account-card-empty"><div><div class="acc-name">Not group account yet</div><small>Join a group to get started</small></div></div>`;
+         }
 
-        /* ── Performance stats ── */
-        html += `<div class="section-label">Performance</div>`;
-        html += `
+        html += `<div class="section-label">Performance</div>
         <div class="perf-grid">
             <div class="perf-stat"><h4>Total Transactions</h4><p>${txns.length + 124}</p></div>
             <div class="perf-stat"><h4>Pending</h4><p>4</p></div>
@@ -745,22 +953,16 @@ const app = {
             <div class="perf-stat"><h4>Total Received</h4><p>KSh 18,200</p></div>
         </div>`;
 
-        /* ── Recent transactions ── */
         html += `<div class="section-label">Recent Transactions</div>`;
         txns.forEach(tx => {
             const isCredit = tx.type === 'deposit';
-            html += `
-            <div class="tx-card">
+            html += `<div class="tx-card">
                 <span class="tx-label">${tx.acc}</span>
-                <span class="tx-amount ${isCredit ? 'credit' : 'debit'}">
-                    ${isCredit ? '+' : '-'} KSh ${Number(tx.amt).toLocaleString()}
-                </span>
+                <span class="tx-amount ${isCredit ? 'credit' : 'debit'}">${isCredit ? '+' : '-'} KSh ${Number(tx.amt).toLocaleString()}</span>
             </div>`;
         });
 
-        /* ── Settings access (PIN / Statement) via small links ── */
-        html += `
-        <div style="display:flex;gap:8px;margin:10px 14px 20px;">
+        html += `<div style="display:flex;gap:8px;margin:10px 14px 20px;">
             <button onclick="app.openModal('Change PIN')" style="flex:1;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">🔒 Change PIN</button>
         </div>`;
 
@@ -768,7 +970,13 @@ const app = {
     },
 
     renderCreatePinView(container) {
-        container.innerHTML = `<div style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:20px auto;box-shadow:0 4px 12px rgba(0,0,0,0.08);"><h2 style="margin-bottom:1rem;color:#0c8f44;">Set Personal PIN</h2><p style="color:#6b7280;margin-bottom:1rem;">You need a 4-digit PIN to access your personal wallet.</p><div class="form-group"><label class="form-label">New PIN</label><input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div><div class="form-group"><label class="form-label">Confirm PIN</label><input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="****" inputmode="numeric"></div><button class="btn btn-primary" onclick="app.createPersonalPin()">Create PIN</button></div>`;
+        container.innerHTML = `<div style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:20px auto;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+            <h2 style="margin-bottom:1rem;color:#0c8f44;">Set Personal PIN</h2>
+            <p style="color:#6b7280;margin-bottom:1rem;">You need a 4-digit PIN to access your personal wallet.</p>
+            <div class="m-field"><label>New PIN</label><input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+            <div class="m-field"><label>Confirm PIN</label><input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+            <button class="m-submit-btn" onclick="app.createPersonalPin()"><i class="fa-solid fa-check-circle"></i> Create PIN</button>
+        </div>`;
     },
 
     async createPersonalPin() {
@@ -777,21 +985,46 @@ const app = {
         if (!pin || pin.length < 4)  { this.showToast("PIN must be 4 digits", "error");   return; }
         if (pin !== confirm)          { this.showToast("PINs do not match",    "error");   return; }
         try {
-            const res    = await fetch('/personal/set-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+            const res    = await fetch('/personal/set-pin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }) });
             const result = await res.json();
             if (result.success) { this.showToast("PIN set successfully!", "success"); this.data.hasPersonalPin = true; this.render(); }
             else { this.showToast(result.message || "Failed to set PIN", "error"); }
-        } catch (e) { this.showToast("Server error occurred", "error"); }
+        } catch(e) { this.showToast("Server error occurred", "error"); }
     },
 
     showNewPinFormModal() {
-        const html = `<div style="text-align:left;"><div style="background:#f8fafc;padding:15px;border-radius:12px;margin-bottom:20px;border:1px solid #e2e8f0;"><p style="font-size:13px;color:#475569;margin:0;">Enter your <b>Current PIN</b> first, then choose a <b>New PIN</b>.</p></div><div class="form-group"><label class="form-label" style="font-size:11px;color:#64748b;font-weight:700;">CURRENT PIN</label><input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div><div class="form-group"><label class="form-label" style="font-size:11px;color:#64748b;font-weight:700;">NEW 4-DIGIT PIN</label><input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div><div class="form-group"><label class="form-label" style="font-size:11px;color:#64748b;font-weight:700;">CONFIRM NEW PIN</label><input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div><button class="btn btn-primary" style="padding:15px;margin-top:10px;font-size:15px;" onclick="app.changePersonalPin()"><i class="fa-solid fa-check-circle"></i> Save New PIN</button></div>`;
-        this.updateModalContent('Set New PIN', html, () => this.openModal('Change PIN'));
+        const html = `
+        <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Enter your <b>Current PIN</b> first, then choose a <b>New PIN</b>.</span></div>
+        <div class="m-field"><label>Current PIN</label><input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div>
+        <div class="m-field"><label>New 4-Digit PIN</label><input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div>
+        <div class="m-field"><label>Confirm New PIN</label><input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div>
+        <button class="m-submit-btn" onclick="app.changePersonalPin()"><i class="fa-solid fa-check-circle"></i> Save New PIN</button>`;
+        this.updateModalContent('Set New PIN', html, () => this.openModal('Change PIN'), 'fa-lock');
     },
 
     showForgotPinFormModal() {
-        const html = `<div style="text-align:left;"><div id="requestPhase"><div style="text-align:center;padding:20px 0;"><div style="width:60px;height:60px;background:#fff7ed;color:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;"><i class="fa-solid fa-comment-sms" style="font-size:24px;"></i></div><h4 style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:8px;">Reset Security PIN</h4><p style="font-size:13px;color:#64748b;line-height:1.5;">We will send a <b>Start Key</b> to your registered mobile number via SMS.</p></div><button class="btn" style="background:#7c3aed;color:#fff;padding:15px;font-weight:700;" onclick="app.requestStartKeyCliant()"><i class="fas fa-sms"></i> Send SMS Start Key</button></div><div id="startKeySectionCliant" class="hidden"><div style="background:#f0f9ff;padding:12px;border-radius:10px;border:1px solid #bae6fd;margin-bottom:20px;display:flex;gap:10px;align-items:center;"><i class="fa-solid fa-circle-info" style="color:#0ea5e9;"></i><p style="font-size:12px;color:#0369a1;margin:0;">Enter the key sent to your phone.</p></div><div class="form-group"><label class="form-label" style="font-size:11px;color:#64748b;font-weight:700;">START KEY (FROM SMS)</label><input type="password" id="startKeyCliant" name="security-start-key" class="form-input" placeholder="••••" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:4px;font-weight:700;" oninput="app.revealResetPinFields()"></div><div id="pinEntryFields" class="hidden" style="margin-top:15px;border-top:1px dashed #e2e8f0;padding-top:15px;"><div class="form-group"><label class="form-label" style="font-size:11px;color:#64748b;font-weight:700;">NEW 4-DIGIT PIN</label><input type="password" id="resetNewPinCliant" autocomplete="new-password" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;" oninput="app.checkResetPinMatch()"></div><div class="form-group"><label class="form-label" style="font-size:11px;color:#64748b;font-weight:700;">CONFIRM PIN</label><input type="password" id="resetConfirmPinCliant" autocomplete="new-password" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;" oninput="app.checkResetPinMatch()"></div><button id="finalResetBtn" class="btn btn-primary hidden" onclick="app.submitResetPinCliant()" style="padding:15px;font-size:15px;"><i class="fa-solid fa-key"></i> Reset & Login</button></div><p id="resetPinMsgCliant" style="color:#ef4444;margin-top:15px;font-size:12px;font-weight:600;text-align:center;"></p></div></div>`;
-        this.updateModalContent('Forgot PIN', html, () => this.openModal('Change PIN'));
+        const html = `
+        <div id="requestPhase">
+            <div style="text-align:center;padding:16px 0 20px;">
+                <div style="width:56px;height:56px;background:#fff7ed;color:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                    <i class="fa-solid fa-comment-sms" style="font-size:22px;"></i>
+                </div>
+                <h4 style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:7px;">Reset Security PIN</h4>
+                <p style="font-size:13px;color:#64748b;line-height:1.5;">We will send a <b>Start Key</b> to your registered mobile number via SMS.</p>
+            </div>
+            <button class="m-submit-btn violet" onclick="app.requestStartKeyCliant()"><i class="fas fa-sms"></i> Send SMS Start Key</button>
+        </div>
+        <div id="startKeySectionCliant" class="hidden">
+            <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Enter the key sent to your phone.</span></div>
+            <div class="m-field"><label>Start Key (from SMS)</label><input type="password" id="startKeyCliant" class="form-input" placeholder="••••" inputmode="numeric" autocomplete="one-time-code" style="letter-spacing:4px;font-weight:700;" oninput="app.revealResetPinFields()"></div>
+            <div id="pinEntryFields" class="hidden" style="margin-top:12px;border-top:1px dashed #e2e8f0;padding-top:14px;">
+                <div class="m-field"><label>New 4-Digit PIN</label><input type="password" id="resetNewPinCliant" autocomplete="new-password" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;" oninput="app.checkResetPinMatch()"></div>
+                <div class="m-field"><label>Confirm PIN</label><input type="password" id="resetConfirmPinCliant" autocomplete="new-password" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;" oninput="app.checkResetPinMatch()"></div>
+                <button id="finalResetBtn" class="m-submit-btn hidden" onclick="app.submitResetPinCliant()"><i class="fa-solid fa-key"></i> Reset & Login</button>
+            </div>
+            <p id="resetPinMsgCliant" style="color:#ef4444;margin-top:12px;font-size:12px;font-weight:600;text-align:center;"></p>
+        </div>`;
+        this.updateModalContent('Forgot PIN', html, () => this.openModal('Change PIN'), 'fa-unlock-keyhole');
     },
 
     requestStartKeyCliant() {
@@ -802,38 +1035,38 @@ const app = {
     revealResetPinFields() {
         const key    = document.getElementById('startKeyCliant')?.value || '';
         const fields = document.getElementById('pinEntryFields');
-        if (fields) { key.length >= 4 ? fields.classList.remove('hidden') : fields.classList.add('hidden'); }
+        if (fields) key.length >= 4 ? fields.classList.remove('hidden') : fields.classList.add('hidden');
     },
     checkResetPinMatch() {
         const pin1 = document.getElementById('resetNewPinCliant')?.value || '';
         const pin2 = document.getElementById('resetConfirmPinCliant')?.value || '';
         const btn  = document.getElementById('finalResetBtn');
-        if (btn) { (pin1.length === 4 && pin1 === pin2) ? btn.classList.remove('hidden') : btn.classList.add('hidden'); }
+        if (btn) (pin1.length === 4 && pin1 === pin2) ? btn.classList.remove('hidden') : btn.classList.add('hidden');
     },
     async submitResetPinCliant() {
         const startKey   = document.getElementById('startKeyCliant')?.value;
         const newPin     = document.getElementById('resetNewPinCliant')?.value;
         const confirmPin = document.getElementById('resetConfirmPinCliant')?.value;
         const msg        = document.getElementById('resetPinMsgCliant');
-        if (!startKey || startKey.length < 4) { if (msg) { msg.textContent = 'Please enter the start key from SMS'; msg.style.color = 'red'; } return; }
-        if (!newPin   || newPin.length < 4)   { if (msg) { msg.textContent = 'New PIN must be 4 digits'; msg.style.color = 'red'; }           return; }
-        if (newPin !== confirmPin)             { if (msg) { msg.textContent = 'PINs do not match'; msg.style.color = 'red'; }                  return; }
+        if (!startKey || startKey.length < 4) { if(msg){msg.textContent='Please enter the start key from SMS';msg.style.color='red';} return; }
+        if (!newPin   || newPin.length < 4)   { if(msg){msg.textContent='New PIN must be 4 digits';msg.style.color='red';} return; }
+        if (newPin !== confirmPin)             { if(msg){msg.textContent='PINs do not match';msg.style.color='red';} return; }
         if (msg) { msg.textContent = 'Start key verification integration pending.'; msg.style.color = '#f59e0b'; }
     },
     async changePersonalPin() {
         const oldPin     = document.getElementById('oldPersonalPin').value;
         const newPin     = document.getElementById('newChangePin').value;
         const confirmPin = document.getElementById('confirmChangePin').value;
-        if (!oldPin || oldPin.length < 4)       { this.showToast("Please enter your current PIN",               "error"); return; }
-        if (!newPin || newPin.length < 4)        { this.showToast("New PIN must be 4 digits",                   "error"); return; }
-        if (newPin !== confirmPin)               { this.showToast("New PINs do not match",                      "error"); return; }
-        if (oldPin === newPin)                   { this.showToast("New PIN must differ from current",            "error"); return; }
+        if (!oldPin || oldPin.length < 4)   { this.showToast("Please enter your current PIN", "error"); return; }
+        if (!newPin || newPin.length < 4)   { this.showToast("New PIN must be 4 digits",      "error"); return; }
+        if (newPin !== confirmPin)           { this.showToast("New PINs do not match",         "error"); return; }
+        if (oldPin === newPin)               { this.showToast("New PIN must differ from current","error"); return; }
         try {
-            const res    = await fetch('/personal/change-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldPin, newPin }) });
+            const res    = await fetch('/personal/change-pin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ oldPin, newPin }) });
             const result = await res.json();
             if (result.success) { this.showToast("PIN changed successfully!", "success"); this.render(); }
             else { this.showToast(result.message || "Failed to change PIN", "error"); }
-        } catch (e) { this.showToast("Server error occurred", "error"); }
+        } catch(e) { this.showToast("Server error occurred", "error"); }
     },
 
     toggleLongStatementOptions() {
@@ -851,49 +1084,66 @@ const app = {
         setTimeout(() => this.showToast('Full statement available in your Inbox soon.', 'success'), 1500);
     },
 
-    /* ────────────────────────────────────────────
-       GENERAL VIEW  (unchanged logic)
-    ──────────────────────────────────────────── */
+    /* ─── GENERAL VIEW ─── */
     renderGeneralView(container) {
         const groups = this.data.userGroups || [];
         const phaseConfig = {
-            1: { title: 'New Request', color: '#3b82f6', icon: 'fa-plus-circle', bg: '#eff6ff' },
-            2: { title: 'Pending',     color: '#f59e0b', icon: 'fa-clock',       bg: '#fff7ed' },
-            3: { title: 'Active',      color: '#10b981', icon: 'fa-check-circle', bg: '#f0fdf4' }
+            1: { title:'New Request', color:'#3b82f6', icon:'fa-plus-circle',  bg:'#eff6ff' },
+            2: { title:'Pending',     color:'#f59e0b', icon:'fa-clock',         bg:'#fff7ed' },
+            3: { title:'Active',      color:'#10b981', icon:'fa-check-circle',  bg:'#f0fdf4' }
         };
         if (groups.length === 0) {
-            container.innerHTML = `<div style="text-align:center;padding:40px 20px;background:white;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.1);margin:14px;"><div style="width:70px;height:70px;background:#f1f5f9;color:#94a3b8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;"><i class="fa-solid fa-folder-open"></i></div><h3 style="color:#1e293b;margin-bottom:12px;font-weight:800;">No Groups Yet</h3><p style="color:#64748b;font-size:14px;margin-bottom:30px;line-height:1.6;">Join or create a group to start saving collectively.</p><button class="btn btn-primary" style="background:#0c8f44;padding:16px;border-radius:14px;" onclick="app.openModal('Create Group')"><i class="fa-solid fa-plus-circle"></i> Create New Group</button></div>`;
+            container.innerHTML = `<div style="text-align:center;padding:40px 20px;background:white;border-radius:20px;box-shadow:0 15px 35px rgba(0,0,0,0.1);margin:14px;">
+                <div style="width:70px;height:70px;background:#f1f5f9;color:#94a3b8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;"><i class="fa-solid fa-folder-open"></i></div>
+                <h3 style="color:#1e293b;margin-bottom:12px;font-weight:800;">No Groups Yet</h3>
+                <p style="color:#64748b;font-size:14px;margin-bottom:30px;line-height:1.6;">Join or create a group to start saving collectively.</p>
+                <button class="m-submit-btn" style="max-width:260px;margin:0 auto;" onclick="app.openModal('Create Group')"><i class="fa-solid fa-plus-circle"></i> Create New Group</button>
+            </div>`;
             return;
         }
         let html = '<div style="display:flex;flex-direction:column;gap:24px;padding:14px 14px 20px;">';
-        [1, 2, 3].forEach(phase => {
+        [1,2,3].forEach(phase => {
             const filtered = groups.filter(g => {
                 let p = parseInt(g.phase) || 0;
-                const memberCount = parseInt(g.totalProposedMembers) || 0;
-                if (memberCount === 0) p = 1;
+                if ((parseInt(g.totalProposedMembers)||0) === 0) p = 1;
                 if (p === 0) p = 1;
                 return Number(p) === Number(phase);
             });
             if (filtered.length > 0) {
                 const config = phaseConfig[phase];
-                html += `<div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><h5 style="font-size:11.5px;color:${config.color};text-transform:uppercase;letter-spacing:1.5px;font-weight:800;display:flex;align-items:center;gap:8px;"><i class="fa-solid ${config.icon}"></i> ${config.title}</h5><span style="font-size:10px;background:${config.bg};color:${config.color};padding:2px 8px;border-radius:10px;font-weight:700;">${filtered.length}</span></div><div style="background:white;border-radius:20px;overflow:hidden;border:1px solid #f1f5f9;box-shadow:0 10px 25px rgba(0,0,0,0.04);">`;
+                html += `<div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <h5 style="font-size:11.5px;color:${config.color};text-transform:uppercase;letter-spacing:1.5px;font-weight:800;display:flex;align-items:center;gap:8px;"><i class="fa-solid ${config.icon}"></i> ${config.title}</h5>
+                    <span style="font-size:10px;background:${config.bg};color:${config.color};padding:2px 8px;border-radius:10px;font-weight:700;">${filtered.length}</span>
+                </div><div style="background:white;border-radius:20px;overflow:hidden;border:1px solid #f1f5f9;box-shadow:0 10px 25px rgba(0,0,0,0.04);">`;
                 filtered.forEach(g => {
                     const roleColor   = g.role === 'trustee' ? '#7c3aed' : '#0891b2';
                     const roleIcon    = g.role === 'trustee' ? 'fa-user-tie' : (g.role === 'official' ? 'fa-user-gear' : 'fa-user');
                     const displayRole = (parseInt(g.phase) >= 2 && g.roleTitle) ? g.roleTitle : (g.role || 'Member');
-                    const createdShort = g.createdAt ? new Date(g.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'N/A';
-                    html += `<div class="menu-item" onclick="window.location.href='/personal/group/${encodeURIComponent(g.groupName)}'" style="background:#f8fafc;padding:16px;border-radius:14px;margin-bottom:12px;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:start;"><div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;"><span style="font-weight:700;color:#1e293b;font-size:1.05rem;">${g.groupName}</span><span style="font-size:0.65rem;color:${roleColor};font-weight:700;background:${roleColor}10;padding:2px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;border:1px solid ${roleColor}20;"><i class="fas ${roleIcon}"></i> ${displayRole.toUpperCase()}</span></div><div style="display:flex;align-items:center;gap:10px;color:#64748b;font-size:11px;font-weight:500;"><i class="fa-solid fa-location-dot" style="font-size:9px;"></i><span>${g.county || 'N/A'} • ${g.ward || 'N/A'}</span><span style="margin-left:auto;font-size:10px;"><i class="far fa-calendar-alt"></i> ${createdShort}</span></div></div><div style="display:flex;align-items:center;gap:10px;margin-left:10px;"><span style="font-size:9px;font-weight:800;text-transform:uppercase;color:${config.color};background:${config.bg};padding:3px 8px;border-radius:6px;border:1px solid ${config.color}20;white-space:nowrap;">${config.title}</span><span class="arrow" style="color:${config.color};font-size:16px;">›</span></div></div>`;
+                    const createdShort = g.createdAt ? new Date(g.createdAt).toLocaleDateString([], { month:'short', day:'numeric' }) : 'N/A';
+                    html += `<div class="menu-item" onclick="window.location.href='/personal/group/${encodeURIComponent(g.groupName)}'" style="background:#f8fafc;padding:16px;border-radius:14px;margin-bottom:12px;border:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:start;cursor:pointer;">
+                        <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                            <span style="font-weight:700;color:#1e293b;font-size:1.05rem;">${g.groupName}</span>
+                            <span style="font-size:0.65rem;color:${roleColor};font-weight:700;background:${roleColor}10;padding:2px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;border:1px solid ${roleColor}20;"><i class="fas ${roleIcon}"></i> ${displayRole.toUpperCase()}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;color:#64748b;font-size:11px;font-weight:500;">
+                            <i class="fa-solid fa-location-dot" style="font-size:9px;"></i>
+                            <span>${g.county||'N/A'} • ${g.ward||'N/A'}</span>
+                            <span style="margin-left:auto;font-size:10px;"><i class="far fa-calendar-alt"></i> ${createdShort}</span>
+                        </div></div>
+                        <div style="display:flex;align-items:center;gap:10px;margin-left:10px;">
+                            <span style="font-size:9px;font-weight:800;text-transform:uppercase;color:${config.color};background:${config.bg};padding:3px 8px;border-radius:6px;border:1px solid ${config.color}20;white-space:nowrap;">${config.title}</span>
+                            <span style="color:${config.color};font-size:16px;">›</span>
+                        </div>
+                    </div>`;
                 });
                 html += `</div></div>`;
             }
         });
-        html += `<button class="btn btn-primary" style="background:#0c8f44;height:56px;border-radius:16px;" onclick="app.openModal('Create Group')"><i class="fa-solid fa-plus-circle"></i> Create New Request</button></div>`;
+        html += `<button class="m-submit-btn" style="height:52px;border-radius:14px;" onclick="app.openModal('Create Group')"><i class="fa-solid fa-plus-circle"></i> Create New Request</button></div>`;
         container.innerHTML = html;
     },
 
-    /* ────────────────────────────────────────────
-       GROUP / LOCATION HELPERS  (unchanged)
-    ──────────────────────────────────────────── */
+    /* ─── GROUP / LOCATION HELPERS ─── */
     goToRegions() {
         const name     = document.getElementById('newGroupName').value.trim();
         const phone    = document.getElementById('newChairPhone').value.trim();
@@ -942,7 +1192,7 @@ const app = {
         wSel.innerHTML = '<option value="">-- Select Ward --</option>';
         if (!county || !constituency) return;
         fetch(`/api/locations/${encodeURIComponent(county)}/${encodeURIComponent(constituency)}/wards`).then(r => r.json()).then(list => {
-            if (!Array.isArray(list) || list.length === 0) { const o = document.createElement('option'); o.value = ''; o.textContent = '(No Wards Listed)'; o.disabled = true; wSel.appendChild(o); return; }
+            if (!Array.isArray(list) || list.length === 0) { const o = document.createElement('option'); o.value=''; o.textContent='(No Wards Listed)'; o.disabled=true; wSel.appendChild(o); return; }
             list.sort().forEach(ward => { const o = document.createElement('option'); o.value = ward; o.textContent = ward; wSel.appendChild(o); });
         });
     },
@@ -956,31 +1206,42 @@ const app = {
         }
         const data = Object.fromEntries(new FormData(event.target).entries());
         try {
-            const res    = await fetch('/general', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            const res    = await fetch('/general', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
             const result = await res.json();
             if (result.success) { this.showToast('Group created successfully!', 'success'); this.closeModal(); if (result.redirect) window.location.href = result.redirect; }
             else { this.showToast(result.message || 'Failed to create group', 'error'); }
-        } catch (e) { this.showToast('Server error occurred', 'error'); }
+        } catch(e) { this.showToast('Server error occurred', 'error'); }
         return false;
     },
     handleDealerClick() { if (!this.data.isDealer) { this.showToast('You are not registered as a dealer.', 'error'); return; } this.switchRole('Dealer'); },
     handleGeneralClick() { this.closeModal(); window.location.href = '/general'; },
 
-    /* ────────────────────────────────────────────
-       SEND MONEY FLOWS  (unchanged logic)
-    ──────────────────────────────────────────── */
+    /* ─── SEND MONEY FLOWS ─── */
     selectGroupForSend(groupName) {
         const dn = decodeURIComponent(groupName);
         this.data.errorMessage = '';
-        this.updateModalContent('Send Money - ' + dn,
-            `<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Choose where to send money:</p><button class="modal-list-btn" onclick="app.sendToMyAccount('${encodeURIComponent(dn)}')"><i class="fa-solid fa-building-columns" style="color:var(--primary);margin-right:8px;"></i> My Account</button><button class="modal-list-btn" onclick="app.sendToOtherMember('${encodeURIComponent(dn)}')"><i class="fa-solid fa-user-group" style="color:var(--secondary);margin-right:8px;"></i> Other Member A/C</button></div>`,
-            () => this.openModal('Send Money'));
+        const html = `
+        <div class="m-info-banner green"><i class="fa-solid fa-circle-info"></i><span>Choose where to send money within <b>${dn}</b>.</span></div>
+        <div class="m-section-label">Destination</div>
+        <button class="m-action-btn" onclick="app.sendToMyAccount('${encodeURIComponent(dn)}')">
+            <div class="btn-icon-box bib-green"><i class="fa-solid fa-building-columns"></i></div>
+            <div class="btn-text-block"><span class="btn-label-text">My Account</span><span class="btn-hint-text">Send to your own group account</span></div>
+            <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+        </button>
+        <button class="m-action-btn violet" onclick="app.sendToOtherMember('${encodeURIComponent(dn)}')">
+            <div class="btn-icon-box bib-violet"><i class="fa-solid fa-user-group"></i></div>
+            <div class="btn-text-block"><span class="btn-label-text">Other Member A/C</span><span class="btn-hint-text">Send to another member's account</span></div>
+            <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+        </button>`;
+        this.updateModalContent('Send Money — ' + dn, html, () => this.openModal('Send Money'), 'fa-paper-plane');
     },
+
     sendToMyAccount(groupName) {
         const dn    = decodeURIComponent(groupName);
         const group = this.data.userGroups.find(g => g.groupName === dn);
         if (!group || !group.principles || !group.principles.otherContributions) {
-            this.updateModalContent('Send to My Account', '<div style="text-align:center;padding:20px;"><p style="color:#6b7280;">No accounts found for this group.</p></div>', () => this.selectGroupForSend(dn));
+            const html = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No accounts found for this group.</p></div>`;
+            this.updateModalContent('Send to My Account', html, () => this.selectGroupForSend(dn), 'fa-building-columns');
             return;
         }
         this.data.groupAccounts  = group.principles.otherContributions;
@@ -991,39 +1252,69 @@ const app = {
         this.data.isMultiMemberFlow = false;
         this.renderAccountForm(dn);
     },
+
     renderAccountForm(groupName) {
-        const accounts     = this.data.groupAccounts || [];
-        const dn           = decodeURIComponent(groupName);
+        const accounts      = this.data.groupAccounts || [];
+        const dn            = decodeURIComponent(groupName);
         const addedAccounts = this.data.addedAccounts || [];
-        const errorMsg     = this.data.errorMessage || '';
-        const sendTo       = this.data.recipientName || 'My Account';
-        let html = '<div style="text-align:left;">';
+        const errorMsg      = this.data.errorMessage || '';
+        const sendTo        = this.data.recipientName || 'My Account';
+        const icon          = this.data.sendMode === 'other' ? 'fa-user-group' : 'fa-building-columns';
+
+        let html = '';
+
         if (this.data.sendMode === 'other') {
-            html += `<div style="background:#f0f9ff;padding:10px;border-radius:8px;margin-bottom:15px;border:1px solid #bae6fd;display:flex;align-items:center;gap:10px;"><i class="fa-solid fa-user-check" style="color:var(--primary);"></i><span style="font-size:13px;font-weight:600;color:#0369a1;">Recipient: ${sendTo}</span></div>`;
+            html += `<div class="m-info-banner green"><i class="fa-solid fa-user-check"></i><span>Recipient: <b>${sendTo}</b></span></div>`;
         }
-        html += '<div style="margin-bottom:10px;"><p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">SOURCE: Select Account</p><select id="sourceAccount" class="form-input" onchange="app.onSourceChange(\'' + encodeURIComponent(dn) + '\')" style="width:100%;padding:10px;font-size:13px;"><option value="">-- Select --</option>';
+
+        html += `<div class="m-section-label">Source Account</div>
+        <div class="m-field" style="margin-bottom:8px;">
+            <label>Select Account</label>
+            <select id="sourceAccount" class="form-input" onchange="app.onSourceChange('${encodeURIComponent(dn)}')" style="font-size:13px;">
+                <option value="">-- Select --</option>`;
         accounts.forEach((acc, index) => {
             const isAdded = addedAccounts.some(a => a.accountNumber === acc.accountNumber);
-            html += `<option value="${index}" ${isAdded ? 'disabled style="color:#cbd5e1;"' : ''}>${acc.accountNumber} - ${acc.accountName}${isAdded ? ' (Added)' : ''}</option>`;
+            html += `<option value="${index}" ${isAdded ? 'disabled' : ''}>${acc.accountNumber} — ${acc.accountName}${isAdded ? ' (Added)' : ''}</option>`;
         });
-        html += '</select></div>';
-        if (errorMsg) html += `<div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px;margin-bottom:15px;"><p style="color:#dc2626;font-size:13px;margin:0;">${errorMsg}</p></div>`;
-        if (addedAccounts.length > 0) {
-            html += '<div style="margin-bottom:15px;"><p style="font-size:12px;color:#6b7280;margin-bottom:8px;font-weight:600;">ADDED ACCOUNTS:</p>';
-            addedAccounts.forEach((acc, index) => {
-                html += `<div style="display:flex;align-items:center;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;gap:10px;"><button onclick="app.removeAccount(${index},'${encodeURIComponent(dn)}')" style="background:#ef4444;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">×</button><div style="flex:1;overflow:hidden;"><div style="font-weight:600;color:#1e293b;font-size:13px;">${acc.accountName}</div><div style="color:#64748b;font-size:11px;">${acc.accountNumber}</div></div><div style="color:var(--primary);font-weight:700;font-size:13px;">KSh ${acc.inputAmount}</div></div>`;
-            });
-            html += '</div>';
+        html += `</select></div>`;
+
+        if (errorMsg) {
+            html += `<div class="m-info-banner red" style="margin-bottom:10px;"><i class="fa-solid fa-triangle-exclamation"></i><span>${errorMsg}</span></div>`;
         }
+
         if (this.data.searchedAccount) {
             const acc = this.data.searchedAccount;
-            html += `<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:15px;border-radius:12px;margin-bottom:15px;color:white;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><div style="font-size:15px;font-weight:600;margin-bottom:2px;">${acc.accountName}</div><div style="font-size:12px;opacity:0.8;">${acc.accountNumber}</div></div><div style="text-align:right;"><div style="font-size:10px;opacity:0.7;margin-bottom:2px;">EXPECTED</div><div style="color:#fbbf24;font-weight:600;font-size:13px;">KSh ${acc.expectedAmount}</div></div></div><div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.1);padding:8px 12px;border-radius:8px;"><span style="font-size:12px;opacity:0.9;">Amount:</span><input type="number" id="accountAmount" class="form-input" placeholder="0" inputmode="numeric" style="flex:1;padding:8px;font-size:14px;border:none;background:transparent;color:white;font-weight:600;text-align:right;"></div></div>`;
+            html += `<div class="m-pay-dark">
+                <div class="m-pay-dark-title">Selected Account</div>
+                <div class="m-pay-row"><div><div style="font-weight:700;font-size:13.5px;">${acc.accountName}</div><div style="font-size:11px;opacity:.7;">${acc.accountNumber}</div></div><div class="m-pay-row-value" style="font-size:11px;">Expected<br><span style="font-size:14px;">KSh ${acc.expectedAmount}</span></div></div>
+                <div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.1);padding:8px 12px;border-radius:8px;margin-top:6px;">
+                    <span style="font-size:12px;opacity:.9;color:#fff;">Amount (KSh):</span>
+                    <input type="number" id="accountAmount" placeholder="0" inputmode="numeric" style="flex:1;padding:8px;font-size:15px;border:none;background:transparent;color:#fbbf24;font-weight:700;text-align:right;outline:none;">
+                </div>
+            </div>`;
         }
-        html += `<div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-primary" onclick="app.addNextAccount('${encodeURIComponent(dn)}')" style="flex:1;padding:12px;"><i class="fa-solid fa-plus"></i> Add</button><button class="btn btn-primary" onclick="app.confirmPayment('${encodeURIComponent(dn)}')" style="flex:1;padding:12px;background-color:var(--secondary);"><i class="fa-solid fa-check"></i> Confirm</button></div></div>`;
-        const title      = this.data.sendMode === 'other' ? 'Send to member' : `Send to My Account - ${dn}`;
-        const backAction = this.data.sendMode === 'other' ? () => this.sendToOtherMember(dn) : () => this.selectGroupForSend(dn);
-        this.updateModalContent(title, html, backAction);
+
+        if (addedAccounts.length > 0) {
+            html += `<div class="m-section-label">Added Accounts</div>`;
+            addedAccounts.forEach((acc, index) => {
+                html += `<div class="m-added-acc">
+                    <button class="m-remove-btn" onclick="app.removeAccount(${index},'${encodeURIComponent(dn)}')"><i class="fa-solid fa-xmark"></i></button>
+                    <div style="flex:1;min-width:0;"><div class="m-added-acc-name">${acc.accountName}</div><div class="m-added-acc-num">${acc.accountNumber}</div></div>
+                    <div class="m-added-acc-amt">KSh ${acc.inputAmount}</div>
+                </div>`;
+            });
+        }
+
+        html += `<div class="m-btn-row" style="margin-top:14px;">
+            <button class="m-submit-btn secondary" onclick="app.addNextAccount('${encodeURIComponent(dn)}')"><i class="fa-solid fa-plus"></i> Add</button>
+            <button class="m-submit-btn" onclick="app.confirmPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-check"></i> Confirm</button>
+        </div>`;
+
+        const title    = this.data.sendMode === 'other' ? `Send to ${sendTo}` : `Send — My Account`;
+        const backFn   = this.data.sendMode === 'other' ? () => this.sendToOtherMember(dn) : () => this.selectGroupForSend(dn);
+        this.updateModalContent(title, html, backFn, icon);
     },
+
     onSourceChange(groupName) {
         const dn    = decodeURIComponent(groupName);
         const sel   = document.getElementById('sourceAccount');
@@ -1062,110 +1353,223 @@ const app = {
         if ((this.data.addedAccounts || []).length === 0) { this.data.errorMessage = 'Please select an account and enter an amount first'; this.renderAccountForm(dn); return; }
         this.showFinalPaymentOptions(dn);
     },
+
     showFinalPaymentOptions(groupName) {
         const dn       = decodeURIComponent(groupName);
         const accounts = this.data.groupAccounts || [];
         const added    = this.data.addedAccounts || [];
         const remaining = accounts.filter(acc => !added.some(a => a.accountNumber === acc.accountNumber));
-        let html = `<div style="text-align:center;"><div style="width:50px;height:50px;background:#fefce8;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;"><i class="fa-solid fa-wallet" style="color:#eab308;font-size:24px;"></i></div><p style="font-size:13px;color:#64748b;margin-bottom:20px;">Review or add more accounts:</p><div style="text-align:left;margin-bottom:25px;border-top:1px dashed #e2e8f0;padding-top:15px;"><div onclick="app.toggleOtherAccountsCollapse()" style="cursor:pointer;"><p style="font-size:12px;color:var(--primary);margin-bottom:0;font-weight:700;text-transform:uppercase;">SOURCE: Select Account</p></div><div id="other-accounts-list" style="display:none;margin-top:10px;"><select class="form-input" onchange="if(this.value!=='') app.selectQuickAccount('${encodeURIComponent(dn)}', this.value)" style="width:100%;padding:10px;font-size:13px;"><option value="">-- Select --</option>`;
-        remaining.forEach(acc => { const gi = accounts.indexOf(acc); html += `<option value="${gi}">${acc.accountNumber} - ${acc.accountName}</option>`; });
-        html += `</select></div></div><button class="btn btn-primary" onclick="app.showFinalPaymentSummary('${encodeURIComponent(dn)}')" style="background:var(--secondary);width:100%;padding:14px;font-size:15px;border-radius:10px;"><i class="fa-solid fa-file-invoice-dollar"></i> Verify payment</button></div>`;
-        this.updateModalContent('Payment Options', html, () => this.renderAccountForm(dn));
+
+        let html = `
+        <div class="m-info-banner green"><i class="fa-solid fa-wallet"></i><span>Review your added accounts or add more before payment.</span></div>
+        <div class="m-section-label">Add More Accounts</div>
+        <button class="m-action-btn accent" onclick="app.toggleOtherAccountsCollapse()">
+            <div class="btn-icon-box bib-amber"><i class="fa-solid fa-plus-circle"></i></div>
+            <div class="btn-text-block"><span class="btn-label-text">Add Another Account</span><span class="btn-hint-text">Select from remaining accounts</span></div>
+            <i class="fa-solid fa-chevron-down btn-arrow-icon" id="otherAccChevron" style="transition:.3s;"></i>
+        </button>
+        <div id="other-accounts-list" style="display:none;margin-top:8px;background:#f8fafc;padding:12px;border-radius:10px;border:1px solid #f1f5f9;">
+            <div class="m-field" style="margin:0;">
+                <select class="form-input" onchange="if(this.value!=='') app.selectQuickAccount('${encodeURIComponent(dn)}', this.value)" style="font-size:13px;">
+                    <option value="">-- Select Account --</option>`;
+        remaining.forEach(acc => {
+            const gi = accounts.indexOf(acc);
+            html += `<option value="${gi}">${acc.accountNumber} — ${acc.accountName}</option>`;
+        });
+        html += `</select></div></div>
+        <div class="m-divider"></div>
+        <button class="m-submit-btn" onclick="app.showFinalPaymentSummary('${encodeURIComponent(dn)}')"><i class="fa-solid fa-file-invoice-dollar"></i> Verify Payment</button>`;
+
+        this.updateModalContent('Payment Options', html, () => this.renderAccountForm(dn), 'fa-list-check');
     },
-    toggleOtherAccountsCollapse() { const t = document.getElementById('other-accounts-list'); if (t) t.style.display = (t.style.display === 'none' || !t.style.display) ? 'flex' : 'none'; },
+
+    toggleOtherAccountsCollapse() {
+        const t = document.getElementById('other-accounts-list');
+        const c = document.getElementById('otherAccChevron');
+        if (t) {
+            const hidden = t.style.display === 'none' || !t.style.display;
+            t.style.display = hidden ? 'block' : 'none';
+            if (c) c.style.transform = hidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    },
     selectQuickAccount(groupName, index) {
         const dn  = decodeURIComponent(groupName);
         const acc = this.data.groupAccounts[index];
         if (acc) { this.data.searchedAccount = { accountName: acc.accountName, accountNumber: acc.accountNumber, expectedAmount: acc.inputAmount || acc.estimatedAmount || "0" }; this.data.errorMessage = ''; this.renderAccountForm(dn); }
     },
+
     showFinalPaymentSummary(groupName) {
         const dn            = decodeURIComponent(groupName);
         const addedAccounts = this.data.addedAccounts || [];
+
         if (this.data.isMultiMemberFlow) {
             const currentIdx = this.data.selectedMemberIndex;
             if (!this.data.settledMembersData) this.data.settledMembersData = {};
             this.data.settledMembersData[currentIdx] = { name: this.data.recipientName, accounts: [...addedAccounts] };
             const allDone = this.data.verifiedMembersList.every(m => this.data.settledMembersData[m.index]);
             if (!allDone) {
-                this.updateModalContent('Details Saved', `<div style="text-align:center;padding:20px;"><div style="width:60px;height:60px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;"><i class="fa-solid fa-check" style="color:#10b981;font-size:30px;"></i></div><h3 style="color:#1e293b;margin-bottom:10px;">Details Saved</h3><p style="color:#6b7280;font-size:14px;margin-bottom:20px;">Accounts for <b>${this.data.recipientName}</b> added.</p><button class="btn btn-primary" onclick="app.showSeveralMembersSummary('${encodeURIComponent(dn)}', app.data.verifiedMembersList)">Select Other Member</button></div>`);
+                const html = `<div style="text-align:center;padding:20px;">
+                    <div style="width:56px;height:56px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><i class="fa-solid fa-check" style="color:#10b981;font-size:26px;"></i></div>
+                    <h3 style="color:#1e293b;margin-bottom:8px;font-size:15px;">Details Saved</h3>
+                    <p style="color:#64748b;font-size:13px;margin-bottom:18px;">Accounts for <b>${this.data.recipientName}</b> saved.</p>
+                    <button class="m-submit-btn" onclick="app.showSeveralMembersSummary('${encodeURIComponent(dn)}', app.data.verifiedMembersList)">Select Next Member</button>
+                </div>`;
+                this.updateModalContent('Details Saved', html, null, 'fa-check-circle');
                 return;
             }
-            this.renderFinalBulkSummary(dn); return;
+            this.renderFinalBulkSummary(dn);
+            return;
         }
+
         let total = 0;
         addedAccounts.forEach(acc => total += parseFloat(acc.inputAmount) || 0);
         const sendTo    = this.data.recipientName || 'My Account';
         const memberIdx = this.data.selectedMemberIndex;
-        let html = '<div style="text-align:left;"><div style="background:linear-gradient(135deg,#1e293b,#334155);padding:15px;border-radius:12px;margin-bottom:15px;color:white;"><h3 style="margin:0 0 12px 0;color:white;font-size:14px;text-align:center;">PAYMENT DETAILS</h3>';
-        html += `<div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;margin-bottom:12px;"><p style="font-size:10px;margin:0;opacity:0.7;letter-spacing:1px;text-transform:uppercase;">Recipient</p><p style="font-weight:700;margin:4px 0 0 0;color:#fbbf24;font-size:14px;">${sendTo}</p></div>`;
+
+        let html = `<div class="m-pay-dark">
+            <div class="m-pay-dark-title">Payment Details</div>
+            <div class="m-pay-row"><span class="m-pay-row-label">Recipient</span><span class="m-pay-row-value">${sendTo}</span></div>`;
         if (this.data.sendMode === 'other' && memberIdx) {
-            html += `<div style="background:rgba(255,255,255,0.1);padding:10px;border-radius:8px;margin-bottom:12px;"><p style="font-size:10px;margin:0;opacity:0.7;">Members Group A/C Number</p><p style="font-weight:700;margin:4px 0 0 0;color:#fbbf24;font-size:14px;">${memberIdx}</p></div>`;
+            html += `<div class="m-pay-row"><span class="m-pay-row-label">Member A/C No.</span><span class="m-pay-row-value">${memberIdx}</span></div>`;
         }
         addedAccounts.forEach((acc, idx) => {
-            html += `<div style="display:flex;align-items:center;padding:12px;background:rgba(255,255,255,0.1);border-radius:10px;margin-bottom:8px;gap:12px;position:relative;"><div style="flex:1;overflow:hidden;"><div style="font-weight:700;font-size:13.5px;color:#fff;">${acc.accountName}</div><div style="font-size:11px;opacity:0.7;color:#fff;">${acc.accountNumber}</div></div><div style="color:#fbbf24;font-weight:700;font-size:14px;margin-right:35px;">KSh ${acc.inputAmount}</div><button onclick="app.removeAccountFromSummary(${idx},'${encodeURIComponent(dn)}')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:rgba(239,68,68,0.1);border:none;color:#f87171;cursor:pointer;font-size:14px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button></div>`;
+            html += `<div class="m-pay-row" style="position:relative;">
+                <div><div style="font-weight:700;font-size:13px;">${acc.accountName}</div><div style="font-size:10px;opacity:.7;">${acc.accountNumber}</div></div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="m-pay-row-value">KSh ${acc.inputAmount}</span>
+                    <button onclick="app.removeAccountFromSummary(${idx},'${encodeURIComponent(dn)}')" style="background:rgba(239,68,68,.15);border:none;color:#f87171;cursor:pointer;font-size:13px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>`;
         });
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(251,191,36,0.2);border-radius:6px;margin-top:10px;"><span style="font-weight:600;font-size:14px;">TOTAL</span><span style="color:#fbbf24;font-weight:700;font-size:18px;">KSh ${total.toLocaleString()}</span></div></div><div style="display:flex;gap:10px;margin-top:15px;"><button class="btn btn-primary" onclick="app.processPayment('tbank')" style="flex:1;padding:12px;background-color:#10b981;"><i class="fa-solid fa-university"></i> tBank</button><button class="btn btn-primary" onclick="app.processPayment('mpesa')" style="flex:1;padding:12px;background-color:#22c55e;"><i class="fa-solid fa-mobile"></i> M-Pesa</button></div>`;
+        html += `<div class="m-pay-total"><span class="m-pay-total-label">TOTAL</span><span class="m-pay-total-value">KSh ${total.toLocaleString()}</span></div></div>`;
+
+        html += `<div class="m-section-label">Pay Via</div>
+        <div class="m-btn-row">
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.processPayment('tbank')"><i class="fa-solid fa-university"></i> tBank</button>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.processPayment('mpesa')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
+        </div>`;
+
         const backFn = this.data.sendMode === 'my' ? () => this.renderAccountForm(dn) : () => this.showFinalPaymentOptions(dn);
-        html += `<button class="modal-list-btn" onclick="app.${this.data.sendMode === 'my' ? 'renderAccountForm' : 'showFinalPaymentOptions'}('${encodeURIComponent(dn)}')" style="margin-top:10px;">Back</button></div>`;
-        this.updateModalContent('Verify Final Payment', html);
+        this.updateModalContent('Verify Payment', html, backFn, 'fa-file-invoice-dollar');
     },
+
     renderFinalBulkSummary(groupName) {
         const dn   = decodeURIComponent(groupName);
         const data = this.data.settledMembersData;
         let totalSum = 0;
-        let html = '<div style="text-align:left;max-height:65vh;overflow-y:auto;padding:0 5px 0 0;">';
+        let html = '';
         for (const idx in data) {
-            const m = data[idx];
-            let memberTotal = 0;
+            const m = data[idx]; let memberTotal = 0;
             m.accounts.forEach(a => memberTotal += parseFloat(a.inputAmount) || 0);
             totalSum += memberTotal;
-            html += `<div style="margin-bottom:15px;border-bottom:1px dashed #e2e8f0;padding-bottom:12px;"><div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;position:relative;"><div onclick="app.toggleMemberCollapse('${idx}')" style="flex:1;"><div style="font-weight:700;color:var(--primary);font-size:15px;margin-bottom:2px;">${m.name}</div><div style="font-size:10px;color:#64748b;font-weight:600;">A/C: ${idx}</div></div><div style="text-align:right;margin-right:45px;cursor:pointer;" onclick="app.toggleMemberCollapse('${idx}')"><div style="font-weight:700;color:#10b981;font-size:14px;">KSh ${memberTotal.toLocaleString()}</div><div style="font-size:9px;color:#94a3b8;">${m.accounts.length} Account(s)</div></div><button onclick="event.stopPropagation(); app.removeFullMemberFromSummary('${idx}', '${encodeURIComponent(dn)}')" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);background:rgba(239,68,68,0.1);border:none;color:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i class="fa-solid fa-trash-can" style="font-size:13px;"></i></button></div><div id="collapse-${idx}" style="display:none;padding-top:10px;">`;
+            html += `<div style="margin-bottom:14px;border-bottom:1px dashed #e2e8f0;padding-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;position:relative;" onclick="app.toggleMemberCollapse('${idx}')">
+                    <div><div style="font-weight:700;color:var(--primary);font-size:14px;margin-bottom:2px;">${m.name}</div><div style="font-size:10px;color:#64748b;font-weight:600;">A/C: ${idx}</div></div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="text-align:right;"><div style="font-weight:700;color:#10b981;font-size:14px;">KSh ${memberTotal.toLocaleString()}</div><div style="font-size:9px;color:#94a3b8;">${m.accounts.length} Account(s)</div></div>
+                        <button onclick="event.stopPropagation(); app.removeFullMemberFromSummary('${idx}','${encodeURIComponent(dn)}')" style="background:rgba(239,68,68,.1);border:none;color:#ef4444;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i class="fa-solid fa-trash-can" style="font-size:12px;"></i></button>
+                    </div>
+                </div>
+                <div id="collapse-${idx}" style="display:none;padding-top:10px;">`;
             m.accounts.forEach((a, accIdx) => {
-                html += `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:8px;color:#64748b;padding:10px;border-radius:8px;background:#fcfcfc;position:relative;"><div style="flex:1;"><span style="font-weight:600;color:#334155;">${a.accountName}</span><div style="font-size:11px;color:#94a3b8;margin-top:2px;">KSh ${parseFloat(a.inputAmount).toLocaleString()}</div></div><button onclick="app.removeBulkAccountFromSummary('${idx}', ${accIdx}, '${encodeURIComponent(dn)}')" style="background:rgba(239,68,68,0.05);border:none;color:#ef4444;cursor:pointer;font-size:13px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button></div>`;
+                html += `<div class="m-added-acc">
+                    <button class="m-remove-btn" onclick="app.removeBulkAccountFromSummary('${idx}',${accIdx},'${encodeURIComponent(dn)}')"><i class="fa-solid fa-xmark"></i></button>
+                    <div style="flex:1;min-width:0;"><div class="m-added-acc-name">${a.accountName}</div><div class="m-added-acc-num">KSh ${parseFloat(a.inputAmount).toLocaleString()}</div></div>
+                </div>`;
             });
             html += `</div></div>`;
         }
-        html += `<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:20px;border-radius:15px;color:white;text-align:center;margin-top:10px;"><div style="font-size:12px;opacity:0.8;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Grand Total</div><div style="font-size:24px;font-weight:800;color:#fbbf24;">KSh ${totalSum.toLocaleString()}</div></div><div style="display:flex;gap:10px;margin-top:20px;"><button class="btn btn-primary" onclick="app.processPayment('tbank')" style="flex:1;background:#10b981;"><i class="fa-solid fa-university"></i> tBank</button><button class="btn btn-primary" onclick="app.processPayment('mpesa')" style="flex:1;background:#22c55e;"><i class="fa-solid fa-mobile"></i> M-Pesa</button></div></div>`;
-        this.updateModalContent('Payment Summary', html, () => this.showSeveralMembersSummary(dn, this.data.verifiedMembersList));
+        html += `<div class="m-pay-dark"><div class="m-pay-dark-title">Grand Total</div><div style="text-align:center;font-size:24px;font-weight:800;color:#fbbf24;">KSh ${totalSum.toLocaleString()}</div></div>
+        <div class="m-btn-row" style="margin-top:14px;">
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.processPayment('tbank')"><i class="fa-solid fa-university"></i> tBank</button>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.processPayment('mpesa')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
+        </div>`;
+        this.updateModalContent('Payment Summary', html, () => this.showSeveralMembersSummary(dn, this.data.verifiedMembersList), 'fa-receipt');
     },
+
     processPayment(method) {
         const name = method === 'tbank' ? 'tBank' : 'M-Pesa';
-        this.updateModalContent('Under Construction', `<div style="text-align:center;padding:40px 20px;"><i class="fa-solid fa-hard-hat" style="font-size:48px;color:var(--primary);margin-bottom:20px;"></i><h3 style="color:#1e293b;margin-bottom:10px;">Under Construction</h3><p style="color:#6b7280;">Payment via ${name} is currently being developed.</p><button class="modal-list-btn" onclick="app.closeModal()" style="margin-top:20px;">Close</button></div>`);
+        const html = `<div style="text-align:center;padding:36px 20px;">
+            <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <i class="fa-solid fa-hard-hat" style="font-size:28px;color:var(--primary);"></i>
+            </div>
+            <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Under Construction</h3>
+            <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Payment via ${name} is currently being developed.</p>
+            <button class="m-submit-btn secondary" onclick="app.closeModal()">Close</button>
+        </div>`;
+        this.updateModalContent('Coming Soon', html, null, 'fa-wrench');
     },
+
     sendToOtherMember(groupName) {
-        const dn = decodeURIComponent(groupName);
-        this.updateModalContent('Other Member Options', `<div style="text-align:center;"><p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Choose a sending option:</p><button class="modal-list-btn" onclick="app.showSingleMemberSearch('${encodeURIComponent(dn)}')"><i class="fa-solid fa-user" style="color:var(--primary);margin-right:10px;"></i> A Member</button><button class="modal-list-btn" onclick="app.showAddSeveralMembers('${encodeURIComponent(dn)}')"><i class="fa-solid fa-users-viewfinder" style="color:var(--primary);margin-right:10px;"></i> Add Several</button></div>`, () => this.selectGroupForSend(dn));
+        const dn   = decodeURIComponent(groupName);
+        const html = `
+        <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Choose how you want to send to another member.</span></div>
+        <div class="m-section-label">Options</div>
+        <button class="m-action-btn" onclick="app.showSingleMemberSearch('${encodeURIComponent(dn)}')">
+            <div class="btn-icon-box bib-blue"><i class="fa-solid fa-user"></i></div>
+            <div class="btn-text-block"><span class="btn-label-text">A Single Member</span><span class="btn-hint-text">Verify by group A/C number</span></div>
+            <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+        </button>
+        <button class="m-action-btn violet" onclick="app.showAddSeveralMembers('${encodeURIComponent(dn)}')">
+            <div class="btn-icon-box bib-violet"><i class="fa-solid fa-users-viewfinder"></i></div>
+            <div class="btn-text-block"><span class="btn-label-text">Several Members</span><span class="btn-hint-text">Batch send to multiple members</span></div>
+            <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+        </button>`;
+        this.updateModalContent('Other Member Options', html, () => this.selectGroupForSend(dn), 'fa-user-group');
     },
+
     showSingleMemberSearch(groupName) {
-        const dn = decodeURIComponent(groupName);
-        this.updateModalContent('Verify Member A/C Number', `<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Enter Members Group A/C Number to verify:</p><div class="form-group"><label class="form-label">Members Group A/C Number</label><input type="text" id="memberIndexInput" class="form-input" placeholder="e.g. 7" inputmode="numeric"></div><div id="memberVerifyError" style="color:#ef4444;font-size:12px;margin-bottom:10px;font-weight:500;" class="hidden"></div><button class="btn btn-primary" onclick="app.verifyMemberIndex('${encodeURIComponent(dn)}')">Verify A/C Number</button></div>`, () => this.sendToOtherMember(dn));
+        const dn   = decodeURIComponent(groupName);
+        const html = `
+        <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Enter the member's group A/C number to verify.</span></div>
+        <div class="m-field"><label>Member Group A/C Number</label><input type="text" id="memberIndexInput" class="form-input" placeholder="e.g. 7" inputmode="numeric"></div>
+        <div id="memberVerifyError" class="hidden m-info-banner red" style="margin-bottom:10px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="memberVerifyErrorText"></span></div>
+        <button class="m-submit-btn" onclick="app.verifyMemberIndex('${encodeURIComponent(dn)}')"><i class="fa-solid fa-magnifying-glass"></i> Verify A/C Number</button>`;
+        this.updateModalContent('Verify Member A/C', html, () => this.sendToOtherMember(dn), 'fa-id-card');
     },
+
     showAddSeveralMembers(groupName) {
         const dn    = decodeURIComponent(groupName);
         const group = this.data.userGroups.find(g => g.groupName === dn);
         if (!group) return;
         let totalGroupMembers = 0;
         for (const key in group) { if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) totalGroupMembers++; }
-        this.updateModalContent('Add Several Members', `<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">How many members? (Group Size: ${totalGroupMembers})</p><div class="form-group"><label class="form-label">Total Number of Members</label><input type="number" id="severalCountInput" class="form-input" min="1" max="${totalGroupMembers}" placeholder="e.g. 5"></div><div id="severalError" style="color:#ef4444;font-size:12px;margin-bottom:10px;" class="hidden"></div><button class="btn btn-primary" onclick="app.renderSeveralMemberInputs('${encodeURIComponent(dn)}', ${totalGroupMembers})">Continue</button></div>`, () => this.sendToOtherMember(dn));
+        const html = `
+        <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Group has <b>${totalGroupMembers}</b> members. Enter how many you want to include.</span></div>
+        <div class="m-field"><label>Number of Members</label><input type="number" id="severalCountInput" class="form-input" min="1" max="${totalGroupMembers}" placeholder="e.g. 5"></div>
+        <div id="severalError" class="hidden m-info-banner red"><i class="fa-solid fa-triangle-exclamation"></i><span id="severalErrorText"></span></div>
+        <button class="m-submit-btn" onclick="app.renderSeveralMemberInputs('${encodeURIComponent(dn)}', ${totalGroupMembers})"><i class="fa-solid fa-arrow-right"></i> Continue</button>`;
+        this.updateModalContent('Add Several Members', html, () => this.sendToOtherMember(dn), 'fa-users');
     },
+
     renderSeveralMemberInputs(groupName, max) {
         const dn    = decodeURIComponent(groupName);
         const input = document.getElementById('severalCountInput');
         const count = parseInt(input ? input.value : 0);
-        const err   = document.getElementById('severalError');
-        if (isNaN(count) || count < 1 || count > max) { if (err) { err.innerText = `Please enter a valid number between 1 and ${max}.`; err.classList.remove('hidden'); } return; }
-        let html = `<div style="text-align:left;max-height:60vh;overflow-y:auto;padding-right:5px;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Enter A/C numbers for ${count} members:</p>`;
-        for (let i = 1; i <= count; i++) { html += `<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Member ${i} A/C Number</label><input type="text" class="form-input several-member-input" data-index="${i}" placeholder="e.g. 7" inputmode="numeric"></div>`; }
-        html += `<div id="severalVerifyError" style="color:#ef4444;font-size:12px;margin-bottom:10px;" class="hidden"></div><button class="btn btn-primary" onclick="app.verifySeveralMembers('${encodeURIComponent(dn)}')">Verify All Members</button></div>`;
-        this.updateModalContent(`Enter Details for ${count} Members`, html, () => this.showAddSeveralMembers(dn));
+        if (isNaN(count) || count < 1 || count > max) {
+            const errDiv = document.getElementById('severalError');
+            const errTxt = document.getElementById('severalErrorText');
+            if (errDiv) errDiv.classList.remove('hidden');
+            if (errTxt) errTxt.textContent = `Please enter a valid number between 1 and ${max}.`;
+            return;
+        }
+        let html = `<div class="m-info-banner green"><i class="fa-solid fa-circle-info"></i><span>Enter A/C numbers for each of the ${count} members.</span></div>`;
+        for (let i = 1; i <= count; i++) {
+            html += `<div class="m-field" style="margin-bottom:10px;"><label>Member ${i} A/C Number</label><input type="text" class="form-input several-member-input" data-index="${i}" placeholder="e.g. 7" inputmode="numeric"></div>`;
+        }
+        html += `<div id="severalVerifyError" class="hidden m-info-banner red" style="margin-bottom:10px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="severalVerifyErrorText"></span></div>
+        <button class="m-submit-btn" onclick="app.verifySeveralMembers('${encodeURIComponent(dn)}')"><i class="fa-solid fa-user-check"></i> Verify All Members</button>`;
+        this.updateModalContent(`Enter ${count} Member Details`, html, () => this.showAddSeveralMembers(dn), 'fa-users');
     },
+
     verifySeveralMembers(groupName) {
         const dn      = decodeURIComponent(groupName);
         const inputs  = document.querySelectorAll('.several-member-input');
         const indices = Array.from(inputs).map(i => i.value.trim()).filter(v => v !== '');
         const errDiv  = document.getElementById('severalVerifyError');
-        if (indices.length < inputs.length) { if (errDiv) { errDiv.innerText = "Please fill in all account numbers."; errDiv.classList.remove('hidden'); } return; }
-        if (new Set(indices).size !== indices.length) { if (errDiv) { errDiv.innerText = "Each member account number must be unique."; errDiv.classList.remove('hidden'); } return; }
+        const errTxt  = document.getElementById('severalVerifyErrorText');
+        if (indices.length < inputs.length) { if (errDiv) errDiv.classList.remove('hidden'); if (errTxt) errTxt.textContent = "Please fill in all account numbers."; return; }
+        if (new Set(indices).size !== indices.length) { if (errDiv) errDiv.classList.remove('hidden'); if (errTxt) errTxt.textContent = "Each member account number must be unique."; return; }
         const group = this.data.userGroups.find(g => g.groupName === dn);
         if (!group) return;
         let verified = [], errors = [];
@@ -1174,31 +1578,38 @@ const app = {
             for (const key in group) { if ((key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) && key.endsWith('_' + index)) { found = group[key].name || "Member " + index; break; } }
             if (found) verified.push({ name: found, index }); else errors.push(`A/C ${index} (Field ${idx + 1}) not found.`);
         });
-        if (errors.length > 0) { if (errDiv) { errDiv.innerText = errors[0]; errDiv.classList.remove('hidden'); } return; }
-        this.data.isMultiMemberFlow    = true;
-        this.data.verifiedMembersList  = verified;
-        this.data.settledMembersData   = {};
+        if (errors.length > 0) { if (errDiv) errDiv.classList.remove('hidden'); if (errTxt) errTxt.textContent = errors[0]; return; }
+        this.data.isMultiMemberFlow   = true;
+        this.data.verifiedMembersList = verified;
+        this.data.settledMembersData  = {};
         this.showSeveralMembersSummary(dn, verified);
     },
+
     showSeveralMembersSummary(groupName, members) {
         const dn           = decodeURIComponent(groupName);
         const settledCount = Object.keys(this.data.settledMembersData || {}).length;
         const totalCount   = members.length;
         if (settledCount === totalCount) { this.renderFinalBulkSummary(dn); return; }
-        let html = `<div style="text-align:left;"><p style="font-size:13px;color:#6b7280;margin-bottom:15px;">Settle accounts for each member (${settledCount}/${totalCount} verified):</p><div style="display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto;padding-right:5px;">`;
+
+        let html = `<div class="m-info-banner green"><i class="fa-solid fa-circle-info"></i><span>Settle accounts for each member — <b>${settledCount}/${totalCount}</b> done.</span></div>
+        <div class="m-section-label">Members</div>`;
         members.forEach(m => {
             const isSettled = this.data.settledMembersData && this.data.settledMembersData[m.index];
-            html += `<button class="modal-list-btn" onclick="app.selectOneMemberFromList('${encodeURIComponent(dn)}','${encodeURIComponent(m.name)}','${m.index}')" style="text-align:left;padding:15px;display:flex;justify-content:space-between;align-items:center;background:${isSettled ? '#f0fdf4' : '#f8fafc'};border:1px solid ${isSettled ? '#bcf0da' : '#e2e8f0'};border-radius:12px;margin-bottom:0;"><div><div style="font-weight:600;font-size:14px;color:${isSettled ? '#065f46' : '#1e293b'};margin-bottom:2px;">${m.name}</div><div style="font-size:11px;color:#64748b;">Member A/C: ${m.index}</div></div><i class="fa-solid ${isSettled ? 'fa-circle-check' : 'fa-chevron-right'}" style="color:${isSettled ? '#10b981' : 'var(--primary)'};font-size:12px;"></i></button>`;
+            html += `<button class="m-action-btn ${isSettled ? '' : 'accent'}" onclick="app.selectOneMemberFromList('${encodeURIComponent(dn)}','${encodeURIComponent(m.name)}','${m.index}')">
+                <div class="btn-icon-box ${isSettled ? 'bib-green' : 'bib-amber'}"><i class="fa-solid ${isSettled ? 'fa-circle-check' : 'fa-user-clock'}"></i></div>
+                <div class="btn-text-block"><span class="btn-label-text">${m.name}</span><span class="btn-hint-text">Member A/C: ${m.index}</span></div>
+                <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+            </button>`;
         });
-        html += '</div></div>';
-        this.updateModalContent('Select Recipient', html, () => this.showAddSeveralMembers(dn));
+        this.updateModalContent('Select Recipient', html, () => this.showAddSeveralMembers(dn), 'fa-users');
     },
+
     selectOneMemberFromList(groupName, memberName, memberIndex) {
         const dn  = decodeURIComponent(groupName);
         const dmn = decodeURIComponent(memberName);
-        this.data.recipientName     = dmn;
+        this.data.recipientName      = dmn;
         this.data.selectedMemberIndex = memberIndex;
-        this.data.sendMode          = 'other';
+        this.data.sendMode           = 'other';
         const group    = this.data.userGroups.find(g => g.groupName === dn);
         const accounts = (group.principles && group.principles.otherContributions) ? group.principles.otherContributions : [];
         this.data.groupAccounts  = accounts;
@@ -1206,6 +1617,7 @@ const app = {
         this.data.errorMessage   = '';
         this.renderAccountForm(dn);
     },
+
     toggleMemberCollapse(idx) {
         const target = document.getElementById(`collapse-${idx}`);
         if (target) target.style.display = target.style.display === 'none' ? 'block' : 'none';
@@ -1237,8 +1649,9 @@ const app = {
         const input   = document.getElementById('memberIndexInput');
         const index   = input ? input.value.trim() : '';
         const errDiv  = document.getElementById('memberVerifyError');
+        const errTxt  = document.getElementById('memberVerifyErrorText');
         if (errDiv) errDiv.classList.add('hidden');
-        if (!index) { if (errDiv) { errDiv.innerText = "Please enter an account number"; errDiv.classList.remove('hidden'); } return; }
+        if (!index) { if (errDiv) errDiv.classList.remove('hidden'); if (errTxt) errTxt.textContent = "Please enter an account number"; return; }
         const group = this.data.userGroups.find(g => g.groupName === dn);
         if (!group) return;
         let found = null;
@@ -1248,18 +1661,16 @@ const app = {
             this.data.selectedMemberIndex = index;
             this.data.sendMode           = 'other';
             this.data.isMultiMemberFlow  = false;
-            const g       = this.data.userGroups.find(g => g.groupName === dn);
+            const g = this.data.userGroups.find(g => g.groupName === dn);
             const accounts = (g.principles && g.principles.otherContributions) ? g.principles.otherContributions : [];
             this.data.groupAccounts  = accounts;
             this.data.addedAccounts  = [];
             this.data.errorMessage   = '';
             this.renderAccountForm(dn);
-        } else { if (errDiv) { errDiv.innerText = "Account number " + index + " not found."; errDiv.classList.remove('hidden'); } }
+        } else { if (errDiv) errDiv.classList.remove('hidden'); if (errTxt) errTxt.textContent = "Account number " + index + " not found."; }
     },
 
-    /* ────────────────────────────────────────────
-       UTILITIES
-    ──────────────────────────────────────────── */
+    /* ─── UTILITIES ─── */
     showToast(msg, type) {
         const toast = document.createElement('div');
         toast.className = 'toast ' + type;
@@ -1282,13 +1693,36 @@ const app = {
         if (buttons[index]) buttons[index].classList.add('active');
         indicator.style.left = `${index * (100 / total)}%`;
     },
-    updateModalContent(title, html, backAction) {
+
+    /**
+     * updateModalContent
+     * @param {string} title
+     * @param {string} html
+     * @param {function|null} backAction
+     * @param {string} [iconClass]  - FA icon class e.g. 'fa-wallet'
+     * @param {string} [hdrStyle]   - Optional inline style override for header gradient
+     */
+    updateModalContent(title, html, backAction, iconClass, hdrStyle) {
         document.getElementById('modalTitle').innerText = title;
         document.getElementById('modalBody').innerHTML  = html;
+
+        // icon
+        const iconEl = document.getElementById('modalHdrIcon');
+        if (iconEl) {
+            iconEl.innerHTML = `<i class="fa-solid ${iconClass || 'fa-circle-info'}"></i>`;
+        }
+
+        // back button
         const backBtn = document.getElementById('modalBackBtn');
         if (backAction) { this.data.modalBackAction = backAction; if (backBtn) backBtn.classList.remove('hidden'); }
         else            { this.data.modalBackAction = null;        if (backBtn) backBtn.classList.add('hidden'); }
+
+        // optional header colour override
+        const hdr = document.getElementById('modalHdr');
+        if (hdr && hdrStyle) hdr.style.background = hdrStyle;
+        else if (hdr) hdr.style.background = '';
     },
+
     onModalBack() {
         if (typeof this.data.modalBackAction === 'function') this.data.modalBackAction();
         else if (typeof this.data.modalBackAction === 'string') new Function(this.data.modalBackAction).call(this);
