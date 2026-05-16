@@ -681,6 +681,25 @@ const app = {
         this.setupPhoneListeners();
     },
 
+    /* ─── DIRECT BALANCE DISPLAY ─── */
+    showBalanceDirectly() {
+        const balanceAmount = Number(this.data.balance).toLocaleString();
+        const balanceHTML = `
+            <div style="margin: 20px 14px; padding: 16px; background: white; border-radius: 12px; box-shadow: var(--shadow-sm); text-align: center;">
+                <h3 style="color: var(--text-dark); margin-bottom: 8px;">Your Account Balance</h3>
+                <p style="font-size: 28px; font-weight: 800; color: var(--primary); margin: 12px 0; letter-spacing: -1px;">
+                    KSh ${balanceAmount}
+                </p>
+                <p style="color: var(--text-light); font-size: 14px;">
+                    Available balance in your personal wallet
+                </p>
+            </div>
+        `;
+        
+        const container = document.getElementById('mainContainer');
+        container.innerHTML = balanceHTML;
+    },
+
     setupPhoneListeners() {
         document.addEventListener('input', (e) => {
             if (e.target.type === 'tel' || e.target.id === 'newChairPhone') {
@@ -971,9 +990,10 @@ const app = {
 
         html += `<div class="actions-row">
             <button class="action-btn" onclick="app.openModal('Send Money')"><span class="action-icon">💸</span>Send</button>
-            <button class="action-btn" onclick="app.openModal('Balance')"><span class="action-icon">📥</span>Balance</button>
+            <button class="action-btn" onclick="app.showBalanceDirectly()"><span class="action-icon">📥</span>Balance</button>
             <button class="action-btn" onclick="app.openModal('Withdraw')"><span class="action-icon">🏧</span>Withdraw</button>
             <button class="action-btn" onclick="app.openModal('Statement')"><span class="action-icon">📊</span>Statement</button>
+            <button class="action-btn" onclick="app.openModal('Change PIN')"><span class="action-icon">🔒</span>Change PIN</button>
         </div>`;
 
         const groups = this.data.userGroups || [];
@@ -988,13 +1008,13 @@ const app = {
                 </div>`;
             });
          } else {
-             html += `<div class="account-card account-card-empty"><div><div class="acc-name">Not group account yet</div><small>Join a group to get started</small></div></div>`;
+              html += `<div class="account-card account-card-empty"><div><div class="acc-name">No active group account.</div><small>Join a group to get started</small></div></div>`;
          }
 
-        html += `<div class="section-label">Performance</div>
+        html += `<div class="section-label">My Wallet</div>
         <div class="perf-grid">
-            <div class="perf-stat"><h4>Total Transactions</h4><p>${txns.length + 124}</p></div>
-            <div class="perf-stat"><h4>Pending</h4><p>4</p></div>
+            <div class="perf-stat"><h4>Balance</h4><p>KSh ${Number(this.data.balance).toLocaleString()}</p></div>
+            <div class="perf-stat"><h4>Group pending balances</h4><p>—</p></div>
             <div class="perf-stat"><h4>Total Sent</h4><p>KSh 12,500</p></div>
             <div class="perf-stat"><h4>Total Received</h4><p>KSh 18,200</p></div>
         </div>`;
@@ -1006,7 +1026,7 @@ const app = {
                 <span class="tx-label">${tx.acc}</span>
                 <span class="tx-amount ${isCredit ? 'credit' : 'debit'}">${isCredit ? '+' : '-'} KSh ${Number(tx.amt).toLocaleString()}</span>
             </div>`;
-        });
+         });
 
         html += `<div style="display:flex;gap:8px;margin:10px 14px 20px;">
             <button onclick="app.openModal('Change PIN')" style="flex:1;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;">🔒 Change PIN</button>
