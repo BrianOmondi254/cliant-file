@@ -100,14 +100,61 @@
         .nav-btn.out { color: var(--danger); }
 
         /* ── HEADER STRIP ── */
- .app-header {
-              background: linear-gradient(135deg, #0c8f44, #00c76f);
-              padding: 14px 16px;
-              display: flex; justify-content: center; align-items: center;
-              box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-              flex-shrink: 0;
-              position: relative; overflow: hidden;
-          }
+        .app-header {
+            background: linear-gradient(135deg, #0c8f44, #00c76f);
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+            position: relative; overflow: hidden;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        /* Responsive fixes for small screens */
+        @media (max-width: 480px) {
+            .app-header {
+                justify-content: center;
+                padding: 12px 10px;
+            }
+            
+            .app-header h2 {
+                font-size: 18px;
+                letter-spacing: -0.3px;
+                word-spacing: 4px;
+                margin: 0 auto;
+                width: 100%;
+                text-align: center;
+            }
+            
+            .app-header .header-right {
+                position: static;
+                margin-top: 8px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            
+            .header-bell {
+                font-size: 16px;
+            }
+            
+            .logout-btn {
+                width: 28px;
+                height: 28px;
+                padding: 6px;
+                font-size: 0.7rem;
+            }
+            
+            /* Reduce decorative circle size on small screens */
+            .app-header::after {
+                width: 120px;
+                height: 120px;
+                top: -50%;
+                right: -5%;
+            }
+        }
         .app-header::after {
             content: ''; position: absolute;
             top: -60%; right: -10%;
@@ -687,12 +734,11 @@ const app = {
                 const icon = isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved';
                 html += `<div style="background:#f8fafc;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #e2e8f0;border-left:4px solid ${borderColor};">
                     <h4 style="color:#1e293b;margin-bottom:7px;font-size:13px;font-weight:700;"><i class="fa-solid ${icon}" style="color:${borderColor};margin-right:7px;"></i>${k.groupName}</h4>
-                    <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content||(isLegacy?'Initial Security Configuration Required':'')}</div>`;
+                    <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
                 if (isLegacy) {
-                    html += `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
-                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>
-                    <button class="m-submit-btn" onclick="app.startGroupSetup('${k.groupName}','${k.key}')"><i class="fa-solid fa-gears"></i> Initialize Principles</button>`;
-                }
+                     html += `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
+                     <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+                 }
                 html += `</div>`;
             });
         }
