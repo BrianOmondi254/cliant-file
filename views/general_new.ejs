@@ -203,6 +203,47 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
 .nav-btn:hover{color:#fff;}
 .nav-btn.active{color:#00f2fe;text-shadow: 0 0 8px rgba(0, 242, 254, 0.3);}
 .hidden{display:none !important;}
+
+/* Custom premium toast notification */
+.premium-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translate(-50%, -20px);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.3);
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.premium-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.premium-toast.success {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(6, 78, 59, 0.95);
+}
+.premium-toast.error {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(127, 29, 29, 0.95);
+}
+.premium-toast.info {
+  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(30, 58, 138, 0.95);
+}
 </style>
 </head>
  
@@ -265,9 +306,14 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
             This group account is pending and awaits group constitution setup by an Agent.
           </p>
         </div>
-        <button type="button" onclick="backToGroupList()" class="secondary" style="margin-top:25px;border-radius:12px;">
-          <i class="fas fa-arrow-left"></i> Back to Groups
-        </button>
+        <div style="display:flex;gap:10px;margin-top:25px;">
+          <button type="button" onclick="backToGroupList()" class="secondary" style="margin-top:0;border-radius:12px;flex:1;">
+            <i class="fas fa-arrow-left"></i> Back to Groups
+          </button>
+          <button type="button" id="pendingDeleteBtn" onclick="deleteCurrentRequest()" style="margin-top:0;border-radius:12px;background:#fee2e2;color:#dc2626;font-weight:700;flex:1;" class="hidden">
+            <i class="fas fa-trash"></i> Delete Request
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -307,10 +353,96 @@ button.secondary:hover { background: #cbd5e1; color: var(--text); }
         <div id="modalBody" style="flex:1;overflow-y:auto;text-align:left;padding:0 15px;"></div>
     </div>
 </div>
+
+<!-- Custom Premium Confirmation Modal -->
+<div id="confirmModalOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(8px);display:flex;justify-content:center;align-items:center;z-index:11000;opacity:0;visibility:hidden;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div style="background:white;padding:25px;border-radius:18px;width:90%;max-width:380px;text-align:center;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);transform:scale(0.9);transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);" id="confirmModalCard">
+        <div style="width:60px;height:60px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <i class="fas fa-exclamation-triangle" style="font-size:24px;color:#dc2626;"></i>
+        </div>
+        <h4 style="margin:0 0 10px;font-size:1.2rem;font-weight:800;color:#0f172a;" id="confirmModalTitle">Confirm Action</h4>
+        <p style="margin:0 0 25px;font-size:0.9rem;color:#64748b;line-height:1.5;" id="confirmModalText">Are you sure you want to proceed?</p>
+        <div style="display:flex;gap:12px;">
+            <button type="button" id="confirmCancelBtn" style="margin-top:0;border-radius:12px;background:#f1f5f9;color:#475569;font-weight:600;flex:1;">Cancel</button>
+            <button type="button" id="confirmOkBtn" style="margin-top:0;border-radius:12px;background:#dc2626;color:white;font-weight:700;flex:1;">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="premiumToast" class="premium-toast">
+  <span id="premiumToastIcon"></span>
+  <span id="premiumToastMessage"></span>
+</div>
  
 <script>
 let userRoleData = null;
 let selectedGroup = null;
+
+/* ========== PREMIUM NOTIFICATIONS ========== */
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('premiumToast');
+  const icon = document.getElementById('premiumToastIcon');
+  const msgEl = document.getElementById('premiumToastMessage');
+  
+  if (!toast || !icon || !msgEl) return;
+  
+  toast.className = 'premium-toast show ' + type;
+  
+  let iconHtml = '';
+  if (type === 'success') {
+    iconHtml = '<i class="fas fa-check-circle" style="color: #4ade80; font-size: 1.1rem;"></i>';
+  } else if (type === 'error') {
+    iconHtml = '<i class="fas fa-exclamation-circle" style="color: #f87171; font-size: 1.1rem;"></i>';
+  } else {
+    iconHtml = '<i class="fas fa-info-circle" style="color: #60a5fa; font-size: 1.1rem;"></i>';
+  }
+  
+  icon.innerHTML = iconHtml;
+  msgEl.innerText = message;
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3500);
+}
+
+function showConfirm(title, text, callback) {
+  const overlay = document.getElementById('confirmModalOverlay');
+  const card = document.getElementById('confirmModalCard');
+  const titleEl = document.getElementById('confirmModalTitle');
+  const textEl = document.getElementById('confirmModalText');
+  const okBtn = document.getElementById('confirmOkBtn');
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  
+  if (!overlay || !card || !titleEl || !textEl || !okBtn || !cancelBtn) {
+    if (confirm(text)) callback();
+    return;
+  }
+  
+  titleEl.innerText = title;
+  textEl.innerText = text;
+  
+  const cleanUp = () => {
+    overlay.style.opacity = '0';
+    overlay.style.visibility = 'hidden';
+    card.style.transform = 'scale(0.9)';
+    okBtn.replaceWith(okBtn.cloneNode(true));
+    cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+  };
+  
+  overlay.style.visibility = 'visible';
+  overlay.style.opacity = '1';
+  card.style.transform = 'scale(1)';
+  
+  document.getElementById('confirmOkBtn').addEventListener('click', () => {
+    cleanUp();
+    callback();
+  });
+  
+  document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+    cleanUp();
+  });
+}
  
 /* ========== TAB SWITCHING ========== */
 function switchTab(tab) {
@@ -530,24 +662,25 @@ function showGroupListView() {
 }
  
 async function deleteNewRequest(groupName) {
-  if (!confirm('Are you sure you want to delete this group request?')) return;
-  try {
-    const res = await fetch('/general/delete-group', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupName })
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert('Group deleted successfully');
-      loadUserRoleData();
-    } else {
-      alert(data.message || 'Failed to delete group');
+  showConfirm('Delete Request', 'Are you sure you want to delete this group request?', async () => {
+    try {
+      const res = await fetch('/general/delete-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Group deleted successfully', 'success');
+        loadUserRoleData();
+      } else {
+        showToast(data.message || 'Failed to delete group', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error deleting group', 'error');
     }
-  } catch (err) {
-    console.error(err);
-    alert('Error deleting group');
-  }
+  });
 }
  
 function selectGroupForAccess(groupName) {
@@ -565,6 +698,7 @@ function selectGroupForAccess(groupName) {
     const viewIcon  = document.getElementById('pendingViewIcon');
     const viewTitle = document.getElementById('pendingViewTitle');
     const viewText  = document.getElementById('pendingViewText');
+    const pendingDeleteBtn = document.getElementById('pendingDeleteBtn');
  
     if (phase === 1) {
       viewBox.style.background    = '#eff6ff';
@@ -577,6 +711,7 @@ function selectGroupForAccess(groupName) {
       const agentPhone = group.assignedAgentPhone || 'N/A';
       viewText.innerHTML  = `Group awaits member population by agent: <strong>${agentName}</strong> (${agentPhone}).<br><br>Please wait as your request is being processed.`;
       viewText.style.color = '#1e40af';
+      if (pendingDeleteBtn) pendingDeleteBtn.classList.remove('hidden');
     } else {
       viewBox.style.background    = '#fffbeb';
       viewBox.style.borderColor   = '#fef3c7';
@@ -586,6 +721,7 @@ function selectGroupForAccess(groupName) {
       viewTitle.style.color       = '#92400e';
       viewText.textContent        = 'This group account is pending and awaits group constitution setup by an Agent.';
       viewText.style.color        = '#92400e';
+      if (pendingDeleteBtn) pendingDeleteBtn.classList.add('hidden');
     }
  
     document.getElementById('pendingGroupView').classList.remove('hidden');
@@ -597,6 +733,12 @@ function selectGroupForAccess(groupName) {
 function backToGroupList() {
   hideAllMySavingViews();
   showGroupListView();
+}
+ 
+function deleteCurrentRequest() {
+  if (selectedGroup && selectedGroup.groupName) {
+    deleteNewRequest(selectedGroup.groupName);
+  }
 }
  
 function hideAllMySavingViews() {
@@ -619,9 +761,9 @@ function goToRegions() {
   const fullName = document.getElementById('fullNameInput').value.trim();
   const isValidP = (p) => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
   
-  if (!name)                                    { alert('Please enter a group name.'); return; }
-  if (!phone)                                   { alert('Please enter phone number'); return; }
-  if (!isValidP(phone))                         { alert('Invalid phone format. Use +254XXXXXXXXX (13), 254XXXXXXXXX (12) or 07/01XXXXXXXX (10 digits).'); return; }
+  if (!name)                                    { showToast('Please enter a group name.', 'error'); return; }
+  if (!phone)                                   { showToast('Please enter phone number', 'error'); return; }
+  if (!isValidP(phone))                         { showToast('Invalid phone format. Use +254XXXXXXXXX (13), 254XXXXXXXXX (12) or 07/01XXXXXXXX (10 digits).', 'error'); return; }
   if (fullName.split(/\s+/).length < 3)         { document.getElementById('nameError').style.display = 'block'; return; }
   document.getElementById('nameError').style.display = 'none';
   document.getElementById('cAccount').classList.add('hidden');
@@ -637,7 +779,7 @@ function handleGeneralSubmit(event) {
   const wardSelect = document.getElementById('wardSelect');
   if (wardSelect && wardSelect.value === 'OTHER') {
     const manualWard = document.getElementById('manualWardInput')?.value.trim();
-    if (!manualWard) { alert('Please enter your ward name.'); return false; }
+    if (!manualWard) { showToast('Please enter your ward name.', 'error'); return false; }
     const opt = document.createElement('option');
     opt.value = manualWard; opt.text = manualWard;
     wardSelect.appendChild(opt); wardSelect.value = manualWard;

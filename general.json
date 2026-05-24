@@ -395,5 +395,15 @@
         }
       }
     ]
+  },
+  "Bomet": {
+    "Chepalungu": [
+      "Chebunyo"
+    ]
+  },
+  "Kericho": {
+    "Kipkelion East": [
+      "Chepseon"
+    ]
   }
 }

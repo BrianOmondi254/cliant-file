@@ -641,6 +641,9 @@ router.post("/", (req, res) => {
   }
 
   if (!groupName || !chairpersonalphonenumber || !firstName || !county || !constituency || !ward) {
+    if (req.headers['content-type'] === 'application/json') {
+      return res.status(400).json({ success: false, message: "Missing required fields (Check county, constituency, and ward)." });
+    }
     return res.status(400).send("Missing required fields (Check county, constituency, and ward).");
   }
 
@@ -734,6 +737,10 @@ router.post("/", (req, res) => {
   }
 
   writeJSON(generalFile, accounts);
+
+  if (req.headers['content-type'] === 'application/json') {
+    return res.json({ success: true, redirect: '/personal', message: 'Group created successfully!' });
+  }
 
   // Return a success view with the message
   res.send(`
@@ -1894,6 +1901,56 @@ router.get("/api/group-deductions/:groupName", (req, res) => {
   } catch (err) {
     console.error("Error in /api/group-deductions:", err);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* 🗑️ API: Delete Group Request */
+router.post("/delete-group", (req, res) => {
+  try {
+    const { groupName } = req.body;
+    if (!groupName) {
+      return res.status(400).json({ success: false, message: "Missing groupName" });
+    }
+
+    const accounts = readJSON(generalFile, {});
+    let groupDeleted = false;
+
+    for (const county in accounts) {
+      for (const constituency in accounts[county]) {
+        const constituencyArray = accounts[county][constituency];
+        if (Array.isArray(constituencyArray)) {
+          // Find index of the group object matching the groupName (case-insensitive)
+          const index = constituencyArray.findIndex(item => 
+            typeof item === 'object' && 
+            item !== null && 
+            item.groupName && 
+            item.groupName.toLowerCase() === groupName.toLowerCase()
+          );
+
+          if (index !== -1) {
+            // Delete the group from array
+            constituencyArray.splice(index, 1);
+            groupDeleted = true;
+            break;
+          }
+        }
+      }
+      if (groupDeleted) break;
+    }
+
+    if (!groupDeleted) {
+      return res.status(404).json({ success: false, message: "Group request not found" });
+    }
+
+    // Save updated structure back to general.json database
+    writeJSON(generalFile, accounts);
+
+    console.log(`✓ Group request deleted: ${groupName}`);
+
+    return res.json({ success: true, message: "Group request deleted successfully from database" });
+  } catch (err) {
+    console.error("Error deleting group request:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 

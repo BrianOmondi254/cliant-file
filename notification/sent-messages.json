@@ -142,5 +142,13 @@
     "title": "Registration Success",
     "content": "Registration Complete: kisumu brother shg group has been activated by Agent brian siaya agent. \nRole: member\nChairperson: 0740415992\nStatus: Phase 2 (Pending HQ Approval)",
     "createdAt": "2026-04-30T12:13:50.213Z"
+  },
+  {
+    "groupName": "ONE SACCO ",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Your application for ONE SACCO  is pending. Note: Your regional block is not yet allocated to any of our officials.",
+    "createdAt": "2026-05-20T18:30:00.381Z"
   }
 ]

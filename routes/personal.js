@@ -343,10 +343,29 @@ router.post("/verify-pin", async (req, res) => {
     const user = users.find(u => norm(u.phoneNumber) === norm(phone));
 
     if (!user || !user.personalPin) {
+      console.log(`[Verify PIN] PIN not found for phone: ${phone}`);
       return res.status(404).json({ success: false, message: "PIN not found" });
     }
 
-    const isValid = await bcrypt.compare(pin, user.personalPin);
+    console.log(`[Verify PIN] Phone: ${phone}, Entered: ${pin}, Stored: ${user.personalPin}`);
+
+    let isValid = false;
+    // 1. Try plaintext direct comparison first (for simple PINs)
+    if (String(pin) === String(user.personalPin)) {
+      isValid = true;
+    } else {
+      // 2. Try bcrypt comparison if stored PIN is a valid bcrypt hash
+      try {
+        if (user.personalPin.startsWith('$2')) {
+          isValid = await bcrypt.compare(pin, user.personalPin);
+        }
+      } catch (err) {
+        console.error('[Verify PIN] Bcrypt error:', err);
+      }
+    }
+
+    console.log(`[Verify PIN] Result: ${isValid ? 'VALID' : 'INVALID'}`);
+
     if (isValid) {
       req.session.personalVerified = true;
       res.json({ success: true });
@@ -404,6 +423,29 @@ router.post("/change-pin", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+/* 👤 Get User Name by Phone */
+router.get("/get-name", (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone) return res.json({ success: false, message: "Phone required" });
+    
+    const usersFile = path.join(__dirname, "../data.json");
+    const users = readJSON(usersFile, []);
+    const normalized = norm(phone);
+    const u = users.find(user => norm(user.phoneNumber) === normalized);
+    
+    if (u) {
+      const name = `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim();
+      res.json({ success: true, name });
+    } else {
+      res.json({ success: false, message: "User not found" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
