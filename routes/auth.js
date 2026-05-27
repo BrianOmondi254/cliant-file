@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const { saveUserToMongoDB, findUserByPhone } = require("../mongoose");
 
 const router = express.Router();
 const usersFile = path.join(__dirname, "../data.json");
@@ -126,7 +127,7 @@ router.post("/register", async (req, res) => {
     }
   }
 
-  // Fallback to original behavior
+  // Save registration ONLY to MongoDB
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const newUser = {
@@ -145,8 +146,15 @@ router.post("/register", async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  users.push(newUser);
-  writeJSON(usersFile, users);
+  try {
+    await saveUserToMongoDB(newUser);
+  } catch (mongoErr) {
+    console.error("Error: Failed to save to MongoDB during registration:", mongoErr.message);
+    return res.render("register", {
+      message: "Registration failed: Database connection issue. Please try again.",
+      form: req.body
+    });
+  }
 
   // Log Performance
   try {
@@ -217,11 +225,7 @@ router.post("/complete-registration", async (req, res) => {
         MiddleName,
         LastName,
         email,
-        phoneNumber: normPhone, // Save normalized phone or original? 
-        // User saw "07..." in form, maybe save normalized to be safe.
-        // Actually, let's save the original string if the user entered it, but 
-        // the normalization logic above handles the comparison.
-        // To be EXTREMELY consistent, let's save the normalized one.
+        phoneNumber: normPhone,
         password: hashedPassword,
         gender,
         county,
@@ -240,8 +244,16 @@ router.post("/complete-registration", async (req, res) => {
         newUser.startky = startky;
     }
 
-    users.push(newUser);
-    writeJSON(usersFile, users);
+    // Save to MongoDB (leave no trace in data.json)
+    try {
+      await saveUserToMongoDB(newUser);
+    } catch (mongoErr) {
+      console.error("Error: Failed to save to MongoDB during completion:", mongoErr.message);
+      return res.render("register", {
+          message: "Registration failed: Database connection issue. Please try again.",
+          form: userData
+      });
+    }
 
     // Log Performance
     try {
@@ -277,7 +289,6 @@ router.get("/login", (req, res) => {
 
 /* 🔑 Login (POST submission) */
 router.post("/login", async (req, res) => {
-  const users = readJSON(usersFile, []);
   let loginPhone = (req.body.phoneNumber || "").trim();
   let loginPassword = req.body.password || "";
 
@@ -285,22 +296,41 @@ router.post("/login", async (req, res) => {
   console.log("   Phone entered :", loginPhone, "-> norm:", norm(loginPhone));
   console.log("   Password length:", loginPassword.length);
 
-  const userIndex = users.findIndex(u => {
-    return norm(u.phoneNumber) === norm(loginPhone);
-  });
+  let user = null;
+  let isFromJSON = false;
+  let userIndexInJSON = -1;
+  const usersFromJSON = readJSON(usersFile, []);
 
-  if (userIndex === -1) {
-    console.log("   ❌ Phone not found in data.json");
+  // 1️⃣ Try to find the user in MongoDB first
+  try {
+    user = await findUserByPhone(loginPhone);
+    if (user) {
+      console.log("   ✅ User found in MongoDB:", user.FirstName, user.LastName);
+    }
+  } catch (dbErr) {
+    console.error("❌ Database query error during login:", dbErr.message);
+  }
+
+  // 2️⃣ If not found in MongoDB, search in data.json (legacy fallback)
+  if (!user) {
+    userIndexInJSON = usersFromJSON.findIndex(u => norm(u.phoneNumber) === norm(loginPhone));
+    if (userIndexInJSON !== -1) {
+      user = usersFromJSON[userIndexInJSON];
+      isFromJSON = true;
+      console.log("   ✅ User found in data.json:", user.FirstName, user.LastName);
+    }
+  }
+
+  // 3️⃣ If not found in either, redirect to registration
+  if (!user) {
+    console.log("   ❌ Phone not found in MongoDB or data.json");
     return res.render("register", {
       message: "Phone number not registered. Please create an account.",
       form: { phoneNumber: req.body.phoneNumber }
     });
   }
 
-  const user = users[userIndex];
-  console.log("   ✅ User found:", user.FirstName, user.LastName);
-  console.log("   Stored hash  :", user.password ? user.password.substring(0, 15) + "..." : "NO PASSWORD FIELD");
-
+  // 4️⃣ Verify password
   if (!user.password) {
     console.log("   ❌ No password hash in user record!");
     return res.render("login", { alert: "Account error: No password set. Contact admin." });
@@ -311,9 +341,36 @@ router.post("/login", async (req, res) => {
 
   if (!valid) return res.render("login", { alert: "Wrong password! Check your password and try again." });
 
-  // Update last login in data.json
-  users[userIndex].lastLogin = new Date().toISOString();
-  writeJSON(usersFile, users);
+  // 5️⃣ JIT Export: If legacy user from JSON, migrate them to MongoDB and delete from data.json
+  if (isFromJSON) {
+    try {
+      console.log(`🚚 Exporting legacy user ${user.phoneNumber} to MongoDB...`);
+      // Update lastLogin time
+      user.lastLogin = new Date().toISOString();
+      
+      // Save to MongoDB
+      await saveUserToMongoDB(user);
+      console.log(`✅ Successfully saved exported user ${user.phoneNumber} to MongoDB.`);
+
+      // Remove from data.json (leave NO TRACE)
+      usersFromJSON.splice(userIndexInJSON, 1);
+      writeJSON(usersFile, usersFromJSON);
+      console.log(`🗑️ Successfully removed user ${user.phoneNumber} from data.json.`);
+    } catch (exportErr) {
+      console.error(`❌ JIT Migration failed for ${user.phoneNumber}:`, exportErr.message);
+      // Fallback: keep them in data.json for now so we don't lose the account!
+      usersFromJSON[userIndexInJSON].lastLogin = new Date().toISOString();
+      writeJSON(usersFile, usersFromJSON);
+    }
+  } else {
+    // Already in MongoDB, just update last login
+    const { updateLastLogin } = require("../mongoose");
+    try {
+      await updateLastLogin(user.phoneNumber);
+    } catch (dbErr) {
+      console.error("❌ Failed to update last login in MongoDB:", dbErr.message);
+    }
+  }
 
   // ✅ Save session user
   req.session.user = { 
@@ -407,19 +464,49 @@ router.post("/admin/reset-password", async (req, res) => {
     return res.status(400).json({ error: "Phone and new password required" });
   }
 
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  // 1️⃣ Try to reset password in MongoDB
+  try {
+    const mongoUser = await findUserByPhone(phoneNumber);
+    if (mongoUser) {
+      mongoUser.password = hashed;
+      await mongoUser.save();
+      console.log("🛠️ Password reset in MongoDB for:", phoneNumber);
+      return res.json({ success: true, message: "Password updated in MongoDB for " + phoneNumber });
+    }
+  } catch (dbErr) {
+    console.error("❌ Database error during admin password reset:", dbErr.message);
+  }
+
+  // 2️⃣ If not in MongoDB, check in data.json (reset and JIT migrate to MongoDB)
   const users = readJSON(usersFile, []);
   const idx = users.findIndex(u => norm(u.phoneNumber) === norm(phoneNumber));
 
-  if (idx === -1) {
-    return res.status(404).json({ error: "User not found" });
+  if (idx !== -1) {
+    const userToMigrate = users[idx];
+    userToMigrate.password = hashed;
+
+    try {
+      await saveUserToMongoDB(userToMigrate);
+      console.log(`🚚 Exported user ${phoneNumber} to MongoDB during password reset.`);
+
+      // Remove from data.json (leave NO TRACE)
+      users.splice(idx, 1);
+      writeJSON(usersFile, users);
+      console.log(`🗑️ Removed user ${phoneNumber} from data.json.`);
+
+      return res.json({ success: true, message: "Password updated and account migrated to MongoDB for " + phoneNumber });
+    } catch (migErr) {
+      console.error("❌ Failed to migrate user during password reset:", migErr.message);
+      // Fallback: update in data.json if MongoDB fails
+      users[idx].password = hashed;
+      writeJSON(usersFile, users);
+      return res.json({ success: true, message: "Password updated in data.json (migration failed) for " + phoneNumber });
+    }
   }
 
-  const hashed = await bcrypt.hash(newPassword, 10);
-  users[idx].password = hashed;
-  writeJSON(usersFile, users);
-
-  console.log("🛠️  Password reset for:", users[idx].phoneNumber);
-  return res.json({ success: true, message: "Password updated for " + users[idx].phoneNumber });
+  return res.status(404).json({ error: "User not found" });
 });
 
 /* 🚪 Logout */

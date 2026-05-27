@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const { findUserByPhone, User } = require("../mongoose");
 
 const router = express.Router();
 const groupsFile = path.join(__dirname, "../general.json");
@@ -88,7 +89,7 @@ router.use((req, res, next) => {
 });
 
 /* 👤 Personal dashboard */
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const phone = req.session.user && req.session.user.phoneNumber;
 
@@ -265,8 +266,18 @@ router.get("/", (req, res) => {
         });
     });
 
-    const currentUser = users.find(u => norm(u.phoneNumber) === norm(phone));
-    const hasPersonalPin = !!(currentUser && currentUser.personalPin);
+    let hasPersonalPin = false;
+    try {
+      const dbUser = await findUserByPhone(phone);
+      if (dbUser && dbUser.personalPin) {
+        hasPersonalPin = true;
+      } else {
+        const currentUser = users.find(u => norm(u.phoneNumber) === norm(phone));
+        hasPersonalPin = !!(currentUser && currentUser.personalPin);
+      }
+    } catch (e) {
+      console.error("Error finding user in DB for PIN check:", e);
+    }
 
     res.render('cliant', {
       user: req.session.user,
@@ -305,18 +316,25 @@ router.post("/set-pin", async (req, res) => {
 
     const usersFile = path.join(__dirname, "../data.json");
     const users = readJSON(usersFile, []);
-    const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
-
-    if (userIndex === -1) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
+    
     // Hash the PIN before saving
     const saltRounds = 10;
     const hashedPin = await bcrypt.hash(pin, saltRounds);
-    
-    users[userIndex].personalPin = hashedPin;
-    writeJSON(usersFile, users);
+
+    // Check MongoDB first
+    const dbUser = await findUserByPhone(phone);
+    if (dbUser) {
+      dbUser.personalPin = hashedPin;
+      await dbUser.save();
+    } else {
+      // Fallback to data.json
+      const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
+      if (userIndex === -1) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      users[userIndex].personalPin = hashedPin;
+      writeJSON(usersFile, users);
+    }
 
     // Set verified flag in session
     req.session.personalVerified = true;
@@ -340,7 +358,11 @@ router.post("/verify-pin", async (req, res) => {
 
     const usersFile = path.join(__dirname, "../data.json");
     const users = readJSON(usersFile, []);
-    const user = users.find(u => norm(u.phoneNumber) === norm(phone));
+    
+    let user = await findUserByPhone(phone);
+    if (!user) {
+        user = users.find(u => norm(u.phoneNumber) === norm(phone));
+    }
 
     if (!user || !user.personalPin) {
       console.log(`[Verify PIN] PIN not found for phone: ${phone}`);
@@ -394,13 +416,17 @@ router.post("/change-pin", async (req, res) => {
 
     const usersFile = path.join(__dirname, "../data.json");
     const users = readJSON(usersFile, []);
-    const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
+    
+    let user = await findUserByPhone(phone);
+    let isMongoUser = !!user;
 
-    if (userIndex === -1) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) {
+        const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
+        if (userIndex === -1) {
+          return res.status(404).json({ success: false, message: "User not found" });
+        }
+        user = users[userIndex];
     }
-
-    const user = users[userIndex];
 
     // Verify old PIN first
     if (!user.personalPin) {
@@ -416,8 +442,14 @@ router.post("/change-pin", async (req, res) => {
     const saltRounds = 10;
     const hashedNewPin = await bcrypt.hash(newPin, saltRounds);
     
-    users[userIndex].personalPin = hashedNewPin;
-    writeJSON(usersFile, users);
+    if (isMongoUser) {
+        user.personalPin = hashedNewPin;
+        await user.save();
+    } else {
+        const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
+        users[userIndex].personalPin = hashedNewPin;
+        writeJSON(usersFile, users);
+    }
 
     res.json({ success: true, message: "PIN changed successfully" });
   } catch (err) {

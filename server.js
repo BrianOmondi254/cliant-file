@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
 const FileStore = require("session-file-store")(session);
+const { connectDB } = require("./mongoose");
 
 /* ================= ROUTE IMPORTS ================= */
 const authRoutes = require("./routes/auth");
@@ -136,6 +138,15 @@ app.get("/", (req, res) => {
 });
 
 /* ================= START SERVER ================= */
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+// Connect to MongoDB before starting server
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`✅ Server running at http://localhost:${PORT}`);
+  });
+}).catch(err => {
+  console.error("Failed to connect to MongoDB:", err);
+  // Still start server even if MongoDB fails
+  app.listen(PORT, () => {
+    console.log(`✅ Server running at http://localhost:${PORT} (MongoDB connection failed)`);
+  });
 });
