@@ -2,7 +2,57 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, User } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone } = require("../mongoose");
+
+// Flatten hierarchical users for searching
+const flattenUsers = (hierarchicalData) => {
+  const flat = [];
+  // Check if already flat (has county field on user objects)
+  if (Array.isArray(hierarchicalData) && hierarchicalData.length > 0 && hierarchicalData[0].county && !hierarchicalData[0].constituencies) {
+    // Already flattened format
+    return hierarchicalData;
+  }
+  // Hierarchical format
+  hierarchicalData.forEach(countyItem => {
+    countyItem.constituencies.forEach(constituencyItem => {
+      constituencyItem.wards.forEach(wardItem => {
+        wardItem.data.forEach(user => {
+          flat.push({ ...user, county: countyItem.county, constituency: constituencyItem.name, ward: wardItem.name });
+        });
+      });
+    });
+  });
+  return flat;
+};
+
+// Async wrapper for getting all users from MongoDB
+const getUsersFromMongo = async () => {
+  try {
+    return await getAllUsersFlattened();
+  } catch (error) {
+    console.error("Error getting users from MongoDB:", error.message);
+    return [];
+  }
+};
+
+// Find user in hierarchical structure
+const findUserInHierarchy = (hierarchicalData, phoneNumber) => {
+  for (let countyIdx = 0; countyIdx < hierarchicalData.length; countyIdx++) {
+    const countyItem = hierarchicalData[countyIdx];
+    for (let consIdx = 0; consIdx < countyItem.constituencies.length; consIdx++) {
+      const consItem = countyItem.constituencies[consIdx];
+      for (let wardIdx = 0; wardIdx < consItem.wards.length; wardIdx++) {
+        const wardItem = consItem.wards[wardIdx];
+        for (let dataIdx = 0; dataIdx < wardItem.data.length; dataIdx++) {
+          if (norm(wardItem.data[dataIdx].phoneNumber) === norm(phoneNumber)) {
+            return { countyIdx, consIdx, wardIdx, dataIdx };
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
 
 const router = express.Router();
 const groupsFile = path.join(__dirname, "../general.json");
@@ -241,16 +291,24 @@ router.get("/", async (req, res) => {
       return false;
     });
 
-    // Check if user has a personal PIN in data.json
-    const usersFile = path.join(__dirname, "../data.json");
-    const users = readJSON(usersFile, []);
+    // Get all users from MongoDB for name lookups
+    let usersFlat = [];
+    try {
+        usersFlat = await getAllUsersFlattened();
+    } catch (e) {
+        console.error("Error fetching users from MongoDB:", e.message);
+    }
     
-    const getUserName = (phoneNumber) => {
+    const getUserName = async (phoneNumber) => {
         if (!phoneNumber) return null;
-        const normalized = norm(phoneNumber);
-        const u = users.find(user => norm(user.phoneNumber) === normalized);
-        if (!u) return null;
-        return `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim();
+        try {
+            return await getUserNameByPhone(phoneNumber);
+        } catch (e) {
+            const normalized = norm(phoneNumber);
+            const u = usersFlat.find(user => norm(user.phoneNumber) === normalized);
+            if (!u) return null;
+            return `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
+        }
     };
 
     // Augment userGroups with member names
@@ -259,8 +317,8 @@ router.get("/", async (req, res) => {
             if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
                 const item = group[key];
                 if (item && typeof item === 'object' && item.phone) {
-                    const fetchedName = getUserName(item.phone);
-                    if (fetchedName) item.name = fetchedName;
+                    const u = usersFlat.find(user => norm(user.phoneNumber) === norm(item.phone));
+                    if (u) item.name = `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
                 }
             }
         });
@@ -272,7 +330,7 @@ router.get("/", async (req, res) => {
       if (dbUser && dbUser.personalPin) {
         hasPersonalPin = true;
       } else {
-        const currentUser = users.find(u => norm(u.phoneNumber) === norm(phone));
+        const currentUser = usersFlat.find(u => norm(u.phoneNumber) === norm(phone));
         hasPersonalPin = !!(currentUser && currentUser.personalPin);
       }
     } catch (e) {
@@ -314,9 +372,6 @@ router.post("/set-pin", async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid PIN format" });
     }
 
-    const usersFile = path.join(__dirname, "../data.json");
-    const users = readJSON(usersFile, []);
-    
     // Hash the PIN before saving
     const saltRounds = 10;
     const hashedPin = await bcrypt.hash(pin, saltRounds);
@@ -324,16 +379,19 @@ router.post("/set-pin", async (req, res) => {
     // Check MongoDB first
     const dbUser = await findUserByPhone(phone);
     if (dbUser) {
-      dbUser.personalPin = hashedPin;
-      await dbUser.save();
+      await updateUserPassword(phone, hashedPin, true); // isPin = true
     } else {
-      // Fallback to data.json
-      const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
-      if (userIndex === -1) {
+      // Fallback to data.json (hierarchical)
+      const usersFile = path.join(__dirname, "../data.json");
+      const users = readJSON(usersFile, []);
+      
+      const userLoc = findUserInHierarchy(users, phone);
+      if (userLoc) {
+        users[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data[userLoc.dataIdx].personalPin = hashedPin;
+        writeJSON(usersFile, users);
+      } else {
         return res.status(404).json({ success: false, message: "User not found" });
       }
-      users[userIndex].personalPin = hashedPin;
-      writeJSON(usersFile, users);
     }
 
     // Set verified flag in session
@@ -356,12 +414,13 @@ router.post("/verify-pin", async (req, res) => {
       return res.status(400).json({ success: false, message: "PIN required" });
     }
 
-    const usersFile = path.join(__dirname, "../data.json");
-    const users = readJSON(usersFile, []);
-    
     let user = await findUserByPhone(phone);
     if (!user) {
-        user = users.find(u => norm(u.phoneNumber) === norm(phone));
+      // Fallback to data.json (hierarchical)
+      const usersFile = path.join(__dirname, "../data.json");
+      const users = readJSON(usersFile, []);
+      const usersFlat = flattenUsers(users);
+      user = usersFlat.find(u => norm(u.phoneNumber) === norm(phone));
     }
 
     if (!user || !user.personalPin) {
@@ -415,17 +474,19 @@ router.post("/change-pin", async (req, res) => {
     }
 
     const usersFile = path.join(__dirname, "../data.json");
-    const users = readJSON(usersFile, []);
-    
+
+    // Find user in MongoDB
     let user = await findUserByPhone(phone);
     let isMongoUser = !!user;
 
     if (!user) {
-        const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
-        if (userIndex === -1) {
-          return res.status(404).json({ success: false, message: "User not found" });
-        }
-        user = users[userIndex];
+      // Fallback to data.json (hierarchical)
+      const users = readJSON(usersFile, []);
+      const userLoc = findUserInHierarchy(users, phone);
+      if (!userLoc) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      user = { ...users[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data[userLoc.dataIdx], personalPin: null };
     }
 
     // Verify old PIN first
@@ -443,12 +504,15 @@ router.post("/change-pin", async (req, res) => {
     const hashedNewPin = await bcrypt.hash(newPin, saltRounds);
     
     if (isMongoUser) {
-        user.personalPin = hashedNewPin;
-        await user.save();
+      await updateUserPassword(phone, hashedNewPin, true); // isPin = true
     } else {
-        const userIndex = users.findIndex(u => norm(u.phoneNumber) === norm(phone));
-        users[userIndex].personalPin = hashedNewPin;
+      const users = readJSON(usersFile, []);
+      const usersFlat = flattenUsers(users);
+      const userIndex = usersFlat.findIndex(u => norm(u.phoneNumber) === norm(phone));
+      if (userIndex !== -1) {
+        usersFlat[userIndex].personalPin = hashedNewPin;
         writeJSON(usersFile, users);
+      }
     }
 
     res.json({ success: true, message: "PIN changed successfully" });
@@ -466,8 +530,9 @@ router.get("/get-name", (req, res) => {
     
     const usersFile = path.join(__dirname, "../data.json");
     const users = readJSON(usersFile, []);
+    const usersFlat = flattenUsers(users);
     const normalized = norm(phone);
-    const u = users.find(user => norm(user.phoneNumber) === normalized);
+    const u = usersFlat.find(user => norm(user.phoneNumber) === normalized);
     
     if (u) {
       const name = `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim();

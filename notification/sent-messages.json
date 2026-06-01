@@ -150,5 +150,21 @@
     "title": "Group Creation",
     "content": "Your application for ONE SACCO  is pending. Note: Your regional block is not yet allocated to any of our officials.",
     "createdAt": "2026-05-20T18:30:00.381Z"
+  },
+  {
+    "groupName": "ONE SACCO 3",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Your application for ONE SACCO 3 is pending. Agent available at your location. Contact: 0740001141",
+    "createdAt": "2026-06-01T09:28:23.704Z"
+  },
+  {
+    "groupName": "ONE SACCO 3",
+    "to": "0740001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Group Creation Request: ONE SACCO 3. Submitted by Processor: 0740001141. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
+    "createdAt": "2026-06-01T09:28:23.711Z"
   }
 ]

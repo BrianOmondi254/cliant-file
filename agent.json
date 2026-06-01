@@ -70,12 +70,38 @@
     "createdAt": "2026-02-09T19:35:58.083Z"
   },
   {
+    "name": "new agent 0741001141",
+    "phoneNumber": "0741001141",
+    "dealerPhone": "",
+    "county": "",
+    "constituency": "",
+    "ward": "",
+    "isBlocked": false,
+    "passkey": "",
+    "createdAt": "2026-06-01T13:56:00.000Z",
+    "groupsTotal": [],
+    "totalMembers": 0,
+    "members": {
+      "trustire": "",
+      "otherOfficial": ""
+    },
+    "group": {
+      "groupaccount": {
+        "groupName": "",
+        "createdAt": "2026-06-01T13:56:00.000Z",
+        "members": 0,
+        "isBlocked": false,
+        "groupStarters": {}
+      }
+    }
+  },
+  {
     "name": "kisi agent",
     "phoneNumber": "0740123458",
+    "dealerPhone": "0740123456",
     "county": "Kisii",
     "constituency": "Bonchari",
     "ward": "Bogiakumu",
-    "dealerPhone": "0740123456",
     "createdAt": "2026-02-09T19:37:30.192Z"
   }
 ]

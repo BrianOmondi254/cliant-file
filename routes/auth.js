@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { saveUserToMongoDB, findUserByPhone } = require("../mongoose");
+const { saveUserToMongoDB, findUserByPhone, updateLastLogin, updateUserPassword } = require("../mongoose");
 
 const router = express.Router();
 const usersFile = path.join(__dirname, "../data.json");
@@ -24,6 +24,57 @@ const readJSON = (file, fallback = []) => {
 
 const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
+};
+
+/**
+ * Flatten hierarchical data for searching
+ * Handles both hierarchical (county->constituency->ward->data) and flat user formats
+ */
+const flattenUsers = (hierarchicalData) => {
+  const flat = [];
+  // Check if already flat (has county field on user objects)
+  if (Array.isArray(hierarchicalData) && hierarchicalData.length > 0 && hierarchicalData[0].county && !hierarchicalData[0].constituencies) {
+    // Already flattened format
+    return hierarchicalData;
+  }
+  // Hierarchical format
+  hierarchicalData.forEach(countyItem => {
+    const { county, constituencies } = countyItem;
+    if (!constituencies) return;
+    constituencies.forEach(constituencyItem => {
+      const { name: constituency, wards } = constituencyItem;
+      if (!wards) return;
+      wards.forEach(wardItem => {
+        const { name: ward, data } = wardItem;
+        if (!data) return;
+        data.forEach(user => {
+          flat.push({ ...user, county, constituency, ward });
+        });
+      });
+    });
+  });
+  return flat;
+};
+
+/**
+ * Find user index in hierarchical structure for removing
+ */
+const findUserInHierarchy = (hierarchicalData, phoneNumber) => {
+  for (let countyIdx = 0; countyIdx < hierarchicalData.length; countyIdx++) {
+    const countyItem = hierarchicalData[countyIdx];
+    for (let consIdx = 0; consIdx < countyItem.constituencies.length; consIdx++) {
+      const consItem = countyItem.constituencies[consIdx];
+      for (let wardIdx = 0; wardIdx < consItem.wards.length; wardIdx++) {
+        const wardItem = consItem.wards[wardIdx];
+        for (let dataIdx = 0; dataIdx < wardItem.data.length; dataIdx++) {
+          if (norm(wardItem.data[dataIdx].phoneNumber) === norm(phoneNumber)) {
+            return { countyIdx, consIdx, wardIdx, dataIdx };
+          }
+        }
+      }
+    }
+  }
+  return null;
 };
 
 const norm = (p) => {
@@ -80,11 +131,10 @@ router.post("/register", async (req, res) => {
     idNumber
   } = req.body;
   const users = readJSON(usersFile, []);
+  const flatUsers = flattenUsers(users);
 
   // Normalize phone number (strip leading zero)
   phoneNumber = (phoneNumber || "").trim();
-  // phoneNumber = (phoneNumber || "").trim();
-  // if (phoneNumber.startsWith("0")) phoneNumber = phoneNumber.substring(1);
 
   if (!phoneNumber || !password) {
     return res.render("register", {
@@ -93,7 +143,7 @@ router.post("/register", async (req, res) => {
     });
   }
 
-  if (users.find(u => {
+  if (flatUsers.find(u => {
     return norm(u.phoneNumber) === norm(phoneNumber);
   })) {
     return res.render("register", {
@@ -127,24 +177,33 @@ router.post("/register", async (req, res) => {
     }
   }
 
-  // Save registration ONLY to MongoDB
-  const hashedPassword = await bcrypt.hash(password, 10);
+// Save registration ONLY to MongoDB
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-  const newUser = {
-    FirstName,
-    MiddleName,
-    LastName,
-    email,
-    phoneNumber,
-    password: hashedPassword,
-    gender,
-    county,
-    constituency,
-    ward,
-    ageBracket,
-    idNumber: idNumber || null, // Make ID optional
-    createdAt: new Date().toISOString()
-  };
+    // Hash personalPin if present and plaintext
+    let hashedPersonalPin = null;
+    if (req.body.personalPin) {
+      hashedPersonalPin = req.body.personalPin.startsWith('$2') 
+        ? req.body.personalPin 
+        : await bcrypt.hash(req.body.personalPin, 10);
+    }
+
+    const newUser = {
+      FirstName,
+      MiddleName,
+      LastName,
+      email,
+      phoneNumber,
+      password: hashedPassword,
+      gender,
+      county,
+      constituency,
+      ward,
+      ageBracket,
+      idNumber: idNumber || null,
+      createdAt: new Date().toISOString(),
+      ...(hashedPersonalPin && { personalPin: hashedPersonalPin })
+    };
 
   try {
     await saveUserToMongoDB(newUser);
@@ -189,6 +248,7 @@ router.post("/complete-registration", async (req, res) => {
     } = userData;
 
     const users = readJSON(usersFile, []);
+    const flatUsers = flattenUsers(users);
 
     // 🛡️ Security Check: Verify Passkey against HQ Compliance
     const tbankData = readJSON(tbankFile, {});
@@ -206,10 +266,9 @@ router.post("/complete-registration", async (req, res) => {
 
     // Normalize phone number
     let normPhone = (phoneNumber || "").trim();
-    // if (normPhone.startsWith("0")) normPhone = normPhone.substring(1);
 
     // Check for phone number again, just in case
-    if (users.find(u => {
+    if (flatUsers.find(u => {
         return norm(u.phoneNumber) === norm(normPhone);
     })) {
         return res.render("register", {
@@ -219,6 +278,14 @@ router.post("/complete-registration", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Hash personalPin if present and plaintext
+    let hashedPersonalPin = null;
+    if (userData.personalPin) {
+      hashedPersonalPin = userData.personalPin.startsWith('$2') 
+        ? userData.personalPin 
+        : await bcrypt.hash(userData.personalPin, 10);
+    }
 
     const newUser = {
         FirstName,
@@ -234,7 +301,8 @@ router.post("/complete-registration", async (req, res) => {
         ageBracket,
         idNumber: idNumber || null,
         createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
+        lastLogin: new Date().toISOString(),
+        ...(hashedPersonalPin && { personalPin: hashedPersonalPin })
     };
 
     if (passkey) {
@@ -298,8 +366,8 @@ router.post("/login", async (req, res) => {
 
   let user = null;
   let isFromJSON = false;
-  let userIndexInJSON = -1;
   const usersFromJSON = readJSON(usersFile, []);
+  const flatUsers = flattenUsers(usersFromJSON);
 
   // 1️⃣ Try to find the user in MongoDB first
   try {
@@ -311,13 +379,13 @@ router.post("/login", async (req, res) => {
     console.error("❌ Database query error during login:", dbErr.message);
   }
 
-  // 2️⃣ If not found in MongoDB, search in data.json (legacy fallback)
+  // 2️⃣ If not found in MongoDB, search in flattened data.json (legacy fallback)
   if (!user) {
-    userIndexInJSON = usersFromJSON.findIndex(u => norm(u.phoneNumber) === norm(loginPhone));
-    if (userIndexInJSON !== -1) {
-      user = usersFromJSON[userIndexInJSON];
+    const userFromJSON = flatUsers.find(u => norm(u.phoneNumber) === norm(loginPhone));
+    if (userFromJSON) {
+      user = userFromJSON;
       isFromJSON = true;
-      console.log("   ✅ User found in data.json:", user.FirstName, user.LastName);
+      console.log("   ✅ User found in data.json (flattened):", user.FirstName, user.LastName);
     }
   }
 
@@ -352,15 +420,23 @@ router.post("/login", async (req, res) => {
       await saveUserToMongoDB(user);
       console.log(`✅ Successfully saved exported user ${user.phoneNumber} to MongoDB.`);
 
-      // Remove from data.json (leave NO TRACE)
-      usersFromJSON.splice(userIndexInJSON, 1);
+      // Remove from hierarchical data.json (leave NO TRACE)
+      const userLoc = findUserInHierarchy(usersFromJSON, user.phoneNumber);
+      if (userLoc) {
+        usersFromJSON[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data.splice(userLoc.dataIdx, 1);
+        // Clean up empty arrays
+        if (usersFromJSON[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data.length === 0) {
+          usersFromJSON[userLoc.countyIdx].constituencies[userLoc.consIdx].wards.splice(userLoc.wardIdx, 1);
+        }
+        if (usersFromJSON[userLoc.countyIdx].constituencies[userLoc.consIdx].wards.length === 0) {
+          usersFromJSON[userLoc.countyIdx].constituencies.splice(userLoc.consIdx, 1);
+        }
+      }
       writeJSON(usersFile, usersFromJSON);
       console.log(`🗑️ Successfully removed user ${user.phoneNumber} from data.json.`);
     } catch (exportErr) {
       console.error(`❌ JIT Migration failed for ${user.phoneNumber}:`, exportErr.message);
       // Fallback: keep them in data.json for now so we don't lose the account!
-      usersFromJSON[userIndexInJSON].lastLogin = new Date().toISOString();
-      writeJSON(usersFile, usersFromJSON);
     }
   } else {
     // Already in MongoDB, just update last login
@@ -470,8 +546,7 @@ router.post("/admin/reset-password", async (req, res) => {
   try {
     const mongoUser = await findUserByPhone(phoneNumber);
     if (mongoUser) {
-      mongoUser.password = hashed;
-      await mongoUser.save();
+      await updateUserPassword(phoneNumber, hashed);
       console.log("🛠️ Password reset in MongoDB for:", phoneNumber);
       return res.json({ success: true, message: "Password updated in MongoDB for " + phoneNumber });
     }
@@ -481,27 +556,34 @@ router.post("/admin/reset-password", async (req, res) => {
 
   // 2️⃣ If not in MongoDB, check in data.json (reset and JIT migrate to MongoDB)
   const users = readJSON(usersFile, []);
-  const idx = users.findIndex(u => norm(u.phoneNumber) === norm(phoneNumber));
+  const flatUsers = flattenUsers(users);
+  const userToReset = flatUsers.find(u => norm(u.phoneNumber) === norm(phoneNumber));
 
-  if (idx !== -1) {
-    const userToMigrate = users[idx];
-    userToMigrate.password = hashed;
+  if (userToReset) {
+    userToReset.password = hashed;
 
     try {
-      await saveUserToMongoDB(userToMigrate);
+      await saveUserToMongoDB(userToReset);
       console.log(`🚚 Exported user ${phoneNumber} to MongoDB during password reset.`);
 
-      // Remove from data.json (leave NO TRACE)
-      users.splice(idx, 1);
+      // Remove from hierarchical data.json (leave NO TRACE)
+      const userLoc = findUserInHierarchy(users, userToReset.phoneNumber);
+      if (userLoc) {
+        users[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data.splice(userLoc.dataIdx, 1);
+        // Clean up empty arrays
+        if (users[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data.length === 0) {
+          users[userLoc.countyIdx].constituencies[userLoc.consIdx].wards.splice(userLoc.wardIdx, 1);
+        }
+        if (users[userLoc.countyIdx].constituencies[userLoc.consIdx].wards.length === 0) {
+          users[userLoc.countyIdx].constituencies.splice(userLoc.consIdx, 1);
+        }
+      }
       writeJSON(usersFile, users);
       console.log(`🗑️ Removed user ${phoneNumber} from data.json.`);
 
       return res.json({ success: true, message: "Password updated and account migrated to MongoDB for " + phoneNumber });
     } catch (migErr) {
       console.error("❌ Failed to migrate user during password reset:", migErr.message);
-      // Fallback: update in data.json if MongoDB fails
-      users[idx].password = hashed;
-      writeJSON(usersFile, users);
       return res.json({ success: true, message: "Password updated in data.json (migration failed) for " + phoneNumber });
     }
   }

@@ -1,13 +1,33 @@
 {
-  "personalAccounts": {},
-  "accountTypes": {
-    "001": { "accountId": "001", "accountName": "Savings", "expectedAmount": "100" },
-    "002": { "accountId": "002", "accountName": "Registration", "expectedAmount": "100" },
-    "003": { "accountId": "003", "accountName": "latenes", "expectedAmount": "100" },
-    "004": { "accountId": "004", "accountName": "welfare", "expectedAmount": "100" }
+  "personalAccounts": {
+    "acct_1": {
+      "phone": "0740001141",
+      "transactions": [
+        {
+          "id": "txn_cord_001",
+          "reference": "REF-2026-001",
+          "time": "2026-06-01T12:56:35+03:00",
+          "openingBalance": 0,
+          "amount": 1500,
+          "type": "received",
+          "from": {
+            "name": "M-Pesa Agent",
+            "number": "0740000141"
+          },
+          "to": {
+            "name": "Brian Siaya Agent",
+            "number": "0740001141"
+          },
+          "closingBalance": 1500,
+          "environment": "mPesa",
+          "notes": "Deposit from agent outlet"
+        }
+      ],
+      "createdAt": "2026-06-01T12:43:45+03:00",
+      "updatedAt": "2026-06-01T12:56:35+03:00"
+    }
   },
   "metadata": {
-    "createdAt": "2026-05-02T00:00:00.000Z",
-    "lastUpdated": "2026-05-02T00:00:00.000Z"
+    "lastUpdated": "2026-06-01T12:56:35+03:00"
   }
 }

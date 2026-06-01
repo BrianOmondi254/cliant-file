@@ -84,18 +84,6 @@ router.post("/account/create", (req, res) => {
     phone,
     name,
     accounts: accounts || {},
-    accountTypes: {
-      "001": { accountId: "001", accountName: "Savings", expectedAmount: "100" },
-      "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-      "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-      "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-    },
-    financials: {
-      openingBalance: 0,
-      amountIn: 0,
-      amountOut: 0,
-      closingBalance: 0
-    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -114,7 +102,7 @@ router.post("/account/create", (req, res) => {
   });
 });
 
-/* POST /p_account/account/:phone/financials - Update financials */
+/* POST /p_account/account/:phone/financials - Create a transaction record from financial data */
 router.post("/account/:phone/financials", (req, res) => {
   const { phone } = req.params;
   const { financials } = req.body;
@@ -133,15 +121,41 @@ router.post("/account/:phone/financials", (req, res) => {
     return res.status(404).json({ success: false, message: "Account not found" });
   }
 
-  if (!personalData.personalAccounts[accountKey].financials) {
-    personalData.personalAccounts[accountKey].financials = {};
-  }
+  const account = personalData.personalAccounts[accountKey];
 
-  personalData.personalAccounts[accountKey].financials = {
-    ...personalData.personalAccounts[accountKey].financials,
-    ...financials,
-    updatedAt: new Date().toISOString()
+  // Build a transaction record with flat structure
+  const txnType = parseFloat(financials.amountIn || 0) > 0 ? "received" : "sent";
+  const amount = Math.abs(parseFloat(financials.amountIn || financials.amountOut || 0)) || 0;
+  const existingTxns = account.transactions || [];
+  const openingBalance = existingTxns.reduce((sum, t) => {
+    return sum + (parseFloat(t.amount) || 0) * (t.type === "received" ? 1 : -1);
+  }, 0);
+  const closingBalance = openingBalance + (txnType === "received" ? amount : -amount);
+  const transaction = {
+    cord: "txn_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+    reference: financials.reference || ("REF-" + Date.now()),
+    time: financials.date ? new Date(financials.date).toISOString() : new Date().toISOString(),
+    openingBalance,
+    amount,
+    type: txnType,
+    from: {
+      name: financials.proceedAccountName || (txnType === "received" ? "External" : "Self"),
+      number: financials.proceedAccountNumber || phone
+    },
+    to: {
+      name: txnType === "received" ? "Self" : "External",
+      number: phone
+    },
+    closingBalance,
+    environment: financials.environment || "unknown",
+    notes: financials.notes || null
   };
+
+  if (!account.transactions) {
+    account.transactions = [];
+  }
+  account.transactions.unshift(transaction);
+  account.updatedAt = new Date().toISOString();
 
   personalData.metadata = {
     ...personalData.metadata,
@@ -152,8 +166,9 @@ router.post("/account/:phone/financials", (req, res) => {
 
   res.json({
     success: true,
-    message: "Financials updated successfully",
-    account: personalData.personalAccounts[accountKey],
+    message: "Financial recorded as transaction successfully",
+    transaction,
+    account: { accountKey, phone }
   });
 });
 
@@ -225,99 +240,130 @@ router.delete("/account/:phone", (req, res) => {
   });
 });
 
-/* GET /p_account/summary - Get summary of all personal accounts */
-router.get("/summary", (req, res) => {
+/* ================= TRANSACTION SHEET ROUTES ================= */
+
+/* GET /p_account/account/:phone/transactions - Get transaction history for an account */
+router.get("/account/:phone/transactions", (req, res) => {
+  const { phone } = req.params;
   const personalData = readJSON(personalFile, { personalAccounts: {} });
-  const accounts = Object.values(personalData.personalAccounts || {});
 
-  const totalAccounts = accounts.length;
-  let totalOpeningBalance = 0;
-  let totalAmountIn = 0;
-  let totalAmountOut = 0;
-  let totalClosingBalance = 0;
+  const accountKey = Object.keys(personalData.personalAccounts || {}).find(key =>
+    normPhone(personalData.personalAccounts[key].phone) === normPhone(phone)
+  );
 
-  accounts.forEach(account => {
-    if (account.financials) {
-      totalOpeningBalance += parseFloat(account.financials.openingBalance) || 0;
-      totalAmountIn += parseFloat(account.financials.amountIn) || 0;
-      totalAmountOut += parseFloat(account.financials.amountOut) || 0;
-      totalClosingBalance += parseFloat(account.financials.closingBalance) || 0;
-    }
-  });
+  if (!accountKey) {
+    return res.status(404).json({ success: false, message: "Account not found" });
+  }
+
+  const account = personalData.personalAccounts[accountKey];
+  const transactions = account.transactions || [];
 
   res.json({
     success: true,
-    summary: {
-      totalAccounts,
-      totalOpeningBalance,
-      totalAmountIn,
-      totalAmountOut,
-      totalClosingBalance,
-    },
+    accountKey,
+    phone,
+    transactions,
+    count: transactions.length,
   });
 });
 
-/* POST /p_account/sync/general - Sync personal data from general.json */
-router.post("/sync/general", (req, res) => {
-  const generalPath = path.join(__dirname, "../general.json");
-  const generalData = readJSON(generalPath, {});
-  const personalData = readJSON(personalFile, { personalAccounts: {} });
+/* POST /p_account/account/:phone/transaction - Record a new transaction */
+router.post("/account/:phone/transaction", (req, res) => {
+  const { phone } = req.params;
+  const {
+    accountType,
+    amount,
+    transactionType, // "received" or "sent"
+    proceedAccountName,
+    proceedAccountNumber,
+    environment,
+    reference,
+    notes,
+    date
+  } = req.body;
 
-  let syncedCount = 0;
-
-  // Flatten general.json data and extract member info
-  for (const county in generalData) {
-    if (county === "performance") continue;
-    const constituencies = generalData[county];
-    for (const constituency in constituencies) {
-      const wardsOrGroups = constituencies[constituency];
-      if (Array.isArray(wardsOrGroups)) {
-        const wardName = typeof wardsOrGroups[0] === "string" ? wardsOrGroups[0] : "";
-        wardsOrGroups.forEach((g) => {
-          if (typeof g === "object" && g !== null && !Array.isArray(g)) {
-            // Extract member info
-            for (const key in g) {
-              if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
-                const member = g[key];
-                if (member && member.phone) {
-                  const accountKey = `acct_${Object.keys(personalData.personalAccounts || {}).length + 1}`;
-                  if (!Object.values(personalData.personalAccounts || {}).some(acc => normPhone(acc.phone) === normPhone(member.phone))) {
-                    personalData.personalAccounts[accountKey] = {
-                      phone: member.phone,
-                      name: member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim() || "Unknown",
-                      groupName: g.groupName,
-                      county: g.county || county,
-                      constituency: g.constituency || constituency,
-                      ward: g.ward || wardName,
-                      role: member.type || "member",
-                      accounts: {},
-                      accountTypes: {
-                        "001": { accountId: "001", accountName: "Savings", expectedAmount: "100" },
-                        "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
-                        "003": { accountId: "003", accountName: "latenes", expectedAmount: "100" },
-                        "004": { accountId: "004", accountName: "welfare", expectedAmount: "100" }
-                      },
-                      financials: {
-                        openingBalance: 0,
-                        amountIn: 0,
-                        amountOut: 0,
-                        closingBalance: 0
-                      },
-                      synced: true,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString()
-                    };
-                    syncedCount++;
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-    }
+  if (!phone || !accountType || !amount || !transactionType) {
+    return res.status(400).json({
+      success: false,
+      message: "Phone, accountType, amount, and transactionType are required"
+    });
   }
 
+  if (transactionType !== "received" && transactionType !== "sent") {
+    return res.status(400).json({
+      success: false,
+      message: "transactionType must be 'received' or 'sent'"
+    });
+  }
+
+  const personalData = readJSON(personalFile, { personalAccounts: {} });
+
+  const accountKey = Object.keys(personalData.personalAccounts || {}).find(key =>
+    normPhone(personalData.personalAccounts[key].phone) === normPhone(phone)
+  );
+
+  if (!accountKey) {
+    return res.status(404).json({ success: false, message: "Account not found" });
+  }
+
+  const account = personalData.personalAccounts[accountKey];
+
+  // Validate account type exists
+  const validAccountTypes = Object.keys(account.accountTypes || {});
+  if (!validAccountTypes.includes(accountType)) {
+    return res.status(400).json({
+      success: false,
+      message: `Invalid account type. Valid types: ${validAccountTypes.join(", ")}`
+    });
+  }
+
+  // Initialize transactions array if missing
+  if (!account.transactions) {
+    account.transactions = [];
+  }
+
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Amount must be a positive number"
+    });
+  }
+
+  // Calculate opening balance from existing transactions
+  const existingTxns = account.transactions || [];
+  const runningBalance = existingTxns.reduce((sum, t) => {
+    return sum + (parseFloat(t.amount) || 0) * (t.transactionType === "received" ? 1 : -1);
+  }, 0);
+  const openingBalance = runningBalance;
+  const closingBalance = openingBalance + (transactionType === "received" ? parsedAmount : -parsedAmount);
+
+  // Build transaction record with flat structure
+  const transaction = {
+    cord: "txn_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+    reference: reference || ("REF-" + Date.now()),
+    time: date ? new Date(date).toISOString() : new Date().toISOString(),
+    openingBalance,
+    amount: parsedAmount,
+    type: transactionType,
+    from: {
+      name: proceedAccountName || (transactionType === "received" ? "External" : "Self"),
+      number: proceedAccountNumber || phone
+    },
+    to: {
+      name: (transactionType === "received" ? "Self" : "External"),
+      number: phone
+    },
+    closingBalance,
+    environment: environment || "unknown",
+    notes: notes || null
+  };
+
+  // Add transaction to history
+  account.transactions.unshift(transaction); // newest first
+
+  // Update timestamps
+  account.updatedAt = new Date().toISOString();
   personalData.metadata = {
     ...personalData.metadata,
     lastUpdated: new Date().toISOString()
@@ -327,8 +373,154 @@ router.post("/sync/general", (req, res) => {
 
   res.json({
     success: true,
-    message: `Synced ${syncedCount} personal accounts from general.json`,
-    synced: syncedCount,
+    message: `Transaction recorded: ${transactionType} KSh ${parsedAmount.toLocaleString()}`,
+    transaction,
+    account: {
+      accountKey,
+      phone
+    }
+  });
+});
+
+/* PUT /p_account/account/:phone/transaction/:transactionId - Update a transaction */
+router.put("/account/:phone/transaction/:transactionId", (req, res) => {
+  const { phone, transactionId } = req.params;
+  const updates = req.body;
+
+  const personalData = readJSON(personalFile, { personalAccounts: {} });
+
+  const accountKey = Object.keys(personalData.personalAccounts || {}).find(key =>
+    normPhone(personalData.personalAccounts[key].phone) === normPhone(phone)
+  );
+
+  if (!accountKey) {
+    return res.status(404).json({ success: false, message: "Account not found" });
+  }
+
+  const account = personalData.personalAccounts[accountKey];
+  if (!account.transactions) {
+    return res.status(404).json({ success: false, message: "No transactions found" });
+  }
+
+  const txnIndex = account.transactions.findIndex(t => t.id === transactionId);
+  if (txnIndex === -1) {
+    return res.status(404).json({ success: false, message: "Transaction not found" });
+  }
+
+  // Update transaction fields
+  account.transactions[txnIndex] = {
+    ...account.transactions[txnIndex],
+    ...updates,
+    updatedAt: new Date().toISOString()
+  };
+
+  account.updatedAt = new Date().toISOString();
+  personalData.metadata = {
+    ...personalData.metadata,
+    lastUpdated: new Date().toISOString()
+  };
+
+  writeJSON(personalFile, personalData);
+
+  res.json({
+    success: true,
+    message: "Transaction updated successfully",
+    transaction: account.transactions[txnIndex]
+  });
+});
+
+/* DELETE /p_account/account/:phone/transaction/:transactionId - Delete a transaction */
+router.delete("/account/:phone/transaction/:transactionId", (req, res) => {
+  const { phone, transactionId } = req.params;
+
+  const personalData = readJSON(personalFile, { personalAccounts: {} });
+
+  const accountKey = Object.keys(personalData.personalAccounts || {}).find(key =>
+    normPhone(personalData.personalAccounts[key].phone) === normPhone(phone)
+  );
+
+  if (!accountKey) {
+    return res.status(404).json({ success: false, message: "Account not found" });
+  }
+
+  const account = personalData.personalAccounts[accountKey];
+  if (!account.transactions) {
+    return res.status(404).json({ success: false, message: "No transactions found" });
+  }
+
+  const txnIndex = account.transactions.findIndex(t => t.id === transactionId);
+  if (txnIndex === -1) {
+    return res.status(404).json({ success: false, message: "Transaction not found" });
+  }
+
+  const deletedTransaction = account.transactions[txnIndex];
+  account.transactions.splice(txnIndex, 1);
+
+  account.updatedAt = new Date().toISOString();
+  personalData.metadata = {
+    ...personalData.metadata,
+    lastUpdated: new Date().toISOString()
+  };
+
+  writeJSON(personalFile, personalData);
+
+  res.json({
+    success: true,
+    message: "Transaction deleted successfully",
+    transaction: deletedTransaction,
+    newFinancials: account.financials
+  });
+});
+
+/* GET /p_account/transactions/summary - Get transaction summary across all accounts */
+router.get("/transactions/summary", (req, res) => {
+  const personalData = readJSON(personalFile, { personalAccounts: {} });
+  const accounts = Object.values(personalData.personalAccounts || {});
+
+  let totalTransactions = 0;
+  let totalReceived = 0;
+  let totalSent = 0;
+
+  const accountSummaries = accounts.map(account => {
+    const txns = account.transactions || [];
+    const txnCount = txns.length;
+    let received = 0;
+    let sent = 0;
+
+    txns.forEach(t => {
+      if (t.transactionType === "received") {
+        received += parseFloat(t.amount) || 0;
+      } else {
+        sent += parseFloat(t.amount) || 0;
+      }
+    });
+
+    totalTransactions += txnCount;
+    totalReceived += received;
+    totalSent += sent;
+
+    return {
+      phone: account.phone,
+      name: account.name,
+      accountType: "personal",
+      transactionCount: txnCount,
+      received,
+      sent,
+      closingBalance: received - sent,
+      financials: account.financials
+    };
+  });
+
+  res.json({
+    success: true,
+    summary: {
+      totalAccounts: accounts.length,
+      totalTransactions,
+      totalReceived,
+      totalSent,
+      netFlow: totalReceived - totalSent
+    },
+    accounts: accountSummaries
   });
 });
 

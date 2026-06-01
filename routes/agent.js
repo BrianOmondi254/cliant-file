@@ -79,7 +79,7 @@ const flattenData = (data) => {
 };
 
 // GET /agent
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   // Prevent caching to ensure strict PIN entry logic works on back/forward navigation
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
@@ -88,10 +88,33 @@ router.get("/", (req, res) => {
     return res.redirect("/login");
   }
 
-  // 2. Use the logged-in user's phone number
   const currentPhoneNumber = req.session.user.phoneNumber;
-  const agents = loadJSON(agentFile);
-  const users = loadJSON(dataFile);
+  const agents = loadJSON(agentFile, []);
+  const users = loadJSON(dataFile, []);
+
+  // 2. Try agent.json first (fastest)
+  let agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+
+  // 3. Always verify against MongoDB (independent check)
+  let mongoUser = null;
+  try {
+    mongoUser = await findUserByPhone(currentPhoneNumber);
+    if (mongoUser && !agent) {
+      agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(mongoUser.phoneNumber));
+    }
+  } catch (dbErr) {
+    console.error("[AGENT] MongoDB verification error:", dbErr.message);
+  }
+
+  // 4. Always verify against data.json (independent check)
+  let legacyUser = null;
+  if (users && (Array.isArray(users) ? users.length : 0) > 0) {
+    const flatUsers = Array.isArray(users) ? users : flattenData(users);
+    legacyUser = flatUsers.find((u) => normPhone(u.phoneNumber) === normPhone(currentPhoneNumber));
+    if (legacyUser && !agent) {
+      agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(legacyUser.phoneNumber));
+    }
+  }
 
   // Create a map for faster user name lookups
   const userMap = new Map();
@@ -102,8 +125,6 @@ router.get("/", (req, res) => {
         if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
     });
   }
-
-  const agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
 
   // Helper to render safe views (No dashboard data)
   const renderSafe = (step, msg = null) => {
@@ -119,25 +140,37 @@ router.get("/", (req, res) => {
     });
   };
 
-  // If the determined phone number doesn't belong to an agent
+  // If the determined phone number doesn't belong to an agent, render a diagnostic message
   if (!agent) {
-    return renderSafe("not-agent", { type: "error", text: "Not qualified to be an agent." });
+    return res.render("agent/agent", {
+      step: "not-agent",
+      phoneNumber: currentPhoneNumber,
+      agentName: "Unknown",
+      agent: null,
+      user: req.session.user,
+      message: {
+        type: "error",
+        text: "Not qualified to be an agent.",
+        details:
+          "Session phone: " + currentPhoneNumber +
+          " | agent.json match: " + (agent ? "yes" : "no") +
+          " | MongoDB user: " + (mongoUser ? "found" : "not found") +
+          " | data.json users total: " + (Array.isArray(users) ? users.length : 0) +
+          " | data.json match: " + (legacyUser ? "yes" : "no")
+      },
+      groups: [],
+      dealer: null
+    });
   }
 
   // Render the dashboard directly.
   const generalRaw = loadJSON(generalFile, {});
   const general = flattenData(generalRaw);
   
-  // Normalize agent details once outside the loop for performance
+  // Filter groups to only show those within the agent's ward (regional block)
   const agentWard = agent.ward ? normStr(agent.ward) : "";
-  const agentCounty = agent.county ? normStr(agent.county) : "";
-  const agentConst = agent.constituency ? normStr(agent.constituency) : "";
-  const agentPhoneNormalized = normPhone(agent.phoneNumber);
-
   const managedGroups = general.filter((g) => {
       const groupWard = g.ward ? normStr(g.ward) : "";
-      
-      // Geographic Match Logic: Strict Ward Match
       return groupWard && agentWard && groupWard === agentWard;
   });
 
@@ -214,10 +247,22 @@ router.get("/", (req, res) => {
     selectedGroup = minimalGroup;
   }
 
+  const regionalGroups = {};
+  managedGroups.forEach(group => {
+    const county = group.county || "Unassigned";
+    const constituency = group.constituency || "Unassigned";
+    const ward = group.ward || "Unassigned";
+    if (!regionalGroups[county]) regionalGroups[county] = {};
+    if (!regionalGroups[county][constituency]) regionalGroups[county][constituency] = {};
+    if (!regionalGroups[county][constituency][ward]) regionalGroups[county][constituency][ward] = [];
+    regionalGroups[county][constituency][ward].push(group);
+  });
+
   res.render("agent/agent", { 
     step: "dashboard", 
     agent: displayAgent, 
     groups: managedGroups, 
+    regionalGroups,
     selectedGroup: selectedGroup,
     dealer: dealer, 
     message: null, 

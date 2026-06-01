@@ -17,7 +17,7 @@ const locationsRoutes = require("./routes/locations");
 const mpesaRoutes = require("./routes/mpesa");
 const memberRoutes = require("./routes/member");
 const tranRoutes = require("./tran_account/tran");
-const personalAccountRoutes = require("./p_account/personal");
+const personalAccountRoutes = require("./p_account/personal.js");
 
 
 

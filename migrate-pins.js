@@ -12,18 +12,9 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const { connectDB, findUserByPhone, User } = require('./mongoose');
+const { connectDB, getAllUsersFlattened, updateUserPassword } = require('./mongoose');
 
 const dataFile = path.join(__dirname, 'data.json');
-
-const norm = (p) => {
-  if (!p) return '';
-  let s = String(p).trim();
-  if (s.startsWith('0')) s = s.substring(1);
-  if (s.startsWith('+254')) s = s.substring(4);
-  if (s.startsWith('254') && s.length > 9) s = s.substring(3);
-  return s;
-};
 
 const migrate = async () => {
   console.log('🚀 Starting PIN migration from data.json → MongoDB...\n');
@@ -31,12 +22,26 @@ const migrate = async () => {
   // 1. Connect to MongoDB
   await connectDB();
 
-  // 2. Read data.json
+  // 2. Read data.json and flatten
   const raw = fs.readFileSync(dataFile, 'utf8');
   const users = JSON.parse(raw);
-
+  
   // 3. Filter users that have a personalPin
-  const usersWithPin = users.filter(u => u.personalPin);
+  const flattenUsers = (hierarchicalData) => {
+    const flat = [];
+    hierarchicalData.forEach(countyItem => {
+      countyItem.constituencies.forEach(constituencyItem => {
+        constituencyItem.wards.forEach(wardItem => {
+          wardItem.data.forEach(user => {
+            flat.push({ ...user, county: countyItem.county, constituency: constituencyItem.name, ward: wardItem.name });
+          });
+        });
+      });
+    });
+    return flat;
+  };
+  
+  const usersWithPin = flattenUsers(users).filter(u => u.personalPin);
   console.log(`📋 Found ${usersWithPin.length} user(s) with personalPin in data.json\n`);
 
   let migrated = 0;
@@ -44,64 +49,41 @@ const migrate = async () => {
   let errors = 0;
 
   for (const localUser of usersWithPin) {
-    const phone = localUser.phoneNumber;
-    const pin = localUser.personalPin;
+    const { phoneNumber, personalPin } = localUser;
 
     try {
-      // Find user in MongoDB - try multiple phone number formats
-      const normalizedPhone = norm(phone);
-      let dbUser = await User.findOne({ phoneNumber: phone });
+      // Find user in MongoDB
+      const dbUser = await getAllUsersFlattened().then(all => 
+        all.find(u => u.phoneNumber === phoneNumber)
+      );
       
       if (!dbUser) {
-        // Try with leading 0
-        dbUser = await User.findOne({ phoneNumber: '0' + normalizedPhone });
-      }
-      if (!dbUser) {
-        // Try with +254
-        dbUser = await User.findOne({ phoneNumber: '+254' + normalizedPhone });
-      }
-      if (!dbUser) {
-        // Try with 254
-        dbUser = await User.findOne({ phoneNumber: '254' + normalizedPhone });
-      }
-      if (!dbUser) {
-        // Try just the normalized digits
-        dbUser = await User.findOne({ phoneNumber: normalizedPhone });
-      }
-      if (!dbUser) {
-        // Try regex match on last 9 digits
-        const regex = new RegExp(normalizedPhone + '$');
-        dbUser = await User.findOne({ phoneNumber: regex });
-      }
-
-      if (!dbUser) {
-        console.log(`⚠️  ${phone} (norm: ${normalizedPhone}) — Not found in MongoDB, skipping`);
+        console.log(`⚠️  ${phoneNumber} — Not found in MongoDB, skipping`);
         skipped++;
         continue;
       }
 
       // Check if MongoDB user already has a PIN
       if (dbUser.personalPin) {
-        console.log(`⏭️  ${phone} — Already has PIN in MongoDB, skipping`);
+        console.log(`⏭️  ${phoneNumber} — Already has PIN in MongoDB, skipping`);
         skipped++;
         continue;
       }
 
       // Hash plaintext PINs; keep already-hashed ones as-is
-      let hashedPin = pin;
-      if (!pin.startsWith('$2')) {
-        console.log(`🔐 ${phone} — Plaintext PIN detected, hashing...`);
-        hashedPin = await bcrypt.hash(pin, 10);
+      let hashedPin = personalPin;
+      if (!personalPin.startsWith('$2')) {
+        console.log(`🔐 ${phoneNumber} — Plaintext PIN detected, hashing...`);
+        hashedPin = await bcrypt.hash(personalPin, 10);
       }
 
       // Save to MongoDB
-      dbUser.personalPin = hashedPin;
-      await dbUser.save();
-      console.log(`✅ ${phone} — PIN migrated to MongoDB`);
+      await updateUserPassword(phoneNumber, hashedPin);
+      console.log(`✅ ${phoneNumber} — PIN migrated to MongoDB`);
       migrated++;
 
     } catch (err) {
-      console.error(`❌ ${phone} — Error: ${err.message}`);
+      console.error(`❌ ${phoneNumber} — Error: ${err.message}`);
       errors++;
     }
   }

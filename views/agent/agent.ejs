@@ -1238,6 +1238,11 @@
     <% if (locals.message) { %>
       <div class="message <%= message.type %>">
         <%= message.text %>
+        <% if (locals.message.details) { %>
+          <div style="font-size: 11px; margin-top: 6px; opacity: 0.8;">
+            <%= message.details %>
+          </div>
+        <% } %>
       </div>
       <% } %>
 
@@ -1518,6 +1523,7 @@
           <!-- MAIN DASHBOARD VIEW (Managed Groups Only) -->
           <div id="agentDashboardView" class="hidden">
             <script>window.managedGroups = <%- JSON.stringify(groups || []) %>;</script>
+            <script>window.regionalGroups = <%- JSON.stringify(regionalGroups || {}) %>;</script>
             <!-- GROUPS COLLAPSIBLE NAVIGATION -->
             <div id="groupsAccordionCollapsible" class="accordion-section" style="margin-bottom: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
               <div class="accordion-header active" onclick="toggleAccordion(this)" style="background: #f8fafc; padding: 15px 20px;">
@@ -1546,70 +1552,117 @@
                 <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
                   <h4 style="margin:0; font-size:14px; color:#1e293b;">My Managed Groups</h4>
                 </div>
-                <div id="managedGroupsListProfessional">
-                  <% 
-                    const managedGroups = groups; 
-                    managedGroups.forEach(g => {
-                      let status = "Active";
-                      let statusColor = "#059669"; // Green
-                      let statusBg = "#ecfdf5";
-                      
-                       // Status based on phase
-                       if (g.phase === 1) {
-                         status = "New Request";
-                         statusColor = "#4285f4"; // Blue
-                         statusBg = "#ebf5ff";
-                       } else if (g.phase === 2) {
-                         status = "Pending Approval";
-                         statusColor = "#d97706"; // Amber
-                         statusBg = "#fffbeb";
-                       } else if (g.phase === 3) {
-                         status = "Active";
-                         statusColor = "#059669"; // Green
-                         statusBg = "#ecfdf5";
-                       } else {
-                         status = "Unknown";
-                         statusColor = "#6b7280"; // Gray
-                         statusBg = "#f3f4f6";
-                       }
-                  %>
-                    <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
-                      style="display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; background: white; border-radius: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>;">
-                      
-                      <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                          <span style="font-weight: 700; color: #1e293b; font-size: 15px;"><%= g.groupName || 'Unnamed Group' %></span>
-                          <span style="font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: <%= statusBg %>; color: <%= statusColor %>; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <%= status %>
-                          </span>
-                        </div>
-                        <div style="font-size: 12px; color: #64748b; font-weight: 500;">
-                          <i class="fa-solid fa-map-location-dot" style="margin-right: 4px; opacity: 0.7;"></i>
-                          <%= g.ward || 'General' %> · <%= g.constituency || 'Agent' %>
-                        </div>
+              <div id="managedGroupsListProfessional">
+                <% if (regionalGroups && Object.keys(regionalGroups).length > 0) { 
+                     const countyKeys = Object.keys(regionalGroups);
+                     countyKeys.forEach(county => {
+                       const constituencies = regionalGroups[county];
+                       const constituencyKeys = Object.keys(constituencies);
+                       const countyTotal = constituencyKeys.reduce((sum, c) => sum + Object.values(constituencies[c]).reduce((s, arr) => s + arr.length, 0), 0);
+                %>
+                  <div class="regional-block" style="margin-bottom: 20px;">
+                    <!-- County Header -->
+                    <div class="regional-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; margin-bottom: 10px; border: 1px solid #cbd5e1;">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-map" style="color: #475569; font-size: 14px;"></i>
+                        <span style="font-weight: 700; color: #1e293b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;"><%= county %></span>
                       </div>
+                      <span style="font-size: 11px; font-weight: 700; color: #64748b; background: #e2e8f0; padding: 2px 10px; border-radius: 10px;"><%= countyTotal %> groups</span>
+                    </div>
 
-                      <div style="display: flex; align-items: center; gap: 12px;">
-                        <% if (status === 'Active') { %>
-                          <div style="text-align: right; margin-right: 8px;">
-                            <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Growth</div>
-                            <div style="font-size: 13px; color: #059669; font-weight: 700;">Phase 3</div>
+                    <!-- Constituency Blocks -->
+                    <div style="padding-left: 15px; border-left: 2px solid #e2e8f0; margin-left: 20px; padding-top: 5px;">
+                      <% constituencyKeys.forEach(constituency => {
+                           const wards = constituencies[constituency];
+                           const wardKeys = Object.keys(wards);
+                           const constTotal = wardKeys.reduce((s, w) => s + wards[w].length, 0);
+                      %>
+                        <!-- Constituency Header -->
+                        <div style="margin-bottom: 10px; margin-top: 12px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-location-dot" style="color: #6366f1; font-size: 11px;"></i>
+                            <span style="font-weight: 600; color: #334155; font-size: 12px;"><%= constituency %></span>
+                            <span style="font-size: 10px; color: #94a3b8; font-weight: 600;"><%= constTotal %> groups</span>
                           </div>
-                        <% } %>
-                        <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 14px;"></i>
+                        </div>
+
+                        <!-- Ward Blocks -->
+                        <% wardKeys.forEach(ward => { 
+                             const groupsInWard = wards[ward];
+                        %>
+                          <!-- Ward Header -->
+                          <div style="margin-bottom: 8px; padding-left: 15px; border-left: 2px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                              <i class="fa-solid fa-circle" style="color: #cbd5e1; font-size: 6px;"></i>
+                              <span style="font-weight: 500; color: #64748b; font-size: 11px;"><%= ward %></span>
+                              <span style="font-size: 10px; color: #94a3b8;"><%= groupsInWard.length %></span>
+                            </div>
+                            
+                            <!-- Groups in this ward -->
+                            <div style="padding-left: 10px;">
+                              <% groupsInWard.forEach(g => {
+                                   let status = "Active";
+                                   let statusColor = "#059669";
+                                   let statusBg = "#ecfdf5";
+                                   if (g.phase === 1) {
+                                     status = "New Request";
+                                     statusColor = "#4285f4";
+                                     statusBg = "#ebf5ff";
+                                   } else if (g.phase === 2) {
+                                     status = "Pending Approval";
+                                     statusColor = "#d97706";
+                                     statusBg = "#fffbeb";
+                                   } else if (g.phase === 3) {
+                                     status = "Active";
+                                     statusColor = "#059669";
+                                     statusBg = "#ecfdf5";
+                                   } else {
+                                     status = "Unknown";
+                                     statusColor = "#6b7280";
+                                     statusBg = "#f3f4f6";
+                                   }
+                              %>
+                                <div class="group-item-container" data-name="<%= g.groupName %>" onclick="handleGroupClick('<%= g.groupName %>', this)"
+                                  style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: white; border-radius: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid <%= statusColor %>; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                  
+                                  <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+                                      <span style="font-weight: 700; color: #1e293b; font-size: 14px;"><%= g.groupName || 'Unnamed Group' %></span>
+                                      <span style="font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 15px; background: <%= statusBg %>; color: <%= statusColor %>; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <%= status %>
+                                      </span>
+                                    </div>
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">
+                                      <i class="fa-solid fa-users" style="margin-right: 3px; opacity: 0.7;"></i>
+                                      <%= g.totalProposedMembers || 0 %> members
+                                    </div>
+                                  </div>
+
+                                  <div style="display: flex; align-items: center; gap: 10px;">
+                                    <% if (status === 'Active') { %>
+                                      <div style="text-align: right;">
+                                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Phase</div>
+                                        <div style="font-size: 12px; color: #059669; font-weight: 700;">3</div>
+                                      </div>
+                                    <% } %>
+                                    <i class="fas fa-chevron-right" style="color: #cbd5e1; font-size: 12px;"></i>
+                                  </div>
+                                </div>
+                                <div class="group-item-content" id="content-<%= g.groupName.replace(/\s+/g, '-') %>" style="display: none;"></div>
+                              <% }); %>
+                            </div>
+                          </div>
+                        <% }); %>
                       </div>
-                    </div>
-                    <div class="group-item-content" id="content-<%= g.groupName.replace(/\s+/g, '-') %>" style="display: none;"></div>
-                  <% }); %>
-                  
-                  <% if (managedGroups.length === 0) { %>
-                    <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 20px; border: 2px dashed #e2e8f0;">
-                      <i class="fa-solid fa-folder-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"></i>
-                      <h3 style="color: #64748b; font-size: 16px; margin-bottom: 5px;">No Groups Managed</h3>
-                      <p style="color: #94a3b8; font-size: 12px;">You are not currently managing any group accounts.</p>
-                    </div>
-                  <% } %>
-                </div>
+                    <% }); %>
+                  </div>
+                <% }); } else { %>
+                  <div style="text-align: center; padding: 40px 20px; background: #f8fafc; border-radius: 20px; border: 2px dashed #e2e8f0;">
+                    <i class="fa-solid fa-folder-open" style="font-size: 48px; color: #cbd5e1; margin-bottom: 15px;"></i>
+                    <h3 style="color: #64748b; font-size: 16px; margin-bottom: 5px;">No Groups Available</h3>
+                    <p style="color: #94a3b8; font-size: 12px;">No groups found in the system.</p>
+                  </div>
+                <% } %>
               </div>
 
               <!-- New Requests List -->
