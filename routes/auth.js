@@ -4,6 +4,7 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const {
   ensureMongoReady,
+  getMongoConfigHint,
   saveUserToMongoDB,
   findUserByPhone,
   updateLastLogin,
@@ -483,7 +484,7 @@ router.post("/login", async (req, res) => {
   if (!dbReady) {
     console.log("   ❌ MongoDB not connected during login");
     return res.render("login", {
-      alert: "Could not reach the database. Check your internet connection and try again.",
+      alert: getMongoConfigHint(),
     });
   }
 

@@ -140,15 +140,25 @@ app.get("/", (req, res) => {
 });
 
 /* ================= START SERVER ================= */
-// Connect to MongoDB before starting server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`✅ Server running at http://localhost:${PORT}`);
+const isProduction =
+  process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+
+connectDB()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      const base = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+      console.log(`✅ Server running at ${base}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to connect to MongoDB:", err.message);
+    if (isProduction) {
+      console.error(
+        "Deploy fix: In Render Dashboard → Environment, set MONGODB_URI to your Atlas connection string. In Atlas → Network Access, allow 0.0.0.0/0."
+      );
+      process.exit(1);
+    }
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Server running at http://localhost:${PORT} (MongoDB connection failed — local only)`);
+    });
   });
-}).catch(err => {
-  console.error("Failed to connect to MongoDB:", err);
-  // Still start server even if MongoDB fails
-  app.listen(PORT, () => {
-    console.log(`✅ Server running at http://localhost:${PORT} (MongoDB connection failed)`);
-  });
-});

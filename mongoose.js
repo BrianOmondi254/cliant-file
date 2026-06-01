@@ -5,15 +5,32 @@ const mongoose = require('mongoose');
  * MongoDB Connection Configuration
  * Connects to MongoDB and handles connection events
  */
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cliant-mobile';
+const isRenderHost = Boolean(process.env.RENDER);
+const isProduction =
+  process.env.NODE_ENV === "production" || isRenderHost;
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://localhost:27017/cliant-mobile";
+
+if (isProduction && !process.env.MONGODB_URI) {
+  console.error(
+    "❌ FATAL: MONGODB_URI is not set. On Render, add your Atlas connection string under Environment → MONGODB_URI."
+  );
+} else if (isProduction && /localhost|127\.0\.0\.1/.test(MONGODB_URI)) {
+  console.error(
+    "❌ FATAL: MONGODB_URI points to localhost. Render cannot use a local database — use your MongoDB Atlas URL."
+  );
+}
 
 const connectionOptions = {
   maxPoolSize: 10,
-  serverSelectionTimeoutMS: 15000,
+  serverSelectionTimeoutMS: isProduction ? 30000 : 15000,
   socketTimeoutMS: 45000,
 };
 
 let connectionPromise = null;
+
+const maskMongoUri = (uri) =>
+  String(uri).replace(/:([^:@/]+)@/, ":****@");
 
 /**
  * Ward Schema - Contains user data array matching data.json hierarchy
@@ -103,6 +120,7 @@ const connectDB = async () => {
 
   connectionPromise = (async () => {
     try {
+      console.log(`🔌 MongoDB connecting to ${maskMongoUri(MONGODB_URI)} ...`);
       const conn = await mongoose.connect(MONGODB_URI, connectionOptions);
       console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
 
@@ -150,13 +168,31 @@ const ensureMongoReady = async () => {
   if (mongoose.connection.readyState === 1) {
     return true;
   }
+  if (isProduction && !process.env.MONGODB_URI) {
+    return false;
+  }
   try {
     await connectDB();
     return mongoose.connection.readyState === 1;
   } catch (error) {
     console.error(`❌ ensureMongoReady failed: ${error.message}`);
+    if (/whitelist|IP|timed out|ECONNREFUSED|ENOTFOUND/i.test(error.message)) {
+      console.error(
+        "   Tip: In MongoDB Atlas → Network Access, allow 0.0.0.0/0 so Render can connect."
+      );
+    }
     return false;
   }
+};
+
+const getMongoConfigHint = () => {
+  if (!process.env.MONGODB_URI) {
+    return "Database URL is not configured on the server (MONGODB_URI missing on Render).";
+  }
+  if (isProduction && /localhost|127\.0\.0\.1/.test(MONGODB_URI)) {
+    return "Server is configured with a local database URL, which does not work on Render.";
+  }
+  return "Could not reach the database. Check Atlas network access (allow 0.0.0.0/0) and try again.";
 };
 
 const normalizePhone = (p) => {
