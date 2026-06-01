@@ -1,23 +1,36 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
+require("dotenv").config();
+const mongoose = require("mongoose");
 
 /**
- * MongoDB Connection Configuration
- * Connects to MongoDB and handles connection events
+ * Read MongoDB URL from environment (Render injects these — .env is local only).
+ * Supports common variable names so a typo on Render does not break deploy.
  */
+const readEnvMongoUri = () => {
+  const raw =
+    process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    process.env.DATABASE_URL ||
+    "";
+  return String(raw).trim().replace(/^["']|["']$/g, "");
+};
+
 const isRenderHost = Boolean(process.env.RENDER);
 const isProduction =
   process.env.NODE_ENV === "production" || isRenderHost;
+const envMongoUri = readEnvMongoUri();
+const hasEnvMongoUri = Boolean(envMongoUri);
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/cliant-mobile";
+  envMongoUri || "mongodb://localhost:27017/cliant-mobile";
 
-if (isProduction && !process.env.MONGODB_URI) {
+if (isProduction && !hasEnvMongoUri) {
   console.error(
-    "❌ FATAL: MONGODB_URI is not set. On Render, add your Atlas connection string under Environment → MONGODB_URI."
+    "❌ FATAL: MongoDB URL is not set on Render.",
+    "Add Environment variable: Key = MONGODB_URI, Value = your Atlas connection string",
+    "(mongodb+srv://...). Copy the same value from your local .env file."
   );
 } else if (isProduction && /localhost|127\.0\.0\.1/.test(MONGODB_URI)) {
   console.error(
-    "❌ FATAL: MONGODB_URI points to localhost. Render cannot use a local database — use your MongoDB Atlas URL."
+    "❌ FATAL: Database URL points to localhost. On Render use your MongoDB Atlas connection string."
   );
 }
 
@@ -168,7 +181,7 @@ const ensureMongoReady = async () => {
   if (mongoose.connection.readyState === 1) {
     return true;
   }
-  if (isProduction && !process.env.MONGODB_URI) {
+  if (isProduction && !hasEnvMongoUri) {
     return false;
   }
   try {
@@ -186,13 +199,13 @@ const ensureMongoReady = async () => {
 };
 
 const getMongoConfigHint = () => {
-  if (!process.env.MONGODB_URI) {
-    return "Database URL is not configured on the server (MONGODB_URI missing on Render).";
+  if (!hasEnvMongoUri) {
+    return "Database URL is not set on Render. Add Environment variable MONGODB_URI with your Atlas connection string (mongodb+srv://...), then redeploy.";
   }
   if (isProduction && /localhost|127\.0\.0\.1/.test(MONGODB_URI)) {
     return "Server is configured with a local database URL, which does not work on Render.";
   }
-  return "Could not reach the database. Check Atlas network access (allow 0.0.0.0/0) and try again.";
+  return "Could not reach the database. In Atlas → Network Access, allow 0.0.0.0/0, then redeploy.";
 };
 
 const normalizePhone = (p) => {
