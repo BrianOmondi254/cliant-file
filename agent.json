@@ -72,10 +72,10 @@
   {
     "name": "new agent 0741001141",
     "phoneNumber": "0741001141",
-    "dealerPhone": "",
-    "county": "",
-    "constituency": "",
-    "ward": "",
+    "dealerPhone": "0740000141",
+    "county": "Siaya",
+    "constituency": "Ugenya",
+    "ward": "East Ugenya",
     "isBlocked": false,
     "passkey": "",
     "createdAt": "2026-06-01T13:56:00.000Z",
@@ -94,14 +94,6 @@
         "groupStarters": {}
       }
     }
-  },
-  {
-    "name": "kisi agent",
-    "phoneNumber": "0740123458",
-    "dealerPhone": "0740123456",
-    "county": "Kisii",
-    "constituency": "Bonchari",
-    "ward": "Bogiakumu",
-    "createdAt": "2026-02-09T19:37:30.192Z"
   }
+ 
 ]

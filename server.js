@@ -18,6 +18,7 @@ const mpesaRoutes = require("./routes/mpesa");
 const memberRoutes = require("./routes/member");
 const tranRoutes = require("./tran_account/tran");
 const personalAccountRoutes = require("./p_account/personal.js");
+const businessAccountRoutes = require("./p_account/business.js");
 
 
 
@@ -118,6 +119,7 @@ app.use("/dealer", protect, dealerRoutes);
 app.use("/proceedings", protect, proceedingsRoutes);
 app.use("/tran", protect, tranRoutes);
 app.use("/p_account", protect, personalAccountRoutes);
+app.use("/b_account", protect, businessAccountRoutes);
 
 // 4️⃣ Default root redirect → login page or mobile app
 app.get("/compliance", (req, res) => res.redirect("/hq/compliance"));

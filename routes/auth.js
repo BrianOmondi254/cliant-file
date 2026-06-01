@@ -2,7 +2,14 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { saveUserToMongoDB, findUserByPhone, updateLastLogin, updateUserPassword, PersonalAccount } = require("../mongoose");
+const {
+  mongoose,
+  saveUserToMongoDB,
+  findUserByPhone,
+  updateLastLogin,
+  updateUserPassword,
+  PersonalAccount,
+} = require("../mongoose");
 
 const router = express.Router();
 const usersFile = path.join(__dirname, "../data.json");
@@ -32,27 +39,52 @@ const writeJSON = (file, data) => {
  */
 const flattenUsers = (hierarchicalData) => {
   const flat = [];
-  // Check if already flat (has county field on user objects)
-  if (Array.isArray(hierarchicalData) && hierarchicalData.length > 0 && hierarchicalData[0].county && !hierarchicalData[0].constituencies) {
-    // Already flattened format
-    return hierarchicalData;
-  }
-  // Hierarchical format
-  hierarchicalData.forEach(countyItem => {
-    const { county, constituencies } = countyItem;
-    if (!constituencies) return;
-    constituencies.forEach(constituencyItem => {
-      const { name: constituency, wards } = constituencyItem;
-      if (!wards) return;
-      wards.forEach(wardItem => {
-        const { name: ward, data } = wardItem;
-        if (!data) return;
-        data.forEach(user => {
-          flat.push({ ...user, county, constituency, ward });
+  if (!hierarchicalData) return flat;
+
+  if (Array.isArray(hierarchicalData)) {
+    if (
+      hierarchicalData.length > 0 &&
+      hierarchicalData[0].county &&
+      !hierarchicalData[0].constituencies
+    ) {
+      return hierarchicalData;
+    }
+    hierarchicalData.forEach((countyItem) => {
+      const { county, constituencies } = countyItem;
+      if (!constituencies) return;
+      constituencies.forEach((constituencyItem) => {
+        const { name: constituency, wards } = constituencyItem;
+        if (!wards) return;
+        wards.forEach((wardItem) => {
+          const { name: ward, data } = wardItem;
+          if (!data) return;
+          data.forEach((user) => {
+            flat.push({ ...user, county, constituency, ward });
+          });
         });
       });
     });
-  });
+    return flat;
+  }
+
+  if (typeof hierarchicalData === "object") {
+    for (const county in hierarchicalData) {
+      const constituencies = hierarchicalData[county];
+      if (!constituencies || typeof constituencies !== "object") continue;
+      for (const constituency in constituencies) {
+        const items = constituencies[constituency];
+        if (!Array.isArray(items)) continue;
+        let currentWard = "Unknown Ward";
+        items.forEach((item) => {
+          if (typeof item === "string") {
+            currentWard = item;
+          } else if (typeof item === "object" && item !== null && item.phoneNumber) {
+            flat.push({ ...item, county, constituency, ward: currentWard });
+          }
+        });
+      }
+    }
+  }
   return flat;
 };
 
@@ -131,10 +163,6 @@ router.post("/register", async (req, res) => {
     idNumber,
     name
   } = req.body;
-  const users = readJSON(usersFile, []);
-  const flatUsers = flattenUsers(users);
-
-  // Normalize phone number (strip leading zero)
   phoneNumber = (phoneNumber || "").trim();
 
   if (!phoneNumber || !password) {
@@ -152,11 +180,24 @@ router.post("/register", async (req, res) => {
     LastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
   }
 
-  if (flatUsers.find(u => {
-    return norm(u.phoneNumber) === norm(phoneNumber);
-  })) {
+  let existingUser = null;
+  try {
+    if (mongoose.connection.readyState === 1) {
+      existingUser = await findUserByPhone(phoneNumber);
+    }
+  } catch (dbErr) {
+    console.error("MongoDB check during registration:", dbErr.message);
+  }
+
+  if (!existingUser) {
+    const users = readJSON(usersFile, []);
+    const flatUsers = flattenUsers(users);
+    existingUser = flatUsers.find((u) => norm(u.phoneNumber) === norm(phoneNumber));
+  }
+
+  if (existingUser) {
     return res.render("register", {
-      message: "Phone already registered!",
+      message: "Phone already registered! Please login instead.",
       form: { phoneNumber }
     });
   }
@@ -437,10 +478,15 @@ router.post("/login", async (req, res) => {
 
   let user = null;
   let isFromJSON = false;
-  const usersFromJSON = readJSON(usersFile, []);
-  const flatUsers = flattenUsers(usersFromJSON);
 
-  // 1️⃣ Try to find the user in MongoDB first
+  if (mongoose.connection.readyState !== 1) {
+    console.log("   ❌ MongoDB not connected during login");
+    return res.render("login", {
+      alert: "Database is not connected. Please wait a moment and try again.",
+    });
+  }
+
+  // 1️⃣ Find user in MongoDB counties collection (primary registry)
   try {
     user = await findUserByPhone(loginPhone);
     if (user) {
@@ -448,24 +494,33 @@ router.post("/login", async (req, res) => {
     }
   } catch (dbErr) {
     console.error("❌ Database query error during login:", dbErr.message);
+    return res.render("login", {
+      alert: "Could not verify your account. Please try again shortly.",
+    });
   }
 
-  // 2️⃣ If not found in MongoDB, search in flattened data.json (legacy fallback)
+  // 2️⃣ Legacy data.json fallback only (empty file is skipped safely)
   if (!user) {
-    const userFromJSON = flatUsers.find(u => norm(u.phoneNumber) === norm(loginPhone));
-    if (userFromJSON) {
-      user = userFromJSON;
-      isFromJSON = true;
-      console.log("   ✅ User found in data.json (flattened):", user.FirstName, user.LastName);
+    try {
+      const usersFromJSON = readJSON(usersFile, []);
+      const flatUsers = flattenUsers(usersFromJSON);
+      const userFromJSON = flatUsers.find((u) => norm(u.phoneNumber) === norm(loginPhone));
+      if (userFromJSON) {
+        user = userFromJSON;
+        isFromJSON = true;
+        console.log("   ✅ User found in data.json (legacy):", user.FirstName, user.LastName);
+      }
+    } catch (jsonErr) {
+      console.error("   ⚠️ data.json lookup failed:", jsonErr.message);
     }
   }
 
-  // 3️⃣ If not found in either, redirect to registration
+  // 3️⃣ Not registered anywhere
   if (!user) {
-    console.log("   ❌ Phone not found in MongoDB or data.json");
+    console.log("   ❌ Phone not found in MongoDB counties registry");
     return res.render("register", {
       message: "Phone number not registered. Please create an account.",
-      form: { phoneNumber: req.body.phoneNumber }
+      form: { phoneNumber: req.body.phoneNumber },
     });
   }
 
@@ -492,6 +547,7 @@ router.post("/login", async (req, res) => {
       console.log(`✅ Successfully saved exported user ${user.phoneNumber} to MongoDB.`);
 
       // Remove from hierarchical data.json (leave NO TRACE)
+      const usersFromJSON = readJSON(usersFile, []);
       const userLoc = findUserInHierarchy(usersFromJSON, user.phoneNumber);
       if (userLoc) {
         usersFromJSON[userLoc.countyIdx].constituencies[userLoc.consIdx].wards[userLoc.wardIdx].data.splice(userLoc.dataIdx, 1);
@@ -510,10 +566,8 @@ router.post("/login", async (req, res) => {
       // Fallback: keep them in data.json for now so we don't lose the account!
     }
   } else {
-    // Already in MongoDB, just update last login
-    const { updateLastLogin } = require("../mongoose");
     try {
-      await updateLastLogin(user.phoneNumber);
+      await updateLastLogin(loginPhone);
     } catch (dbErr) {
       console.error("❌ Failed to update last login in MongoDB:", dbErr.message);
     }

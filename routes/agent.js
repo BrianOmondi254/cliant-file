@@ -5,10 +5,12 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const PDFDocument = require("pdfkit");
 
+const { findUserByPhone, getAllUsersFlattened } = require("../mongoose");
+
 const agentFile = path.join(__dirname, "../agent.json");
 const generalFile = path.join(__dirname, "../general.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
-const dataFile = path.join(__dirname, "../data.json");
+const businessFile = path.join(__dirname, "../p_account/business.json");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
 
@@ -35,47 +37,161 @@ const normPhone = (p) => {
 
 const normStr = (s) => (s ? String(s).trim().toLowerCase() : "");
 
-const flattenData = (data) => {
-    if (Array.isArray(data)) return data;
-    const flat = [];
-    if (!data) return flat;
-    for (const county in data) {
-        if (typeof data[county] !== 'object') continue;
-        for (const constituency in data[county]) {
-            const level2 = data[county][constituency];
-            if (!level2) continue;
-            
-            if (Array.isArray(level2)) {
-                // Handle County -> Constituency -> GroupsArray
-                const wardName = typeof level2[0] === 'string' ? level2[0] : '';
-                level2.forEach(g => {
-                    if (typeof g === 'object' && g !== null && !Array.isArray(g)) {
-                        g.county = g.county || county;
-                        g.constituency = g.constituency || constituency;
-                        if (wardName) g.ward = g.ward || wardName;
-                        flat.push(g);
-                    }
-                });
-            } else if (typeof level2 === 'object') {
-                // Handle County -> Constituency -> Ward -> GroupsArray
-                for (const ward in level2) {
-                    const groups = level2[ward];
-                    if (Array.isArray(groups)) {
-                        const wardName = typeof groups[0] === 'string' ? groups[0] : ward;
-                        groups.forEach(g => {
-                            if (typeof g === 'object' && g !== null && !Array.isArray(g)) {
-                                g.county = g.county || county;
-                                g.constituency = g.constituency || constituency;
-                                g.ward = g.ward || wardName;
-                                flat.push(g);
-                            }
-                        });
-                    }
-                }
-            }
-        }
+const getUsersFromMongo = async () => {
+  try {
+    return await getAllUsersFlattened();
+  } catch (error) {
+    console.error("[AGENT] Error getting users from MongoDB:", error.message);
+    return [];
+  }
+};
+
+const findUserInList = (users, phone) => {
+  const normalized = normPhone(phone);
+  if (!normalized || !Array.isArray(users)) return null;
+  return users.find((u) => normPhone(u.phoneNumber) === normalized) || null;
+};
+
+const formatUserName = (user) => {
+  if (!user) return "";
+  return [user.FirstName, user.MiddleName, user.LastName]
+    .map((s) => s && String(s).trim())
+    .filter(Boolean)
+    .join(" ");
+};
+
+const buildUserNameMap = (users) => {
+  const userMap = new Map();
+  if (!Array.isArray(users)) return userMap;
+  users.forEach((u) => {
+    if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), formatUserName(u));
+  });
+  return userMap;
+};
+
+const buildUserDetailMap = (users) => {
+  const userMap = new Map();
+  if (!Array.isArray(users)) return userMap;
+  users.forEach((u) => {
+    if (u.phoneNumber) {
+      userMap.set(normPhone(u.phoneNumber), {
+        name: formatUserName(u),
+        id: u.idNumber || u.IDNumber || "",
+      });
     }
-    return flat;
+  });
+  return userMap;
+};
+
+const flattenData = (data) => {
+  if (Array.isArray(data)) return data;
+  const flat = [];
+  if (!data) return flat;
+  for (const county in data) {
+    if (county === "performance" || typeof data[county] !== "object") continue;
+    for (const constituency in data[county]) {
+      if (constituency === "performance") continue;
+      const items = data[county][constituency];
+      if (Array.isArray(items)) {
+        let currentWard = "Unknown Ward";
+        items.forEach((item) => {
+          if (typeof item === "string") {
+            currentWard = item;
+          } else if (typeof item === "object" && item !== null && !item.isPerformance && item.groupName) {
+            flat.push({
+              ...item,
+              county: item.county || county,
+              constituency: item.constituency || constituency,
+              ward: item.ward || currentWard,
+            });
+          }
+        });
+      } else if (typeof items === "object" && items !== null) {
+        for (const ward in items) {
+          const groups = items[ward];
+          if (!Array.isArray(groups)) continue;
+          let currentWard = ward;
+          groups.forEach((item) => {
+            if (typeof item === "string") {
+              currentWard = item;
+            } else if (typeof item === "object" && item !== null && !item.isPerformance && item.groupName) {
+              flat.push({
+                ...item,
+                county: item.county || county,
+                constituency: item.constituency || constituency,
+                ward: item.ward || currentWard,
+              });
+            }
+          });
+        }
+      }
+    }
+  }
+  return flat;
+};
+
+const resolveAgentProfile = (agent, mongoUser, managedGroupsForInfer = []) => {
+  const profile = {
+    name: agent?.name || "",
+    phoneNumber: agent?.phoneNumber || "",
+    county: (agent?.county || "").trim(),
+    constituency: (agent?.constituency || "").trim(),
+    ward: (agent?.ward || "").trim(),
+    dealerPhone: agent?.dealerPhone || "",
+  };
+  if (mongoUser && !profile.name) {
+    profile.name = formatUserName(mongoUser);
+  }
+  // Agent territory comes from agent.json only (not personal MongoDB registration).
+  if (!profile.county && managedGroupsForInfer.length > 0) {
+    const g = managedGroupsForInfer[0];
+    profile.county = g.county || profile.county;
+    profile.constituency = g.constituency || profile.constituency;
+    profile.ward = g.ward || profile.ward;
+  }
+  return profile;
+};
+
+const matchesAgentRegion = (group, profile) => {
+  if (!profile.county) return false;
+  if (normStr(group.county) !== normStr(profile.county)) return false;
+  if (profile.constituency && group.constituency && normStr(group.constituency) !== normStr(profile.constituency)) {
+    return false;
+  }
+  if (profile.ward && group.ward && normStr(group.ward) !== normStr(profile.ward)) {
+    return false;
+  }
+  return true;
+};
+
+const isGroupManagedByAgent = (group, agentPhone, profile) => {
+  const agentNorm = normPhone(agentPhone);
+  const agentPhones = [
+    group.agentProcessed,
+    group.registeredByAgent,
+    group.processorPhone,
+  ];
+  if (agentPhones.some((p) => p && normPhone(p) === agentNorm)) {
+    return true;
+  }
+  if (profile.county && profile.constituency && profile.ward) {
+    return matchesAgentRegion(group, profile);
+  }
+  return false;
+};
+
+const buildRegionalGroups = (groups, profile) => {
+  const regionalGroups = {};
+  groups.forEach((group) => {
+    const county = group.county || profile.county || "Unassigned";
+    const constituency = group.constituency || profile.constituency || "Unassigned";
+    const ward = group.ward || profile.ward || "Unassigned";
+    if (!regionalGroups[county]) regionalGroups[county] = {};
+    if (!regionalGroups[county][constituency]) regionalGroups[county][constituency] = {};
+    if (!regionalGroups[county][constituency][ward]) regionalGroups[county][constituency][ward] = [];
+    regionalGroups[county][constituency][ward].push(group);
+  });
+  return regionalGroups;
 };
 
 // GET /agent
@@ -90,41 +206,25 @@ router.get("/", async (req, res) => {
 
   const currentPhoneNumber = req.session.user.phoneNumber;
   const agents = loadJSON(agentFile, []);
-  const users = loadJSON(dataFile, []);
+  const users = await getUsersFromMongo();
 
   // 2. Try agent.json first (fastest)
   let agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
 
-  // 3. Always verify against MongoDB (independent check)
-  let mongoUser = null;
-  try {
-    mongoUser = await findUserByPhone(currentPhoneNumber);
-    if (mongoUser && !agent) {
-      agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(mongoUser.phoneNumber));
-    }
-  } catch (dbErr) {
-    console.error("[AGENT] MongoDB verification error:", dbErr.message);
-  }
-
-  // 4. Always verify against data.json (independent check)
-  let legacyUser = null;
-  if (users && (Array.isArray(users) ? users.length : 0) > 0) {
-    const flatUsers = Array.isArray(users) ? users : flattenData(users);
-    legacyUser = flatUsers.find((u) => normPhone(u.phoneNumber) === normPhone(currentPhoneNumber));
-    if (legacyUser && !agent) {
-      agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(legacyUser.phoneNumber));
+  // 3. Verify against MongoDB counties collection
+  let mongoUser = findUserInList(users, currentPhoneNumber);
+  if (!mongoUser) {
+    try {
+      mongoUser = await findUserByPhone(currentPhoneNumber);
+    } catch (dbErr) {
+      console.error("[AGENT] MongoDB verification error:", dbErr.message);
     }
   }
-
-  // Create a map for faster user name lookups
-  const userMap = new Map();
-  if (Array.isArray(users)) {
-    users.forEach(u => {
-        // Filter out empty strings and join with space
-        const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
-        if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
-    });
+  if (mongoUser && !agent) {
+    agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(mongoUser.phoneNumber));
   }
+
+  const userMap = buildUserNameMap(users);
 
   // Helper to render safe views (No dashboard data)
   const renderSafe = (step, msg = null) => {
@@ -135,8 +235,9 @@ router.get("/", async (req, res) => {
       agent: agent ? { name: agent.name, phoneNumber: agent.phoneNumber } : null, // Strict sanitization
       user: req.session.user,
       message: msg,
-      groups: [], // BLOCK dashboard content
-      dealer: null // BLOCK dashboard content
+      groups: [],
+      regionalGroups: {},
+      dealer: null
     });
   };
 
@@ -155,24 +256,33 @@ router.get("/", async (req, res) => {
           "Session phone: " + currentPhoneNumber +
           " | agent.json match: " + (agent ? "yes" : "no") +
           " | MongoDB user: " + (mongoUser ? "found" : "not found") +
-          " | data.json users total: " + (Array.isArray(users) ? users.length : 0) +
-          " | data.json match: " + (legacyUser ? "yes" : "no")
+          " | MongoDB users total: " + users.length +
+          " | registry match: " + (mongoUser ? "yes" : "no")
       },
       groups: [],
+      regionalGroups: {},
       dealer: null
     });
   }
 
-  // Render the dashboard directly.
+  // Load groups from general.json; match by agent phone, then by agent.json territory
   const generalRaw = loadJSON(generalFile, {});
   const general = flattenData(generalRaw);
-  
-  // Filter groups to only show those within the agent's ward (regional block)
-  const agentWard = agent.ward ? normStr(agent.ward) : "";
-  const managedGroups = general.filter((g) => {
-      const groupWard = g.ward ? normStr(g.ward) : "";
-      return groupWard && agentWard && groupWard === agentWard;
+  const agentNorm = normPhone(currentPhoneNumber);
+  const phoneMatchedGroups = general.filter((g) => {
+    const fields = [g.agentProcessed, g.registeredByAgent, g.processorPhone];
+    return fields.some((p) => p && normPhone(p) === agentNorm);
   });
+  let agentProfile = agent
+    ? resolveAgentProfile(agent, mongoUser, phoneMatchedGroups)
+    : null;
+  let managedGroups = phoneMatchedGroups;
+  if (managedGroups.length === 0 && agentProfile) {
+    managedGroups = general.filter((g) => isGroupManagedByAgent(g, currentPhoneNumber, agentProfile));
+  }
+  if (!agentProfile?.county && managedGroups.length > 0) {
+    agentProfile = resolveAgentProfile(agent, mongoUser, managedGroups);
+  }
 
   // Augment managed groups with a list of members including their full names
   managedGroups.forEach(group => {
@@ -192,7 +302,7 @@ router.get("/", async (req, res) => {
 
                 if (phone) {
                     const normalizedPhone = normPhone(phone);
-                    // Lookup name from data.json, fallback to existing name, fallback to 'Unknown'
+                    // Lookup name from MongoDB registry, fallback to existing name, fallback to 'Unknown'
                     const memberName = userMap.get(normalizedPhone) || (typeof member === 'object' && member.name ? member.name : '') || 'Unknown Name';
                     
                     // Standardize member object
@@ -216,9 +326,13 @@ router.get("/", async (req, res) => {
   });
 
   const dealers = loadJSON(dealerFile);
-  const dealer = (agent && Array.isArray(dealers)) ? dealers.find(d => normPhone(d.phoneNumber) === normPhone(agent.dealerPhone)) : null;
+  const dealer = (agentProfile && Array.isArray(dealers))
+    ? dealers.find((d) => normPhone(d.phoneNumber) === normPhone(agentProfile.dealerPhone))
+    : null;
 
-  const displayAgent = agent ? { ...agent, name: agent.name } : { phoneNumber: currentPhoneNumber, name: "Unknown Agent" };
+  const displayAgent = agentProfile
+    ? { ...agent, ...agentProfile, name: agentProfile.name || agent.name }
+    : { phoneNumber: currentPhoneNumber, name: "Unknown Agent" };
 
   const selectedGroupName = req.query.groupName;
   const selectedGroupIndex = selectedGroupName ? managedGroups.findIndex(g => g.groupName === selectedGroupName) : -1;
@@ -247,28 +361,56 @@ router.get("/", async (req, res) => {
     selectedGroup = minimalGroup;
   }
 
-  const regionalGroups = {};
-  managedGroups.forEach(group => {
-    const county = group.county || "Unassigned";
-    const constituency = group.constituency || "Unassigned";
-    const ward = group.ward || "Unassigned";
-    if (!regionalGroups[county]) regionalGroups[county] = {};
-    if (!regionalGroups[county][constituency]) regionalGroups[county][constituency] = {};
-    if (!regionalGroups[county][constituency][ward]) regionalGroups[county][constituency][ward] = [];
-    regionalGroups[county][constituency][ward].push(group);
-  });
+  const regionalGroups = buildRegionalGroups(managedGroups, agentProfile);
 
-  res.render("agent/agent", { 
-    step: "dashboard", 
-    agent: displayAgent, 
-    groups: managedGroups, 
+  // Calculate business account float from business.json based on agent's phone
+  const getBusinessPhone = () => {
+    if (!Array.isArray(agents)) return currentPhoneNumber;
+    const found = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+    return found ? found.phoneNumber : currentPhoneNumber;
+  };
+  const businessPhone = getBusinessPhone();
+  let businessFloat = 0;
+  let businessShare = 0;
+  let businessTotal = 0;
+  try {
+    const businessRaw = loadJSON(businessFile, { businessAccounts: {} });
+    const businessAccounts = businessRaw.businessAccounts || {};
+    const matchedKey = Object.keys(businessAccounts).find(key => normPhone(businessAccounts[key].phone) === normPhone(businessPhone));
+    if (matchedKey) {
+      const account = businessAccounts[matchedKey];
+      const txns = account.transactions || [];
+      if (txns.length > 0 && typeof txns[txns.length - 1].closingBalance === 'number') {
+        businessFloat = txns[txns.length - 1].closingBalance;
+      } else {
+        let balance = 0;
+        (txns || []).forEach(t => {
+          const amt = parseFloat(t.amount) || 0;
+          balance += t.type === 'received' ? amt : -amt;
+        });
+        businessFloat = balance;
+      }
+      businessShare = parseFloat((businessFloat * 0.10).toFixed(2));
+      businessTotal = parseFloat((businessFloat + businessShare).toFixed(2));
+    }
+  } catch (e) {
+    console.error("[AGENT] Business float calculation error:", e.message);
+  }
+
+  res.render("agent/agent", {
+    step: "dashboard",
+    agent: displayAgent,
+    groups: managedGroups,
     regionalGroups,
     selectedGroup: selectedGroup,
-    dealer: dealer, 
-    message: null, 
-    phoneNumber: currentPhoneNumber, 
+    dealer: dealer,
+    message: null,
+    phoneNumber: currentPhoneNumber,
     user: (req.session && req.session.user) || { phoneNumber: currentPhoneNumber },
-    registrationConfig: registrationConfig
+    registrationConfig: registrationConfig,
+    businessFloat,
+    businessShare,
+    businessTotal
   });
 
 });
@@ -418,7 +560,7 @@ router.post("/register-new-group", async (req, res) => {
         phone: chairpersonPhone,
         type: 'trustee',
         title: 'Chairperson',
-        name: 'Chairperson' // Temporary name until verified against data.json
+        name: 'Chairperson' // Temporary name until verified against MongoDB registry
       };
       g.phone = chairpersonPhone;
       g.createdAt = g.createdAt || new Date().toISOString();
@@ -699,29 +841,32 @@ router.post("/activate-group", async (req, res) => {
   }
 });
 
-// POST /agent/verify-user - Verify member exists in data.json
-router.post("/verify-user", (req, res) => {
+// POST /agent/verify-user - Verify member exists in MongoDB counties registry
+router.post("/verify-user", async (req, res) => {
   if (!req.session || !req.session.user) {
     return res.json({ success: false, message: "Unauthorized" });
   }
 
   const { phone } = req.body;
-  const users = loadJSON(dataFile);
-  const normalized = normPhone(phone);
-  
-  const user = users.find(u => normPhone(u.phoneNumber) === normalized);
-  
-  if (user) {
-      // Construct full verified name
-      const name = [user.FirstName, user.MiddleName, user.LastName].map(s => s && String(s).trim()).filter(Boolean).join(' ');
-      return res.json({ success: true, name: name });
-  } else {
-      return res.json({ success: false, message: "User not found in registry." });
+  let user = null;
+  try {
+    user = await findUserByPhone(phone);
+  } catch (dbErr) {
+    console.error("[AGENT] verify-user MongoDB error:", dbErr.message);
   }
+  if (!user) {
+    const users = await getUsersFromMongo();
+    user = findUserInList(users, phone);
+  }
+
+  if (user) {
+    return res.json({ success: true, name: formatUserName(user) });
+  }
+  return res.json({ success: false, message: "User not found in registry." });
 });
 
 // GET /agent/group-form/:groupName - Display group registration form
-router.get("/group-form/:groupName", (req, res) => {
+router.get("/group-form/:groupName", async (req, res) => {
   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     return res.redirect("/login");
   }
@@ -751,7 +896,7 @@ router.get("/group-form/:groupName", (req, res) => {
   }
 
   const tbank = require('../tbank.json');
-  const data = require('../data.json');
+  const users = await getUsersFromMongo();
 
   // Get next form reference number from general.json
   const generalData = loadJSON(generalFile, {});
@@ -773,11 +918,7 @@ router.get("/group-form/:groupName", (req, res) => {
   }
   const nextFormRef = String(totalDownloads + 1).padStart(3, '0');
 
-  // Function to get name by phone
-  function getNameByPhone(phone) {
-    const user = data.find(u => u.phoneNumber === phone);
-    return user ? `${user.FirstName} ${user.LastName}` : '';
-  }
+  const getNameByPhone = (phone) => formatUserName(findUserInList(users, phone));
 
   // Populate names for trustees, officials, members
   Object.keys(group).forEach(key => {
@@ -799,7 +940,7 @@ router.get("/group-form/:groupName", (req, res) => {
 });
 
 // GET /agent/group-registration-pdf/:groupName - Download group registration form PDF
-router.get("/group-registration-pdf/:groupName", (req, res) => {
+router.get("/group-registration-pdf/:groupName", async (req, res) => {
   try {
     // Check authorization first
     if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
@@ -810,7 +951,7 @@ router.get("/group-registration-pdf/:groupName", (req, res) => {
     const decodedGroupName = decodeURIComponent(groupName);
     const agents = loadJSON(agentFile);
     const general = flattenData(loadJSON(generalFile, {}));
-    const users = loadJSON(dataFile);
+    const users = await getUsersFromMongo();
 
     const currentPhoneNumber = req.session.user.phoneNumber;
     const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
@@ -834,17 +975,7 @@ router.get("/group-registration-pdf/:groupName", (req, res) => {
       });
     }
 
-  // Create a map for user lookups
-  const userMap = new Map();
-  if (Array.isArray(users)) {
-    users.forEach(u => {
-      const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
-      if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), {
-        name: parts.join(' '),
-        id: u.IDNumber || ''
-      });
-    });
-  }
+  const userMap = buildUserDetailMap(users);
 
   // Collect members
   const members = [];
@@ -1122,7 +1253,7 @@ doc.y = infoBoxY + 70;
 });
 
 // GET /agent/con-group - Display specific group details for Phase 2 (Pending Approval) groups
-router.get("/con-group", (req, res) => {
+router.get("/con-group", async (req, res) => {
   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     return res.redirect("/login");
   }
@@ -1134,7 +1265,7 @@ router.get("/con-group", (req, res) => {
 
   const agents = loadJSON(agentFile);
   const general = flattenData(loadJSON(generalFile, {}));
-  const users = loadJSON(dataFile);
+  const users = await getUsersFromMongo();
 
   const currentPhoneNumber = req.session.user.phoneNumber;
   const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
@@ -1149,14 +1280,7 @@ router.get("/con-group", (req, res) => {
     return res.redirect("/agent");
   }
 
-  // Create user lookup map
-  const userMap = new Map();
-  if (Array.isArray(users)) {
-    users.forEach(u => {
-      const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
-      if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
-    });
-  }
+  const userMap = buildUserNameMap(users);
 
   // Augment group with membersList if populated
   if (group.membersPopulatedAt || (group.phase && group.phase >= 2)) {
@@ -1199,7 +1323,7 @@ router.get("/con-group", (req, res) => {
 });
 
 // GET /conform - View/download constitution form
-router.get("/conform", (req, res) => {
+router.get("/conform", async (req, res) => {
   const { groupName } = req.query;
   
   if (!groupName) {
@@ -1214,15 +1338,9 @@ router.get("/conform", (req, res) => {
     return res.status(404).send("Group not found");
   }
   
-  const users = loadJSON(dataFile, []);
-  const userMap = new Map();
-  if (Array.isArray(users)) {
-    users.forEach(u => {
-      const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
-      if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
-    });
-  }
-  
+  const users = await getUsersFromMongo();
+  const userMap = buildUserNameMap(users);
+
    res.render("agent/conform", {
      group: group,
      user: req.session.user,
@@ -1231,7 +1349,7 @@ router.get("/conform", (req, res) => {
  });
 
   // GET /agent/group-performance - Display group performance dashboard
-  router.get("/group-performance", (req, res) => {
+  router.get("/group-performance", async (req, res) => {
     if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
       return res.redirect("/login");
     }
@@ -1252,7 +1370,7 @@ router.get("/conform", (req, res) => {
      const agents = loadJSON(agentFile);
      const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
      const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
-     const users = loadJSON(dataFile);
+     const users = await getUsersFromMongo();
 
      const currentPhoneNumber = req.session.user.phoneNumber;
      const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
@@ -1261,14 +1379,7 @@ router.get("/conform", (req, res) => {
        return res.redirect("/agent");
      }
 
-     // Create user lookup map
-     const userMap = new Map();
-    if (Array.isArray(users)) {
-      users.forEach(u => {
-        const parts = [u.FirstName, u.MiddleName, u.LastName].map(s => s && String(s).trim()).filter(Boolean);
-        if (u.phoneNumber) userMap.set(normPhone(u.phoneNumber), parts.join(' '));
-      });
-    }
+     const userMap = buildUserNameMap(users);
 
       // Find corresponding group in member.json by matching groupName (case-insensitive, trim whitespace)
       let groupMembersData = {};

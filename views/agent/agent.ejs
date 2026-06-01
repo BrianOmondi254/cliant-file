@@ -1315,21 +1315,21 @@
                   <div
                     style="font-size:9px; text-transform:uppercase; font-weight:800; opacity:0.9; margin-bottom:4px; margin-top:8px;">
                     Agent Float</div>
-                  <div style="display:flex; align-items:baseline; gap:4px;">
-                    <span style="font-size:10px; font-weight:600; opacity:0.8;">KES</span>
-                    <span style="font-size:20px; font-weight:900; letter-spacing:-0.5px;">125,450.00</span>
-                  </div>
+                   <div style="display:flex; align-items:baseline; gap:4px;">
+                     <span style="font-size:10px; font-weight:600; opacity:0.8;">KES</span>
+                     <span style="font-size:20px; font-weight:900; letter-spacing:-0.5px;"><%= (businessFloat || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+                   </div>
 
-                  <div style="margin-top:4px; display:flex; align-items:baseline; gap:4px; opacity:0.85;">
-                    <span style="font-size:8px; font-weight:700;">SHARE:</span>
-                    <span style="font-size:10px; font-weight:600;">KES 12,240.50</span>
-                  </div>
+                   <div style="margin-top:4px; display:flex; align-items:baseline; gap:4px; opacity:0.85;">
+                     <span style="font-size:8px; font-weight:700;">SHARE:</span>
+                     <span style="font-size:10px; font-weight:600;">KES <%= (businessShare || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+                   </div>
 
-                  <div
-                    style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.2); display:flex; align-items:baseline; gap:4px;">
-                    <span style="font-size:8px; font-weight:800;">TOTAL:</span>
-                    <span style="font-size:13px; font-weight:800;">KES 137,690.50</span>
-                  </div>
+                   <div
+                     style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.2); display:flex; align-items:baseline; gap:4px;">
+                     <span style="font-size:8px; font-weight:800;">TOTAL:</span>
+                     <span style="font-size:13px; font-weight:800;">KES <%= (businessTotal || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+                   </div>
                   <i class="fas fa-vault"
                     style="position:absolute; right:-10px; bottom:-5px; font-size:40px; opacity:0.1; transform: rotate(-15deg); pointer-events:none;"></i>
                 </div>

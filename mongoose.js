@@ -125,23 +125,113 @@ const connectDB = async () => {
   }
 };
 
+const normalizePhone = (p) => {
+  if (!p) return "";
+  let s = String(p).trim();
+  if (s.startsWith("0")) s = s.substring(1);
+  if (s.startsWith("+254")) s = s.substring(4);
+  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+  return s;
+};
+
+const phoneMatches = (a, b) => normalizePhone(a) === normalizePhone(b);
+
 /**
- * Find user by phone number in hierarchical structure
+ * Flatten all users from counties collection (+ legacy users collection)
  */
-const findUserByPhone = async (phoneNumber) => {
+const getAllUsersFlattened = async () => {
   try {
-    const countyItem = await County.findOne({ 'constituencies.wards.data.phoneNumber': phoneNumber });
-    if (!countyItem) return null;
-    
-    for (const consItem of countyItem.constituencies) {
-      for (const wardItem of consItem.wards) {
-        const user = wardItem.data.find(u => u.phoneNumber === phoneNumber);
-        if (user) {
-          return { ...user.toObject(), county: countyItem.county, constituency: consItem.name, ward: wardItem.name };
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error("MongoDB not connected");
+    }
+    const counties = await County.find({}).lean();
+    const users = [];
+    const seen = new Set();
+
+    for (const countyItem of counties) {
+      for (const consItem of countyItem.constituencies || []) {
+        for (const wardItem of consItem.wards || []) {
+          for (const user of wardItem.data || []) {
+            const key = normalizePhone(user.phoneNumber);
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            users.push({
+              ...user,
+              county: countyItem.county,
+              constituency: consItem.name,
+              ward: wardItem.name,
+            });
+          }
         }
       }
     }
-    return null;
+
+    const db = mongoose.connection.db;
+    if (db) {
+      const legacyUsers = await db.collection("users").find({}).toArray();
+      for (const user of legacyUsers) {
+        const key = normalizePhone(user.phoneNumber);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        users.push(user);
+      }
+    }
+
+    return users;
+  } catch (error) {
+    console.error(`❌ Error flattening users: ${error.message}`);
+    return [];
+  }
+};
+
+/**
+ * Find user by phone in counties collection (normalized match)
+ */
+const findUserInCounties = async (phoneNumber) => {
+  const target = normalizePhone(phoneNumber);
+  if (!target) return null;
+
+  const counties = await County.find({}).lean();
+  for (const countyItem of counties) {
+    for (const consItem of countyItem.constituencies || []) {
+      for (const wardItem of consItem.wards || []) {
+        for (const user of wardItem.data || []) {
+          if (normalizePhone(user.phoneNumber) === target) {
+            return {
+              ...user,
+              county: countyItem.county,
+              constituency: consItem.name,
+              ward: wardItem.name,
+            };
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+/**
+ * Find user by phone number in MongoDB (counties + legacy users collection)
+ */
+const findUserByPhone = async (phoneNumber) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error("MongoDB not connected");
+    }
+
+    let user = await findUserInCounties(phoneNumber);
+    if (user) return user;
+
+    const target = normalizePhone(phoneNumber);
+    if (!target) return null;
+
+    const db = mongoose.connection.db;
+    if (db) {
+      const legacy = await db.collection("users").find({}).toArray();
+      user = legacy.find((u) => normalizePhone(u.phoneNumber) === target) || null;
+    }
+    return user;
   } catch (error) {
     console.error(`❌ Error finding user: ${error.message}`);
     throw error;
@@ -168,16 +258,24 @@ const getUserNameByPhone = async (phoneNumber) => {
  */
 const updateLastLogin = async (phoneNumber) => {
   try {
-    const countyItem = await County.findOne({ 'constituencies.wards.data.phoneNumber': phoneNumber });
-    if (!countyItem) return null;
-    
-    for (const consItem of countyItem.constituencies) {
-      for (const wardItem of consItem.wards) {
-        const user = wardItem.data.find(u => u.phoneNumber === phoneNumber);
-        if (user) {
-          user.lastLogin = new Date();
-          await countyItem.save();
-          return { ...user.toObject(), county: countyItem.county, constituency: consItem.name, ward: wardItem.name };
+    const target = normalizePhone(phoneNumber);
+    if (!target) return null;
+
+    const allCounties = await County.find({});
+    for (const doc of allCounties) {
+      for (const consItem of doc.constituencies || []) {
+        for (const wardItem of consItem.wards || []) {
+          const user = (wardItem.data || []).find((u) => normalizePhone(u.phoneNumber) === target);
+          if (user) {
+            user.lastLogin = new Date();
+            await doc.save();
+            return {
+              ...user.toObject(),
+              county: doc.county,
+              constituency: consItem.name,
+              ward: wardItem.name,
+            };
+          }
         }
       }
     }
@@ -217,7 +315,7 @@ const saveUserToMongoDB = async (userData) => {
     
     // Check for duplicate phone in this ward
     const existingUser = countyDoc.constituencies[consIndex].wards[wardIndex].data.find(
-      u => u.phoneNumber === userInfo.phoneNumber
+      (u) => phoneMatches(u.phoneNumber, userInfo.phoneNumber)
     );
     if (existingUser) {
       throw new Error('Phone number already registered');
@@ -240,29 +338,6 @@ const saveUserToMongoDB = async (userData) => {
     }
     console.error(`❌ Error saving user to MongoDB: ${error.message}`);
     throw error;
-  }
-};
-
-/**
- * Flatten all users from hierarchical structure
- */
-const getAllUsersFlattened = async () => {
-  try {
-    const counties = await County.find({});
-    const users = [];
-    counties.forEach(countyItem => {
-      countyItem.constituencies.forEach(consItem => {
-        consItem.wards.forEach(wardItem => {
-          wardItem.data.forEach(user => {
-            users.push({ ...user.toObject(), county: countyItem.county, constituency: consItem.name, ward: wardItem.name });
-          });
-        });
-      });
-    });
-    return users;
-  } catch (error) {
-    console.error(`❌ Error flattening users: ${error.message}`);
-    return [];
   }
 };
 
@@ -420,5 +495,7 @@ module.exports = {
   updateUserPassword,
   removeUserFromMongo,
   migratePinsFromJSON,
-  flattenHierarchicalUsers
+  flattenHierarchicalUsers,
+  normalizePhone,
+  phoneMatches,
 };
