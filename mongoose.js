@@ -9,9 +9,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cliant
 
 const connectionOptions = {
   maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 15000,
   socketTimeoutMS: 45000,
 };
+
+let connectionPromise = null;
 
 /**
  * Ward Schema - Contains user data array matching data.json hierarchy
@@ -88,40 +90,72 @@ const personalAccountSchema = new mongoose.Schema({
 const PersonalAccount = mongoose.model('PersonalAccount', personalAccountSchema);
 
 /**
- * Connect to MongoDB database
+ * Connect to MongoDB database (idempotent — safe to call multiple times)
  */
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(MONGODB_URI, connectionOptions);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    
-    mongoose.connection.on('error', (err) => {
-      console.error(`❌ MongoDB connection error: ${err.message}`);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected');
-    });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
-    });
-    
-    process.on('SIGINT', async () => {
-      try {
-        await mongoose.connection.close();
-        console.log('MongoDB connection closed through app termination');
-        process.exit(0);
-      } catch (err) {
-        console.error('Error closing MongoDB connection:', err);
-        process.exit(1);
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  connectionPromise = (async () => {
+    try {
+      const conn = await mongoose.connect(MONGODB_URI, connectionOptions);
+      console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+
+      mongoose.connection.on("error", (err) => {
+        console.error(`❌ MongoDB connection error: ${err.message}`);
+      });
+
+      mongoose.connection.on("disconnected", () => {
+        console.warn("⚠️  MongoDB disconnected");
+        connectionPromise = null;
+      });
+
+      mongoose.connection.on("reconnected", () => {
+        console.log("🔄 MongoDB reconnected");
+      });
+
+      if (!process.listenerCount("SIGINT")) {
+        process.on("SIGINT", async () => {
+          try {
+            await mongoose.connection.close();
+            console.log("MongoDB connection closed through app termination");
+            process.exit(0);
+          } catch (err) {
+            console.error("Error closing MongoDB connection:", err);
+            process.exit(1);
+          }
+        });
       }
-    });
-    
-    return conn;
+
+      return conn;
+    } catch (error) {
+      connectionPromise = null;
+      console.error(`❌ Error connecting to MongoDB: ${error.message}`);
+      throw error;
+    }
+  })();
+
+  return connectionPromise;
+};
+
+/**
+ * Wait for an active MongoDB connection (reconnects if needed)
+ */
+const ensureMongoReady = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return true;
+  }
+  try {
+    await connectDB();
+    return mongoose.connection.readyState === 1;
   } catch (error) {
-    console.error(`❌ Error connecting to MongoDB: ${error.message}`);
-    throw error;
+    console.error(`❌ ensureMongoReady failed: ${error.message}`);
+    return false;
   }
 };
 
@@ -141,7 +175,8 @@ const phoneMatches = (a, b) => normalizePhone(a) === normalizePhone(b);
  */
 const getAllUsersFlattened = async () => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    const ready = await ensureMongoReady();
+    if (!ready) {
       throw new Error("MongoDB not connected");
     }
     const counties = await County.find({}).lean();
@@ -216,7 +251,8 @@ const findUserInCounties = async (phoneNumber) => {
  */
 const findUserByPhone = async (phoneNumber) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
+    const ready = await ensureMongoReady();
+    if (!ready) {
       throw new Error("MongoDB not connected");
     }
 
@@ -483,7 +519,8 @@ const migratePinsFromJSON = async () => {
 };
 
 module.exports = { 
-  connectDB, 
+  connectDB,
+  ensureMongoReady,
   mongoose, 
   County,
   PersonalAccount,

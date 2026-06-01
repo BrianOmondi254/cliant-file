@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
 const {
-  mongoose,
+  ensureMongoReady,
   saveUserToMongoDB,
   findUserByPhone,
   updateLastLogin,
@@ -182,7 +182,7 @@ router.post("/register", async (req, res) => {
 
   let existingUser = null;
   try {
-    if (mongoose.connection.readyState === 1) {
+    if (await ensureMongoReady()) {
       existingUser = await findUserByPhone(phoneNumber);
     }
   } catch (dbErr) {
@@ -479,10 +479,11 @@ router.post("/login", async (req, res) => {
   let user = null;
   let isFromJSON = false;
 
-  if (mongoose.connection.readyState !== 1) {
+  const dbReady = await ensureMongoReady();
+  if (!dbReady) {
     console.log("   ❌ MongoDB not connected during login");
     return res.render("login", {
-      alert: "Database is not connected. Please wait a moment and try again.",
+      alert: "Could not reach the database. Check your internet connection and try again.",
     });
   }
 
