@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { saveUserToMongoDB, findUserByPhone, updateLastLogin, updateUserPassword } = require("../mongoose");
+const { saveUserToMongoDB, findUserByPhone, updateLastLogin, updateUserPassword, PersonalAccount } = require("../mongoose");
 
 const router = express.Router();
 const usersFile = path.join(__dirname, "../data.json");
@@ -128,7 +128,8 @@ router.post("/register", async (req, res) => {
     constituency,
     ward,
     ageBracket,
-    idNumber
+    idNumber,
+    name
   } = req.body;
   const users = readJSON(usersFile, []);
   const flatUsers = flattenUsers(users);
@@ -141,6 +142,14 @@ router.post("/register", async (req, res) => {
       message: "Phone number and password are required!",
       form: {}
     });
+  }
+
+  // Derive first/middle/last from a single name field if provided
+  if (!FirstName && !MiddleName && !LastName && name) {
+    const nameParts = String(name).trim().split(/\s+/);
+    FirstName = nameParts[0] || "";
+    MiddleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(" ") : (nameParts.length === 2 ? "" : nameParts[1] || "");
+    LastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
   }
 
   if (flatUsers.find(u => {
@@ -213,6 +222,37 @@ router.post("/register", async (req, res) => {
       message: "Registration failed: Database connection issue. Please try again.",
       form: req.body
     });
+  }
+
+  try {
+    const personalFile = path.join(__dirname, "../p_account/personal.json");
+    const personalData = readJSON(personalFile, { personalAccounts: {} });
+    const accountKey = `acct_${Object.keys(personalData.personalAccounts || {}).length + 1}`;
+    personalData.personalAccounts[accountKey] = {
+      phone: phoneNumber,
+      transactions: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    personalData.metadata = { ...personalData.metadata, lastUpdated: new Date().toISOString() };
+    writeJSON(personalFile, personalData);
+    console.log(`[REGISTER] Created personal account ${accountKey} for ${phoneNumber}`);
+
+    // Also save to MongoDB PersonalAccount collection
+    try {
+      const newPersonalAccount = new PersonalAccount({
+        phone: phoneNumber,
+        transactions: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      await newPersonalAccount.save();
+      console.log(`[REGISTER] Saved personal account to MongoDB for ${phoneNumber}`);
+    } catch (mongoPersonalErr) {
+      console.error("Error saving personal account to MongoDB during registration:", mongoPersonalErr.message);
+    }
+  } catch (personalErr) {
+    console.error("Error creating personal account during registration:", personalErr.message);
   }
 
   // Log Performance
@@ -321,6 +361,37 @@ router.post("/complete-registration", async (req, res) => {
           message: "Registration failed: Database connection issue. Please try again.",
           form: userData
       });
+    }
+
+    try {
+      const personalFile = path.join(__dirname, "../p_account/personal.json");
+      const personalData = readJSON(personalFile, { personalAccounts: {} });
+      const accountKey = `acct_${Object.keys(personalData.personalAccounts || {}).length + 1}`;
+      personalData.personalAccounts[accountKey] = {
+        phone: normPhone,
+        transactions: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      personalData.metadata = { ...personalData.metadata, lastUpdated: new Date().toISOString() };
+      writeJSON(personalFile, personalData);
+      console.log(`[REGISTER] Created personal account ${accountKey} for ${normPhone}`);
+
+      // Also save to MongoDB PersonalAccount collection
+      try {
+        const newPersonalAccount = new PersonalAccount({
+          phone: normPhone,
+          transactions: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        await newPersonalAccount.save();
+        console.log(`[REGISTER] Saved personal account to MongoDB for ${normPhone}`);
+      } catch (mongoPersonalErr) {
+        console.error("Error saving personal account to MongoDB during registration:", mongoPersonalErr.message);
+      }
+    } catch (personalErr) {
+      console.error("Error creating personal account during completion:", personalErr.message);
     }
 
     // Log Performance

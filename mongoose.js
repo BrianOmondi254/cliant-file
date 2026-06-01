@@ -58,6 +58,36 @@ const countySchema = new mongoose.Schema({
 const County = mongoose.model('County', countySchema);
 
 /**
+ * Personal Account Schema - Mirrors p_account/personal.json per-user snapshot
+ */
+const personalAccountSchema = new mongoose.Schema({
+  phone: { type: String, required: true, unique: true },
+  transactions: [new mongoose.Schema({
+    cord: { type: String },
+    reference: { type: String },
+    time: { type: Date },
+    openingBalance: { type: Number, default: 0 },
+    amount: { type: Number, default: 0 },
+    type: { type: String, enum: ['received', 'sent'], default: 'received' },
+    from: {
+      name: { type: String },
+      number: { type: String }
+    },
+    to: {
+      name: { type: String },
+      number: { type: String }
+    },
+    closingBalance: { type: Number, default: 0 },
+    environment: { type: String, default: 'unknown' },
+    notes: { type: String }
+  }, { _id: false })],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const PersonalAccount = mongoose.model('PersonalAccount', personalAccountSchema);
+
+/**
  * Connect to MongoDB database
  */
 const connectDB = async () => {
@@ -381,6 +411,7 @@ module.exports = {
   connectDB, 
   mongoose, 
   County,
+  PersonalAccount,
   saveUserToMongoDB,
   findUserByPhone,
   getUserNameByPhone,
