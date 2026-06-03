@@ -649,8 +649,13 @@ router.post("/login", async (req, res) => {
     req.session.hasDealerPin = false;
   }
 
-  // ✅ Redirect to personal page (handled by routes/personal.js)
-  res.redirect("/personal");
+  // ✅ Save session before redirecting to prevent session write race conditions
+  req.session.save((err) => {
+    if (err) {
+      console.error("❌ Session save error during login redirect:", err);
+    }
+    res.redirect("/personal");
+  });
 });
 
 /* 🛠️ Admin: Reset a user's password (POST /admin/reset-password) */

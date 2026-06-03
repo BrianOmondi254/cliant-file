@@ -1087,7 +1087,7 @@ const app = {
         const badge       = document.getElementById('msgBadge');
         const badgeHeader = document.getElementById('msgBadgeHeader');
         const keyCount    = (this.data.constitutionKeys && Array.isArray(this.data.constitutionKeys)) ? this.data.constitutionKeys.length : 0;
-        const inboxCount  = (this.data.user.inbox && Array.isArray(this.data.user.inbox)) ? this.data.user.inbox.filter(m => m.unread).length : 0;
+        const inboxCount  = (this.data.user && this.data.user.inbox && Array.isArray(this.data.user.inbox)) ? this.data.user.inbox.filter(m => m.unread).length : 0;
         const total       = (this.data.unread || 0) + keyCount + inboxCount;
         if (badge)       { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
@@ -1096,7 +1096,7 @@ const app = {
     /* ─── INBOX ─── */
     openInbox() {
         const keys      = this.data.constitutionKeys || [];
-        const inbox     = this.data.user.inbox || [];
+        const inbox     = (this.data.user && this.data.user.inbox) || [];
         const groupMsgs = this.data.groupMessages || [];
         let html = '';
 
@@ -1353,7 +1353,7 @@ const app = {
 
         let html = '';
 
-        if (u.groupNotifications && u.groupNotifications.length > 0) {
+        if (u && u.groupNotifications && u.groupNotifications.length > 0) {
             html += '<div class="group-notif" style="margin-top:14px;">';
             u.groupNotifications.forEach(n => {
                 const bg = n.type === 'registration' ? '#dcfce7' : '#fef3c7';
@@ -1458,7 +1458,7 @@ const app = {
                     </div>
                     <!-- Nested options row like wallet content -->
                     <div style="display:flex;gap:8px;padding:0 16px 14px 16px;background:#fafafa;border-top:1px solid #f1f5f9;">
-                        <button class="action-btn" onclick="app.openGroupAccountsModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
+                        <button class="action-btn" onclick="app.openGroupAccountsModal('${encodeURIComponent(g.groupName)}', '${encodeURIComponent(g.accountNumber || '')}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📂</span>
                             <span style="font-size:10px;font-weight:600;">Accounts</span>
                         </button>
@@ -1533,94 +1533,242 @@ const app = {
         container.innerHTML = html;
     },
 
-    openGroupAccountsModal(groupName) {
+    openGroupAccountsModal(groupName, encodedAccNum) {
+        const accountNumber = encodedAccNum ? decodeURIComponent(encodedAccNum) : '';
         document.getElementById('modalOverlay').classList.add('open');
-        this.updateModalContent('Loading Accounts...', '<div style="text-align:center;padding:20px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i></div>', null, 'fa-folder-open');
-        
-        fetch('/member/group-by-name', {
+        this.updateModalContent('Loading Accounts...', '<div style="text-align:center;padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--primary);"></i><p style="margin-top:10px;font-size:12px;color:#64748b;">Fetching account data...</p></div>', null, 'fa-folder-open');
+
+        fetch('/member/group-accounts-schema', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupName })
+            body: JSON.stringify({ groupName: decodeURIComponent(groupName), accountNumber })
         })
-        .then(res => res.json())
-        .then(group => {
-            if (!group || !group.members) {
-                this.updateModalContent('Accounts', '<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No account details found for this group.</p></div>', null, 'fa-folder-open');
+        .then(res => {
+            if (!res.ok) {
+                return res.json().then(err => { throw new Error(err.error || 'Server error ' + res.status); });
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (!data || data.error) {
+                this.updateModalContent('Accounts', `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>${data && data.error ? data.error : 'No account details found for this group.'}</p></div>`, null, 'fa-folder-open');
                 return;
             }
-            
-            const normalize = (p) => {
-                let s = String(p).trim().replace(/\D/g, '');
-                if (s.startsWith('254')) s = '0' + s.substring(3);
-                return s;
+
+            // Store for drill-down
+            this._groupAccountsData = data;
+            this._groupAccountsName = groupName;
+
+            const accSchema = data.accountSchema || {};
+            const accDetails = data.accountDetails || {};
+
+            const accColors = {
+                saving:       { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank',     grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
+                registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card',         grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
+                late:         { bg: '#ffebee', color: '#c62828', icon: 'fa-clock',           grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
+                welfare:      { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding',   grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
+                default:      { bg: '#e8f0fe', color: '#1a73e8', icon: 'fa-wallet',          grad: 'linear-gradient(135deg,#1a73e8,#64b5f6)' }
             };
-            
-            const loggedPhone = normalize(this.data.user.phoneNumber);
-            let memberData = null;
-            
-            // Search for matching member
-            for (const phoneKey in group.members) {
-                if (normalize(phoneKey) === loggedPhone) {
-                    memberData = group.members[phoneKey];
-                    break;
-                }
-            }
-            
-            if (!memberData || !memberData.accounts) {
-                this.updateModalContent('Accounts', '<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>You do not have any registered accounts in this group yet.</p></div>', null, 'fa-folder-open');
-                return;
-            }
-            
+
+            const getAccStyle = (name) => {
+                const n = (name || '').toLowerCase();
+                if (n.includes('saving'))       return accColors.saving;
+                if (n.includes('registration')) return accColors.registration;
+                if (n.includes('late'))         return accColors.late;
+                if (n.includes('welfare'))      return accColors.welfare;
+                return accColors.default;
+            };
+
+            // ── HEADER SUMMARY ──────────────────────────────────────────
             let html = `
-            <div class="m-info-banner green" style="margin-bottom:14px;"><i class="fa-solid fa-circle-info"></i><span>Registered accounts for <b>${memberData.name || this.data.user.FirstName}</b> in <b>${groupName}</b></span></div>
-            <div style="max-height: 320px; overflow-y: auto; display:flex; flex-direction:column; gap:12px; padding: 4px 10px;">`;
-            
-            for (const accId in memberData.accounts) {
-                const acc = memberData.accounts[accId];
-                const fins = acc.financials || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
-                
-                // Color badges based on account name/type
-                let bg = '#e8f5e9';
-                let color = '#2e7d32';
-                let icon = 'fa-wallet';
-                
-                if (acc.accountName.toLowerCase().includes('saving')) {
-                    bg = '#e8f5e9'; color = '#2e7d32'; icon = 'fa-piggy-bank';
-                } else if (acc.accountName.toLowerCase().includes('registration')) {
-                    bg = '#e3f2fd'; color = '#1565c0'; icon = 'fa-id-card';
-                } else if (acc.accountName.toLowerCase().includes('late')) {
-                    bg = '#ffebee'; color = '#c62828'; icon = 'fa-clock';
-                } else if (acc.accountName.toLowerCase().includes('welfare')) {
-                    bg = '#f3e5f5'; color = '#6a1b9a'; icon = 'fa-hands-holding';
-                }
-                
+            <div style="background:linear-gradient(135deg,#0c8f44,#34d399);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:white;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.85;">Group</div>
+                    <div style="font-size:15px;font-weight:800;margin-top:2px;">${data.groupName}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:11px;opacity:0.85;">Total Members</div>
+                    <div style="font-size:22px;font-weight:800;">${data.totalMembers}</div>
+                </div>
+            </div>
+            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📂 Cliant Contribution Accounts — Select Account</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">`;
+
+            for (const accId in accSchema) {
+                const schema  = accSchema[accId];
+                const detail  = accDetails[accId] || { totalIn: 0, totalOut: 0, totalBalance: 0, members: [] };
+                const style   = getAccStyle(schema.accountName);
+
                 html += `
-                <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; box-shadow:var(--shadow-sm); display:flex; justify-content:space-between; align-items:center; text-align:left;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <span style="font-size:16px; background:${bg}; color:${color}; width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                            <i class="fa-solid ${icon}"></i>
-                        </span>
-                        <div>
-                            <span style="display:block; font-weight:700; font-size:13.5px; color:var(--text-dark);">${acc.accountName}</span>
-                            <small style="font-size:11px; color:#64748b;">ID: ${acc.accountId}</small>
+                <button onclick="app.openGroupAccountMembersView('${accId}')"
+                    style="background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:13px 14px;display:flex;align-items:center;gap:13px;text-align:left;cursor:pointer;transition:all 0.18s;box-shadow:0 2px 6px rgba(0,0,0,0.06);"
+                    onmouseover="this.style.borderColor='${style.color}';this.style.background='#f8fffe';"
+                    onmouseout="this.style.borderColor='#e2e8f0';this.style.background='white';">
+                    <span style="width:42px;height:42px;border-radius:10px;background:${style.bg};color:${style.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+                        <i class="fa-solid ${style.icon}"></i>
+                    </span>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;font-size:13.5px;color:#1e293b;">${schema.accountName}</div>
+                        <div style="font-size:10.5px;color:#64748b;margin-top:1px;">
+                            A/C ID: <b>${schema.accountId}</b> &nbsp;·&nbsp; Expected: <b>KSh ${Number(schema.expectedAmount||0).toLocaleString()}</b> /member
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:5px;">
+                            <span style="font-size:10px;background:#dcfce7;color:#15803d;padding:2px 7px;border-radius:20px;font-weight:600;">
+                                In: KSh ${Number(detail.totalIn).toLocaleString()}
+                            </span>
+                            <span style="font-size:10px;background:#fee2e2;color:#b91c1c;padding:2px 7px;border-radius:20px;font-weight:600;">
+                                Out: KSh ${Number(detail.totalOut).toLocaleString()}
+                            </span>
                         </div>
                     </div>
-                    <div style="text-align:right;">
-                        <span style="display:block; font-weight:800; font-size:14px; color:${color};">KSh ${Number(fins.closingBalance || 0).toLocaleString()}</span>
-                        <small style="font-size:10px; color:#94a3b8;">In: +${Number(fins.amountIn || 0).toLocaleString()} | Out: -${Number(fins.amountOut || 0).toLocaleString()}</small>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-weight:800;font-size:14px;color:${style.color};">KSh ${Number(detail.totalBalance).toLocaleString()}</div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${(detail.members||[]).length} member${(detail.members||[]).length!==1?'s':''}</div>
+                        <i class="fa-solid fa-chevron-right" style="font-size:10px;color:#94a3b8;margin-top:4px;display:block;"></i>
                     </div>
-                </div>`;
+                </button>`;
             }
-            
+
             html += `</div>
-            <button class="m-submit-btn" style="margin-top:16px;" onclick="app.closeModal()">Close</button>`;
-            
-            this.updateModalContent('Member Accounts', html, null, 'fa-folder-open', 'linear-gradient(135deg, #0c8f44, #1b5e20)');
+            <button class="m-submit-btn secondary" style="margin-top:14px;" onclick="app.closeModal()">
+                <i class="fa-solid fa-xmark"></i> Close
+            </button>`;
+
+            this.updateModalContent('Group Accounts', html, null, 'fa-folder-open', 'linear-gradient(135deg,#0c8f44,#34d399)');
         })
         .catch(err => {
-            console.error(err);
-            this.updateModalContent('Error', '<div class="m-empty-state"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p>Failed to load accounts. Please try again later.</p></div>', null, 'fa-folder-open');
+            console.error('[openGroupAccountsModal] fetch error:', err);
+            const msg = err && err.message ? err.message : 'Failed to load accounts. Please try again.';
+            this.updateModalContent('Error', `<div class="m-empty-state"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p style="font-size:12px;color:#64748b;margin-top:8px;">${msg}</p></div>`, null, 'fa-folder-open');
         });
+    },
+
+    // ── DRILL-DOWN: show all members for a specific account type ─────────
+    openGroupAccountMembersView(accId) {
+        const data = this._groupAccountsData;
+        if (!data) return;
+
+        const accDetails = data.accountDetails || {};
+        const detail = accDetails[accId];
+        if (!detail) return;
+
+        const groupName = this._groupAccountsName || data.groupName;
+
+        const accColors = {
+            saving:       { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank',   grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
+            registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card',       grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
+            late:         { bg: '#ffebee', color: '#c62828', icon: 'fa-clock',         grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
+            welfare:      { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding', grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
+            default:      { bg: '#e8f0fe', color: '#1a73e8', icon: 'fa-wallet',        grad: 'linear-gradient(135deg,#1a73e8,#64b5f6)' }
+        };
+        const getAccStyle = (name) => {
+            const n = (name || '').toLowerCase();
+            if (n.includes('saving'))       return accColors.saving;
+            if (n.includes('registration')) return accColors.registration;
+            if (n.includes('late'))         return accColors.late;
+            if (n.includes('welfare'))      return accColors.welfare;
+            return accColors.default;
+        };
+        const style = getAccStyle(detail.accountName);
+
+        const members = detail.members || [];
+
+        // ── summary strip ─────────────────────────────────────────────
+        let html = `
+        <div style="background:${style.grad};border-radius:12px;padding:14px 16px;margin-bottom:14px;color:white;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <span style="width:38px;height:38px;border-radius:9px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:15px;">
+                    <i class="fa-solid ${style.icon}"></i>
+                </span>
+                <div>
+                    <div style="font-size:15px;font-weight:800;">${detail.accountName}</div>
+                    <div style="font-size:10.5px;opacity:0.85;">A/C ${detail.accountId} &nbsp;·&nbsp; ${groupName}</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+                <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
+                    <div style="font-size:9px;opacity:0.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total In</div>
+                    <div style="font-size:13px;font-weight:800;margin-top:3px;">KSh ${Number(detail.totalIn).toLocaleString()}</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
+                    <div style="font-size:9px;opacity:0.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total Out</div>
+                    <div style="font-size:13px;font-weight:800;margin-top:3px;">KSh ${Number(detail.totalOut).toLocaleString()}</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.25);border-radius:8px;padding:8px 4px;">
+                    <div style="font-size:9px;opacity:0.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Balance</div>
+                    <div style="font-size:13px;font-weight:800;margin-top:3px;">KSh ${Number(detail.totalBalance).toLocaleString()}</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+            👥 Members (${members.length})
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;">`;
+
+        if (members.length === 0) {
+            html += `<div class="m-empty-state"><i class="fa-solid fa-users"></i><p>No members found for this account.</p></div>`;
+        } else {
+            members.forEach((m, idx) => {
+                const closingBal = Number(m.closingBalance || 0);
+                const amtIn      = Number(m.amountIn  || 0);
+                const amtOut     = Number(m.amountOut || 0);
+                const openBal    = Number(m.openingBalance || 0);
+                const expectedAmt= Number(detail.expectedAmount || 0);
+                const paidStatus = amtIn >= expectedAmt && expectedAmt > 0;
+
+                html += `
+                <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                    <!-- Member Header -->
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                        <div style="width:32px;height:32px;border-radius:50%;background:${style.bg};border:1.5px solid ${style.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${style.color};flex-shrink:0;">
+                            ${idx + 1}
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:700;font-size:13px;color:#1e293b;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+                            <div style="font-size:10px;color:#64748b;margin-top:1px;">ID: ${m.memberId}</div>
+                        </div>
+                        <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;${paidStatus ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;' : 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;'}">
+                            ${paidStatus ? '✓ Paid' : '⏳ Pending'}
+                        </span>
+                    </div>
+                    <!-- Account Name + Number Row -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f8fafc;border-radius:7px;margin-bottom:8px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <i class="fa-solid ${style.icon}" style="color:${style.color};font-size:11px;"></i>
+                            <span style="font-size:11px;font-weight:700;color:#1e293b;">${detail.accountName}</span>
+                        </div>
+                        <span style="font-size:10px;color:#64748b;font-weight:600;">A/C ID: <b>${detail.accountId}</b></span>
+                    </div>
+                    <!-- Financials Grid -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
+                            <div style="font-size:8.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Opening Bal</div>
+                            <div style="font-size:12px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${openBal.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
+                            <div style="font-size:8.5px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;">Amount In</div>
+                            <div style="font-size:12px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${amtIn.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:7px;padding:7px 9px;">
+                            <div style="font-size:8.5px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.5px;">Amount Out</div>
+                            <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${amtOut.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:7px 9px;">
+                            <div style="font-size:8.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;">Closing Bal</div>
+                            <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${closingBal.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        html += `</div>
+        <button class="m-submit-btn secondary" style="margin-top:14px;" onclick="app.openGroupAccountsModal('${groupName}')">
+            <i class="fa-solid fa-arrow-left"></i> Back to Accounts
+        </button>`;
+
+        this.updateModalContent(`${detail.accountName} — Members`, html, () => this.openGroupAccountsModal(groupName), style.icon, style.grad);
     },
 
     openGroupStatementModal(groupName) {
@@ -2094,10 +2242,40 @@ const app = {
         container.innerHTML = `<div style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:20px auto;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
             <h2 style="margin-bottom:1rem;color:#0c8f44;">Set Personal PIN</h2>
             <p style="color:#6b7280;margin-bottom:1rem;">You need a 4-digit PIN to access your personal wallet.</p>
-            <div class="m-field"><label>New PIN</label><input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric"></div>
-            <div class="m-field"><label>Confirm PIN</label><input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+            <div class="m-field">
+                <label>New PIN</label>
+                <div style="position: relative;">
+                    <input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; font-weight: 700; text-align: center;">
+                    <span onclick="app.togglePinVisibility('newPersonalPin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                        <i class="fa-solid fa-eye-slash"></i>
+                    </span>
+                </div>
+            </div>
+            <div class="m-field">
+                <label>Confirm PIN</label>
+                <div style="position: relative;">
+                    <input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; font-weight: 700; text-align: center;">
+                    <span onclick="app.togglePinVisibility('confirmPersonalPin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                        <i class="fa-solid fa-eye-slash"></i>
+                    </span>
+                </div>
+            </div>
             <button class="m-submit-btn" onclick="app.createPersonalPin()"><i class="fa-solid fa-check-circle"></i> Create PIN</button>
         </div>`;
+    },
+
+    togglePinVisibility(inputId, toggleEl) {
+        const input = document.getElementById(inputId);
+        const icon = toggleEl.querySelector('i');
+        if (input && icon) {
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye-slash';
+            }
+        }
     },
 
     async createPersonalPin() {
@@ -2116,9 +2294,33 @@ const app = {
     showNewPinFormModal() {
         const html = `
         <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Enter your <b>Current PIN</b> first, then choose a <b>New PIN</b>.</span></div>
-        <div class="m-field"><label>Current PIN</label><input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div>
-        <div class="m-field"><label>New 4-Digit PIN</label><input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div>
-        <div class="m-field"><label>Confirm New PIN</label><input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-weight:700;"></div>
+        <div class="m-field">
+            <label>Current PIN</label>
+            <div style="position: relative;">
+                <input type="password" id="oldPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; letter-spacing:4px; font-weight:700; text-align: center;">
+                <span onclick="app.togglePinVisibility('oldPersonalPin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                    <i class="fa-solid fa-eye-slash"></i>
+                </span>
+            </div>
+        </div>
+        <div class="m-field">
+            <label>New 4-Digit PIN</label>
+            <div style="position: relative;">
+                <input type="password" id="newChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; letter-spacing:4px; font-weight:700; text-align: center;">
+                <span onclick="app.togglePinVisibility('newChangePin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                    <i class="fa-solid fa-eye-slash"></i>
+                </span>
+            </div>
+        </div>
+        <div class="m-field">
+            <label>Confirm New PIN</label>
+            <div style="position: relative;">
+                <input type="password" id="confirmChangePin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; letter-spacing:4px; font-weight:700; text-align: center;">
+                <span onclick="app.togglePinVisibility('confirmChangePin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                    <i class="fa-solid fa-eye-slash"></i>
+                </span>
+            </div>
+        </div>
         <button class="m-submit-btn" onclick="app.changePersonalPin()"><i class="fa-solid fa-check-circle"></i> Save New PIN</button>`;
         this.updateModalContent('Set New PIN', html, () => this.openModal('Change PIN'), 'fa-lock');
     },

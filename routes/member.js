@@ -589,6 +589,128 @@ router.put("/group/:groupNumber/contribution/:accountNumber/transaction", (req, 
    res.json(defaultMemberStructure());
  });
 
+// POST /member/group-accounts-schema
+// Returns the accountSchema (account types) for a group and, for each account type,
+// lists all members with their individual financials for that account.
+router.post("/group-accounts-schema", (req, res) => {
+  const { groupName, accountNumber } = req.body;
+  if (!groupName && !accountNumber) {
+    return res.status(400).json({ error: "groupName or accountNumber is required" });
+  }
+
+  let data;
+  try {
+    data = readJSON(memberFile, defaultMemberStructure());
+  } catch (e) {
+    console.error('[group-accounts-schema] Error reading memberFile:', e.message);
+    return res.status(500).json({ error: 'Could not read member data: ' + e.message });
+  }
+
+  // Strategy 1: Direct key lookup by accountNumber (most reliable — e.g. "2540422491234002")
+  let foundGroup = null;
+  if (accountNumber && data && data.groups) {
+    const trimmedAccNum = String(accountNumber).trim();
+    if (data.groups[trimmedAccNum]) {
+      foundGroup = data.groups[trimmedAccNum];
+      console.log('[group-accounts-schema] Found by accountNumber key:', trimmedAccNum);
+    }
+  }
+
+  // Strategy 2: Fall back to case-insensitive groupName match
+  if (!foundGroup && groupName && data && data.groups) {
+    const wantedName = String(groupName).trim().toLowerCase();
+    for (const key in data.groups) {
+      const g = data.groups[key];
+      if (g && g.groupName && g.groupName.trim().toLowerCase() === wantedName) {
+        foundGroup = g;
+        console.log('[group-accounts-schema] Found by groupName:', g.groupName, 'at key:', key);
+        break;
+      }
+    }
+  }
+
+  if (!foundGroup) {
+    const available = data && data.groups
+      ? Object.entries(data.groups).map(([k, g]) => `${k} (${g && g.groupName})`)
+      : [];
+    console.warn('[group-accounts-schema] Group not found. accountNumber:', accountNumber, '| groupName:', groupName, '| Available:', available);
+    return res.status(404).json({
+      error: `Group not found. Tried accountNumber="${accountNumber}" and name="${groupName}". Available groups: ${available.join(', ') || 'none'}`
+    });
+  }
+
+  const members = foundGroup.members || {};
+
+  // Build accountSchema from actual member account data (first member has accounts)
+  // Fall back to default schema if no members
+  const defaultSchema = {
+    "001": { accountId: "001", accountName: "Saving",       expectedAmount: "100" },
+    "002": { accountId: "002", accountName: "Registration", expectedAmount: "100" },
+    "003": { accountId: "003", accountName: "latenes",      expectedAmount: "100" },
+    "004": { accountId: "004", accountName: "welfare",      expectedAmount: "100" }
+  };
+
+  // Derive accountSchema from the first member's accounts or use default
+  let accountSchema = defaultSchema;
+  const memberKeys = Object.keys(members);
+  if (memberKeys.length > 0) {
+    const firstMember = members[memberKeys[0]];
+    if (firstMember.accounts && Object.keys(firstMember.accounts).length > 0) {
+      accountSchema = {};
+      for (const accId in firstMember.accounts) {
+        const acc = firstMember.accounts[accId];
+        accountSchema[accId] = {
+          accountId:      acc.accountId      || accId,
+          accountName:    acc.accountName    || accId,
+          expectedAmount: acc.expectedAmount || "100"
+        };
+      }
+    }
+  }
+
+  // Build per-account member list
+  const accountDetails = {};
+  for (const accId in accountSchema) {
+    const schema = accountSchema[accId];
+    const memberList = [];
+
+    for (const phone in members) {
+      const member = members[phone];
+      const acc = member.accounts && member.accounts[accId];
+      const fins = (acc && acc.financials) || {
+        openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0
+      };
+      memberList.push({
+        memberId:       member.memberId || phone,
+        name:           member.name     || phone,
+        openingBalance: fins.openingBalance || 0,
+        amountIn:       fins.amountIn       || 0,
+        amountOut:      fins.amountOut      || 0,
+        closingBalance: fins.closingBalance  || 0
+      });
+    }
+
+    accountDetails[accId] = {
+      accountId:      schema.accountId,
+      accountName:    schema.accountName,
+      expectedAmount: schema.expectedAmount,
+      members:        memberList,
+      // Group-level totals
+      totalIn:  memberList.reduce((s, m) => s + Number(m.amountIn),       0),
+      totalOut: memberList.reduce((s, m) => s + Number(m.amountOut),      0),
+      totalBalance: memberList.reduce((s, m) => s + Number(m.closingBalance), 0)
+    };
+  }
+
+  res.json({
+    groupName:      foundGroup.groupName,
+    groupNumber:    foundGroup.groupNumber,
+    accountSchema,
+    accountDetails,
+    totalMembers:   memberKeys.length
+  });
+});
+
 router.post("/verify-group", (req, res) => {
   const { groupName } = req.body;
 

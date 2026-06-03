@@ -512,7 +512,7 @@ const migratePinsFromJSON = async () => {
   
   console.log('🚀 Starting PIN migration from data.json → MongoDB...\n');
   
-  const dataFile = path.join(__dirname, 'data.json');
+  const dataFile = path.join(__dirname, 'data/data.json');
   
   const raw = fs.readFileSync(dataFile, 'utf8');
   const users = JSON.parse(raw);
