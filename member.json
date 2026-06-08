@@ -1,283 +1,378 @@
 {
-  "group": {
-    "2540422491234002": {
-      "groupNumber": 1,
-      "groupName": "ONE SACCO ",
-      "groupFinancials": {
-        "totalOpeningBalance": 0,
-        "totalAmountIn": 0,
-        "totalAmountOut": 0,
-        "totalClosingBalance": 0,
-        "availableWithdrawalBalance": 0
+  "regions": {
+    "Siaya": {
+      "county": "Siaya",
+      "countryTransaction": {
+        "openingBalance": 0,
+        "closingBalance": 0,
+        "transactions": []
       },
-      "accountSchema": {
-        "001": {
-          "accountId": "001",
-          "accountName": "Saving",
-          "expectedAmount": "100"
-        },
-        "002": {
-          "accountId": "002",
-          "accountName": "Registration",
-          "expectedAmount": "100"
-        },
-        "003": {
-          "accountId": "003",
-          "accountName": "latenes",
-          "expectedAmount": "100"
-        },
-        "004": {
-          "accountId": "004",
-          "accountName": "welfare",
-          "expectedAmount": "100"
+      "constituencies": [
+        {
+          "name": "Ugenya",
+          "constituencyTransaction": {
+            "openingBalance": 0,
+            "closingBalance": 0,
+            "transactions": []
+          },
+          "wards": [
+            {
+              "name": "East Ugenya",
+              "wardTransaction": {
+                "openingBalance": 0,
+                "closingBalance": 0,
+                "transactions": []
+              },
+              "data": [
+                {
+                  "groupId": "2540422491234002",
+                  "groupNumber": 1,
+                  "groupName": "ONE SACCO",
+                  "totalProposedMembers": 4,
+                  "phase": 3,
+                  "groupTransaction": {
+                    "intervalperformance": {
+                      "openingBalance": 0,
+                      "amountIn": 0,
+                      "amountOut": 0,
+                      "closingBalance": 0,
+                      "roundNumber": 0,
+                      "transactionCode": ""
+                    },
+                    "transactions": []
+                  },
+                  "accountSchema": {
+                    "001": {
+                      "accountId": "001",
+                      "accountName": "Saving",
+                      "expectedAmount": "100"
+                    },
+                    "002": {
+                      "accountId": "002",
+                      "accountName": "Registration",
+                      "expectedAmount": "100"
+                    },
+                    "003": {
+                      "accountId": "003",
+                      "accountName": "latenes",
+                      "expectedAmount": "100"
+                    },
+                    "004": {
+                      "accountId": "004",
+                      "accountName": "welfare",
+                      "expectedAmount": "100"
+                    }
+                  },
+                  "members": {
+                    "0740415992": {
+                      "memberId": "0740415992",
+                      "name": "brian okeyo",
+                      "memberFinancials": {
+                        "openingBalance": 0,
+                        "amountIn": 0,
+                        "amountOut": 0,
+                        "closingBalance": 0
+                      },
+                      "accounts": {
+                        "001": {
+                          "accountId": "001",
+                          "accountName": "Saving",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "002": {
+                          "accountId": "002",
+                          "accountName": "Registration",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "003": {
+                          "accountId": "003",
+                          "accountName": "latenes",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "004": {
+                          "accountId": "004",
+                          "accountName": "welfare",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        }
+                      },
+                      "processedDeductions": []
+                    },
+                    "0700051102": {
+                      "memberId": "0700051102",
+                      "name": "brian ba",
+                      "memberFinancials": {
+                        "openingBalance": 0,
+                        "amountIn": 0,
+                        "amountOut": 0,
+                        "closingBalance": 0
+                      },
+                      "accounts": {
+                        "001": {
+                          "accountId": "001",
+                          "accountName": "Saving",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "002": {
+                          "accountId": "002",
+                          "accountName": "Registration",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "003": {
+                          "accountId": "003",
+                          "accountName": "latenes",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "004": {
+                          "accountId": "004",
+                          "accountName": "welfare",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        }
+                      },
+                      "processedDeductions": []
+                    },
+                    "0746001141": {
+                      "memberId": "0746001141",
+                      "name": "brian omolo",
+                      "memberFinancials": {
+                        "openingBalance": 0,
+                        "amountIn": 0,
+                        "amountOut": 0,
+                        "closingBalance": 0
+                      },
+                      "accounts": {
+                        "001": {
+                          "accountId": "001",
+                          "accountName": "Saving",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "002": {
+                          "accountId": "002",
+                          "accountName": "Registration",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "003": {
+                          "accountId": "003",
+                          "accountName": "latenes",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "004": {
+                          "accountId": "004",
+                          "accountName": "welfare",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        }
+                      },
+                      "processedDeductions": []
+                    },
+                    "0740404040": {
+                      "memberId": "0740404040",
+                      "name": "Brian 0m0ndi",
+                      "memberFinancials": {
+                        "openingBalance": 0,
+                        "amountIn": 0,
+                        "amountOut": 0,
+                        "closingBalance": 0
+                      },
+                      "accounts": {
+                        "001": {
+                          "accountId": "001",
+                          "accountName": "Saving",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "002": {
+                          "accountId": "002",
+                          "accountName": "Registration",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "003": {
+                          "accountId": "003",
+                          "accountName": "latenes",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        },
+                        "004": {
+                          "accountId": "004",
+                          "accountName": "welfare",
+                          "expectedAmount": "100",
+                          "financials": {
+                            "openingBalance": 0,
+                            "amountIn": 0,
+                            "amountOut": 0,
+                            "closingBalance": 0
+                          },
+                          "transactionHistory": []
+                        }
+                      },
+                      "processedDeductions": []
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
+      ]
+    },
+    "Bomet": {
+      "county": "Bomet",
+      "countryTransaction": {
+        "openingBalance": 0,
+        "closingBalance": 0,
+        "transactions": []
       },
-      "members": {
-        "0740415992": {
-          "memberId": "0740415992",
-          "name": "brian okeyo",
-          "memberFinancials": {
+      "constituencies": [
+        {
+          "name": "Chepalungu",
+          "constituencyTransaction": {
             "openingBalance": 0,
-            "amountIn": 0,
-            "amountOut": 0,
-            "closingBalance": 0
+            "closingBalance": 0,
+            "transactions": []
           },
-          "accounts": {
-            "001": {
-              "accountId": "001",
-              "accountName": "Saving",
-              "expectedAmount": "100",
-              "financials": {
+          "wards": [
+            {
+              "name": "Chebunyo",
+              "wardTransaction": {
                 "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
+                "closingBalance": 0,
+                "transactions": []
               },
-              "transactionHistory": []
-            },
-            "002": {
-              "accountId": "002",
-              "accountName": "Registration",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "003": {
-              "accountId": "003",
-              "accountName": "latenes",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "004": {
-              "accountId": "004",
-              "accountName": "welfare",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
+              "data": []
             }
-          },
-          "processedDeductions": []
-        },
-        "0700051102": {
-          "memberId": "0700051102",
-          "name": "brian ba",
-          "memberFinancials": {
-            "openingBalance": 0,
-            "amountIn": 0,
-            "amountOut": 0,
-            "closingBalance": 0
-          },
-          "accounts": {
-            "001": {
-              "accountId": "001",
-              "accountName": "Saving",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "002": {
-              "accountId": "002",
-              "accountName": "Registration",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "003": {
-              "accountId": "003",
-              "accountName": "latenes",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "004": {
-              "accountId": "004",
-              "accountName": "welfare",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            }
-          },
-          "processedDeductions": []
-        },
-        "0746001141": {
-          "memberId": "0746001141",
-          "name": "brian omolo",
-          "memberFinancials": {
-            "openingBalance": 0,
-            "amountIn": 0,
-            "amountOut": 0,
-            "closingBalance": 0
-          },
-          "accounts": {
-            "001": {
-              "accountId": "001",
-              "accountName": "Saving",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "002": {
-              "accountId": "002",
-              "accountName": "Registration",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "003": {
-              "accountId": "003",
-              "accountName": "latenes",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "004": {
-              "accountId": "004",
-              "accountName": "welfare",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            }
-          },
-          "processedDeductions": []
-        },
-        "0740404040": {
-          "memberId": "0740404040",
-          "name": "Brian 0m0ndi",
-          "memberFinancials": {
-            "openingBalance": 0,
-            "amountIn": 0,
-            "amountOut": 0,
-            "closingBalance": 0
-          },
-          "accounts": {
-            "001": {
-              "accountId": "001",
-              "accountName": "Saving",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "002": {
-              "accountId": "002",
-              "accountName": "Registration",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "003": {
-              "accountId": "003",
-              "accountName": "latenes",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            },
-            "004": {
-              "accountId": "004",
-              "accountName": "welfare",
-              "expectedAmount": "100",
-              "financials": {
-                "openingBalance": 0,
-                "amountIn": 0,
-                "amountOut": 0,
-                "closingBalance": 0
-              },
-              "transactionHistory": []
-            }
-          },
-          "processedDeductions": []
+          ]
         }
-      }
+      ]
+    },
+    "Kericho": {
+      "county": "Kericho",
+      "countryTransaction": {
+        "openingBalance": 0,
+        "closingBalance": 0,
+        "transactions": []
+      },
+      "constituencies": [
+        {
+          "name": "Kipkelion East",
+          "constituencyTransaction": {
+            "openingBalance": 0,
+            "closingBalance": 0,
+            "transactions": []
+          },
+          "wards": [
+            {
+              "name": "Chepseon",
+              "wardTransaction": {
+                "openingBalance": 0,
+                "closingBalance": 0,
+                "transactions": []
+              },
+              "data": []
+            }
+          ]
+        }
+      ]
     }
   }
 }
