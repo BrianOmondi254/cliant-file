@@ -1368,45 +1368,68 @@ router.get("/conform", async (req, res) => {
      }
 
      const agents = loadJSON(agentFile);
-     const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
-     const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
-     const users = await getUsersFromMongo();
+      const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
+      const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
+      const users = await getUsersFromMongo();
 
-     const currentPhoneNumber = req.session.user.phoneNumber;
-     const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+      const currentPhoneNumber = req.session.user.phoneNumber;
+      const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
 
-     if (!agent) {
-       return res.redirect("/agent");
-     }
-
-     const userMap = buildUserNameMap(users);
-
-      // Find corresponding group in member.json by matching groupName (case-insensitive, trim whitespace)
-      let groupMembersData = {};
-      let groupFinancials = {};
-      let groupAccountSchema = {};
-      if (membersData.groups) {
-        const normalizedGroupName = normStr(groupName);
-        const matchingGroup = Object.values(membersData.groups).find(g =>
-          g.groupName && normStr(g.groupName) === normalizedGroupName
-        );
-        if (matchingGroup) {
-          groupMembersData = matchingGroup.members || {};
-          groupFinancials = matchingGroup.groupFinancials || {};
-          groupAccountSchema = matchingGroup.accountSchema || {};
-        }
-      } else if (membersData.group) {
-        // Fallback to old structure
-        const normalizedGroupName = normStr(groupName);
-        const matchingGroup = Object.values(membersData.group).find(g =>
-          g.groupName && normStr(g.groupName) === normalizedGroupName
-        );
-        if (matchingGroup) {
-          groupMembersData = matchingGroup.members || {};
-          groupFinancials = matchingGroup.groupFinancials || {};
-          groupAccountSchema = matchingGroup.accountSchema || {};
-        }
+      if (!agent) {
+        return res.redirect("/agent");
       }
+
+      const userMap = buildUserNameMap(users);
+
+       // Find corresponding group in member.json (handles both regional and flat formats)
+       let groupMembersData = {};
+       let groupFinancials = {};
+       let groupAccountSchema = {};
+
+       // Helper: flatten regional member.json -> { [groupName]: { members, groupFinancials, accountSchema } }
+       const flattenMemberData = (md) => {
+         const flat = {};
+         if (md.groups) {
+           // Old flat format
+           for (const [gKey, g] of Object.entries(md.groups)) {
+             flat[(g.groupName || gKey).trim()] = {
+               members: g.members || {},
+               groupFinancials: g.groupFinancials || {},
+               accountSchema: g.accountSchema || {}
+             };
+           }
+         } else if (typeof md === 'object' && !Array.isArray(md)) {
+           // New regional format: county -> constituencies -> wards -> data[]
+           for (const county in md) {
+             if (!md[county].constituencies) continue;
+             for (const cons of md[county].constituencies) {
+               for (const ward of cons.wards) {
+                 if (Array.isArray(ward.data)) {
+                   ward.data.forEach(g => {
+                     const gname = (g.groupName || '').trim();
+                     if (!gname) return;
+                     flat[gname] = {
+                       members: g.regionalMembers || {},
+                       groupFinancials: g.groupFinancials || {},
+                       accountSchema: g.accountSchema || {}
+                     };
+                   });
+                 }
+               }
+             }
+           }
+         }
+         return flat;
+       };
+
+       const flatMembers = flattenMemberData(membersData);
+       const normalizedGroupName = normStr(groupName);
+       const match = flatMembers[normalizedGroupName];
+       if (match) {
+         groupMembersData = match.members;
+         groupFinancials = match.groupFinancials;
+         groupAccountSchema = match.accountSchema;
+       }
 
     // Enhance group with member details from member.json
     const enrichedMembers = {};

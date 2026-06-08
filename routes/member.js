@@ -2,8 +2,20 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 
+const {
+  saveMemberGroupToMongo,
+  addMemberToMemberGroup,
+  updateMemberAccountInMongo,
+  getMemberGroupFromMongo,
+  saveMemberDataToMongo,
+  findOrCreateMemberGroup,
+  MemberGroup,
+  ensureMongoReady
+} = require('../mongoose');
+
 const router = express.Router();
 const memberFile = path.join(__dirname, "../tran_account/member.json");
+const memberRegionsFile = path.join(__dirname, "../member.json");
 const generalFile = path.join(__dirname, "../general.json");
 const dataFile = path.join(__dirname, "../data.json");
 
@@ -18,6 +30,26 @@ const readJSON = (file, fallback = null) => {
     console.error(`Error reading ${file}:`, err.message);
     return fallback;
   }
+};
+
+const getRegionTransaction = async () => {
+  try {
+    const ready = await ensureMongoReady();
+    if (ready) {
+      const mongoose = require('mongoose');
+      const col = mongoose.connection.db.collection('groups-members');
+      const doc = await col.findOne({ _id: 'regionTransaction' });
+      if (doc && doc.regionTransaction) {
+        return doc.regionTransaction;
+      }
+    }
+  } catch (e) {
+    console.error('[regionTransaction] MongoDB read error:', e.message);
+  }
+  
+  // Fallback to JSON file
+  const memberData = readJSON(memberRegionsFile, {});
+  return memberData.regions?.regionTransaction || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
 };
 
 const writeJSON = (file, data) => {
@@ -54,6 +86,36 @@ const restructureData = (data) => {
  const defaultMemberStructure = () => ({
    groups: {}
  });
+
+const submitMemberDataToMongo = async (memberData, source) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) {
+      console.warn('[Mongo] Skipping submit for MongoDB not ready:', source);
+      return null;
+    }
+
+    const groupsMap = memberData.group || memberData.groups;
+    if (!groupsMap || typeof groupsMap !== 'object') {
+      console.warn('[Mongo] Skipping submit for no groups found:', source);
+      return null;
+    }
+
+    const results = [];
+    for (const key of Object.keys(groupsMap)) {
+      const group = groupsMap[key];
+      const payload = {};
+      Object.assign(payload, group);
+      payload.groupName = group.groupName || key;
+      const result = await saveMemberGroupToMongo(payload);
+      results.push(result);
+    }
+    return results;
+  } catch (err) {
+    console.error('[Mongo] submit member failed (' + source + '):', err.message);
+    return null;
+  }
+};
 
 const normalizeKenyanPhone = (p = "") => {
   let digits = String(p).replace(/\D/g, "");
@@ -389,12 +451,67 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
    });
 
     writeJSON(memberFile, memberData);
+    submitMemberDataToMongo(memberData, 'sync').catch(err => console.error('[Mongo] submit member failed:', err.message));
   };
 
-router.post("/sync", (req, res) => {
+  // Sync regional member.json (regions structure) to MongoDB groups-members collection
+  const syncRegionsToMongo = async () => {
+    try {
+      const ready = await ensureMongoReady();
+      if (!ready) {
+        console.warn('[regions-sync] MongoDB not ready, skipping');
+        return;
+      }
+      
+      const mongoose = require('mongoose');
+      const col = mongoose.connection.db.collection('groups-members');
+      
+      const memberData = readJSON(memberRegionsFile, { regions: {} });
+      const regions = memberData.regions || {};
+      
+      // Sync regionTransaction
+      if (regions.regionTransaction) {
+        await col.updateOne(
+          { _id: 'regionTransaction' },
+          { $set: { regionTransaction: regions.regionTransaction, syncedAt: new Date().toISOString() } },
+          { upsert: true }
+        );
+      }
+      
+      // Sync each county - preserve FULL structure including constituencies and wards
+      for (const countyKey in regions) {
+        if (countyKey === 'regionTransaction') continue;
+        
+        const countyDoc = regions[countyKey];
+        if (!countyDoc || !countyDoc.county) continue;
+        
+        // Preserve full nested structure
+        const payload = {
+          county: countyDoc.county,
+          countyId: countyDoc.countyId || countyKey,
+          countryTransaction: countyDoc.countryTransaction || {},
+          constituencies: countyDoc.constituencies || [],
+          syncedAt: new Date().toISOString()
+        };
+        
+        await col.updateOne(
+          { county: countyDoc.county },
+          { $set: payload },
+          { upsert: true }
+        );
+      }
+      
+      console.log('[regions-sync] Synced to MongoDB successfully');
+    } catch (e) {
+      console.error('[regions-sync] Error:', e.message);
+    }
+  };
+
+router.post("/sync", async (req, res) => {
   try {
     syncFromGeneral();
-    res.json({ success: true, message: "Synced from general.json" });
+    await syncRegionsToMongo();
+    res.json({ success: true, message: "Synced from general.json and regions to MongoDB" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -430,6 +547,7 @@ router.get("/group/:groupNumber/member/:memberId", (req, res) => {
 router.post("/init", (req, res) => {
   const data = defaultMemberStructure();
   writeJSON(memberFile, data);
+  submitMemberDataToMongo(data, 'init').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, message: "member.json initialized", data });
 });
 
@@ -447,6 +565,7 @@ router.post("/group", (req, res) => {
 
   data.groups[accountNum] = newGroup;
   writeJSON(memberFile, data);
+  submitMemberDataToMongo(data, 'add-group').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, group: newGroup });
 });
 
@@ -537,6 +656,7 @@ router.post("/group/:groupNumber/member", (req, res) => {
   };
 
   writeJSON(memberFile, data);
+  submitMemberDataToMongo(data, 'add-member').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, member: group.members[memberId] });
 });
 
@@ -556,6 +676,7 @@ router.put("/group/:groupNumber/member/:memberId/account/:accountNumber/transact
   account.transactionHistory = transactionData.transactions || transactionData || [];
 
   writeJSON(memberFile, data);
+  submitMemberDataToMongo(data, 'update-transaction').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, account });
 });
 
@@ -582,6 +703,7 @@ router.put("/group/:groupNumber/contribution/:accountNumber/transaction", (req, 
   group.otherContributions[accountNumber].transactions = transactionData;
 
   writeJSON(memberFile, data);
+  submitMemberDataToMongo(data, 'update-contribution').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, contribution: group.otherContributions[accountNumber] });
 });
 
@@ -592,54 +714,53 @@ router.put("/group/:groupNumber/contribution/:accountNumber/transaction", (req, 
 // POST /member/group-accounts-schema
 // Returns the accountSchema (account types) for a group and, for each account type,
 // lists all members with their individual financials for that account.
-router.post("/group-accounts-schema", (req, res) => {
+// Data source: MongoDB `groups` collection (MemberGroup model) ONLY.
+router.post("/group-accounts-schema", async (req, res) => {
   const { groupName, accountNumber } = req.body;
   if (!groupName && !accountNumber) {
     return res.status(400).json({ error: "groupName or accountNumber is required" });
   }
 
-  let data;
-  try {
-    data = readJSON(memberFile, defaultMemberStructure());
-  } catch (e) {
-    console.error('[group-accounts-schema] Error reading memberFile:', e.message);
-    return res.status(500).json({ error: 'Could not read member data: ' + e.message });
-  }
-
-  // Strategy 1: Direct key lookup by accountNumber (most reliable — e.g. "2540422491234002")
   let foundGroup = null;
-  if (accountNumber && data && data.groups) {
-    const trimmedAccNum = String(accountNumber).trim();
-    if (data.groups[trimmedAccNum]) {
-      foundGroup = data.groups[trimmedAccNum];
-      console.log('[group-accounts-schema] Found by accountNumber key:', trimmedAccNum);
+
+  // Strategy 1: Lookup by groupName (stored as groupKey in MongoDB)
+  if (groupName) {
+    foundGroup = await getMemberGroupFromMongo(groupName);
+    if (foundGroup) {
+      console.log('[group-accounts-schema] Found in MongoDB by groupName:', groupName);
     }
   }
 
-  // Strategy 2: Fall back to case-insensitive groupName match
-  if (!foundGroup && groupName && data && data.groups) {
-    const wantedName = String(groupName).trim().toLowerCase();
-    for (const key in data.groups) {
-      const g = data.groups[key];
-      if (g && g.groupName && g.groupName.trim().toLowerCase() === wantedName) {
-        foundGroup = g;
-        console.log('[group-accounts-schema] Found by groupName:', g.groupName, 'at key:', key);
-        break;
-      }
+  // Strategy 2: Try accountNumber as groupKey (legacy JSON structure used phone numbers as keys)
+  if (!foundGroup && accountNumber) {
+    const trimmedAccNum = String(accountNumber).trim();
+    foundGroup = await MemberGroup.findOne({ groupKey: trimmedAccNum }).lean();
+    if (foundGroup) {
+      console.log('[group-accounts-schema] Found in MongoDB by accountNumber groupKey:', trimmedAccNum);
     }
   }
 
   if (!foundGroup) {
-    const available = data && data.groups
-      ? Object.entries(data.groups).map(([k, g]) => `${k} (${g && g.groupName})`)
-      : [];
-    console.warn('[group-accounts-schema] Group not found. accountNumber:', accountNumber, '| groupName:', groupName, '| Available:', available);
     return res.status(404).json({
-      error: `Group not found. Tried accountNumber="${accountNumber}" and name="${groupName}". Available groups: ${available.join(', ') || 'none'}`
+      error: `Group not found in MongoDB. Tried groupName="${groupName}" and accountNumber="${accountNumber}".`
     });
   }
 
   const members = foundGroup.members || {};
+
+  // ── Ensure member accounts are plain objects (not Mongoose Maps) ──
+  const normalizedMembers = {};
+  for (const phone in members) {
+    const m = members[phone];
+    normalizedMembers[phone] = {
+      memberId: m.memberId || phone,
+      name:     m.name     || phone,
+      role:     m.role     || 'member',
+      accounts: (m.accounts && typeof m.accounts === 'object' && !Array.isArray(m.accounts))
+        ? { ...m.accounts }
+        : (m.accounts || {})
+    };
+  }
 
   // Build accountSchema from actual member account data (first member has accounts)
   // Fall back to default schema if no members
@@ -650,15 +771,16 @@ router.post("/group-accounts-schema", (req, res) => {
     "004": { accountId: "004", accountName: "welfare",      expectedAmount: "100" }
   };
 
-  // Derive accountSchema from the first member's accounts or use default
   let accountSchema = defaultSchema;
-  const memberKeys = Object.keys(members);
+  const memberKeys = Object.keys(normalizedMembers);
   if (memberKeys.length > 0) {
-    const firstMember = members[memberKeys[0]];
-    if (firstMember.accounts && Object.keys(firstMember.accounts).length > 0) {
+    const firstMember = normalizedMembers[memberKeys[0]];
+    const firstAccounts = firstMember.accounts || {};
+    const accIds = Object.keys(firstAccounts);
+    if (accIds.length > 0) {
       accountSchema = {};
-      for (const accId in firstMember.accounts) {
-        const acc = firstMember.accounts[accId];
+      for (const accId of accIds) {
+        const acc = firstAccounts[accId];
         accountSchema[accId] = {
           accountId:      acc.accountId      || accId,
           accountName:    acc.accountName    || accId,
@@ -674,8 +796,8 @@ router.post("/group-accounts-schema", (req, res) => {
     const schema = accountSchema[accId];
     const memberList = [];
 
-    for (const phone in members) {
-      const member = members[phone];
+    for (const phone in normalizedMembers) {
+      const member = normalizedMembers[phone];
       const acc = member.accounts && member.accounts[accId];
       const fins = (acc && acc.financials) || {
         openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0
@@ -1118,6 +1240,7 @@ router.post("/process-deduction", (req, res) => {
   });
   
   writeJSON(memberFile, data);
+  submitMemberDataToMongo(data, 'deductions').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, message: `Processed ${transactionCount} deductions`, processed: transactionCount });
 });
 
@@ -1664,7 +1787,8 @@ router.post("/add-member", (req, res) => {
   };
   
   writeJSON(memberFile, data);
-  
+
+  submitMemberDataToMongo(data, 'add-member').catch(err => console.error('[Mongo] submit member failed:', err.message));
   res.json({ success: true, member: group.members[phone] });
 });
 
@@ -2038,6 +2162,7 @@ const memberFile = path.join(__dirname, "../tran_account/member.json");
           createdAt: new Date().toISOString()
         };
         writeJSON(memberFile, memberData);
+        submitMemberDataToMongo(memberData, 'add-member-request').catch(err => console.error('[Mongo] submit member failed:', err.message));
       }
 
       // === GET APPROVER INFO ===
@@ -2180,4 +2305,156 @@ router.get("/get-by-phone", (req, res) => {
     } 
   });
 });
+
+// GET /member/region-transaction - Get region-level transaction data
+router.get("/region-transaction", async (req, res) => {
+  try {
+    const regionTxn = await getRegionTransaction();
+    res.json({ success: true, regionTransaction: regionTxn });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /member/region-transaction - Update region-level transaction data
+router.post("/region-transaction", async (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({ success: false, error: "Unauthorized" });
+  }
+  
+  const { openingBalance, amountIn, amountOut, closingBalance } = req.body;
+  
+  const regionTxn = {
+    openingBalance: Number(openingBalance) || 0,
+    amountIn: Number(amountIn) || 0,
+    amountOut: Number(amountOut) || 0,
+    closingBalance: Number(closingBalance) || 0
+  };
+  
+  try {
+    const ready = await ensureMongoReady();
+    if (ready) {
+      const mongoose = require('mongoose');
+      const col = mongoose.connection.db.collection('groups-members');
+      await col.updateOne(
+        { _id: 'regionTransaction' },
+        { $set: { regionTransaction: regionTxn, syncedAt: new Date().toISOString() } },
+        { upsert: true }
+      );
+    }
+    
+    // Also persist to member.json
+    const memberData = readJSON(memberRegionsFile, { regions: {} });
+    if (!memberData.regions) memberData.regions = {};
+    memberData.regions.regionTransaction = regionTxn;
+    writeJSON(memberRegionsFile, memberData);
+    
+    res.json({ success: true, regionTransaction: regionTxn });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /member/regions - Get all regions data (for admin/dashboard) - preserves full nested structure
+router.get("/regions", async (req, res) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (ready) {
+      const mongoose = require('mongoose');
+      const col = mongoose.connection.db.collection('groups-members');
+      const docs = await col.find({ countyId: { $ne: 'region' } }).toArray();
+      const regions = {};
+      for (const doc of docs) {
+        regions[doc.county] = {
+          county: doc.county,
+          countryTransaction: doc.countryTransaction,
+          constituencies: doc.constituencies || [],
+          syncedAt: doc.syncedAt
+        };
+      }
+      return res.json({ success: true, regions });
+    }
+  } catch (e) {
+    console.error('[regions] MongoDB read error:', e.message);
+  }
+  
+  // Fallback to JSON format
+  const memberData = readJSON(memberRegionsFile, { regions: {} });
+  res.json({ success: true, regions: memberData.regions || {} });
+});
+
+// GET /member/group-by-location - Get group by county/constituency/ward - uses nested constituencies/wards structure
+router.get("/group-by-location", async (req, res) => {
+  const { county, constituency, ward } = req.query;
+  
+  // Try MongoDB first
+  try {
+    const ready = await ensureMongoReady();
+    if (ready) {
+      const mongoose = require('mongoose');
+      const col = mongoose.connection.db.collection('groups-members');
+      const query = {};
+      if (county) query.county = county;
+      const doc = await col.findOne(query);
+      
+      if (doc && doc.constituencies) {
+        let constituencies = doc.constituencies;
+        let groups = [];
+        
+        // Navigate nested structure
+        constituencies.forEach(cons => {
+          if (constituency && cons.name !== constituency) return;
+          
+          (cons.wards || []).forEach(w => {
+            if (ward && w.name !== ward) return;
+            (w.data || []).forEach(g => {
+              groups.push(g);
+            });
+          });
+        });
+        
+        return res.json({ success: true, county: doc.county, constituency, ward, groups });
+      }
+    }
+  } catch (e) {
+    console.error('[group-by-location] MongoDB read error:', e.message);
+  }
+  
+  // Fallback to JSON
+  const memberData = readJSON(memberRegionsFile, { regions: {} });
+  const regions = memberData.regions || {};
+  
+  const countyDoc = Object.values(regions).find(r => r.county === county);
+  if (!countyDoc) {
+    return res.json({ success: true, county, groups: [] });
+  }
+  
+  // Navigate the nested structure from JSON
+  let groups = [];
+  if (constituency && countyDoc.constituencies) {
+    const cons = countyDoc.constituencies.find(c => c.name === constituency);
+    if (cons && ward && cons.wards) {
+      const wardDoc = cons.wards.find(w => w.name === ward);
+      if (wardDoc) groups = wardDoc.data || [];
+    } else if (cons) {
+      cons.wards?.forEach(w => { groups.push(...(w.data || [])); });
+    }
+  } else {
+    // Get all groups from county
+    countyDoc.constituencies?.forEach(cons => {
+      cons.wards?.forEach(w => {
+        groups.push(...(w.data || []));
+      });
+    });
+  }
+  
+  res.json({ success: true, county, constituency, ward, groups });
+});
+
+// GET /member/region-summary - Get region-level transaction summary
+router.get("/region-summary", async (req, res) => {
+  const regionTxn = await getRegionTransaction();
+  res.json({ success: true, regionTransaction: regionTxn });
+});
+
 module.exports = router;

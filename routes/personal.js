@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -87,9 +87,36 @@ const flattenData = (data) => {
     if (!data) return flat;
     for (const county in data) {
         if (county === 'performance' || typeof data[county] !== 'object') continue;
-        for (const constituency in data[county]) {
+        const countyData = data[county];
+        // New nested format: county -> constituencies[] -> wards[] -> data[]
+        if (countyData.constituencies && Array.isArray(countyData.constituencies)) {
+            for (const cons of countyData.constituencies) {
+                const consName = cons.name || '';
+                if (!cons.wards || !Array.isArray(cons.wards)) continue;
+                for (const ward of cons.wards) {
+                    const wardName = (typeof ward === 'string') ? ward : (ward.name || 'Unknown Ward');
+                    const groupArray = (typeof ward === 'object' && ward.data && Array.isArray(ward.data))
+                        ? ward.data
+                        : [];
+                    groupArray.forEach(item => {
+                        if (typeof item === 'string') return;
+                        if (item && typeof item === 'object' && !item.isPerformance) {
+                            flat.push({
+                                ...item,
+                                county: item.county || county,
+                                constituency: item.constituency || consName,
+                                ward: item.ward || wardName,
+                            });
+                        }
+                    });
+                }
+            }
+            continue;
+        }
+        // Old / hybrid format: county -> constituency -> items[]
+        for (const constituency in countyData) {
             if (constituency === 'performance') continue;
-            const items = data[county][constituency];
+            const items = countyData[constituency];
             if (Array.isArray(items)) {
                 let currentWard = "Unknown Ward";
                 items.forEach(item => {
@@ -98,9 +125,9 @@ const flattenData = (data) => {
                     } else if (typeof item === 'object' && item !== null && !item.isPerformance) {
                         flat.push({
                             ...item,
-                            county,
-                            constituency,
-                            ward: currentWard
+                            county: item.county || county,
+                            constituency: item.constituency || constituency,
+                            ward: item.ward || currentWard,
                         });
                     }
                 });
@@ -143,18 +170,13 @@ router.get("/", async (req, res) => {
   try {
     const phone = req.session.user && req.session.user.phoneNumber;
 
-    const generalFile = path.join(__dirname, '../general.json');
-
-    const generalsRaw = readJSON(generalFile, {});
-    const generals = flattenData(generalsRaw);
-
     const checkItem = (item) => {
       if (!item) return false;
       let itemPhone = "";
       if (typeof item === 'string') itemPhone = item;
       else if (item.phoneNumber) itemPhone = item.phoneNumber;
       else if (item.phone) itemPhone = item.phone;
-      
+
       return norm(itemPhone) === norm(phone);
     };
 
@@ -163,14 +185,48 @@ router.get("/", async (req, res) => {
       if (checkItem(data)) return true;
       if (Array.isArray(data)) return data.some(search);
       if (typeof data === 'object') {
-        // Also check if any key matches (important for dealer.json hierarchy)
         const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
         if (keyMatch) return true;
-        // Only recurse into objects/arrays to avoid matching relationship strings (like dealerPhone)
         return Object.values(data).some(val => (typeof val === 'object' && val !== null) && search(val));
       }
       return false;
     };
+
+    // ── Fetch ALL groups from MongoDB `groups` collection (county-hierarchy) ──
+    const generals = [];
+    try {
+      const ready = await ensureMongoReady();
+      if (ready) {
+        const db = require('mongoose').connection.db;
+        const counties = await db.collection('groups').find({}).toArray();
+        for (const county of counties) {
+          const countyName = county.county || "";
+          for (const cons of county.constituencies || []) {
+            const consName = cons.name || "";
+            if (!cons.wards || !Array.isArray(cons.wards)) continue;
+            for (const ward of cons.wards) {
+              const wardName = (typeof ward === 'string') ? ward : (ward.name || "Unknown Ward");
+              const groupArray = (typeof ward === 'object' && ward.data && Array.isArray(ward.data))
+                ? ward.data
+                : [];
+              groupArray.forEach(item => {
+                if (typeof item === 'string') return;
+                if (item && typeof item === 'object' && !item.isPerformance) {
+                  generals.push({
+                    ...item,
+                    county: item.county || countyName,
+                    constituency: item.constituency || consName,
+                    ward: item.ward || wardName,
+                  });
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[personal] groups collection fetch error:", e.message);
+    }
 
     // Use session flags for showDealer, showAgent, agent, and hasAgentPin
     // To be robust, re-check against files if flags are missing or stale
@@ -183,146 +239,130 @@ router.get("/", async (req, res) => {
     const isAgentInFile = search(agents);
 
     const showDealer = !!(req.session.isDealer || isDealerInFile);
-    const showAgent = !!(req.session.isAgent || isAgentInFile); // Removed && !showDealer restriction
-    const generalExists = search(generals);
-
-
+    const showAgent = !!(req.session.isAgent || isAgentInFile);
 
     const dealerIsVerified = !!req.session.dealerPhone;
-    const agentIsVerified = true; // Agent portal access is now direct
+    const agentIsVerified = true;
 
     // Identify if user is a trustee, official or member and collect keys
     let isTrustee = false;
     let isOfficial = false;
     let isMember = false;
     const constitutionKeys = [];
-    const groupMessages = []; // User's group notifications
+    const groupMessages = [];
 
-    // Robust check helper
     const userInThisGroup = (g, phone) => {
-       const str = JSON.stringify(g);
-       return str.includes(phone); // Simple substring check
+      return Object.values(g).some(v => {
+        if (v && typeof v === 'object') {
+          if (v.phone && norm(v.phone) === norm(phone)) return true;
+          if (v.requesterPhone && norm(v.requesterPhone) === norm(phone)) return true;
+          if (v.approverPhone && norm(v.approverPhone) === norm(phone)) return true;
+          if (v.to && norm(v.to) === norm(phone)) return true;
+          if (Array.isArray(v)) return v.some(child => child && typeof child === 'object' && search(child));
+          return search(v);
+        }
+        return false;
+      });
     };
 
     generals.forEach(group => {
-      // 1. Check if user is in group at all
-      if (userInThisGroup(group, phone)) {
-          
-          let userIsTrusteeInThisGroup = false;
+      if (!userInThisGroup(group, phone)) return;
 
-          // 2. Determine detailed roles
-          Object.keys(group).forEach(key => {
-             const item = group[key];
-             if (item && typeof item === 'object' && item.phone && norm(item.phone) === norm(phone)) {
-                 if (key.startsWith('trustee_')) {
-                     isTrustee = true;
-                     userIsTrusteeInThisGroup = true;
-                 }
-                 if (key.startsWith('official_')) isOfficial = true;
-                 if (key.startsWith('member_')) isMember = true;
-             }
-          });
-          
-          // Also check explicit Chair phone field if present
-          if (group.chairpersonalphonenumber && norm(group.chairpersonalphonenumber) === norm(phone)) {
-              isTrustee = true;
-              userIsTrusteeInThisGroup = true;
-          }
+      let userIsTrusteeInThisGroup = false;
 
-          // 3. Collect Group Messages (for user's inbox display)
-          if (group.messages && Array.isArray(group.messages)) {
-              group.messages.forEach(msg => {
-                  if (msg.to && norm(msg.to) === norm(phone)) {
-                      groupMessages.push({
-                          groupName: group.groupName,
-                          title: msg.title,
-                          content: msg.content,
-                          type: msg.type,
-                          createdAt: msg.createdAt,
-                          isNew: msg.isNew !== false
-                      });
-                  }
-              });
+      Object.keys(group).forEach(key => {
+        const item = group[key];
+        if (item && typeof item === 'object' && item.phone && norm(item.phone) === norm(phone)) {
+          if (key.startsWith('trustee_')) {
+            isTrustee = true;
+            userIsTrusteeInThisGroup = true;
           }
+          if (key.startsWith('official_')) isOfficial = true;
+          if (key.startsWith('member_')) isMember = true;
+        }
+      });
 
-          // 4. Collect Security Messages (for constitution keys display)
-          if (group.messages && Array.isArray(group.messages)) {
-              group.messages.forEach(msg => {
-                  if (msg.to && norm(msg.to) === norm(phone)) {
-                      constitutionKeys.push({
-                          groupName: msg.title || group.groupName,
-                          type: msg.type,
-                          content: msg.content,
-                          isNew: true
-                      });
-                  } else if (msg.broadcast && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
-                      constitutionKeys.push({
-                          groupName: msg.title || group.groupName,
-                          type: msg.type,
-                          content: msg.content,
-                          isNew: true
-                      });
-                  }
-              });
+      if (group.messages && Array.isArray(group.messages)) {
+        group.messages.forEach(msg => {
+          if (msg.to && norm(msg.to) === norm(phone)) {
+            groupMessages.push({
+              groupName: group.groupName,
+              title: msg.title,
+              content: msg.content,
+              type: msg.type,
+              createdAt: msg.createdAt,
+              isNew: msg.isNew !== false
+            });
           }
+        });
+      }
 
-          // Legacy support for plain-text initial keys
-          if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
-              constitutionKeys.push({
-                  groupName: group.groupName,
-                  key: group.constitutionStartKey,
-                  type: 'legacy'
-              });
+      if (group.messages && Array.isArray(group.messages)) {
+        group.messages.forEach(msg => {
+          if (msg.to && norm(msg.to) === norm(phone)) {
+            constitutionKeys.push({
+              groupName: msg.title || group.groupName,
+              type: msg.type,
+              content: msg.content,
+              isNew: true
+            });
+          } else if (msg.broadcast && msg.roles && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
+            constitutionKeys.push({
+              groupName: msg.title || group.groupName,
+              type: msg.type,
+              content: msg.content,
+              isNew: true
+            });
           }
+        });
+      }
+
+      if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
+        constitutionKeys.push({
+          groupName: group.groupName,
+          key: group.constitutionStartKey,
+          type: 'legacy'
+        });
       }
     });
 
     const normalizedPhone = norm(phone);
-    const userGroups = generals.filter(group => {
-      for (const key in group) {
-        const item = group[key];
-        if (item && typeof item === 'object' && item.phone && norm(item.phone) === normalizedPhone) {
-            return true;
-        }
-      }
-      if (group.phone && norm(group.phone) === normalizedPhone) {
-            return true;
-      }
-      return false;
-    });
+    const userGroups = generals.filter(group => userInThisGroup(group, phone));
 
-    // Get all users from MongoDB for name lookups
+    // Get all users from MongoDB for name lookups and PIN check
     let usersFlat = [];
     try {
-        usersFlat = await getAllUsersFlattened();
+      usersFlat = await getAllUsersFlattened();
     } catch (e) {
-        console.error("Error fetching users from MongoDB:", e.message);
+      console.error("Error fetching users from MongoDB:", e.message);
     }
-    
-    const getUserName = async (phoneNumber) => {
-        if (!phoneNumber) return null;
-        try {
-            return await getUserNameByPhone(phoneNumber);
-        } catch (e) {
-            const normalized = norm(phoneNumber);
-            const u = usersFlat.find(user => norm(user.phoneNumber) === normalized);
-            if (!u) return null;
-            return `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
-        }
+
+    const getUserName = (phoneNumber) => {
+      if (!phoneNumber) return null;
+      try {
+        return getUserNameByPhone(phoneNumber);
+      } catch (e) {
+        const normalized = norm(phoneNumber);
+        const u = usersFlat.find(user => norm(user.phoneNumber) === normalized);
+        if (!u) return null;
+        return `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
+      }
     };
 
     // Augment userGroups with member names
     userGroups.forEach(group => {
-        Object.keys(group).forEach(key => {
-            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
-                const item = group[key];
-                if (item && typeof item === 'object' && item.phone) {
-                    const u = usersFlat.find(user => norm(user.phoneNumber) === norm(item.phone));
-                    if (u) item.name = `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
-                }
-            }
-        });
+      Object.keys(group).forEach(key => {
+        if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+          const item = group[key];
+          if (item && typeof item === 'object' && item.phone) {
+            const u = usersFlat.find(user => norm(user.phoneNumber) === norm(item.phone));
+            if (u) item.name = `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
+          }
+        }
+      });
     });
+
+    const generalExists = userGroups.length > 0;
 
     let hasPersonalPin = false;
     try {

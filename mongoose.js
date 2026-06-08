@@ -90,6 +90,303 @@ const countySchema = new mongoose.Schema({
 const County = mongoose.model('County', countySchema);
 
 /**
+ * Transaction History Schema for accounts
+ */
+const transactionHistorySchema = new mongoose.Schema({
+  date: { type: String },
+  type: { type: String },
+  amount: { type: Number },
+  balance: { type: Number },
+  note: { type: String },
+  state: { type: String },
+  description: { type: String },
+  transactionId: { type: String },
+  transactionNumber: { type: Number },
+  targetAccount: { type: String },
+  totalDeductions: { type: Number },
+  totalPendingDeductions: { type: Number },
+  round: { type: Number },
+  createdAt: { type: String },
+  contributingMembers: [{ type: String }],
+  scheduledDate: { type: String },
+  status: { type: String }
+}, { _id: false });
+
+/**
+ * Account Schema within a member
+ */
+const accountSchema = new mongoose.Schema({
+  accountId: { type: String, required: true },
+  accountName: { type: String },
+  expectedAmount: { type: String },
+  financials: {
+    openingBalance: { type: Number, default: 0 },
+    amountIn: { type: Number, default: 0 },
+    amountOut: { type: Number, default: 0 },
+    closingBalance: { type: Number, default: 0 }
+  },
+  transactionHistory: [transactionHistorySchema],
+  dateIntervalCycle: { type: mongoose.Schema.Types.Mixed }
+}, { _id: false });
+
+/**
+ * Member Schema within a group
+ */
+const memberSchema = new mongoose.Schema({
+  memberId: { type: String, required: true },
+  name: { type: String },
+  role: { type: String, default: 'member' },
+  idNumber: { type: String },
+  memberFinancials: {
+    openingBalance: { type: Number, default: 0 },
+    amountIn: { type: Number, default: 0 },
+    amountOut: { type: Number, default: 0 },
+    closingBalance: { type: Number, default: 0 }
+  },
+  accounts: { type: Map, of: accountSchema, default: {} },
+  processedDeductions: [{ type: mongoose.Schema.Types.Mixed }],
+  createdAt: { type: String, default: () => new Date().toISOString() }
+}, { _id: false });
+
+/**
+ * Group Financials Schema
+ */
+const groupFinancialsSchema = new mongoose.Schema({
+  totalOpeningBalance: { type: Number, default: 0 },
+  totalAmountIn: { type: Number, default: 0 },
+  totalAmountOut: { type: Number, default: 0 },
+  totalClosingBalance: { type: Number, default: 0 },
+  availableWithdrawalBalance: { type: Number, default: 0 }
+}, { _id: false });
+
+/**
+ * Member Group Schema — mirrors member.json groups structure
+ */
+const memberGroupSchema = new mongoose.Schema({
+  groupKey: { type: String, required: true, unique: true },
+  groupNumber: { type: Number },
+  groupName: { type: String, required: true },
+  groupFinancials: { type: groupFinancialsSchema },
+  accountSchema: { type: Map, of: {
+    accountId: { type: String },
+    accountName: { type: String },
+    expectedAmount: { type: String }
+  }},
+  otherContributions: { type: Map, of: {
+    accountNumber: { type: String },
+    transactions: [{ type: mongoose.Schema.Types.Mixed }]
+  }},
+  members: { type: Map, of: memberSchema, default: {} },
+  principles: { type: mongoose.Schema.Types.Mixed },
+  constitutionStartKey: { type: String },
+  constitutionKeyGeneratedAt: { type: String },
+  constitutionKeySetByAgentAt: { type: String },
+  principlesSetAt: { type: String },
+  createdAt: { type: String, default: () => new Date().toISOString() },
+  updatedAt: { type: String, default: () => new Date().toISOString() }
+}, { timestamps: true });
+
+const MemberGroup = mongoose.model('MemberGroup', memberGroupSchema, 'groups');
+
+/**
+ * GROUP CRUD - Find or create group document for member data
+ */
+const findOrCreateMemberGroup = async (groupName, groupNumber) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  let groupKey = String(groupName || '').trim();
+  if (!groupKey) {
+    const total = await MemberGroup.countDocuments();
+    groupKey = 'group_' + (total + 1);
+  }
+
+  let doc = await MemberGroup.findOne({ groupKey });
+  if (!doc) {
+    doc = new MemberGroup({
+      groupKey,
+      groupNumber: groupNumber || 0,
+      groupName,
+      members: {},
+      accountSchema: {},
+      otherContributions: {},
+      principles: {},
+      groupFinancials: {}
+    });
+    await doc.save();
+  }
+  return doc;
+};
+
+/**
+ * Save full group member data to MongoDB
+ */
+const saveMemberGroupToMongo = async (groupData) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const groupName = groupData.groupName;
+  if (!groupName) throw new Error('groupName is required');
+
+  let groupKey = String(groupName).trim();
+  let existing = await MemberGroup.findOne({ groupKey });
+  if (!existing) {
+    existing = new MemberGroup({
+      groupKey,
+      groupName,
+      groupNumber: groupData.groupNumber || 0,
+      groupFinancials: groupData.groupFinancials || {},
+      accountSchema: groupData.accountSchema || {},
+      otherContributions: groupData.otherContributions || {},
+      members: {},
+      principles: groupData.principles || {},
+      constitutionStartKey: groupData.constitutionStartKey || '',
+      constitutionKeyGeneratedAt: groupData.constitutionKeyGeneratedAt || '',
+      constitutionKeySetByAgentAt: groupData.constitutionKeySetByAgentAt || '',
+      principlesSetAt: groupData.principlesSetAt || ''
+    });
+  } else {
+    existing.groupNumber = groupData.groupNumber || existing.groupNumber;
+    existing.groupFinancials = groupData.groupFinancials || existing.groupFinancials;
+    existing.accountSchema = groupData.accountSchema || existing.accountSchema;
+    existing.otherContributions = groupData.otherContributions || existing.otherContributions;
+    existing.principles = groupData.principles || existing.principles;
+    existing.constitutionStartKey = groupData.constitutionStartKey || existing.constitutionStartKey;
+    existing.constitutionKeyGeneratedAt = groupData.constitutionKeyGeneratedAt || existing.constitutionKeyGeneratedAt;
+    existing.constitutionKeySetByAgentAt = groupData.constitutionKeySetByAgentAt || existing.constitutionKeySetByAgentAt;
+    existing.principlesSetAt = groupData.principlesSetAt || existing.principlesSetAt;
+    existing.updatedAt = new Date().toISOString();
+  }
+
+  if (groupData.members) {
+    for (const [memberId, member] of Object.entries(groupData.members)) {
+      existing.members.set(memberId, member);
+    }
+  }
+
+  await existing.save();
+  return existing;
+};
+
+/**
+ * Add a member to a group in MongoDB
+ */
+const addMemberToMemberGroup = async (groupName, memberData) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const groupKey = String(groupName).trim();
+  let doc = await MemberGroup.findOne({ groupKey });
+  if (!doc) {
+    doc = new MemberGroup({
+      groupKey,
+      groupName,
+      groupNumber: 0,
+      members: {}
+    });
+  }
+
+  const memberId = memberData.memberId || '';
+  if (!memberId) throw new Error('memberId is required');
+
+  doc.members.set(memberId, memberData);
+  doc.updatedAt = new Date().toISOString();
+  await doc.save();
+  return doc;
+};
+
+/**
+ * Update a member's account in a group
+ */
+const updateMemberAccountInMongo = async (groupName, memberId, accountNumber, transactionData) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const groupKey = String(groupName).trim();
+  const doc = await MemberGroup.findOne({ groupKey });
+  if (!doc) throw new Error('Group not found');
+
+  const member = doc.members.get(memberId);
+  if (!member) throw new Error('Member not found');
+
+  if (!member.accounts) member.accounts = {};
+  const account = member.accounts.get(accountNumber) || {
+    accountId: accountNumber,
+    accountName: '',
+    financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+    transactionHistory: []
+  };
+
+  account.transactionHistory = transactionData;
+  member.accounts.set(accountNumber, account);
+  doc.updatedAt = new Date().toISOString();
+  await doc.save();
+  return doc;
+};
+
+/**
+ * Get full member group data from MongoDB
+ */
+const getMemberGroupFromMongo = async (groupName) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const groupKey = String(groupName).trim();
+  const doc = await MemberGroup.findOne({ groupKey }).lean();
+  if (!doc) return null;
+
+  const membersObj = {};
+  if (doc.members) {
+    doc.members.forEach((value, key) => {
+      membersObj[key] = value;
+    });
+    doc.members = membersObj;
+  }
+
+  const accountSchemaObj = {};
+  if (doc.accountSchema) {
+    doc.accountSchema.forEach((value, key) => {
+      accountSchemaObj[key] = value;
+    });
+    doc.accountSchema = accountSchemaObj;
+  }
+
+  const otherContributionsObj = {};
+  if (doc.otherContributions) {
+    doc.otherContributions.forEach((value, key) => {
+      otherContributionsObj[key] = value;
+    });
+    doc.otherContributions = otherContributionsObj;
+  }
+
+  return doc;
+};
+
+/**
+ * Save top-level member.json structure (group key wrapper)
+ */
+const saveMemberDataToMongo = async (memberData) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  if (memberData.group) {
+    for (const [key, group] of Object.entries(memberData.group)) {
+      await saveMemberGroupToMongo({ ...group, groupName: group.groupName || key });
+    }
+    return true;
+  }
+
+  if (memberData.groups) {
+    for (const [key, group] of Object.entries(memberData.groups)) {
+      await saveMemberGroupToMongo({ ...group, groupName: group.groupName || key });
+    }
+    return true;
+  }
+
+  return false;
+};
+
+/**
  * Personal Account Schema - Mirrors p_account/personal.json per-user snapshot
  */
 const personalAccountSchema = new mongoose.Schema({
@@ -567,12 +864,13 @@ const migratePinsFromJSON = async () => {
   return { migrated, skipped, errors };
 };
 
-module.exports = { 
+module.exports = {
   connectDB,
   ensureMongoReady,
-  mongoose, 
+  mongoose,
   County,
   PersonalAccount,
+  MemberGroup,
   saveUserToMongoDB,
   findUserByPhone,
   getUserNameByPhone,
@@ -584,4 +882,11 @@ module.exports = {
   flattenHierarchicalUsers,
   normalizePhone,
   phoneMatches,
+  saveMemberGroupToMongo,
+  addMemberToMemberGroup,
+  updateMemberAccountInMongo,
+  getMemberGroupFromMongo,
+  saveMemberDataToMongo,
+  saveMemberGroupToMongo,
+  findOrCreateMemberGroup,
 };
