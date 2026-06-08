@@ -1,5 +1,11 @@
 {
   "regions": {
+    "regionTransaction": {
+      "openingBalance": 0,
+      "amountIn": 0,
+      "amountOut": 0,
+      "closingBalance": 0
+    },
     "Siaya": {
       "county": "Siaya",
       "countryTransaction": {
@@ -32,35 +38,30 @@
                   "phase": 3,
                   "groupTransaction": {
                     "intervalperformance": {
+                      "roundNumber": 0,
+                      "transactionCode": "",
                       "openingBalance": 0,
                       "amountIn": 0,
                       "amountOut": 0,
-                      "closingBalance": 0,
-                      "roundNumber": 0,
-                      "transactionCode": ""
-                    },
-                    "transactions": []
+                      "closingBalance": 0
+                    }
                   },
                   "accountSchema": {
                     "001": {
                       "accountId": "001",
-                      "accountName": "Saving",
-                      "expectedAmount": "100"
+                      "accountName": "Saving"
                     },
                     "002": {
                       "accountId": "002",
-                      "accountName": "Registration",
-                      "expectedAmount": "100"
+                      "accountName": "Registration"
                     },
                     "003": {
                       "accountId": "003",
-                      "accountName": "latenes",
-                      "expectedAmount": "100"
+                      "accountName": "latenes"
                     },
                     "004": {
                       "accountId": "004",
-                      "accountName": "welfare",
-                      "expectedAmount": "100"
+                      "accountName": "welfare"
                     }
                   },
                   "members": {
@@ -75,52 +76,44 @@
                       },
                       "accounts": {
                         "001": {
-                          "accountId": "001",
                           "accountName": "Saving",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "002": {
-                          "accountId": "002",
                           "accountName": "Registration",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "003": {
-                          "accountId": "003",
                           "accountName": "latenes",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "004": {
-                          "accountId": "004",
                           "accountName": "welfare",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         }
                       },
                       "processedDeductions": []
@@ -136,52 +129,44 @@
                       },
                       "accounts": {
                         "001": {
-                          "accountId": "001",
                           "accountName": "Saving",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "002": {
-                          "accountId": "002",
                           "accountName": "Registration",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "003": {
-                          "accountId": "003",
                           "accountName": "latenes",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "004": {
-                          "accountId": "004",
                           "accountName": "welfare",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         }
                       },
                       "processedDeductions": []
@@ -197,52 +182,44 @@
                       },
                       "accounts": {
                         "001": {
-                          "accountId": "001",
                           "accountName": "Saving",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "002": {
-                          "accountId": "002",
                           "accountName": "Registration",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "003": {
-                          "accountId": "003",
                           "accountName": "latenes",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "004": {
-                          "accountId": "004",
                           "accountName": "welfare",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         }
                       },
                       "processedDeductions": []
@@ -258,52 +235,44 @@
                       },
                       "accounts": {
                         "001": {
-                          "accountId": "001",
                           "accountName": "Saving",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "002": {
-                          "accountId": "002",
                           "accountName": "Registration",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "003": {
-                          "accountId": "003",
                           "accountName": "latenes",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         },
                         "004": {
-                          "accountId": "004",
                           "accountName": "welfare",
-                          "expectedAmount": "100",
                           "financials": {
                             "openingBalance": 0,
                             "amountIn": 0,
                             "amountOut": 0,
-                            "closingBalance": 0
-                          },
-                          "transactionHistory": []
+                            "closingBalance": 0,
+                            "transactionHistory": []
+                          }
                         }
                       },
                       "processedDeductions": []
