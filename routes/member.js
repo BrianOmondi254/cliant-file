@@ -847,10 +847,136 @@ router.put("/group/:groupNumber/contribution/:accountNumber/transaction", (req, 
    res.json(defaultMemberStructure());
  });
 
+// ── Helper: Find group in groups-members regional structure (MongoDB) ──
+// Supports lookup by groupName or groupId
+const findGroupInGroupsMembersCollection = async (groupName) => {
+  const ready = await ensureMongoReady();
+  if (!ready) return null;
+
+  const mongoose = require('mongoose');
+  const db = mongoose.connection.db;
+  if (!db) return null;
+
+  const targetName = String(groupName || '').trim().toLowerCase();
+  const docs = await db.collection('groups-members').find({}).toArray();
+
+  for (const doc of docs) {
+    if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
+
+    for (const constituency of doc.constituencies) {
+      if (!constituency || !Array.isArray(constituency.wards)) continue;
+
+      for (const ward of constituency.wards) {
+        if (!ward || !Array.isArray(ward.data)) continue;
+
+        for (const group of ward.data) {
+          if (!group) continue;
+          // Check by groupName or groupId
+          const groupNameMatch = group.groupName && String(group.groupName).trim().toLowerCase() === targetName;
+          const groupIdMatch = group.groupId && String(group.groupId).trim().toLowerCase() === targetName;
+          if (groupNameMatch || groupIdMatch) {
+            return {
+              group,
+              county: group.county || doc.county,
+              constituency: group.constituency || constituency.name,
+              ward: group.ward || ward.name
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+// ── Helper: Find group in member.json (flat structure) ──
+// Supports lookup by groupName or groupId
+const findGroupInMemberJson = (groupName) => {
+  const memberData = readJSON(memberFile, { groups: {} });
+  if (!memberData.groups || Object.keys(memberData.groups).length === 0) return null;
+
+  const target = String(groupName || '').trim().toLowerCase();
+  
+  // First try: lookup by key (accountNumber/groupId)
+  if (memberData.groups[target] || memberData.groups[groupName]) {
+    const group = memberData.groups[target] || memberData.groups[groupName];
+    return {
+      group,
+      county: group.county || '',
+      constituency: group.constituency || '',
+      ward: group.ward || ''
+    };
+  }
+  
+  // Second try: lookup by groupName field
+  for (const key in memberData.groups) {
+    const group = memberData.groups[key];
+    if (group && group.groupName && String(group.groupName).trim().toLowerCase() === target) {
+      return {
+        group,
+        county: group.county || '',
+        constituency: group.constituency || '',
+        ward: group.ward || ''
+      };
+    }
+    // Also check groupId field
+    if (group && group.groupId && String(group.groupId).trim().toLowerCase() === target) {
+      return {
+        group,
+        county: group.county || '',
+        constituency: group.constituency || '',
+        ward: group.ward || ''
+      };
+    }
+  }
+  return null;
+};
+
+// ── Helper: Normalize member accounts from member.json structure ──
+const normalizeMembersFromMemberJson = (group) => {
+  const members = group.members || {};
+  const normalized = {};
+
+  for (const phone in members) {
+    const m = members[phone];
+    normalized[phone] = {
+      memberId: m.memberId || phone,
+      name: m.name || phone,
+      role: m.role || 'member',
+      accounts: (m.accounts && typeof m.accounts === 'object' && !Array.isArray(m.accounts))
+        ? { ...m.accounts }
+        : (m.accounts || {})
+    };
+  }
+
+  return normalized;
+};
+
+// ── Helper: Normalize member accounts from regional groups-members structure ──
+const normalizeMembersFromGroupsMembers = (group) => {
+  const members = group.members || {};
+  const normalized = {};
+
+  for (const phone in members) {
+    const m = members[phone];
+    normalized[phone] = {
+      memberId: m.memberId || m.phone || phone,
+      name: m.name || phone,
+      role: m.role || m.type || 'member',
+      accounts: (m.accounts && typeof m.accounts === 'object' && !Array.isArray(m.accounts))
+        ? { ...m.accounts }
+        : (m.accounts || {})
+    };
+  }
+
+  return normalized;
+};
+
 // POST /member/group-accounts-schema
 // Returns the accountSchema (account types) for a group and, for each account type,
 // lists all members with their individual financials for that account.
-// Data source: MongoDB `groups` collection (MemberGroup model) ONLY.
+// Data sources: member.json (local) → groups-members MongoDB → MemberGroup MongoDB
 router.post("/group-accounts-schema", async (req, res) => {
   const { groupName, accountNumber } = req.body;
   if (!groupName && !accountNumber) {
@@ -858,44 +984,108 @@ router.post("/group-accounts-schema", async (req, res) => {
   }
 
   let foundGroup = null;
+  let foundInSource = null;
 
-  // Strategy 1: Lookup by groupName (stored as groupKey in MongoDB)
+  // Strategy 1: Lookup in member.json (flat structure) - reliable local fallback
   if (groupName) {
-    foundGroup = await getMemberGroupFromMongo(groupName);
-    if (foundGroup) {
-      console.log('[group-accounts-schema] Found in MongoDB by groupName:', groupName);
+    const jsonFound = findGroupInMemberJson(groupName);
+    if (jsonFound) {
+      foundGroup = jsonFound.group;
+      foundInSource = 'member.json';
+      console.log('[group-accounts-schema] Found in member.json by groupName:', groupName);
     }
   }
 
-  // Strategy 2: Try accountNumber as groupKey (legacy JSON structure used phone numbers as keys)
+  // Strategy 2: Try accountNumber as groupKey in member.json (phone-based keys)
   if (!foundGroup && accountNumber) {
-    const trimmedAccNum = String(accountNumber).trim();
-    foundGroup = await MemberGroup.findOne({ groupKey: trimmedAccNum }).lean();
-    if (foundGroup) {
-      console.log('[group-accounts-schema] Found in MongoDB by accountNumber groupKey:', trimmedAccNum);
+    const memberData = readJSON(memberFile, { groups: {} });
+    if (memberData.groups && memberData.groups[accountNumber]) {
+      foundGroup = memberData.groups[accountNumber];
+      foundInSource = 'member.json';
+      console.log('[group-accounts-schema] Found in member.json by accountNumber key:', accountNumber);
+    }
+  }
+
+  // Strategy 3: Lookup by groupName in MemberGroup collection (MongoDB)
+  if (!foundGroup && groupName) {
+    try {
+      foundGroup = await getMemberGroupFromMongo(groupName);
+      if (foundGroup) {
+        foundInSource = 'MemberGroup';
+        console.log('[group-accounts-schema] Found in MemberGroup MongoDB by groupName:', groupName);
+      }
+    } catch (e) {
+      console.warn('[group-accounts-schema] MemberGroup MongoDB lookup failed:', e.message);
+    }
+  }
+
+  // Strategy 4: Try accountNumber as groupKey in MemberGroup (MongoDB)
+  if (!foundGroup && accountNumber) {
+    try {
+      const trimmedAccNum = String(accountNumber).trim();
+      foundGroup = await MemberGroup.findOne({ groupKey: trimmedAccNum }).lean();
+      if (foundGroup) {
+        foundInSource = 'MemberGroup';
+        console.log('[group-accounts-schema] Found in MemberGroup MongoDB by accountNumber groupKey:', trimmedAccNum);
+      }
+    } catch (e) {
+      console.warn('[group-accounts-schema] MemberGroup lookup by accountNumber failed:', e.message);
+    }
+  }
+
+  // Strategy 5: Lookup in groups-members regional collection (MongoDB)
+  if (!foundGroup && groupName) {
+    try {
+      const regionalFound = await findGroupInGroupsMembersCollection(groupName);
+      if (regionalFound) {
+        foundGroup = regionalFound.group;
+        foundInSource = 'groups-members';
+        console.log('[group-accounts-schema] Found in groups-members MongoDB by groupName:', groupName);
+      }
+    } catch (e) {
+      console.warn('[group-accounts-schema] groups-members MongoDB lookup failed:', e.message);
+    }
+  }
+
+  // Strategy 5b: Also try accountNumber as groupId in groups-members
+  if (!foundGroup && accountNumber) {
+    try {
+      const regionalFound = await findGroupInGroupsMembersCollection(accountNumber);
+      if (regionalFound) {
+        foundGroup = regionalFound.group;
+        foundInSource = 'groups-members';
+        console.log('[group-accounts-schema] Found in groups-members MongoDB by groupId:', accountNumber);
+      }
+    } catch (e) {
+      console.warn('[group-accounts-schema] groups-members MongoDB lookup by groupId failed:', e.message);
     }
   }
 
   if (!foundGroup) {
+    const sourcesTried = [
+      groupName ? `member.json(groupName="${groupName}")` : '',
+      accountNumber ? `member.json(accountNumber="${accountNumber}")` : '',
+      groupName ? `MemberGroup(groupName="${groupName}")` : '',
+      accountNumber ? `MemberGroup(accountNumber="${accountNumber}")` : '',
+      groupName ? `groups-members(groupName="${groupName}")` : '',
+      accountNumber ? `groups-members(groupId="${accountNumber}")` : ''
+    ].filter(Boolean).join(', ');
     return res.status(404).json({
-      error: `Group not found in MongoDB. Tried groupName="${groupName}" and accountNumber="${accountNumber}".`
+      error: `Group not found. Tried: ${sourcesTried}.`
     });
   }
 
-  const members = foundGroup.members || {};
-
-  // ── Ensure member accounts are plain objects (not Mongoose Maps) ──
-  const normalizedMembers = {};
-  for (const phone in members) {
-    const m = members[phone];
-    normalizedMembers[phone] = {
-      memberId: m.memberId || phone,
-      name:     m.name     || phone,
-      role:     m.role     || 'member',
-      accounts: (m.accounts && typeof m.accounts === 'object' && !Array.isArray(m.accounts))
-        ? { ...m.accounts }
-        : (m.accounts || {})
-    };
+  // Normalize members based on source
+  let normalizedMembers = {};
+  try {
+    if (foundInSource === 'groups-members') {
+      normalizedMembers = normalizeMembersFromGroupsMembers(foundGroup);
+    } else {
+      normalizedMembers = normalizeMembersFromMemberJson(foundGroup);
+    }
+  } catch (e) {
+    console.error('[group-accounts-schema] Member normalization failed:', e.message);
+    return res.status(500).json({ error: "Failed to process member data: " + e.message });
   }
 
   // Build accountSchema from actual member account data (first member has accounts)
@@ -965,7 +1155,8 @@ router.post("/group-accounts-schema", async (req, res) => {
     groupNumber:    foundGroup.groupNumber,
     accountSchema,
     accountDetails,
-    totalMembers:   memberKeys.length
+    totalMembers:   memberKeys.length,
+    source: foundInSource  // Debug: which source provided the data
   });
 });
 
