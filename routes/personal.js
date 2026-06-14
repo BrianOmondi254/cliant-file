@@ -137,6 +137,207 @@ const flattenData = (data) => {
     return flat;
 };
 
+const normalizeMembersMap = (members) => {
+    const normalized = {};
+    if (!members || typeof members !== 'object') return normalized;
+
+    if (typeof members.forEach === 'function') {
+        members.forEach((value, key) => {
+            normalized[String(key)] = value && typeof value.toObject === 'function' ? value.toObject() : value;
+        });
+        return normalized;
+    }
+
+    for (const key of Object.keys(members)) {
+        const value = members[key];
+        normalized[String(key)] = value && typeof value.toObject === 'function' ? value.toObject() : value;
+    }
+    return normalized;
+};
+
+const memberMatchesPhone = (memberId, member, targetPhone) => {
+    const phoneFromKey = norm(memberId || '');
+    const phoneFromMember = norm((member && (member.memberId || member.phone || member.phoneNumber)) || '');
+    return phoneFromKey === targetPhone || phoneFromMember === targetPhone;
+};
+
+const inferMemberRole = (memberId, member) => {
+    if (member && member.role) return member.role;
+    if (member && member.type) return member.type;
+    if (/^trustee_/.test(memberId || '')) return 'trustee';
+    if (/^official_/.test(memberId || '')) return 'official';
+    if (/^member_/.test(memberId || '')) return 'member';
+    return 'member';
+};
+
+const groupContainsPhone = (group, targetPhone) => {
+    if (group && typeof group === 'object') {
+        if (norm(group.phone) === targetPhone) return true;
+        if (norm(group.chairpersonalphonenumber) === targetPhone) return true;
+    }
+
+    return Object.keys(group || {}).some(key => {
+        const item = group[key];
+        return item && typeof item === 'object' && item.phone && norm(item.phone) === targetPhone;
+    });
+};
+
+const getGroupsForMemberFromGroupsCollection = async (phone) => {
+    const targetPhone = norm(phone);
+    if (!targetPhone) return [];
+
+    const ready = await ensureMongoReady();
+    if (!ready) return [];
+
+    const db = require('mongoose').connection.db;
+    if (!db) return [];
+
+    const docs = await db.collection('groups').find({}).toArray();
+    const groups = [];
+
+    for (const doc of docs) {
+        if (!doc) continue;
+
+        // MemberGroup-style document: { groupName, members: Map/object }
+        if (doc.members && typeof doc.members === 'object' && !Array.isArray(doc.members)) {
+            const members = normalizeMembersMap(doc.members);
+            const match = Object.entries(members).find(([memberId, member]) =>
+                memberMatchesPhone(memberId, member, targetPhone)
+            );
+
+            if (!match) continue;
+
+            const [memberId, member] = match;
+            const role = inferMemberRole(memberId, member);
+
+            groups.push({
+                groupName: doc.groupName || doc.groupKey || 'Unnamed Group',
+                groupNumber: doc.groupNumber || '',
+                accountNumber: doc.accountNumber || doc.groupKey || '',
+                phase: doc.phase || '',
+                role,
+                roleTitle: (member && (member.title || member.roleTitle)) || role,
+                memberNumber: (member && member.memberNumber) || '',
+                memberId: (member && (member.memberId || member.phone || member.phoneNumber)) || memberId,
+                county: doc.county || '',
+                constituency: doc.constituency || '',
+                ward: doc.ward || '',
+                myBalance: doc.myBalance || 0,
+                totalMembers: Object.keys(members).length,
+                source: 'groups'
+            });
+            continue;
+        }
+
+        // MemberGroup-style document with members stored as an array
+        if (Array.isArray(doc.members)) {
+            const match = doc.members.find(member =>
+                member && typeof member === 'object' && (
+                    norm(member.memberId || member.phone || member.phoneNumber || '') === targetPhone
+                )
+            );
+
+            if (!match) continue;
+
+            const role = inferMemberRole(match.memberId || '', match);
+
+            groups.push({
+                groupName: doc.groupName || doc.groupKey || 'Unnamed Group',
+                groupNumber: doc.groupNumber || '',
+                accountNumber: doc.accountNumber || doc.groupKey || '',
+                phase: doc.phase || '',
+                role,
+                roleTitle: (match.title || match.roleTitle) || role,
+                memberNumber: match.memberNumber || '',
+                memberId: match.memberId || match.phone || match.phoneNumber || '',
+                county: doc.county || '',
+                constituency: doc.constituency || '',
+                ward: doc.ward || '',
+                myBalance: doc.myBalance || 0,
+                totalMembers: doc.members.length,
+                source: 'groups'
+            });
+            continue;
+        }
+
+        // Flattened group document: { groupName, trustee_1, official_1, member_1, ... }
+        if (doc.groupName && groupContainsPhone(doc, targetPhone)) {
+            const roleInfo = Object.keys(doc).reduce((found, key) => {
+                if (found) return found;
+                const item = doc[key];
+                if (item && typeof item === 'object' && item.phone && norm(item.phone) === targetPhone) {
+                    return { key, item };
+                }
+                return found;
+            }, null);
+
+            const isChairperson = norm(doc.phone) === targetPhone || norm(doc.chairpersonalphonenumber) === targetPhone;
+
+            groups.push({
+                groupName: doc.groupName,
+                groupNumber: doc.groupNumber || '',
+                accountNumber: doc.accountNumber || '',
+                phase: doc.phase || '',
+                role: roleInfo && roleInfo.key.startsWith('trustee_') ? 'trustee' : (roleInfo && roleInfo.key.startsWith('official_') ? 'official' : (isChairperson ? 'trustee' : 'member')),
+                roleTitle: (roleInfo && (roleInfo.item.title || roleInfo.item.type)) || (isChairperson ? 'Chairperson' : ''),
+                memberNumber: (roleInfo && roleInfo.item.memberNumber) || '',
+                memberId: (roleInfo && roleInfo.item.phone) || doc.phone || doc.chairpersonalphonenumber || '',
+                county: doc.county || '',
+                constituency: doc.constituency || '',
+                ward: doc.ward || '',
+                myBalance: doc.myBalance || 0,
+                totalMembers: Object.keys(doc).filter(k => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')).length,
+                source: 'groups'
+            });
+            continue;
+        }
+
+        // Legacy hierarchical county document stored in the same groups collection
+        if (doc.constituencies && Array.isArray(doc.constituencies)) {
+            const countyName = doc.county || '';
+            for (const cons of doc.constituencies || []) {
+                const consName = cons.name || '';
+                if (!cons.wards || !Array.isArray(cons.wards)) continue;
+                for (const ward of cons.wards) {
+                    const wardName = (typeof ward === 'string') ? ward : (ward.name || 'Unknown Ward');
+                    const groupArray = (typeof ward === 'object' && ward.data && Array.isArray(ward.data))
+                        ? ward.data
+                        : [];
+                    for (const item of groupArray) {
+                        if (!item || typeof item !== 'object' || item.isPerformance || !item.groupName) continue;
+                        if (!groupContainsPhone(item, targetPhone)) continue;
+
+                        const roleInfo = Object.keys(item).reduce((found, key) => {
+                            if (found) return found;
+                            const member = item[key];
+                            if (member && typeof member === 'object' && member.phone && norm(member.phone) === targetPhone) {
+                                return { key, member };
+                            }
+                            return found;
+                        }, null);
+
+                        const isChairperson = norm(item.phone) === targetPhone || norm(item.chairpersonalphonenumber) === targetPhone;
+
+                        groups.push({
+                            ...item,
+                            county: item.county || countyName,
+                            constituency: item.constituency || consName,
+                            ward: item.ward || wardName,
+                            role: roleInfo && roleInfo.key.startsWith('trustee_') ? 'trustee' : (roleInfo && roleInfo.key.startsWith('official_') ? 'official' : (isChairperson ? 'trustee' : 'member')),
+                            roleTitle: (roleInfo && (roleInfo.member.title || roleInfo.member.type)) || (isChairperson ? 'Chairperson' : ''),
+                            memberNumber: (roleInfo && roleInfo.member.memberNumber) || '',
+                            memberId: (roleInfo && roleInfo.member.phone) || item.phone || item.chairpersonalphonenumber || '',
+                            source: 'groups'
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    return groups;
+};
+
 const restructureData = (data) => {
   if (!Array.isArray(data)) return data; // Assume already structured
   const structured = {};
@@ -192,40 +393,14 @@ router.get("/", async (req, res) => {
       return false;
     };
 
-    // ── Fetch ALL groups from MongoDB `groups` collection (county-hierarchy) ──
-    const generals = [];
+    // ── Fetch groups from MongoDB `groups` collection and match the logged-in phone ──
+    const userGroups = [];
     try {
-      const ready = await ensureMongoReady();
-      if (ready) {
-        const db = require('mongoose').connection.db;
-        const counties = await db.collection('groups').find({}).toArray();
-        for (const county of counties) {
-          const countyName = county.county || "";
-          for (const cons of county.constituencies || []) {
-            const consName = cons.name || "";
-            if (!cons.wards || !Array.isArray(cons.wards)) continue;
-            for (const ward of cons.wards) {
-              const wardName = (typeof ward === 'string') ? ward : (ward.name || "Unknown Ward");
-              const groupArray = (typeof ward === 'object' && ward.data && Array.isArray(ward.data))
-                ? ward.data
-                : [];
-              groupArray.forEach(item => {
-                if (typeof item === 'string') return;
-                if (item && typeof item === 'object' && !item.isPerformance) {
-                  generals.push({
-                    ...item,
-                    county: item.county || countyName,
-                    constituency: item.constituency || consName,
-                    ward: item.ward || wardName,
-                  });
-                }
-              });
-            }
-          }
-        }
-      }
+      const groupsFromCollection = await getGroupsForMemberFromGroupsCollection(phone);
+      userGroups.push(...groupsFromCollection);
+      console.log(`[personal] groups collection returned ${groupsFromCollection.length} group(s) for ${phone}: ${groupsFromCollection.map(g => g.groupName).join(', ') || '(none)'}`);
     } catch (e) {
-      console.error("[personal] groups collection fetch error:", e.message);
+      console.error("[personal] groups collection membership lookup error:", e.message);
     }
 
     // Use session flags for showDealer, showAgent, agent, and hasAgentPin
@@ -265,22 +440,13 @@ router.get("/", async (req, res) => {
       });
     };
 
-    generals.forEach(group => {
-      if (!userInThisGroup(group, phone)) return;
+    userGroups.forEach(group => {
+      const role = String(group.role || '').toLowerCase();
+      const userIsTrusteeInThisGroup = role === 'trustee';
 
-      let userIsTrusteeInThisGroup = false;
-
-      Object.keys(group).forEach(key => {
-        const item = group[key];
-        if (item && typeof item === 'object' && item.phone && norm(item.phone) === norm(phone)) {
-          if (key.startsWith('trustee_')) {
-            isTrustee = true;
-            userIsTrusteeInThisGroup = true;
-          }
-          if (key.startsWith('official_')) isOfficial = true;
-          if (key.startsWith('member_')) isMember = true;
-        }
-      });
+      if (userIsTrusteeInThisGroup) isTrustee = true;
+      else if (role === 'official') isOfficial = true;
+      else isMember = true;
 
       if (group.messages && Array.isArray(group.messages)) {
         group.messages.forEach(msg => {
@@ -327,7 +493,6 @@ router.get("/", async (req, res) => {
     });
 
     const normalizedPhone = norm(phone);
-    const userGroups = generals.filter(group => userInThisGroup(group, phone));
 
     // Get all users from MongoDB for name lookups and PIN check
     let usersFlat = [];

@@ -238,6 +238,142 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
     return groups;
   };
 
+  const findVerifiedGroupInGroupsMembers = async (groupName, phone) => {
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+
+    const targetPhone = normalizeKenyanPhone(phone);
+    const targetGroup = String(groupName || '').trim().toLowerCase();
+    if (!targetPhone || !targetGroup) return null;
+
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
+    if (!db) return null;
+
+    const docs = await db.collection('groups-members').find({}).toArray();
+
+    for (const doc of docs) {
+      if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
+
+      for (const constituency of doc.constituencies) {
+        if (!constituency || !Array.isArray(constituency.wards)) continue;
+
+        for (const ward of constituency.wards) {
+          if (!ward || !Array.isArray(ward.data)) continue;
+
+          for (const group of ward.data) {
+            if (!group || !group.groupName) continue;
+            if (String(group.groupName).trim().toLowerCase() !== targetGroup) continue;
+
+            const members = group.members || {};
+            const matchedMemberKey = Object.keys(members).find(memberKey => {
+              const member = members[memberKey];
+              const memberPhone = member && (member.memberId || member.phone || member.phoneNumber) ? (member.memberId || member.phone || member.phoneNumber) : memberKey;
+              return normalizeKenyanPhone(memberPhone) === targetPhone;
+            });
+
+            if (!matchedMemberKey) continue;
+
+            return {
+              group,
+              county: group.county || doc.county,
+              constituency: group.constituency || constituency.name,
+              ward: group.ward || ward.name,
+              memberKey: matchedMemberKey,
+              member: members[matchedMemberKey]
+            };
+          }
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const buildAccountSchemaFromGroup = (group) => {
+    if (group.accountSchema && typeof group.accountSchema === 'object' && Object.keys(group.accountSchema).length > 0) {
+      return { ...group.accountSchema };
+    }
+
+    const members = group.members || {};
+    const firstMember = members[Object.keys(members)[0]];
+    const accounts = firstMember && firstMember.accounts ? firstMember.accounts : {};
+    const schema = {};
+
+    for (const accId of Object.keys(accounts)) {
+      const acc = accounts[accId];
+      schema[accId] = {
+        accountId: acc.accountId || accId,
+        accountName: acc.accountName || accId,
+        expectedAmount: acc.expectedAmount || '0'
+      };
+    }
+
+    return schema;
+  };
+
+  const buildGroupAccountsPayloadFromGroupsMembers = (verified) => {
+    const group = verified.group;
+    const members = group.members || {};
+    const accountSchema = buildAccountSchemaFromGroup(group);
+    const accountDetails = {};
+
+    for (const accId of Object.keys(accountSchema)) {
+      const schema = accountSchema[accId];
+      const memberList = [];
+
+      for (const memberKey of Object.keys(members)) {
+        const member = members[memberKey];
+        const account = member.accounts && member.accounts[accId];
+        const financials = (account && account.financials) || {
+          openingBalance: 0,
+          amountIn: 0,
+          amountOut: 0,
+          closingBalance: 0
+        };
+
+        memberList.push({
+          memberId: member.memberId || memberKey,
+          name: member.name || memberKey,
+          openingBalance: Number(financials.openingBalance || 0),
+          amountIn: Number(financials.amountIn || 0),
+          amountOut: Number(financials.amountOut || 0),
+          closingBalance: Number(financials.closingBalance || 0)
+        });
+      }
+
+      accountDetails[accId] = {
+        accountId: schema.accountId,
+        accountName: schema.accountName,
+        expectedAmount: Number(schema.expectedAmount || 0),
+        members: memberList,
+        totalIn: memberList.reduce((sum, member) => sum + member.amountIn, 0),
+        totalOut: memberList.reduce((sum, member) => sum + member.amountOut, 0),
+        totalBalance: memberList.reduce((sum, member) => sum + member.closingBalance, 0)
+      };
+    }
+
+    return {
+      success: true,
+      verified: true,
+      source: 'groups-members',
+      groupName: group.groupName,
+      groupNumber: group.groupNumber || '',
+      groupId: group.groupId || '',
+      accountNumber: group.accountNumber || group.groupId || '',
+      phase: group.phase || '',
+      county: verified.county,
+      constituency: verified.constituency,
+      ward: verified.ward,
+      accountSchema,
+      accountDetails,
+      totalMembers: Object.keys(members).length,
+      currentUser: verified.member,
+      groupTransaction: group.groupTransaction || {},
+      countyTransaction: group.countyTransaction || {}
+    };
+  };
+
   // Generate account templates with dateIntervalCycle for a group
   const generateAccountTemplates = (group) => {
     const intervals = group.principles?.intervals || {};
@@ -831,6 +967,36 @@ router.post("/group-accounts-schema", async (req, res) => {
     accountDetails,
     totalMembers:   memberKeys.length
   });
+});
+
+router.post("/verified-groups-members", async (req, res) => {
+  try {
+    const { groupName, accountNumber } = req.body;
+    const phone = req.body.phone || req.session?.user?.phoneNumber;
+
+    if (!groupName) {
+      return res.status(400).json({ success: false, error: "groupName is required" });
+    }
+    if (!phone) {
+      return res.status(401).json({ success: false, error: "Logged-in phone number is required" });
+    }
+
+    const verified = await findVerifiedGroupInGroupsMembers(groupName, phone);
+    if (!verified) {
+      return res.status(404).json({
+        success: false,
+        verified: false,
+        error: "Group not found or logged-in phone is not a verified member in groups-members collection."
+      });
+    }
+
+    const payload = buildGroupAccountsPayloadFromGroupsMembers(verified);
+    console.log(`[verified-groups-members] Verified ${phone} in ${payload.groupName} from groups-members`);
+    res.json(payload);
+  } catch (err) {
+    console.error('[verified-groups-members] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 router.post("/verify-group", (req, res) => {
