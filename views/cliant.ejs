@@ -673,10 +673,37 @@ const app = {
             window.location.href = "http://localhost:3000/personal";
             return;
         }
-        this.seedHistory();
+        this.fetchWalletData();
         this.render();
         this.updateBadge();
         this.setupPhoneListeners();
+    },
+
+    refreshPersonalDashboardIfVisible() {
+        const container = document.getElementById('mainContainer');
+        if (!container || this.data.role !== 'Personal') return;
+
+        const currentHTML = container.innerHTML || '';
+        if (currentHTML.includes('My Wallet') && currentHTML.includes('My Groups')) {
+            this.renderPersonalView(container);
+        }
+    },
+
+    async fetchWalletData() {
+        try {
+            const res = await fetch('/personal/wallet');
+            const data = await res.json();
+            if (data.success) {
+                this.data.balance = Number(data.balance) || 0;
+                this.data.transactions = data.transactions || [];
+                this.refreshPersonalDashboardIfVisible();
+            }
+        } catch (e) {
+            console.error('Error fetching wallet:', e);
+            this.data.balance = 0;
+            this.data.transactions = [];
+            this.refreshPersonalDashboardIfVisible();
+        }
     },
 
     /* ─── DIRECT BALANCE DISPLAY ─── */
@@ -1071,6 +1098,14 @@ const app = {
         }
     },
 
+    requirePersonalPin() {
+        if (!this.data.hasPersonalPin) {
+            this.showToast('Create your Personal PIN to unlock wallet actions.', 'error');
+            return false;
+        }
+        return true;
+    },
+
     setupPhoneListeners() {
         document.addEventListener('input', (e) => {
             if (e.target.type === 'tel' || e.target.id === 'newChairPhone') {
@@ -1347,9 +1382,12 @@ const app = {
 
     /* ─── PERSONAL VIEW ─── */
     renderPersonalView(container) {
-        if (!this.data.hasPersonalPin) { this.renderCreatePinView(container); return; }
-        const u    = this.data.user;
-        const txns = this.data.transactions || [];
+        const u = this.data.user;
+        const hasPin = !!this.data.hasPersonalPin;
+        const balanceAmount = Number(this.data.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const groups = this.data.userGroups || [];
+        const activeCount = groups.filter(g => parseInt(g.phase) === 3).length;
+        const pendingCount = groups.length - activeCount;
 
         let html = '';
 
@@ -1374,30 +1412,29 @@ const app = {
                     <span style="font-size:16px;background:#efebe9;color:#5d4037;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-wallet"></i></span>
                     <div style="text-align:left;">
                         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">My Wallet</span>
+                        <span style="display:block;font-size:10.5px;color:#64748b;margin-top:1px;">Available balance: <strong id="walletBalanceText" style="color:var(--primary);">KSh ${balanceAmount}</strong></span>
                     </div>
                 </div>
-                <!-- Hide/Show balance eye button -->
                 <span onclick="app.toggleHeaderBalance()" style="font-size: 13px; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: white; padding: 4px 8px; border-radius: 20px; border: 1px solid #e2e8f0;">
                     <span id="headerBalanceValue" style="display: none;"></span>
                     <i id="headerBalanceEye" class="fa-solid fa-eye-slash" style="font-size: 12px; color: var(--text-light); padding: 2px;"></i>
                 </span>
             </div>
-            
-            <!-- Nested options row for My Wallet -->
+
             <div style="display:flex;gap:8px;padding:0 16px 14px 16px;background:#fafafa;border-top:1px solid #f1f5f9;flex-wrap:wrap;">
-                <button class="action-btn" onclick="app.openModal('Send Money')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;">
+                <button class="action-btn" onclick="app.requirePersonalPin() && app.openModal('Send Money')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
                     <span class="action-icon" style="font-size:16px;margin-bottom:2px;">💸</span>
                     <span style="font-size:10px;font-weight:600;">Send</span>
                 </button>
-                <button class="action-btn" onclick="app.showBalanceDirectly()" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;">
+                <button class="action-btn" onclick="app.requirePersonalPin() && app.showBalanceDirectly()" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
                     <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📥</span>
                     <span style="font-size:10px;font-weight:600;">Balance</span>
                 </button>
-                <button class="action-btn" onclick="app.openModal('Statement')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;">
+                <button class="action-btn" onclick="app.requirePersonalPin() && app.openModal('Statement')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
                     <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📊</span>
                     <span style="font-size:10px;font-weight:600;">Statement</span>
                 </button>
-                <button class="action-btn" onclick="app.openModal('Withdraw')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;">
+                <button class="action-btn" onclick="app.requirePersonalPin() && app.openModal('Withdraw')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
                     <span class="action-icon" style="font-size:16px;margin-bottom:2px;">🏧</span>
                     <span style="font-size:10px;font-weight:600;">Withdraw</span>
                 </button>
@@ -1406,22 +1443,60 @@ const app = {
                     <span style="font-size:10px;font-weight:600;">PIN</span>
                 </button>
             </div>
+            ${!hasPin ? `<div style="padding:0 16px 14px;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;line-height:1.45;"><i class="fa-solid fa-circle-info" style="margin-right:5px;color:#f59e0b;"></i>Create your Personal PIN to unlock Send, Balance, Statement and Withdraw actions.</div>` : ''}
         </div>`;
 
-        const groups = this.data.userGroups || [];
-        const active = groups.filter(g => parseInt(g.phase) === 3);
-        html += `<div class="section-label">My Groups</div>`;
-        if (active.length > 0) {
-            active.forEach(g => {
-                const bal = g.myBalance ? 'KSh ' + Number(g.myBalance).toLocaleString() : '';
+        html += `<div class="section-label">My Groups <span style="font-size:10px;color:#64748b;font-weight:600;text-transform:none;letter-spacing:0;">${groups.length} ${groups.length === 1 ? 'group' : 'groups'} · ${activeCount} active${pendingCount ? ' · ' + pendingCount + ' pending' : ''}</span></div>`;
+
+        if (groups.length > 0) {
+            groups.forEach(g => {
+                const phase = parseInt(g.phase);
+                const phaseLabel = phase === 3 ? 'Active' : `Phase ${g.phase || 'N/A'}`;
+                const phaseColor = phase === 3 ? '#16a34a' : '#64748b';
+                const phaseBg = phase === 3 ? '#dcfce7' : '#f1f5f9';
+                const hasBalance = g.myBalance !== undefined && g.myBalance !== null && g.myBalance !== '';
+                const bal = hasBalance ? `KSh ${Number(g.myBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
+                const role = g.roleTitle || g.role || 'Member';
                 html += `<div class="account-card" style="cursor:pointer;" onclick="app.renderGroupView('${encodeURIComponent(g.groupName)}')">
-                    <div><div class="acc-name">${g.groupName}</div><small>${g.county||''} ${g.ward ? '• '+g.ward : ''}</small></div>
-                    <div class="acc-balance">${bal}</div>
+                    <div>
+                        <div class="acc-name">${g.groupName}</div>
+                        <small>${g.county||''} ${g.ward ? '• '+g.ward : ''} • ${role}</small>
+                    </div>
+                    <div style="text-align:right;">
+                        ${bal ? `<div class="acc-balance">${bal}</div>` : ''}
+                        <span style="display:inline-block;margin-top:4px;padding:2px 7px;border-radius:999px;background:${phaseBg};color:${phaseColor};font-size:9px;font-weight:700;">${phaseLabel}</span>
+                    </div>
                 </div>`;
             });
-         } else {
-              html += `<div class="account-card account-card-empty"><div><div class="acc-name">No active group.</div><small style="cursor:pointer;text-decoration:underline;color:var(--primary);" onclick="app.openModal('Create Group')">Click to register group</small></div></div>`;
-         }
+        } else {
+            html += `<div class="account-card account-card-empty"><div><div class="acc-name">No group found.</div><small style="cursor:pointer;text-decoration:underline;color:var(--primary);" onclick="app.openModal('Create Group')">Click to register group</small></div></div>`;
+        }
+
+        if (!hasPin) {
+            html += `<div style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:16px auto 20px;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+                <h2 style="margin-bottom:1rem;color:#0c8f44;">Set Personal PIN</h2>
+                <p style="color:#6b7280;margin-bottom:1rem;">You need a 4-digit PIN to access your personal wallet.</p>
+                <div class="m-field">
+                    <label>New PIN</label>
+                    <div style="position: relative;">
+                        <input type="password" id="newPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; font-weight: 700; text-align: center;">
+                        <span onclick="app.togglePinVisibility('newPersonalPin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="m-field">
+                    <label>Confirm PIN</label>
+                    <div style="position: relative;">
+                        <input type="password" id="confirmPersonalPin" class="form-input" maxlength="4" placeholder="••••" inputmode="numeric" style="padding-right: 40px; font-weight: 700; text-align: center;">
+                        <span onclick="app.togglePinVisibility('confirmPersonalPin', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-light); font-size: 14px;">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </span>
+                    </div>
+                </div>
+                <button class="m-submit-btn" onclick="app.createPersonalPin()"><i class="fa-solid fa-check-circle"></i> Create PIN</button>
+            </div>`;
+        }
 
         container.innerHTML = html;
     },
@@ -1444,6 +1519,20 @@ const app = {
                 </button>
                 <div>
                     <h3 style="font-size: 15px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.2;">${g.groupName}</h3>
+                    <small style="color:#64748b;font-size:11px;">${g.county||''} ${g.ward ? '• '+g.ward : ''} • Phase ${g.phase || 'N/A'}</small>
+                </div>
+            </div>
+
+            <!-- GROUP PLAN / CONTENT SECTION -->
+            <div style="background:white;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#f0fdf4;">
+                    <span style="font-size:16px;background:#dcfce7;color:#15803d;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-file-lines"></i></span>
+                    <div style="text-align:left;">
+                        <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">Group Constitution & Plan</span>
+                    </div>
+                </div>
+                <div style="padding:14px 16px;font-size:12px;color:#475569;line-height:1.6;">
+                    ${this.renderGroupPlan(g)}
                 </div>
             </div>
 
@@ -1533,6 +1622,52 @@ const app = {
         container.innerHTML = html;
     },
 
+    renderGroupPlan(group) {
+        const p = group.principles;
+        if (!p) return '<p style="color:#94a3b8;font-style:italic;">No constitution or plan has been set for this group yet. Contact the chairperson to initialize the group principles.</p>';
+
+        const lines = [];
+
+        if (p.intervals) {
+            const int = p.intervals;
+            lines.push(`<b style="color:#0c8f44;">📅 Meeting Schedule:</b> ${(int.frequency||'N/A').charAt(0).toUpperCase()+(int.frequency||'').slice(1)} on every ${(int.period||'').toLowerCase()}. Cycle lasts ${(int.endSavingPeriod||'1 year').replace('-',' ')}.`);
+        }
+
+        if (p.otherContributions && p.otherContributions.length > 0) {
+            lines.push(`<b style="color:#9333ea;">💰 Contribution Accounts:</b>`);
+            p.otherContributions.forEach(c => {
+                lines.push(`&nbsp;&nbsp;▸ ${c.accountName} (${c.accountNumber}): KSh ${Number(c.expectedAmount||0).toLocaleString()} expected per member.`);
+            });
+        }
+
+        if (p.distribution) {
+            const d = p.distribution;
+            lines.push(`<b style="color:#dc2626;">📊 Profit Distribution:</b> Model: <b>${d.model||'performance'}</b>. Officials get ${d.officialPct||0}%, Performance share ${d.performancePct||0}%.`);
+            if (d.targetAccountName) lines.push(`&nbsp;&nbsp;▸ Accumulates into <b>${d.targetAccountName}</b> pool.`);
+        }
+
+        if (p.balancing && p.balancing.benefitAccounts) {
+            lines.push(`<b style="color:#0891b2;">⚖️ Benefits & Fines:</b> ${p.balancing.benefitAccounts.join(', ')}.`);
+        }
+
+        if (p.loans) {
+            const l = p.loans;
+            lines.push(`<b style="color:#f59e0b;">🏦 Loans:</b> Qualified after ${l.duration?.days||30} days. Interest: ${l.interestAndLimits?.interestRate||0}%. Max limit: x${l.interestAndLimits?.limitMultiplier||3} of savings.`);
+            if (l.repayment) lines.push(`&nbsp;&nbsp;▸ Repayment: ${l.repayment.durationDays||30} days, max ${l.repayment.maxRollovers||3} rollovers via ${l.repayment.rolloverMethod||'fixed'} scale.`);
+        }
+
+        if (p.governance) {
+            const g = p.governance;
+            lines.push(`<b style="color:#64748b;">🛡️ Governance:</b> Fast changes need ${g.fastNotificationThreshold||60}% quorum. Major edits need ${g.editAccountThreshold||75}% consensus.`);
+        }
+
+        if (lines.length === 0) {
+            return '<p style="color:#94a3b8;font-style:italic;">Constitution details are incomplete. Only basic group info available.</p>';
+        }
+
+        return `<ul style="margin:0;padding-left:18px;">${lines.map(l => `<li style="margin-bottom:6px;">${l}</li>`).join('')}</ul>`;
+    },
+
     openGroupAccountsModal(groupName, encodedAccNum) {
         const accountNumber = encodedAccNum ? decodeURIComponent(encodedAccNum) : '';
         document.getElementById('modalOverlay').classList.add('open');
@@ -1541,17 +1676,24 @@ const app = {
         fetch('/member/group-accounts-schema', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupName: decodeURIComponent(groupName), accountNumber })
+            body: JSON.stringify({ groupName: decodeURIComponent(groupName), accountNumber, phone: this.data.user.phoneNumber })
         })
         .then(res => {
+            console.log('[Accounts fetch] status:', res.status, res.statusText);
             if (!res.ok) {
-                return res.json().then(err => { throw new Error(err.error || 'Server error ' + res.status); });
+                return res.json().then(err => {
+                    console.error('[Accounts fetch] server error payload:', err);
+                    throw new Error((err && err.error) ? err.error : ('Server error ' + res.status));
+                });
             }
             return res.json();
         })
         .then(data => {
+            console.log('[Accounts fetch] data keys:', data ? Object.keys(data) : 'null/undefined', 'isMemberOnly:', data && data.isMemberOnly);
             if (!data || data.error) {
-                this.updateModalContent('Accounts', `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>${data && data.error ? data.error : 'No account details found for this group.'}</p></div>`, null, 'fa-folder-open');
+                const msg = (data && data.error) ? data.error : 'No account details found for this group.';
+                console.error('[Accounts fetch] business error:', msg);
+                this.updateModalContent('Accounts', `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>${msg}</p></div>`, null, 'fa-folder-open');
                 return;
             }
 
@@ -1561,6 +1703,9 @@ const app = {
 
             const accSchema = data.accountSchema || {};
             const accDetails = data.accountDetails || {};
+            const isMemberOnly = !!data.isMemberOnly;
+            const roleRaw = data.loggedInMemberRole || (isMemberOnly ? 'member' : 'official');
+            const roleLabel = roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1);
 
             const accColors = {
                 saving:       { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank',     grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
@@ -1579,25 +1724,36 @@ const app = {
                 return accColors.default;
             };
 
-            // ── HEADER SUMMARY ──────────────────────────────────────────
+            // ── HEADER: group strip + "who am I" card ──────────────────
             let html = `
-            <div style="background:linear-gradient(135deg,#0c8f44,#34d399);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:white;display:flex;justify-content:space-between;align-items:center;">
+            <div style="background:linear-gradient(135deg,#0c8f44,#34d399);border-radius:12px;padding:14px 16px;margin-bottom:10px;color:white;display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.85;">Group</div>
                     <div style="font-size:15px;font-weight:800;margin-top:2px;">${data.groupName}</div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:11px;opacity:0.85;">Total Members</div>
-                    <div style="font-size:22px;font-weight:800;">${data.totalMembers}</div>
+                    <div style="font-size:11px;opacity:0.85;">${isMemberOnly ? 'Account Type' : 'Total Members'}</div>
+                    <div style="font-size:${isMemberOnly ? '14px' : '22px'};font-weight:800;margin-top:${isMemberOnly ? '4px' : '0'};">${isMemberOnly ? 'Personal' : data.totalMembers}</div>
                 </div>
             </div>
-            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📂 Cliant Contribution Accounts — Select Account</div>
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+                <div style="width:38px;height:38px;border-radius:50%;background:${isMemberOnly ? '#dcfce7' : '#ede9fe'};color:${isMemberOnly ? '#15803d' : '#6d28d9'};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">
+                    <i class="fa-solid ${isMemberOnly ? 'fa-user' : 'fa-user-tie'}"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:700;color:#1e293b;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${data.loggedInMemberName || 'You'}</div>
+                    <div style="font-size:10.5px;color:#64748b;margin-top:1px;">Logged in as <b>${roleLabel}</b></div>
+                </div>
+                <span style="font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;background:${isMemberOnly ? '#dcfce7' : '#ede9fe'};color:${isMemberOnly ? '#15803d' : '#6d28d9'};border:1px solid ${isMemberOnly ? '#86efac' : '#c4b5fd'};">${roleLabel.toUpperCase()}</span>
+            </div>
+            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">${isMemberOnly ? '📂 My Contribution Accounts' : '📂 Cliant Contribution Accounts — Select Account'}</div>
             <div style="display:flex;flex-direction:column;gap:10px;">`;
 
             for (const accId in accSchema) {
                 const schema  = accSchema[accId];
                 const detail  = accDetails[accId] || { totalIn: 0, totalOut: 0, totalBalance: 0, members: [] };
                 const style   = getAccStyle(schema.accountName);
+                const showMemberStats = !isMemberOnly;
 
                 html += `
                 <button onclick="app.openGroupAccountMembersView('${accId}')"
@@ -1612,18 +1768,18 @@ const app = {
                         <div style="font-size:10.5px;color:#64748b;margin-top:1px;">
                             A/C ID: <b>${schema.accountId}</b> &nbsp;·&nbsp; Expected: <b>KSh ${Number(schema.expectedAmount||0).toLocaleString()}</b> /member
                         </div>
-                        <div style="display:flex;gap:10px;margin-top:5px;">
+                        ${showMemberStats ? `<div style="display:flex;gap:10px;margin-top:5px;">
                             <span style="font-size:10px;background:#dcfce7;color:#15803d;padding:2px 7px;border-radius:20px;font-weight:600;">
                                 In: KSh ${Number(detail.totalIn).toLocaleString()}
                             </span>
                             <span style="font-size:10px;background:#fee2e2;color:#b91c1c;padding:2px 7px;border-radius:20px;font-weight:600;">
                                 Out: KSh ${Number(detail.totalOut).toLocaleString()}
                             </span>
-                        </div>
+                        </div>` : ''}
                     </div>
                     <div style="text-align:right;flex-shrink:0;">
                         <div style="font-weight:800;font-size:14px;color:${style.color};">KSh ${Number(detail.totalBalance).toLocaleString()}</div>
-                        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${(detail.members||[]).length} member${(detail.members||[]).length!==1?'s':''}</div>
+                        ${showMemberStats ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px;">${(detail.members||[]).length} member${(detail.members||[]).length!==1?'s':''}</div>` : `<div style="font-size:10px;color:#15803d;margin-top:2px;font-weight:600;">My Account</div>`}
                         <i class="fa-solid fa-chevron-right" style="font-size:10px;color:#94a3b8;margin-top:4px;display:block;"></i>
                     </div>
                 </button>`;
@@ -1634,7 +1790,7 @@ const app = {
                 <i class="fa-solid fa-xmark"></i> Close
             </button>`;
 
-            this.updateModalContent('Group Accounts', html, null, 'fa-folder-open', 'linear-gradient(135deg,#0c8f44,#34d399)');
+            this.updateModalContent(isMemberOnly ? 'My Accounts' : 'Group Accounts', html, null, 'fa-folder-open', 'linear-gradient(135deg,#0c8f44,#34d399)');
         })
         .catch(err => {
             console.error('[openGroupAccountsModal] fetch error:', err);
@@ -1653,6 +1809,9 @@ const app = {
         if (!detail) return;
 
         const groupName = this._groupAccountsName || data.groupName;
+        const isMemberOnly = data.isMemberOnly;
+        const loggedInMemberName = data.loggedInMemberName || '';
+        const loggedInMemberId = data.loggedInMemberId || null;
 
         const accColors = {
             saving:       { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank',   grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
@@ -1684,7 +1843,11 @@ const app = {
                     <div style="font-size:15px;font-weight:800;">${detail.accountName}</div>
                     <div style="font-size:10.5px;opacity:0.85;">A/C ${detail.accountId} &nbsp;·&nbsp; ${groupName}</div>
                 </div>
-            </div>
+            </div>`;
+
+        // Trustees/Officials see group totals; members see only their own balance
+        if (!isMemberOnly) {
+            html += `
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
                 <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
                     <div style="font-size:9px;opacity:0.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total In</div>
@@ -1698,77 +1861,144 @@ const app = {
                     <div style="font-size:9px;opacity:0.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Balance</div>
                     <div style="font-size:13px;font-weight:800;margin-top:3px;">KSh ${Number(detail.totalBalance).toLocaleString()}</div>
                 </div>
-            </div>
-        </div>
-
-        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-            👥 Members (${members.length})
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;">`;
-
-        if (members.length === 0) {
-            html += `<div class="m-empty-state"><i class="fa-solid fa-users"></i><p>No members found for this account.</p></div>`;
+            </div>`;
         } else {
-            members.forEach((m, idx) => {
-                const closingBal = Number(m.closingBalance || 0);
-                const amtIn      = Number(m.amountIn  || 0);
-                const amtOut     = Number(m.amountOut || 0);
-                const openBal    = Number(m.openingBalance || 0);
-                const expectedAmt= Number(detail.expectedAmount || 0);
-                const paidStatus = amtIn >= expectedAmt && expectedAmt > 0;
+            // Member sees only their own closing balance
+            const myBal = members.length > 0 ? Number(members[0].closingBalance || 0) : 0;
+            html += `
+            <div style="display:grid;grid-template-columns:1fr;gap:8px;text-align:center;">
+                <div style="background:rgba(255,255,255,0.25);border-radius:8px;padding:8px 4px;">
+                    <div style="font-size:9px;opacity:0.8;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">My Closing Balance</div>
+                    <div style="font-size:13px;font-weight:800;margin-top:3px;">KSh ${myBal.toLocaleString()}</div>
+                </div>
+            </div>`;
+        }
+        html += `</div>`;
 
-                html += `
-                <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-                    <!-- Member Header -->
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                        <div style="width:32px;height:32px;border-radius:50%;background:${style.bg};border:1.5px solid ${style.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${style.color};flex-shrink:0;">
-                            ${idx + 1}
-                        </div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-weight:700;font-size:13px;color:#1e293b;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
-                            <div style="font-size:10px;color:#64748b;margin-top:1px;">ID: ${m.memberId}</div>
-                        </div>
-                        <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;${paidStatus ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;' : 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;'}">
-                            ${paidStatus ? '✓ Paid' : '⏳ Pending'}
-                        </span>
+        // MEMBER VIEW: Show only the logged-in member's contribution card
+        if (isMemberOnly && members.length === 1) {
+            const m = members[0];
+            const closingBal = Number(m.closingBalance || 0);
+            const amtIn      = Number(m.amountIn  || 0);
+            const amtOut     = Number(m.amountOut || 0);
+            const openBal    = Number(m.openingBalance || 0);
+            const expectedAmt= Number(detail.expectedAmount || 0);
+            const paidStatus = amtIn >= expectedAmt && expectedAmt > 0;
+
+            html += `
+            <div style="background:white;border:1.5px solid ${style.color};border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <span style="width:36px;height:36px;border-radius:50%;background:${style.bg};color:${style.color};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;">
+                        <i class="fa-solid fa-user"></i>
+                    </span>
+                    <div>
+                        <div style="font-weight:700;font-size:13px;color:#1e293b;">${loggedInMemberName || m.name}</div>
+                        <div style="font-size:10px;color:#64748b;margin-top:1px;">ID: ${m.memberId}</div>
                     </div>
-                    <!-- Account Name + Number Row -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f8fafc;border-radius:7px;margin-bottom:8px;">
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <i class="fa-solid ${style.icon}" style="color:${style.color};font-size:11px;"></i>
-                            <span style="font-size:11px;font-weight:700;color:#1e293b;">${detail.accountName}</span>
-                        </div>
-                        <span style="font-size:10px;color:#64748b;font-weight:600;">A/C ID: <b>${detail.accountId}</b></span>
+                    <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-left:auto;${paidStatus ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;' : 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;'}">
+                        ${paidStatus ? '✓ Paid' : '⏳ Pending'}
+                    </span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f8fafc;border-radius:7px;margin-bottom:10px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <i class="fa-solid ${style.icon}" style="color:${style.color};font-size:11px;"></i>
+                        <span style="font-size:11px;font-weight:700;color:#1e293b;">${detail.accountName}</span>
                     </div>
-                    <!-- Financials Grid -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-                        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
-                            <div style="font-size:8.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Opening Bal</div>
-                            <div style="font-size:12px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${openBal.toLocaleString()}</div>
-                        </div>
-                        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
-                            <div style="font-size:8.5px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;">Amount In</div>
-                            <div style="font-size:12px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${amtIn.toLocaleString()}</div>
-                        </div>
-                        <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:7px;padding:7px 9px;">
-                            <div style="font-size:8.5px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.5px;">Amount Out</div>
-                            <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${amtOut.toLocaleString()}</div>
-                        </div>
-                        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:7px 9px;">
-                            <div style="font-size:8.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;">Closing Bal</div>
-                            <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${closingBal.toLocaleString()}</div>
-                        </div>
+                    <span style="font-size:10px;color:#64748b;font-weight:600;">A/C ID: <b>${detail.accountId}</b></span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
+                        <div style="font-size:8.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Opening Bal</div>
+                        <div style="font-size:12px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${openBal.toLocaleString()}</div>
                     </div>
-                </div>`;
-            });
+                    <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
+                        <div style="font-size:8.5px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;">Amount In</div>
+                        <div style="font-size:12px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${amtIn.toLocaleString()}</div>
+                    </div>
+                    <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:7px;padding:7px 9px;">
+                        <div style="font-size:8.5px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.5px;">Amount Out</div>
+                        <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${amtOut.toLocaleString()}</div>
+                    </div>
+                    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:7px 9px;">
+                        <div style="font-size:8.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;">Closing Bal</div>
+                        <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${closingBal.toLocaleString()}</div>
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            // TRUSTEE/OFFICIAL VIEW: show all members list
+            html += `
+            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+                👥 Members (${members.length})
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px;">`;
+
+            if (members.length === 0) {
+                html += `<div class="m-empty-state"><i class="fa-solid fa-users"></i><p>No members found for this account.</p></div>`;
+            } else {
+                members.forEach((m, idx) => {
+                    const closingBal = Number(m.closingBalance || 0);
+                    const amtIn      = Number(m.amountIn  || 0);
+                    const amtOut     = Number(m.amountOut || 0);
+                    const openBal    = Number(m.openingBalance || 0);
+                    const expectedAmt= Number(detail.expectedAmount || 0);
+                    const paidStatus = amtIn >= expectedAmt && expectedAmt > 0;
+                    const isYou = loggedInMemberId && String(m.memberId) === String(loggedInMemberId);
+
+                    html += `
+                    <div style="background:${isYou ? style.bg : 'white'};border:1px solid ${isYou ? style.color : '#e2e8f0'};border-radius:12px;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <div style="width:32px;height:32px;border-radius:50%;background:${isYou ? style.color : style.bg};border:1.5px solid ${style.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${isYou ? '#fff' : style.color};flex-shrink:0;">
+                                ${idx + 1}
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:700;font-size:13px;color:#1e293b;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+                                <div style="font-size:10px;color:#64748b;margin-top:1px;">ID: ${m.memberId}</div>
+                            </div>
+                            ${isYou ? `<span style="font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;background:${style.color};color:#fff;margin-right:4px;white-space:nowrap;">YOU</span>` : ''}
+                            <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;${paidStatus ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;' : 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;'}">
+                                ${paidStatus ? '✓ Paid' : '⏳ Pending'}
+                            </span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#f8fafc;border-radius:7px;margin-bottom:8px;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <i class="fa-solid ${style.icon}" style="color:${style.color};font-size:11px;"></i>
+                                <span style="font-size:11px;font-weight:700;color:#1e293b;">${detail.accountName}</span>
+                            </div>
+                            <span style="font-size:10px;color:#64748b;font-weight:600;">A/C ID: <b>${detail.accountId}</b></span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                            <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
+                                <div style="font-size:8.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Opening Bal</div>
+                                <div style="font-size:12px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${openBal.toLocaleString()}</div>
+                            </div>
+                            <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:7px;padding:7px 9px;">
+                                <div style="font-size:8.5px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;">Amount In</div>
+                                <div style="font-size:12px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${amtIn.toLocaleString()}</div>
+                            </div>
+                            <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:7px;padding:7px 9px;">
+                                <div style="font-size:8.5px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.5px;">Amount Out</div>
+                                <div style="font-size:12px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${amtOut.toLocaleString()}</div>
+                            </div>
+                            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:7px 9px;">
+                                <div style="font-size:8.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;">Closing Bal</div>
+                                <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${closingBal.toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            }
+            html += `</div>`;
         }
 
-        html += `</div>
+        const backLabel = isMemberOnly ? 'Back to Accounts' : 'Back to Accounts';
+        html += `
         <button class="m-submit-btn secondary" style="margin-top:14px;" onclick="app.openGroupAccountsModal('${groupName}')">
-            <i class="fa-solid fa-arrow-left"></i> Back to Accounts
+            <i class="fa-solid fa-arrow-left"></i> ${backLabel}
         </button>`;
 
-        this.updateModalContent(`${detail.accountName} — Members`, html, () => this.openGroupAccountsModal(groupName), style.icon, style.grad);
+        const modalTitle = isMemberOnly ? `My ${detail.accountName}` : `${detail.accountName} — Members`;
+        this.updateModalContent(modalTitle, html, () => this.openGroupAccountsModal(groupName), style.icon, style.grad);
     },
 
     openGroupStatementModal(groupName) {

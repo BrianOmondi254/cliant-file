@@ -976,9 +976,10 @@ const normalizeMembersFromGroupsMembers = (group) => {
 // POST /member/group-accounts-schema
 // Returns the accountSchema (account types) for a group and, for each account type,
 // lists all members with their individual financials for that account.
+// Trustees and Officials see all members. Members see only their own data.
 // Data sources: member.json (local) → groups-members MongoDB → MemberGroup MongoDB
 router.post("/group-accounts-schema", async (req, res) => {
-  const { groupName, accountNumber } = req.body;
+  const { groupName, accountNumber, phone } = req.body;
   if (!groupName && !accountNumber) {
     return res.status(400).json({ error: "groupName or accountNumber is required" });
   }
@@ -1070,9 +1071,17 @@ router.post("/group-accounts-schema", async (req, res) => {
       groupName ? `groups-members(groupName="${groupName}")` : '',
       accountNumber ? `groups-members(groupId="${accountNumber}")` : ''
     ].filter(Boolean).join(', ');
-    return res.status(404).json({
-      error: `Group not found. Tried: ${sourcesTried}.`
-    });
+    const errPayload = {
+      error: `Group not found. Tried: ${sourcesTried}.`,
+      debug: {
+        groupName,
+        accountNumber,
+        phone,
+        loginPhone: phone ? normalizeKenyanPhone(phone) : null
+      }
+    };
+    console.error('[group-accounts-schema] 404:', errPayload);
+    return res.status(404).json(errPayload);
   }
 
   // Normalize members based on source
@@ -1084,8 +1093,52 @@ router.post("/group-accounts-schema", async (req, res) => {
       normalizedMembers = normalizeMembersFromMemberJson(foundGroup);
     }
   } catch (e) {
-    console.error('[group-accounts-schema] Member normalization failed:', e.message);
+    console.error('[group-accounts-schema] Member normalization failed:', e.message, 'source=', foundInSource, 'groupName=', groupName);
     return res.status(500).json({ error: "Failed to process member data: " + e.message });
+  }
+
+  // Determine user's role and whether to restrict data
+  const loginPhone = phone ? normalizeKenyanPhone(phone) : null;
+  let isMemberOnly = false;
+  let loggedInMemberKey = null;
+  let loggedInMemberRole = null;
+  let loggedInMemberName = null;
+
+  if (loginPhone) {
+    // Find the logged-in member in the normalized members
+    for (const memberKey in normalizedMembers) {
+      const m = normalizedMembers[memberKey];
+      // Match against all possible phone fields (same logic as normalizeMembersFromGroupsMembers)
+      const memberPhone = normalizeKenyanPhone(m.memberId || m.phone || m.phoneNumber || memberKey);
+      if (memberPhone === loginPhone) {
+        loggedInMemberKey = memberKey;
+        loggedInMemberRole = (m.role || m.type || 'member').toLowerCase();
+        loggedInMemberName = m.name || loginPhone;
+        break;
+      }
+    }
+
+    // Validate: if we couldn't find the user in this group, log it clearly
+    if (!loggedInMemberKey) {
+      console.warn(`[group-accounts-schema] Phone ${loginPhone} not found in group members. Treating as non-member (full access).`);
+    }
+
+    // If role is 'member' (not trustee or official), restrict view
+    if (loggedInMemberKey && loggedInMemberRole && loggedInMemberRole !== 'trustee' && loggedInMemberRole !== 'official') {
+      isMemberOnly = true;
+    }
+  }
+
+  // ── DEBUG: Log what we found ──────────────────────────────────────
+  console.log(`[group-accounts-schema] source=${foundInSource} phoneSent="${phone}" loginPhone="${loginPhone}" isMemberOnly=${isMemberOnly}`);
+  console.log(`[group-accounts-schema] memberKeys: [${Object.keys(normalizedMembers).join(', ')}]`);
+  for (const k in normalizedMembers) {
+    const m = normalizedMembers[k];
+    const mPhone = normalizeKenyanPhone(m.memberId || m.phone || m.phoneNumber || k);
+    console.log(`  key=${k} memberId=${m.memberId} mPhone=${mPhone} role=${m.role||m.type||'member'} match=${mPhone === loginPhone}`);
+  }
+  if (isMemberOnly) {
+    console.log(`[group-accounts-schema] Member-only response: memberKey=${loggedInMemberKey}`);
   }
 
   // Build accountSchema from actual member account data (first member has accounts)
@@ -1100,8 +1153,9 @@ router.post("/group-accounts-schema", async (req, res) => {
   let accountSchema = defaultSchema;
   const memberKeys = Object.keys(normalizedMembers);
   if (memberKeys.length > 0) {
-    const firstMember = normalizedMembers[memberKeys[0]];
-    const firstAccounts = firstMember.accounts || {};
+    // If member-only, use their own accounts to build schema; otherwise use first member
+    const schemaSource = isMemberOnly && loggedInMemberKey ? normalizedMembers[loggedInMemberKey] : normalizedMembers[memberKeys[0]];
+    const firstAccounts = schemaSource.accounts || {};
     const accIds = Object.keys(firstAccounts);
     if (accIds.length > 0) {
       accountSchema = {};
@@ -1109,7 +1163,7 @@ router.post("/group-accounts-schema", async (req, res) => {
         const acc = firstAccounts[accId];
         accountSchema[accId] = {
           accountId:      acc.accountId      || accId,
-          accountName:    acc.accountName    || accId,
+          accountName:    acc.accountName || accId,
           expectedAmount: acc.expectedAmount || "100"
         };
       }
@@ -1120,22 +1174,40 @@ router.post("/group-accounts-schema", async (req, res) => {
   const accountDetails = {};
   for (const accId in accountSchema) {
     const schema = accountSchema[accId];
-    const memberList = [];
+    let memberList = [];
 
-    for (const phone in normalizedMembers) {
-      const member = normalizedMembers[phone];
+    if (isMemberOnly && loggedInMemberKey) {
+      // Member view: only show their own data
+      const member = normalizedMembers[loggedInMemberKey];
       const acc = member.accounts && member.accounts[accId];
       const fins = (acc && acc.financials) || {
         openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0
       };
       memberList.push({
-        memberId:       member.memberId || phone,
-        name:           member.name     || phone,
+        memberId:       member.memberId || loggedInMemberKey,
+        name:           member.name     || loggedInMemberKey,
         openingBalance: fins.openingBalance || 0,
         amountIn:       fins.amountIn       || 0,
         amountOut:      fins.amountOut      || 0,
         closingBalance: fins.closingBalance  || 0
       });
+    } else {
+      // Trustee/Official view: show all members
+      for (const phoneKey in normalizedMembers) {
+        const member = normalizedMembers[phoneKey];
+        const acc = member.accounts && member.accounts[accId];
+        const fins = (acc && acc.financials) || {
+          openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0
+        };
+        memberList.push({
+          memberId:       member.memberId || phoneKey,
+          name:           member.name     || phoneKey,
+          openingBalance: fins.openingBalance || 0,
+          amountIn:       fins.amountIn       || 0,
+          amountOut:      fins.amountOut      || 0,
+          closingBalance: fins.closingBalance  || 0
+        });
+      }
     }
 
     accountDetails[accId] = {
@@ -1143,7 +1215,7 @@ router.post("/group-accounts-schema", async (req, res) => {
       accountName:    schema.accountName,
       expectedAmount: schema.expectedAmount,
       members:        memberList,
-      // Group-level totals
+      // Group-level totals (filtered if member-only)
       totalIn:  memberList.reduce((s, m) => s + Number(m.amountIn),       0),
       totalOut: memberList.reduce((s, m) => s + Number(m.amountOut),      0),
       totalBalance: memberList.reduce((s, m) => s + Number(m.closingBalance), 0)
@@ -1155,8 +1227,12 @@ router.post("/group-accounts-schema", async (req, res) => {
     groupNumber:    foundGroup.groupNumber,
     accountSchema,
     accountDetails,
-    totalMembers:   memberKeys.length,
-    source: foundInSource  // Debug: which source provided the data
+    totalMembers:   isMemberOnly ? 1 : memberKeys.length,
+    isMemberOnly,
+    loggedInMemberName,
+    loggedInMemberRole: loggedInMemberRole || (isMemberOnly ? 'member' : 'official'),
+    loggedInMemberId: loggedInMemberKey ? (normalizedMembers[loggedInMemberKey].memberId || loggedInMemberKey) : null,
+    source: foundInSource
   });
 });
 

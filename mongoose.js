@@ -86,8 +86,8 @@ const countySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Create model
-const County = mongoose.model('County', countySchema);
+// Create model (guarded against OverwriteModelError on hot-reload / repeated requires)
+const County = mongoose.models.County || mongoose.model('County', countySchema);
 
 /**
  * Transaction History Schema for accounts
@@ -186,7 +186,7 @@ const memberGroupSchema = new mongoose.Schema({
   updatedAt: { type: String, default: () => new Date().toISOString() }
 }, { timestamps: true });
 
-const MemberGroup = mongoose.model('MemberGroup', memberGroupSchema, 'groups');
+const MemberGroup = mongoose.models.MemberGroup || mongoose.model('MemberGroup', memberGroupSchema, 'groups');
 
 /**
  * GROUP CRUD - Find or create group document for member data
@@ -414,7 +414,7 @@ const personalAccountSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const PersonalAccount = mongoose.model('PersonalAccount', personalAccountSchema);
+const PersonalAccount = mongoose.models.PersonalAccount || mongoose.model('PersonalAccount', personalAccountSchema);
 
 /**
  * Connect to MongoDB database (idempotent — safe to call multiple times)
@@ -809,7 +809,8 @@ const migratePinsFromJSON = async () => {
   
   console.log('🚀 Starting PIN migration from data.json → MongoDB...\n');
   
-  const dataFile = path.join(__dirname, 'data/data.json');
+  // data.json lives at the project root, alongside this file
+  const dataFile = path.join(__dirname, 'data.json');
   
   const raw = fs.readFileSync(dataFile, 'utf8');
   const users = JSON.parse(raw);
@@ -867,6 +868,7 @@ const migratePinsFromJSON = async () => {
 module.exports = {
   connectDB,
   ensureMongoReady,
+  getMongoConfigHint,
   mongoose,
   County,
   PersonalAccount,
@@ -887,6 +889,5 @@ module.exports = {
   updateMemberAccountInMongo,
   getMemberGroupFromMongo,
   saveMemberDataToMongo,
-  saveMemberGroupToMongo,
   findOrCreateMemberGroup,
 };

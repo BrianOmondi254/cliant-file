@@ -799,6 +799,56 @@ router.get("/myaccount", (req, res) => {
   }
 });
 
+/* 💰 Wallet - Get user's wallet balance and transactions */
+router.get("/wallet", (req, res) => {
+  try {
+    const phone = req.session.user?.phoneNumber;
+    if (!phone) return res.status(401).json({ success: false, error: "Not authenticated" });
+
+    const pAccountDir = path.join(__dirname, "../p_account");
+    const personalFile = path.join(pAccountDir, "personal.json");
+    const personalData = readJSON(personalFile, { personalAccounts: {} });
+
+    const normalizedPhone = norm(phone);
+    const accountKey = Object.keys(personalData.personalAccounts || {}).find(key =>
+      norm(personalData.personalAccounts[key].phone) === normalizedPhone
+    );
+
+    if (!accountKey) return res.json({ success: true, balance: 0, transactions: [], accountExists: false });
+
+    const account = personalData.personalAccounts[accountKey];
+    // Handle both old format (transactions on account) and new format (accounts.xxx.transactions)
+    const accountTxns = account.transactions || [];
+    const nestedTxns = [];
+    if (account.accounts && typeof account.accounts === 'object') {
+      Object.values(account.accounts).forEach(acc => {
+        if (acc.transactions && Array.isArray(acc.transactions)) {
+          nestedTxns.push(...acc.transactions);
+        }
+      });
+    }
+    const allTxns = [...accountTxns, ...nestedTxns];
+
+    const transactions = allTxns.map(t => ({
+      type: t.type || t.transactionType || 'received',
+      acc: (t.from?.name || t.to?.name || 'Personal Account'),
+      amt: parseFloat(t.amount || 0),
+      date: t.time || t.date,
+      accountNumber: t.to?.number || t.from?.number || account.phone,
+      notes: t.notes || ''
+    }));
+
+    const balance = transactions.length > 0
+      ? transactions.reduce((sum, t) => sum + (t.type === 'received' || t.type === 'deposit' ? t.amt : -t.amt), 0)
+      : 0;
+
+    res.json({ success: true, balance, transactions, accountExists: true });
+  } catch (err) {
+    console.error("Error fetching wallet:", err);
+    res.status(500).json({ success: false, error: "Failed to load wallet" });
+  }
+});
+
 /* 🏠 Group Details */
 router.get("/group/:groupName", (req, res) => {
   try {
