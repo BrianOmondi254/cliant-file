@@ -418,7 +418,7 @@
     },
     "Kericho": {
       "totals": {
-        "phase1": 1,
+        "phase1": 2,
         "phase2": 0,
         "phase3": 0,
         "phase4": 0,
@@ -427,6 +427,14 @@
       },
       "hourly": {
         "2026-05-20-21": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        },
+        "2026-06-16-18": {
           "phase1": 1,
           "phase2": 0,
           "phase3": 0,
@@ -443,10 +451,26 @@
           "phase4": 0,
           "phase5": 0,
           "totalMembers": 0
+        },
+        "2026-W25": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
         }
       },
       "monthly": {
         "2026-05": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        },
+        "2026-06": {
           "phase1": 1,
           "phase2": 0,
           "phase3": 0,
@@ -458,7 +482,7 @@
       "constituencies": {
         "Kipkelion East": {
           "totals": {
-            "phase1": 1,
+            "phase1": 2,
             "phase2": 0,
             "phase3": 0,
             "phase4": 0,
@@ -467,6 +491,14 @@
           },
           "hourly": {
             "2026-05-20-21": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            },
+            "2026-06-16-18": {
               "phase1": 1,
               "phase2": 0,
               "phase3": 0,
@@ -483,10 +515,26 @@
               "phase4": 0,
               "phase5": 0,
               "totalMembers": 0
+            },
+            "2026-W25": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
             }
           },
           "monthly": {
             "2026-05": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            },
+            "2026-06": {
               "phase1": 1,
               "phase2": 0,
               "phase3": 0,
@@ -498,7 +546,7 @@
           "wards": {
             "Chepseon": {
               "totals": {
-                "phase1": 1,
+                "phase1": 2,
                 "phase2": 0,
                 "phase3": 0,
                 "phase4": 0,
@@ -507,6 +555,14 @@
               },
               "hourly": {
                 "2026-05-20-21": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                },
+                "2026-06-16-18": {
                   "phase1": 1,
                   "phase2": 0,
                   "phase3": 0,
@@ -523,10 +579,26 @@
                   "phase4": 0,
                   "phase5": 0,
                   "totalMembers": 0
+                },
+                "2026-W25": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
                 }
               },
               "monthly": {
                 "2026-05": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                },
+                "2026-06": {
                   "phase1": 1,
                   "phase2": 0,
                   "phase3": 0,
@@ -598,6 +670,14 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-06-16-18": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
       }
     },
     "weekly": {
@@ -624,6 +704,14 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-W25": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
       }
     },
     "monthly": {
@@ -642,10 +730,18 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-06": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
       }
     },
     "totals": {
-      "phase1": 11,
+      "phase1": 12,
       "phase2": 0,
       "phase3": 3,
       "phase4": 0,

@@ -166,5 +166,13 @@
     "title": "Group Creation",
     "content": "Group Creation Request: ONE SACCO 3. Submitted by Processor: 0740001141. Chairperson Phone: 0740415992. Location: Siaya/Ugenya/East Ugenya. Please verify this request.",
     "createdAt": "2026-06-01T09:28:23.711Z"
+  },
+  {
+    "groupName": "ONE SACCO 1",
+    "to": "0741001141",
+    "type": "security_alert",
+    "title": "Group Creation",
+    "content": "Your application for ONE SACCO 1 is pending. Note: Your regional block is not yet allocated to any of our officials.",
+    "createdAt": "2026-06-16T15:51:13.330Z"
   }
 ]
