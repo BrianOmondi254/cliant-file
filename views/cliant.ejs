@@ -1325,7 +1325,8 @@ const app = {
                 <div id="cAccountStep">
                     <div class="m-info-banner green"><i class="fa-solid fa-users-cog"></i><span>Fill in the group and chairperson details to get started.</span></div>
                     <div class="m-section-label">Group Details</div>
-                    <div class="m-field"><label>Group Name</label><input type="text" name="groupName" id="newGroupName" class="form-input" placeholder="e.g. Umoja Savings Group" required></div>
+                    <div class="m-field"><label>Group Name</label><input type="text" name="groupName" id="newGroupName" class="form-input" placeholder="e.g. Umoja Savings Group" required oninput="app.clearNewGroupNameError()"></div>
+                    <small style="color:#dc2626;font-size:0.7rem;display:none;" id="newGroupNameError"></small>
                     <div class="m-section-label" style="margin-top:16px;">Chairperson Details</div>
                     <div class="m-field"><label>Phone Number</label><input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="07XX XXX XXX" inputmode="numeric" required></div>
                     <div class="m-field">
@@ -1338,7 +1339,7 @@ const app = {
                     <input type="hidden" name="lastName"   id="newLastName">
                     <div class="m-btn-row" style="margin-top:16px;">
                         <button type="button" class="m-submit-btn secondary" onclick="app.handleGeneralClick()"><i class="fa-solid fa-arrow-left"></i> Back</button>
-                        <button type="button" class="m-submit-btn" onclick="app.goToRegions()">Next <i class="fa-solid fa-arrow-right"></i></button>
+                        <button type="button" id="newGroupNextBtn" class="m-submit-btn" onclick="app.goToRegions()">Next <i class="fa-solid fa-arrow-right"></i></button>
                     </div>
                 </div>
                 <div id="gRegionsStep" class="hidden">
@@ -2697,17 +2698,83 @@ const app = {
     },
 
     /* ─── GROUP / LOCATION HELPERS ─── */
-    goToRegions() {
+    async goToRegions() {
         const name     = document.getElementById('newGroupName').value.trim();
         const phone    = document.getElementById('newChairPhone').value.trim();
         const fullName = document.getElementById('newFullNameInput').value.trim();
+        const nextBtn  = document.getElementById('newGroupNextBtn');
         const isValidP = p => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
         if (!name)                      { this.showToast('Please enter a group name.', 'error'); return; }
         if (!phone || !isValidP(phone)) { this.showToast('Invalid phone. Use +254XXXXXXXXX or 07/01XXXXXXXX.', 'error'); return; }
         if (fullName.split(/\s+/).length < 3) { document.getElementById('newNameError').style.display = 'block'; return; }
         document.getElementById('newNameError').style.display = 'none';
-        document.getElementById('cAccountStep').classList.add('hidden');
-        document.getElementById('gRegionsStep').classList.remove('hidden');
+
+        const original = nextBtn ? nextBtn.innerHTML : '';
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.style.opacity = '0.65';
+            nextBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
+        }
+
+        try {
+            const nameOk = await this.verifyNewGroupName();
+            if (!nameOk) return;
+            document.getElementById('cAccountStep').classList.add('hidden');
+            document.getElementById('gRegionsStep').classList.remove('hidden');
+        } finally {
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.style.opacity = '';
+                nextBtn.innerHTML = original || 'Next <i class="fa-solid fa-arrow-right"></i>';
+            }
+        }
+    },
+    async verifyNewGroupName() {
+        const name  = document.getElementById('newGroupName').value.trim();
+        const error = document.getElementById('newGroupNameError');
+        if (!name) {
+            error.textContent = 'Please enter a group name.';
+            error.style.display = 'block';
+            return false;
+        }
+
+        error.textContent = 'Verifying group name...';
+        error.style.display = 'block';
+
+        try {
+            const res = await fetch(`/general/verify-group-name?groupName=${encodeURIComponent(name)}`, {
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-store'
+            });
+            const result = await res.json();
+            const exists = Boolean(result.exists);
+
+            if (result.unavailable) {
+                error.textContent = result.message || 'MongoDB verification is not available.';
+                error.style.display = 'block';
+                return false;
+            }
+
+            if (exists) {
+                error.textContent = 'Group name exists. Please choose a different group name.';
+                error.style.display = 'block';
+                return false;
+            }
+            error.textContent = '';
+            error.style.display = 'none';
+            return true;
+        } catch (e) {
+            error.textContent = 'Could not verify group name. Please try again.';
+            error.style.display = 'block';
+            return false;
+        }
+    },
+    clearNewGroupNameError() {
+        const error = document.getElementById('newGroupNameError');
+        if (error) {
+            error.textContent = '';
+            error.style.display = 'none';
+        }
     },
     backToGroupForm() {
         document.getElementById('gRegionsStep').classList.add('hidden');

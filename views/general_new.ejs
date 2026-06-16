@@ -473,8 +473,9 @@ function switchTab(tab) {
           <label>Group Name</label>
           <div class="input-group">
             <i class="fas fa-users"></i>
-            <input type="text" name="groupName" id="confirmedGroup" placeholder="e.g. Umoja Savings Group" required>
+            <input type="text" name="groupName" id="confirmedGroup" placeholder="e.g. Umoja Savings Group" required oninput="clearGroupNameError()">
           </div>
+          <small id="groupNameError" style="color:#dc2626;font-size:0.7rem;display:none;margin-top:6px;"></small>
  
           <div style="border:1px solid var(--border);padding:14px;border-radius:12px;margin-top:14px;background:#f8f9fa;">
             <h4 style="margin:0 0 12px;color:var(--primary);font-size:0.95rem;border-bottom:2px solid var(--primary);padding-bottom:8px;">
@@ -502,7 +503,7 @@ function switchTab(tab) {
             <button type="button" onclick="switchTab('mySaving')" style="flex:1;background:#e2e8f0;color:#333;">
               <i class="fas fa-arrow-left"></i> Back
             </button>
-            <button type="button" onclick="goToRegions()" style="flex:1;">
+            <button type="button" id="createGroupNextBtn" onclick="goToRegions()" style="flex:1;">
               Next <i class="fas fa-arrow-right"></i>
             </button>
           </div>
@@ -755,10 +756,11 @@ function parseFullName() {
   document.getElementById('lastName').value   = parts.slice(2).join(' ') || '';
 }
  
-function goToRegions() {
+async function goToRegions() {
   const name     = document.getElementById('confirmedGroup').value.trim();
   const phone    = document.getElementById('confirmedPhone').value.trim();
   const fullName = document.getElementById('fullNameInput').value.trim();
+  const nextBtn  = document.getElementById('createGroupNextBtn');
   const isValidP = (p) => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
   
   if (!name)                                    { showToast('Please enter a group name.', 'error'); return; }
@@ -766,8 +768,75 @@ function goToRegions() {
   if (!isValidP(phone))                         { showToast('Invalid phone format. Use +254XXXXXXXXX (13), 254XXXXXXXXX (12) or 07/01XXXXXXXX (10 digits).', 'error'); return; }
   if (fullName.split(/\s+/).length < 3)         { document.getElementById('nameError').style.display = 'block'; return; }
   document.getElementById('nameError').style.display = 'none';
-  document.getElementById('cAccount').classList.add('hidden');
-  document.getElementById('gRegions').classList.remove('hidden');
+
+  const original = nextBtn ? nextBtn.innerHTML : '';
+  if (nextBtn) {
+    nextBtn.disabled = true;
+    nextBtn.style.opacity = '0.65';
+    nextBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Verifying...';
+  }
+
+  try {
+    const nameOk = await verifyGroupName();
+    if (!nameOk) return;
+    document.getElementById('cAccount').classList.add('hidden');
+    document.getElementById('gRegions').classList.remove('hidden');
+  } finally {
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.style.opacity = '';
+      nextBtn.innerHTML = original || 'Next <i class="fas fa-arrow-right"></i>';
+    }
+  }
+}
+
+async function verifyGroupName() {
+  const name  = document.getElementById('confirmedGroup').value.trim();
+  const error = document.getElementById('groupNameError');
+  if (!name) {
+    error.textContent = 'Please enter a group name.';
+    error.style.display = 'block';
+    return false;
+  }
+
+  error.textContent = 'Verifying group name...';
+  error.style.display = 'block';
+
+  try {
+    const res = await fetch(`/general/verify-group-name?groupName=${encodeURIComponent(name)}`, {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
+    const result = await res.json();
+
+    if (result.unavailable) {
+      error.textContent = result.message || 'MongoDB verification is not available.';
+      error.style.display = 'block';
+      return false;
+    }
+
+    if (result.exists) {
+      error.textContent = 'Group name exists. Please choose a different group name.';
+      error.style.display = 'block';
+      return false;
+    }
+
+    error.textContent = '';
+    error.style.display = 'none';
+    return true;
+  } catch (e) {
+    error.textContent = 'Could not verify group name. Please try again.';
+    error.style.display = 'block';
+    return false;
+  }
+}
+
+function clearGroupNameError() {
+  const error = document.getElementById('groupNameError');
+  if (error) {
+    error.textContent = '';
+    error.style.display = 'none';
+  }
 }
  
 function backToGroupForm() {
