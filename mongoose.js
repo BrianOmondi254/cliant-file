@@ -189,6 +189,79 @@ const memberGroupSchema = new mongoose.Schema({
 const MemberGroup = mongoose.models.MemberGroup || mongoose.model('MemberGroup', memberGroupSchema, 'groups');
 
 /**
+ * Tbank Settings Schema - Compliance configuration
+ */
+const tbankSettingsSchema = new mongoose.Schema({
+  compliance: {
+    registration: {
+      newGroupFee: { type: String, default: "50" },
+      renewalFee: { type: String, default: "50" },
+      updatedAt: { type: String, default: () => new Date().toISOString() }
+    },
+    membership: {
+      trustees: { type: String, default: "1" },
+      officials: { type: String, default: "1" },
+      members: { type: String, default: "3" },
+      maxMembers: { type: String, default: "40" },
+      updatedAt: { type: String, default: () => new Date().toISOString() }
+    },
+    periods: {
+      interval: { type: String, default: "Weekly" },
+      season: { type: String, default: "Annual" },
+      updatedAt: { type: String }
+    },
+    completed: { type: Boolean, default: true },
+    personal_account_registration: {
+      amount: { type: String, default: "50" },
+      paymentMethod: { type: String, default: "mpesa" },
+      passkey: { type: String },
+      updatedAt: { type: String }
+    }
+  },
+  updatedAt: { type: String, default: () => new Date().toISOString() }
+}, { _id: false });
+
+const TbankSettings = mongoose.models.TbankSettings || mongoose.model('TbankSettings', tbankSettingsSchema, 'tbank');
+
+/**
+ * Save tbank settings to MongoDB
+ */
+const saveTbankSettings = async (settings) => {
+  if (mongoose.connection.readyState !== 1) return false;
+  const db = mongoose.connection.db;
+  if (!db) return false;
+
+  try {
+    await db.collection('tbank').updateOne(
+      {},
+      { $set: { ...settings, updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+    return true;
+  } catch (e) {
+    console.error('[tbank] saveTbankSettings error:', e.message);
+    return false;
+  }
+};
+
+/**
+ * Get tbank settings from MongoDB
+ */
+const getTbankSettings = async () => {
+  if (mongoose.connection.readyState !== 1) return null;
+  const db = mongoose.connection.db;
+  if (!db) return null;
+
+  try {
+    const settings = await db.collection('tbank').findOne({});
+    return settings;
+  } catch (e) {
+    console.error('[tbank] getTbankSettings error:', e.message);
+    return null;
+  }
+};
+
+/**
  * GROUP CRUD - Find or create group document for member data
  */
 const findOrCreateMemberGroup = async (groupName, groupNumber) => {
@@ -1226,6 +1299,7 @@ module.exports = {
   County,
   PersonalAccount,
   MemberGroup,
+  TbankSettings,
   saveUserToMongoDB,
   findUserByPhone,
   getUserNameByPhone,
@@ -1236,17 +1310,19 @@ module.exports = {
   migratePinsFromJSON,
   flattenHierarchicalUsers,
   normalizePhone,
-phoneMatches,
-   saveMemberGroupToMongo,
-    addMemberToMemberGroup,
-    updateMemberAccountInMongo,
-    getMemberGroupFromMongo,
-    saveMemberDataToMongo,
-    findOrCreateMemberGroup,
-    isGroupNameAvailableInMongo,
-    saveGeneralGroupToMongo,
-    getGeneralGroupsFromMongo,
-    findGeneralGroupsByMemberPhone,
-    cleanupStaleGroupKeys,
-    fixGroupKeyIndex
+  phoneMatches,
+  saveMemberGroupToMongo,
+  addMemberToMemberGroup,
+  updateMemberAccountInMongo,
+  getMemberGroupFromMongo,
+  saveMemberDataToMongo,
+  findOrCreateMemberGroup,
+  isGroupNameAvailableInMongo,
+  saveGeneralGroupToMongo,
+  getGeneralGroupsFromMongo,
+  findGeneralGroupsByMemberPhone,
+  cleanupStaleGroupKeys,
+  fixGroupKeyIndex,
+  saveTbankSettings,
+  getTbankSettings
 };

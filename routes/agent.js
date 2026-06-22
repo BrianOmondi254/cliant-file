@@ -5,10 +5,9 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const PDFDocument = require("pdfkit");
 
-const { findUserByPhone, getAllUsersFlattened } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings } = require("../mongoose");
 
 const agentFile = path.join(__dirname, "../agent.json");
-const generalFile = path.join(__dirname, "../general.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
 const businessFile = path.join(__dirname, "../p_account/business.json");
 const perfLogger = require("../performance/group-performance");
@@ -194,6 +193,78 @@ const buildRegionalGroups = (groups, profile) => {
   return regionalGroups;
 };
 
+/* ── MongoDB helpers (replaces general.json) ── */
+const findGroupByNameInMongo = async (groupName) => {
+  try {
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) return null;
+    const db = mongoose.connection.db;
+    if (!db) return null;
+
+    const countyDocs = await db.collection('groups').find({}).toArray();
+    for (const doc of countyDocs) {
+      const hasNestedArrays = Object.keys(doc).some(k =>
+        k !== '_id' && k !== 'county' && Array.isArray(doc[k])
+      );
+      if (!hasNestedArrays && doc.groupName === groupName) {
+        return { ...doc, county: doc.county || 'Unknown', constituency: doc.constituency || 'Unknown', ward: doc.ward || 'Unknown Ward' };
+      }
+      for (const key in doc) {
+        if (key === '_id' || key === 'county') continue;
+        const items = doc[key];
+        if (!Array.isArray(items)) continue;
+        let currentWard = 'Unknown Ward';
+        for (const item of items) {
+          if (typeof item === 'string') {
+            currentWard = item;
+          } else if (item && typeof item === 'object' && item.groupName === groupName) {
+            return { ...item, county: doc.county, constituency: key, ward: currentWard };
+          }
+        }
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('[AGENT] findGroupByNameInMongo error:', e.message);
+    return null;
+  }
+};
+
+const updateGroupInMongo = async (groupName, updateFn) => {
+  try {
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) return false;
+    const db = mongoose.connection.db;
+    if (!db) return false;
+
+    const col = db.collection('groups');
+    const countyDocs = await col.find({}).toArray();
+    for (const doc of countyDocs) {
+      for (const key in doc) {
+        if (key === '_id' || key === 'county') continue;
+        const items = doc[key];
+        if (!Array.isArray(items)) continue;
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item && typeof item === 'object' && item.groupName === groupName) {
+            const updated = updateFn({ ...item });
+            items[i] = updated;
+            await col.updateOne(
+              { _id: doc._id },
+              { $set: { [key]: items } }
+            );
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  } catch (e) {
+    console.error('[AGENT] updateGroupInMongo error:', e.message);
+    return false;
+  }
+};
+
 // GET /agent
 router.get("/", async (req, res) => {
   // Prevent caching to ensure strict PIN entry logic works on back/forward navigation
@@ -265,9 +336,17 @@ router.get("/", async (req, res) => {
     });
   }
 
-  // Load groups from general.json; match by agent phone, then by agent.json territory
-  const generalRaw = loadJSON(generalFile, {});
-  const general = flattenData(generalRaw);
+  // Load groups from MongoDB only (general.json removed)
+  let general = [];
+  try {
+    const mongoGroups = await getGeneralGroupsFromMongo();
+    if (Array.isArray(mongoGroups)) {
+      general = mongoGroups;
+    }
+  } catch (e) {
+    console.error('[AGENT] Error loading groups from MongoDB:', e.message);
+  }
+
   const agentNorm = normPhone(currentPhoneNumber);
   const phoneMatchedGroups = general.filter((g) => {
     const fields = [g.agentProcessed, g.registeredByAgent, g.processorPhone];
@@ -416,31 +495,29 @@ router.get("/", async (req, res) => {
 });
 
 // GET /agent/new-group - Redirect to a dedicated page for populating new group requests
-router.get("/new-group", (req, res) => {
+router.get("/new-group", async (req, res) => {
   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     return res.redirect("/login");
   }
 
   const { groupName } = req.query;
   const agents = loadJSON(agentFile);
-  const general = flattenData(loadJSON(generalFile, {}));
-  
+
   const currentPhoneNumber = req.session.user.phoneNumber;
   const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
-  
+
   if (!agent) {
     return res.redirect("/agent");
   }
 
-  // Find the group
-  const group = general.find(g => g.groupName === groupName);
+  // Find the group from MongoDB
+  const group = await findGroupByNameInMongo(groupName);
   if (!group) {
     return res.redirect("/agent");
   }
 
-  // Get compliance standards
-  const tbankFile = path.join(__dirname, "../tbank.json");
-  const tbankData = loadJSON(tbankFile, {});
+  // Get compliance standards from MongoDB tbank collection
+  const tbankData = await getTbankSettings().catch(() => null);
   
   let registrationConfig = {
     trustees: 3,
@@ -480,11 +557,11 @@ router.post("/set-constitution-key", async (req, res) => {
     return res.json({ success: false, message: "Unauthorized" });
   }
 
-  const { groupName, key } = req.body;
+const { groupName, key } = req.body;
   if (!key) return res.json({ success: false, message: "Key is required" });
-  
-  // Reload fresh data
-  let general = loadJSON(generalFile);
+
+  let general = [];
+  await getGeneralGroupsFromMongo().then(groups => { general = groups; }).catch(() => {});
 
   let found = false;
 
@@ -500,7 +577,7 @@ router.post("/set-constitution-key", async (req, res) => {
   if (g) updateGroup(g);
 
   if (found) {
-      fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
+      await updateGroupInMongo(groupName, updated => ({ ...updated, ...g }));
       return res.json({ success: true });
   } else {
       return res.json({ success: false, message: "Group not found." });
@@ -513,21 +590,13 @@ router.post("/verify-constitution-key", async (req, res) => {
     return res.json({ success: false, message: "Unauthorized" });
   }
 
-  const { groupName, key } = req.body;
+const { groupName, key } = req.body;
   if (!key) return res.json({ success: false, message: "Key is required" });
 
-  let general = loadJSON(generalFile);
-  let verified = false;
-
-  const checkKey = (g) => {
-    if (g.constitutionStartKey === key) {
-      verified = true;
-    }
-  };
-
+  let general = await getGeneralGroupsFromMongo().catch(() => []);
   const flat = flattenData(general);
   const g = flat.find(g => g.groupName === groupName);
-  if (g) checkKey(g);
+  const verified = g && g.constitutionStartKey === key;
 
   if (verified) {
     return res.json({ success: true });
@@ -548,96 +617,78 @@ router.post("/register-new-group", async (req, res) => {
     return res.json({ success: false, message: "Group name and chairperson phone are required" });
   }
   
-  // Load general.json
-  let general = loadJSON(generalFile);
-  
-  // Find and update the group
-  let found = false;
-  
-  const updateGroup = (g) => {
-      // Add chairperson as trustee_1
-      g.trustee_1 = {
-        phone: chairpersonPhone,
-        type: 'trustee',
-        title: 'Chairperson',
-        name: 'Chairperson' // Temporary name until verified against MongoDB registry
-      };
-      g.phone = chairpersonPhone;
-      g.createdAt = g.createdAt || new Date().toISOString();
-      g.updatedAt = new Date().toISOString();
-      g.registeredByAgent = req.session.user.phoneNumber;
-      
-      // Add trustees
-      if (trustees && trustees.length > 0) {
-          trustees.forEach((t, idx) => {
-              g[`trustee_${idx + 1}`] = { 
-                  name: t.name, 
-                  id: t.id, 
-                  phone: t.phone, 
-                  type: 'trustee' 
-              };
-              if (idx === 0) {
-                  g.trustee_1_name = t.name;
-              }
-          });
-      }
-      
-      // Add officials
-      if (officials && officials.length > 0) {
-          officials.forEach((o, idx) => {
-              g[`official_${idx + 1}`] = { 
-                  name: o.name, 
-                  id: o.id, 
-                  phone: o.phone, 
-                  type: 'official' 
-              };
-          });
-      }
-      
-      // Add members
-      if (members && members.length > 0) {
-          members.forEach((m, idx) => {
-              g[`member_${idx + 1}`] = { 
-                  name: m.name, 
-                  id: m.id, 
-                  phone: m.phone, 
-                  type: 'member' 
-              };
-          });
-          g.totalProposedMembers = trustees.length + officials.length + members.length;
-      }
-      
-      found = true;
-  };
-
+  const general = await getGeneralGroupsFromMongo().catch(() => []);
   const flat = flattenData(general);
   const g = flat.find(g => g.groupName === groupName);
-  if (g) updateGroup(g);
-
-  if (found) {
-      fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
-      
-      // Log Registration Performance
+  
+  if (g) {
+    g.trustee_1 = {
+      phone: chairpersonPhone,
+      type: 'trustee',
+      title: 'Chairperson',
+      name: 'Chairperson'
+    };
+    g.phone = chairpersonPhone;
+    g.createdAt = g.createdAt || new Date().toISOString();
+    g.updatedAt = new Date().toISOString();
+    g.registeredByAgent = req.session.user.phoneNumber;
+    
+    if (trustees && trustees.length > 0) {
+      trustees.forEach((t, idx) => {
+        g[`trustee_${idx + 1}`] = { 
+          name: t.name, 
+          id: t.id, 
+          phone: t.phone, 
+          type: 'trustee' 
+        };
+        if (idx === 0) {
+          g.trustee_1_name = t.name;
+        }
+      });
+    }
+    
+    if (officials && officials.length > 0) {
+      officials.forEach((o, idx) => {
+        g[`official_${idx + 1}`] = { 
+          name: o.name, 
+          id: o.id, 
+          phone: o.phone, 
+          type: 'official' 
+        };
+      });
+    }
+    
+    if (members && members.length > 0) {
+      members.forEach((m, idx) => {
+        g[`member_${idx + 1}`] = { 
+          name: m.name, 
+          id: m.id, 
+          phone: m.phone, 
+          type: 'member' 
+        };
+      });
+      g.totalProposedMembers = trustees.length + officials.length + members.length;
+    }
+    
+    await updateGroupInMongo(groupName, updated => ({ ...updated, ...g }));
+    
+    const agents = loadJSON(agentFile, []);
+    const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(req.session.user.phoneNumber));
+    if (agent) {
       try {
-          // Since we might not have full location here easily, we search for the group's location or use agent's location
-          // For simplicity, let's assume we use the agent's location if available
-          const agents = loadJSON(agentFile, []);
-          const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(req.session.user.phoneNumber));
-          if (agent) {
-              regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'groups');
-              // Increment members too
-              const memberCount = (trustees ? trustees.length : 0) + (officials ? officials.length : 0) + (members ? members.length : 0);
-              if (memberCount > 0) {
-                  regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'members', memberCount);
-              }
-          }
+        regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'groups');
+        const memberCount = (trustees ? trustees.length : 0) + (officials ? officials.length : 0) + (members ? members.length : 0);
+        if (memberCount > 0) {
+          regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'members', memberCount);
+        }
       } catch (e) {
-          console.error("Registration performance log error:", e);
+        console.error("Registration performance log error:", e);
       }
-
-      return res.json({ success: true, message: "Group registered successfully" });
+    }
+    
+    return res.json({ success: true, message: "Group registered successfully" });
   } else {
-      return res.json({ success: false, message: "Group not found." });
+    return res.json({ success: false, message: "Group not found." });
   }
 });
 
@@ -654,7 +705,6 @@ router.post("/activate-group", async (req, res) => {
     return res.json({ success: false, message: "Invalid data - no trustees" });
   }
 
-  // Get agent's location from agent.json based on session
   const agentPhone = req.session.user.phoneNumber;
   const agents = loadJSON(agentFile, []);
   const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(agentPhone));
@@ -671,74 +721,24 @@ router.post("/activate-group", async (req, res) => {
     return res.json({ success: false, message: "Agent location not set" });
   }
 
-  // Load general.json
-  let general = loadJSON(generalFile, {});
-
-  // Identify/Handle Ward Groups
-  let wardGroups = null;
-  let isArrayStructure = false;
-
-  // Find county (case insensitive)
-  let countyKey = Object.keys(general).find(k => normStr(k) === normStr(county));
-  if (!countyKey) {
-      countyKey = county;
-      general[countyKey] = {};
-  }
-
-  // Find constituency (case insensitive)
-  let constituencyKey = Object.keys(general[countyKey]).find(k => normStr(k) === normStr(constituency));
-  if (!constituencyKey) {
-      constituencyKey = constituency;
-      general[countyKey][constituencyKey] = {};
-  }
-
-  let constituencyObj = general[countyKey][constituencyKey];
-
-  if (Array.isArray(constituencyObj)) {
-    // It's the [WardName, Group1, ...] structure
-    isArrayStructure = true;
-    wardGroups = constituencyObj;
-  } else {
-    // Object-based structure
-    if (!constituencyObj[ward]) {
-        // Try to find ward case-insensitively
-        const wardKey = Object.keys(constituencyObj).find(k => normStr(k) === normStr(ward));
-        if (wardKey) {
-            wardGroups = constituencyObj[wardKey];
-        } else {
-            constituencyObj[ward] = [];
-            wardGroups = constituencyObj[ward];
-        }
-    } else {
-        wardGroups = constituencyObj[ward];
-    }
-  }
-
   const groupName = displayName;
+  const existingGroup = await findGroupByNameInMongo(groupName);
+  const oldPhase = existingGroup ? (existingGroup.phase || 1) : 1;
 
-  // Check if group already exists (Use normalized comparison)
-  let existingGroupIndex = -1;
-  if (groupName && wardGroups) {
-    existingGroupIndex = wardGroups.findIndex(g => typeof g === 'object' && g !== null && normStr(g.groupName) === normStr(groupName));
-  }
-
-  // NO BLOCK: Allow updating even if group already has members if we are in activation flow
-
-  // Build group object following general.json arrangement
-  // Field order: groupName, groupType, accountNumber, pin, createdAt, agentProcessed, phase, totalProposedMembers,
-  // trustee entries, official entries, member entries, requests, groupCertificateNumber, constitution keys, principlesSetAt
   const group = {
     groupName,
     groupType: groupType || '',
     accountNumber: phone || '',
     pin: constitutionStartKey || '',
-    createdAt: createdAt || new Date().toISOString(),
+    createdAt: existingGroup ? (existingGroup.createdAt || new Date().toISOString()) : (createdAt || new Date().toISOString()),
     agentProcessed: agentProcessed || agentPhone || 'n/a',
     phase: phase || 2,
-    totalProposedMembers: totalMembers || 0
+    totalProposedMembers: totalMembers || 0,
+    county,
+    constituency,
+    ward
   };
 
-  // Add trustees/officials/members
   trustees.forEach((t, i) => {
     group[`trustee_${i + 1}`] = { index: String(i + 1), type: 'trustee', ...t };
   });
@@ -754,87 +754,45 @@ router.post("/activate-group", async (req, res) => {
     });
   }
 
-
-  // Add requests section with addMember entries
-  group.requests = {
-    addMember: []
-  };
-
-  // Add remaining fields in correct order
+  group.requests = { addMember: [] };
   group.groupCertificateNumber = groupCertificateNumber || '';
   group.constitutionStartKey = constitutionStartKey || '';
   group.constitutionKeyGeneratedAt = new Date().toISOString();
   group.principlesSetAt = new Date().toISOString();
-  
-  // Add principles object (empty for now, can be filled later)
   group.principles = {};
-  
-  // messages field
   group.messages = messages;
 
-  // Update existing group or add new one
-  if (existingGroupIndex >= 0) {
-    const oldPhase = wardGroups[existingGroupIndex].phase || 1;
-    // Update existing group
-    wardGroups[existingGroupIndex] = group;
-
-    // Log Performance Graduation (Phase 1 -> Phase 2)
-    try {
+  try {
+    const saveResult = await saveGeneralGroupToMongo(group);
+    if (!saveResult) {
+      console.error('[AGENT] saveGeneralGroupToMongo returned null for:', groupName);
+      return res.json({ success: false, message: "Failed to save group to database. MongoDB sync error." });
+    }
+    
+    if (existingGroup) {
+      try {
         perfLogger.logActivity(county, constituency, ward, group.phase, true, oldPhase, group.totalProposedMembers);
-    } catch(e) { console.error("Performance log error (Update):", e); }
-
-    console.log(`✓ Updated existing group: ${groupName}`);
-  } else {
-    // Add new group
-    if (isArrayStructure) {
-        // Find ward index or append if missing (though usually it should be there)
-        let wardIdx = wardGroups.findIndex(item => typeof item === 'string' && normStr(item) === normStr(ward));
-        if (wardIdx === -1) {
-            wardGroups.push(ward);
-            wardGroups.push(group);
-        } else {
-            // Insert after the ward name
-            wardGroups.splice(wardIdx + 1, 0, group);
-        }
+      } catch(e) { console.error("Performance log error (Update):", e); }
+      console.log(`✓ Updated existing group: ${groupName}`);
     } else {
-        wardGroups.push(group);
-    }
-
-    // Increment regional counts only for new groups
-    general[county].countyGroupCount = (general[county].countyGroupCount || 0) + 1;
-    if (constituency) {
-      if (typeof general[county][constituency] === 'object' && !Array.isArray(general[county][constituency])) {
-          general[county][constituency].constituencyGroupCount = (general[county][constituency].constituencyGroupCount || 0) + 1;
-          if (ward && general[county][constituency][ward]) {
-              general[county][constituency][ward].wardGroupCount = (general[county][constituency][ward].wardGroupCount || 0) + 1;
-          }
-      }
-    }
-    console.log(`✓ Created new group: ${groupName}`);
-
-    // Log Performance New Activity (Starts at Phase 2)
-    try {
+      try {
         perfLogger.logActivity(county, constituency, ward, group.phase, false, null, group.totalProposedMembers);
-        // Also log registration performance
         regPerfLogger.logRegistration(county, constituency, ward, 'groups');
         if (group.totalProposedMembers > 0) {
-            regPerfLogger.logRegistration(county, constituency, ward, 'members', group.totalProposedMembers);
+          regPerfLogger.logRegistration(county, constituency, ward, 'members', group.totalProposedMembers);
         }
-    } catch(e) { console.error("Performance log error (Create):", e); }
-  }
+      } catch(e) { console.error("Performance log error (Create):", e); }
+      console.log(`✓ Created new group: ${groupName}`);
+    }
 
-  // Send Notifications
-  try {
-    const agentName = agent.name || "System Agent";
-    notification.sendActivationNotices(group, payload, agentName, agentPhone);
-  } catch (e) {
-    console.error("Notification broadcast error:", e);
-  }
+    try {
+      const agentName = agent.name || "System Agent";
+      notification.sendActivationNotices(group, payload, agentName, agentPhone);
+    } catch (e) {
+      console.error("Notification broadcast error:", e);
+    }
 
-  // Save
-  try {
-    fs.writeFileSync(generalFile, JSON.stringify(general, null, 2));
-    res.json({ success: true, message: existingGroupIndex >= 0 ? "Group updated successfully" : "Group activated successfully", groupName });
+    res.json({ success: true, message: existingGroup ? "Group updated successfully" : "Group activated successfully", groupName });
   } catch (e) {
     console.error(e);
     res.json({ success: false, message: "Failed to save" });
@@ -874,7 +832,7 @@ router.get("/group-form/:groupName", async (req, res) => {
   const { groupName } = req.params;
   const decodedGroupName = decodeURIComponent(groupName);
   const agents = loadJSON(agentFile);
-  const general = flattenData(loadJSON(generalFile, {}));
+  const general = await getGeneralGroupsFromMongo().catch(() => []);
 
   const currentPhoneNumber = req.session.user.phoneNumber;
   const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
@@ -895,26 +853,13 @@ router.get("/group-form/:groupName", async (req, res) => {
     });
   }
 
-  const tbank = require('../tbank.json');
+  const tbank = loadJSON(path.join(__dirname, "../tbank.json"), {});
   const users = await getUsersFromMongo();
 
-  // Get next form reference number from general.json
-  const generalData = loadJSON(generalFile, {});
   let totalDownloads = 0;
-  
-  // Search through nested structure
-  for (const county in generalData) {
-    for (const constituency in generalData[county]) {
-      const wards = generalData[county][constituency];
-      if (Array.isArray(wards)) {
-        for (const group of wards) {
-          if (group.groupName && group.groupName.toLowerCase() === decodedGroupName.toLowerCase()) {
-            totalDownloads = group.formDownloads ? group.formDownloads.length : 0;
-            break;
-          }
-        }
-      }
-    }
+  const foundGroup = await findGroupByNameInMongo(decodedGroupName);
+  if (foundGroup && foundGroup.formDownloads) {
+    totalDownloads = foundGroup.formDownloads.length;
   }
   const nextFormRef = String(totalDownloads + 1).padStart(3, '0');
 
@@ -950,7 +895,7 @@ router.get("/group-registration-pdf/:groupName", async (req, res) => {
     const { groupName } = req.params;
     const decodedGroupName = decodeURIComponent(groupName);
     const agents = loadJSON(agentFile);
-    const general = flattenData(loadJSON(generalFile, {}));
+    const general = await getGeneralGroupsFromMongo().catch(() => []);
     const users = await getUsersFromMongo();
 
     const currentPhoneNumber = req.session.user.phoneNumber;
@@ -1264,7 +1209,7 @@ router.get("/con-group", async (req, res) => {
   }
 
   const agents = loadJSON(agentFile);
-  const general = flattenData(loadJSON(generalFile, {}));
+  const general = await getGeneralGroupsFromMongo().catch(() => []);
   const users = await getUsersFromMongo();
 
   const currentPhoneNumber = req.session.user.phoneNumber;
@@ -1330,7 +1275,7 @@ router.get("/conform", async (req, res) => {
     return res.redirect("/agent");
   }
   
-  const generalData = loadJSON(generalFile, {});
+  const generalData = await getGeneralGroupsFromMongo().catch(() => []);
   const flatGroups = flattenData(generalData);
   const group = flatGroups.find(g => g.groupName === groupName);
   
@@ -1359,13 +1304,13 @@ router.get("/conform", async (req, res) => {
        return res.redirect("/agent");
      }
 
-     const generalData = loadJSON(generalFile, {});
-     const flatGroups = flattenData(generalData);
-     const group = flatGroups.find(g => g.groupName === groupName);
+const generalData = await getGeneralGroupsFromMongo().catch(() => []);
+      const flatGroups = flattenData(generalData);
+      const group = flatGroups.find(g => g.groupName === groupName);
 
-     if (!group) {
-       return res.status(404).send("Group not found");
-     }
+      if (!group) {
+        return res.status(404).send("Group not found");
+      }
 
      const agents = loadJSON(agentFile);
       const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});

@@ -7,7 +7,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
-const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose } = require("../mongoose");
+const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, findGeneralGroupsByMemberPhone } = require("../mongoose");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -704,11 +704,11 @@ router.get("/tbank-config", (req, res) => {
   });
 });
 
-/* ✅ Verify Member Phone Numbers against data.json (POST) */
+/* ✅ Verify Member Phone Numbers against MongoDB (POST) */
 /**
- * Combined and robust member verification route
+ * Member verification route - queries MongoDB counties and groups collections
  */
-router.post("/verify-members", (req, res) => {
+router.post("/verify-members", async (req, res) => {
   try {
     const { members, phoneNumbers } = req.body;
     const inputList = members || phoneNumbers || [];
@@ -717,82 +717,131 @@ router.post("/verify-members", (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid payload format" });
     }
 
-    const dataFile = path.join(__dirname, "../data.json");
-    const userData = readJSON(dataFile, []);
-    const generalData = readJSON(generalFile, {});
+    // Query MongoDB connection for user lookup
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ success: false, message: "MongoDB not connected" });
+    }
+    const db = mongoose.connection.db;
 
-    // Build a map of phone numbers from all groups in general.json for cross-referencing
-    const generalMembersMap = new Map();
-    const flattenForSearch = (obj) => {
-      if (!obj || typeof obj !== 'object') return;
-      Object.keys(obj).forEach(key => {
-        if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
-          const m = obj[key];
-          if (m && typeof m === 'object' && m.phone) {
-            const normalized = norm(m.phone);
-            if (!generalMembersMap.has(normalized)) {
-              generalMembersMap.set(normalized, {
-                name: m.name || m.title || "Group Member",
-                id: m.id || null,
-                memberNumber: m.memberNumber || null
+    // Get all users from counties collection for verification
+    let allMongoUsers = [];
+    try {
+      const counties = await db.collection('counties').find({}).toArray();
+      for (const countyDoc of counties) {
+        for (const cons of (countyDoc.constituencies || [])) {
+          for (const ward of (cons.wards || [])) {
+            for (const user of (ward.data || [])) {
+              allMongoUsers.push({
+                ...user,
+                county: countyDoc.county,
+                constituency: cons.name,
+                ward: ward.name
               });
             }
           }
         }
-      });
-    };
+      }
+      // Also check legacy users collection
+      const legacyUsers = await db.collection('users').find({}).toArray();
+      allMongoUsers = [...allMongoUsers, ...legacyUsers];
+    } catch (dbErr) {
+      console.error('[verify-members] MongoDB lookup error:', dbErr.message);
+    }
 
-    // Traverse the hierarchy (supports both hybrid array and object structures)
-    for (const county in generalData) {
-      if (county === 'performance') continue;
-      const constituencies = generalData[county];
-      for (const constituency in constituencies) {
-        const wardsOrGroups = constituencies[constituency];
-        if (Array.isArray(wardsOrGroups)) {
-          wardsOrGroups.forEach(item => {
-            if (typeof item === 'object' && item !== null && !item.isPerformance) flattenForSearch(item);
-          });
-        } else if (typeof wardsOrGroups === 'object') {
-          for (const ward in wardsOrGroups) {
-            const list = wardsOrGroups[ward];
-            if (Array.isArray(list)) {
-              list.forEach(g => { if (typeof g === 'object') flattenForSearch(g); });
+    // Query MongoDB groups collection for existing group member cross-reference
+    const groupsCollectionMembers = new Map();
+    try {
+      const countyDocs = await db.collection('groups').find({}).toArray();
+      for (const doc of countyDocs) {
+        for (const key in doc) {
+          if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+            const m = doc[key];
+            if (m && typeof m === 'object' && m.phone) {
+              const normalized = norm(m.phone);
+              if (!groupsCollectionMembers.has(normalized)) {
+                groupsCollectionMembers.set(normalized, {
+                  name: m.name || m.title || "Group Member",
+                  id: m.id || null,
+                  memberNumber: m.memberNumber || null,
+                  county: doc.county || 'Unknown'
+                });
+              }
+            }
+          }
+          // Handle nested constituency/ward structure
+          if (Array.isArray(doc[key])) {
+            for (const item of doc[key]) {
+              if (typeof item === 'object' && item !== null) {
+                for (const subKey in item) {
+                  if (subKey.startsWith('trustee_') || subKey.startsWith('official_') || subKey.startsWith('member_')) {
+                    const m = item[subKey];
+                    if (m && typeof m === 'object' && m.phone) {
+                      const normalized = norm(m.phone);
+                      if (!groupsCollectionMembers.has(normalized)) {
+                        groupsCollectionMembers.set(normalized, {
+                          name: m.name || m.title || "Group Member",
+                          id: m.id || null,
+                          memberNumber: m.memberNumber || null,
+                          county: doc.county || 'Unknown'
+                        });
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
+    } catch (groupsErr) {
+      console.error('[verify-members] MongoDB groups lookup error:', groupsErr.message);
     }
 
     const results = inputList.map(member => {
       const phone = member.phone || member.phoneNumber;
       const id = member.id || member.idNumber;
       const normalized = norm(phone);
-      
-      const user = userData.find(u => norm(u.phoneNumber) === normalized);
-      
-      let resMember = {
+
+      // Check counties collection first (primary source)
+      const mongoUser = allMongoUsers.find(u => norm(u.phoneNumber) === normalized);
+      if (mongoUser) {
+        const fullName = [mongoUser.FirstName, mongoUser.MiddleName, mongoUser.LastName].filter(Boolean).join(' ');
+        const idMatch = id && String(mongoUser.idNumber).trim() === String(id).trim();
+        return {
+          ...member,
+          verified: true,
+          name: fullName || mongoUser.name || "Verified User",
+          id: mongoUser.idNumber || id,
+          county: mongoUser.county,
+          constituency: mongoUser.constituency,
+          ward: mongoUser.ward,
+          status: idMatch ? "verified" : (id ? "mismatch" : "partial"),
+          source: "mongo-counties"
+        };
+      }
+
+      // Check MongoDB groups collection as fallback
+      const groupsMember = groupsCollectionMembers.get(normalized);
+      if (groupsMember) {
+        const idMatch = id && groupsMember.id && String(groupsMember.id).trim() === String(id).trim();
+        return {
+          ...member,
+          verified: true,
+          name: groupsMember.name,
+          id: groupsMember.id || id,
+          county: groupsMember.county,
+          status: idMatch ? "verified" : (id ? "mismatch" : "partial"),
+          source: "mongo-groups"
+        };
+      }
+
+      // Not found in MongoDB
+      return {
         ...member,
         verified: false,
-        name: "Not Found",
+        name: "Not Found in Registry",
         status: "not-found"
       };
-
-       if (user) {
-         const fullName = [user.FirstName, user.MiddleName, user.LastName].filter(Boolean).join(' ');
-         const idMatch = id && String(user.idNumber).trim() === String(id).trim();
-         resMember.name = fullName;
-         resMember.verified = true; // Found by phone number is sufficient for verification
-         resMember.status = idMatch ? "verified" : (id ? "mismatch" : "partial");
-       } else {
-         const gen = generalMembersMap.get(normalized);
-         if (gen) {
-           resMember.name = gen.name;
-           resMember.verified = true; // Found by phone number is sufficient for verification
-           resMember.status = id && gen.id && String(gen.id).trim() === String(id).trim() ? "verified" : "mismatch";
-           resMember.source = "general";
-         }
-       }
-      return resMember;
     });
 
     return res.json({ success: true, results, members: results });
@@ -1051,79 +1100,207 @@ router.post("/set-principles", (req, res) => {
 });
 
 // JSON endpoints for client-side consumption
-// GET /general/groups -> returns all groups
-router.get("/groups", (req, res) => {
-  let accounts = readJSON(generalFile, {});
-  if (Array.isArray(accounts)) {
-    accounts = restructureData(accounts);
-    writeJSON(generalFile, accounts);
+// GET /general/groups -> returns all groups from MongoDB
+router.get("/groups", async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.json([]);
   }
-  res.json(flattenData(accounts));
+  
+  const db = mongoose.connection.db;
+  if (!db) {
+    return res.json([]);
+  }
+
+  try {
+    const countyDocs = await db.collection('groups').find({}).toArray();
+    const flat = [];
+    
+    for (const doc of countyDocs) {
+      const county = doc.county;
+      for (const key in doc) {
+        if (key === '_id' || key === 'county') continue;
+        const items = doc[key];
+        if (!Array.isArray(items)) continue;
+        let currentWard = "Unknown Ward";
+        items.forEach(item => {
+          if (typeof item === 'string') {
+            currentWard = item;
+          } else if (item && typeof item === 'object') {
+            flat.push({ ...item, county, constituency: key, ward: currentWard });
+          }
+        });
+      }
+    }
+    
+    res.json(flat);
+  } catch (err) {
+    console.error('[general/groups] MongoDB query error:', err.message);
+    res.json([]);
+  }
 });
 
-// GET /general/my-groups -> returns groups where user is a member
-router.get("/my-groups", (req, res) => {
+// GET /general/my-groups -> returns groups where user is a member from MongoDB
+router.get("/my-groups", async (req, res) => {
   const userPhone = req.session?.user?.phoneNumber;
   
   if (!userPhone) {
     return res.status(401).json({ success: false, message: "Not logged in" });
   }
 
-  let accounts = readJSON(generalFile, {});
-  if (Array.isArray(accounts)) {
-    accounts = restructureData(accounts);
+  if (mongoose.connection.readyState !== 1) {
+    return res.json({ success: true, groups: [], userPhone: userPhone });
+  }
+  
+  const db = mongoose.connection.db;
+  if (!db) {
+    return res.json({ success: true, groups: [], userPhone: userPhone });
   }
 
-  const allGroups = flattenData(accounts);
-  const userGroups = [];
+  try {
+    const flat = [];
+    const countyDocs = await db.collection('groups').find({}).toArray();
+    
+    for (const doc of countyDocs) {
+      const county = doc.county;
+      for (const key in doc) {
+        if (key === '_id' || key === 'county') continue;
+        const items = doc[key];
+        if (!Array.isArray(items)) continue;
+        let currentWard = "Unknown Ward";
+        items.forEach(item => {
+          if (typeof item === 'string') {
+            currentWard = item;
+          } else if (item && typeof item === 'object') {
+            flat.push({ ...item, county, constituency: key, ward: currentWard });
+          }
+        });
+      }
+    }
 
-  for (const group of allGroups) {
-    for (const key in group) {
-      if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
-        const memberInfo = group[key];
-        const memberPhone = memberInfo ? String(memberInfo.phone || "").trim() : "";
-        
-        if (memberPhone && norm(memberPhone) === norm(userPhone)) {
-          // Find assigned agent
-          const agentFile = path.join(__dirname, "../agent.json");
-          const agents = readJSON(agentFile, []);
-          const matchedAgent = agents.find(a => 
-             String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
-             String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase() &&
-             String(a.ward || '').trim().toLowerCase() === String(group.ward || '').trim().toLowerCase()
-          ) || agents.find(a => 
-             String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
-             String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase()
-          );
+    const userGroups = [];
+    const agents = readJSON(agentFile, []);
 
-          userGroups.push({
-            groupName: group.groupName,
-            phone: group.phone,
-            role: memberInfo.type || (key.startsWith("trustee_") ? "trustee" : (key.startsWith("official_") ? "official" : "member")),
-            roleTitle: memberInfo.title || '',
-            phase: parseInt(group.phase) || 1,
-            totalProposedMembers: group.totalProposedMembers || 0,
-            createdAt: group.createdAt,
-            membersPopulatedAt: group.membersPopulatedAt,
-            assignedAgentName: matchedAgent ? matchedAgent.name : "To be assigned",
-            assignedAgentPhone: matchedAgent ? matchedAgent.phoneNumber : "N/A",
-            accountNumber: group.accountNumber || '',
-            county: group.county || '',
-            constituency: group.constituency || '',
-            ward: group.ward || ''
-          });
-          break;
+    for (const group of flat) {
+      for (const key in group) {
+        if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+          const memberInfo = group[key];
+          const memberPhone = memberInfo ? String(memberInfo.phone || "").trim() : "";
+          
+          if (memberPhone && norm(memberPhone) === norm(userPhone)) {
+            const matchedAgent = agents.find(a => 
+               String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+               String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase() &&
+               String(a.ward || '').trim().toLowerCase() === String(group.ward || '').trim().toLowerCase()
+            ) || agents.find(a => 
+               String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
+               String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase()
+            );
+
+            userGroups.push({
+              groupName: group.groupName,
+              phone: group.phone,
+              role: memberInfo.type || (key.startsWith("trustee_") ? "trustee" : (key.startsWith("official_") ? "official" : "member")),
+              roleTitle: memberInfo.title || '',
+              phase: parseInt(group.phase) || 1,
+              totalProposedMembers: group.totalProposedMembers || 0,
+              createdAt: group.createdAt,
+              membersPopulatedAt: group.membersPopulatedAt,
+              assignedAgentName: matchedAgent ? matchedAgent.name : "To be assigned",
+              assignedAgentPhone: matchedAgent ? matchedAgent.phoneNumber : "N/A",
+              accountNumber: group.accountNumber || '',
+              county: group.county || '',
+              constituency: group.constituency || '',
+              ward: group.ward || ''
+            });
+            break;
+          }
         }
       }
     }
+
+    res.json({ 
+      success: true, 
+      groups: userGroups,
+      userPhone: userPhone
+    });
+  } catch (err) {
+    console.error('[general/my-groups] MongoDB query error:', err.message);
+    res.json({ success: true, groups: [], userPhone: userPhone });
+  }
+});
+
+// GET /general/mongo-groups -> returns groups from MongoDB 'groups' collection where user is a member
+router.get("/mongo-groups", async (req, res) => {
+  const userPhone = req.session?.user?.phoneNumber;
+
+  if (!userPhone) {
+    return res.status(401).json({ success: false, message: "Not logged in" });
   }
 
-  res.json({ 
-    success: true, 
-    groups: userGroups,
-    userPhone: userPhone
-  });
+  try {
+    const mongoGroups = await findGeneralGroupsByMemberPhone(userPhone);
+
+    const userGroups = mongoGroups.map(group => {
+      // Determine user's role in this group from MongoDB data
+      let userRoleInGroup = null;
+      let userTitleInGroup = null;
+      
+      const chairPhone = group.phone || group.chairpersonalphonenumber;
+      if (chairPhone && norm(chairPhone) === norm(userPhone)) {
+        userRoleInGroup = "trustee";
+        userTitleInGroup = "Chairperson";
+      }
+      
+      for (const key in group) {
+        if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+          const memberInfo = group[key];
+          if (memberInfo && norm(memberInfo.phone) === norm(userPhone)) {
+            userTitleInGroup = memberInfo.title || memberInfo.type || "";
+            if (key.startsWith("trustee_")) {
+              userRoleInGroup = "trustee";
+            } else if (key.startsWith("official_")) {
+              userRoleInGroup = userRoleInGroup || "official";
+            } else if (key.startsWith("member_")) {
+              userRoleInGroup = userRoleInGroup || "member";
+            }
+          }
+        }
+      }
+
+      const now = new Date();
+      const created = new Date(group.createdAt || now);
+      const diffDays = Math.ceil(Math.abs(now - created) / (1000 * 60 * 60 * 24));
+      const activeRound = Math.ceil(diffDays / 7) || 1;
+
+      return {
+        groupName: group.groupName,
+        role: userRoleInGroup || "member",
+        roleTitle: userTitleInGroup || "",
+        phone: group.phone || group.chairpersonalphonenumber || "",
+        phase: group.phase || 1,
+        assignedAgentName: group.assignedAgentName || "To be assigned",
+        assignedAgentPhone: group.assignedAgentPhone || "N/A",
+        createdAt: group.createdAt,
+        membersPopulatedAt: group.membersPopulatedAt,
+        activeRound: activeRound,
+        remainRounds: Math.max(0, 52 - activeRound),
+        accountNumber: group.accountNumber || "",
+        constitutionStartKey: group.constitutionStartKey || "",
+        source: "mongo"
+      };
+    });
+
+    res.json({
+      success: true,
+      groups: userGroups,
+      userPhone: userPhone
+    });
+  } catch (err) {
+    console.error("Error fetching MongoDB groups:", err);
+    res.status(500).json({ success: false, message: "Error fetching groups from database" });
+  }
 });
+
 
 // GET /general/agent-for-group -> returns agent assigned to a group's ward
 router.get("/agent-for-group", (req, res) => {
@@ -1304,11 +1481,43 @@ router.post("/verify-member", (req, res) => {
   });
 });
 
-// GET /general/users
-router.get("/users", (req, res) => {
-  const dataFile = path.join(__dirname, "../data.json");
-  const users = readJSON(dataFile, []);
-  res.json(users);
+// GET /general/users - returns all users from MongoDB counties collection
+router.get("/users", async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.json([]);
+  }
+  
+  const db = mongoose.connection.db;
+  if (!db) {
+    return res.json([]);
+  }
+
+  try {
+    const flatUsers = [];
+    // Query counties collection
+    const counties = await db.collection('counties').find({}).toArray();
+    for (const countyDoc of counties) {
+      for (const cons of (countyDoc.constituencies || [])) {
+        for (const ward of (cons.wards || [])) {
+          for (const user of (ward.data || [])) {
+            flatUsers.push({
+              ...user,
+              county: countyDoc.county,
+              constituency: cons.name,
+              ward: ward.name
+            });
+          }
+        }
+      }
+    }
+    
+    // Also include legacy users collection
+    const legacyUsers = await db.collection('users').find({}).toArray();
+    res.json([...flatUsers, ...legacyUsers]);
+  } catch (err) {
+    console.error('[general/users] MongoDB query error:', err.message);
+    res.json([]);
+  }
 });
 
 // POST /general/verify-pin

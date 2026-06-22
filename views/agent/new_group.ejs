@@ -922,52 +922,40 @@
       }
     }
 
-    function checkGroupProposedMembers() {
-      const groupName = '<%= group.groupName %>';
-      return fetch('/general.json')
-        .then(response => response.json())
-        .then(data => {
-          // Search for group name in the hierarchical structure
-          for (const county in data) {
-            for (const constituency in data[county]) {
-              for (const ward in data[county][constituency]) {
-                let groups = data[county][constituency][ward];
-                if (Array.isArray(groups)) {
-                  // Direct array
-                } else if (groups.groups && Array.isArray(groups.groups)) {
-                  groups = groups.groups;
-                } else {
-                  continue;
-                }
-                for (const group of groups) {
-                  if (group.groupName === groupName) {
-                    // Check totalProposedMembers
-                    return group.totalProposedMembers || 0;
-                  }
-                }
-              }
-            }
-          }
-          return 0;
-        })
-        .catch(error => {
-          console.error('Error checking group:', error);
-          return 0;
-        });
-    }
+function checkGroupProposedMembers() {
+       const groupName = '<%= group.groupName %>';
+       return fetch('/general/groups')
+         .then(response => response.json())
+         .then(data => {
+           // Search for group name in the flat array returned by MongoDB endpoint
+           const groups = Array.isArray(data) ? data : (data.groups || []);
+           for (const group of groups) {
+             if (group.groupName === groupName) {
+               // Check totalProposedMembers
+               return group.totalProposedMembers || 0;
+             }
+           }
+           return 0;
+         })
+         .catch(error => {
+           console.error('Error checking group:', error);
+           return 0;
+         });
+     }
 
-    function fetchAgentName() {
-      fetch('/data.json')
-        .then(response => response.json())
-        .then(data => {
-          const agentPhone = '<%= agent.phoneNumber %>';
-          const agent = data.find(a => a.phone === agentPhone);
-          if (agent) {
-            document.getElementById('verifyAgentName').textContent = agent.name;
-          }
-        })
-        .catch(error => console.error('Error fetching data:', error));
-    }
+function fetchAgentName() {
+       fetch('/general/users')
+         .then(response => response.json())
+         .then(data => {
+           const agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
+           const agent = data.find(a => a.phoneNumber === agentPhone);
+           if (agent) {
+             const name = [agent.FirstName, agent.MiddleName, agent.LastName].filter(Boolean).join(' ');
+             document.getElementById('verifyAgentName').textContent = name || agent.name || 'Unknown';
+           }
+         })
+         .catch(error => console.error('Error fetching data:', error));
+     }
 
     async function confirmAndSubmit() {
       // Check if group exists and is populated
@@ -1079,9 +1067,9 @@
            <div class="input-group" style="margin-bottom:var(--card-gap);">
              <label>Phone Number</label>
              <div class="input-wrapper">
-               <input type="tel" id="t${idx}_phone"
-                 ${isChairperson ? `value="${groupData.trustee_1 && groupData.trustee_1.phone ? groupData.trustee_1.phone : ''}" readonly class="locked"` : `placeholder="Enter phone number"`}
-                 maxlength="12">
+<input type="tel" id="t${idx}_phone"
+                  ${isChairperson ? `value="${groupData.phone || groupData.chairpersonalphonenumber || ''}" readonly class="locked"` : `placeholder="Enter phone number"`}
+                  maxlength="12">
                ${isChairperson ? '<i class="fas fa-lock lock-icon"></i>' : ''}
              </div>
              ${isChairperson ? '<div class="compliance-note"><i class="fas fa-info-circle"></i> Chairperson phone pre-filled from group data</div>' : ''}
@@ -1502,32 +1490,25 @@
         });
       }
 
-      let agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
-      fetch('/general/verify-members', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ members: [{ key:'agent', phone:agentPhone, id:'', role:'agent', title:'Agent', index:'0' }] })
-      }).then(r => {
-        if (!r.ok) return { success: false };
-        return r.json();
-      }).then(agentResponse => {
-        if (agentResponse.success && agentResponse.members && agentResponse.members.length > 0) {
-          const agentData = agentResponse.members[0];
-          if (agentData.name) {
-            document.getElementById('verifyAgentName').textContent      = agentData.name;
-            document.getElementById('verifyAgentPhoneIcon').className   = 'fas fa-check-circle';
-            document.getElementById('verifyAgentPhoneIcon').style.color = '#166534';
-            document.getElementById('verifyAgentPhoneIcon').style.animation = 'none';
-          } else {
-            document.getElementById('verifyAgentName').textContent      = '<%= group.agentName %>';
-            document.getElementById('verifyAgentPhoneIcon').className   = 'fas fa-times-circle';
-            document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
-          }
-        }
-      }).catch(() => {
-        document.getElementById('verifyAgentName').textContent      = '<%= group.agentName %>';
-        document.getElementById('verifyAgentPhoneIcon').className   = 'fas fa-times-circle';
-        document.getElementById('verifyAgentPhoneIcon').style.color = '#991b1b';
-      });
+let agentPhone = '<%= agent ? agent.phoneNumber : "" %>';
+       fetch('/general/verify-members', {
+         method: 'POST', headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ members: [{ key:'agent', phone:agentPhone, id:'', role:'agent', title:'Agent', index:'0' }] })
+       }).then(r => {
+         if (!r.ok) return { success: false };
+         return r.json();
+       }).then(agentResponse => {
+         if (agentResponse.success && agentResponse.members && agentResponse.members.length > 0) {
+           const agentData = agentResponse.members[0];
+           if (agentData.name) {
+             document.getElementById('verifyAgentName').textContent      = agentData.name;
+           } else {
+             document.getElementById('verifyAgentName').textContent      = '<%= group.agentName %>';
+           }
+         }
+       }).catch(() => {
+         document.getElementById('verifyAgentName').textContent      = '<%= group.agentName %>';
+       });
 
       fetch('/general/verify-members', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1614,12 +1595,10 @@
         </div>`;
     }
 
-    function goBackToForm() {
-      showStep('step3-tbank');
-      updateTrusteeTitles();
-    }
-
-      submitTbankRegistration();
+function goBackToForm() {
+       showStep('step3-tbank');
+       updateTrusteeTitles();
+     }
 
     // ─── DOWNLOAD REGISTRATION FORM ────────────────────────────────────
     async function downloadRegistrationForm() {
@@ -1645,11 +1624,11 @@
           id:document.getElementById(`member_${idx}_id`)?.value.trim()||'', type:'member' });
       }
 
-      const groupName = groupData.groupName||'';
-      const location  = `${groupData.ward||''}, ${groupData.constituency||''}, ${groupData.county||''}`;
-      const agentName = groupData.agentName||'Unknown Agent';
-      const agentPhone= groupData.agentPhone||'';
-      const downloadDateTime = new Date().toLocaleString('en-GB',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+const groupName = groupData.groupName||'';
+       const location  = `${groupData.ward||''}, ${groupData.constituency||''}, ${groupData.county||''}`;
+       const agentName = '<%= agent ? agent.name : "Unknown Agent" %>';
+       const agentPhone= '<%= agent ? agent.phoneNumber : "" %>';
+       const downloadDateTime = new Date().toLocaleString('en-GB',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
       const doc        = new jsPDF();
       const pageHeight = doc.internal.pageSize.height||doc.internal.pageSize.getHeight();
@@ -1818,13 +1797,13 @@
     }
 
     // ─── DOWNLOAD GROUP REGISTRATION FORM ─────────────────────
-    function downloadGroupRegistrationForm() {
-      const formData = {
-        groupName: groupData.groupName, groupType: document.getElementById('groupType').value,
-        certificateNumber: document.getElementById('groupCertificateNumber').value.trim(),
-        county: groupData.county, constituency: groupData.constituency, ward: groupData.ward,
-        agentName: groupData.agentName, agentPhone: groupData.agentPhone, members: []
-      };
+function downloadGroupRegistrationForm() {
+       const formData = {
+         groupName: groupData.groupName, groupType: document.getElementById('groupType').value,
+         certificateNumber: document.getElementById('groupCertificateNumber').value.trim(),
+         county: groupData.county, constituency: groupData.constituency, ward: groupData.ward,
+         agentName: '<%= agent ? agent.name : "" %>', agentPhone: '<%= agent ? agent.phoneNumber : "" %>', members: []
+       };
       for (let i=0; i<STD_TRUSTEES; i++) {
         const idx = i+1;
         formData.members.push({ index:idx, type:'trustee', title:document.getElementById(`t${idx}_title`).value.trim(),
