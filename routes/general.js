@@ -7,6 +7,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
+const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose } = require("../mongoose");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -270,9 +271,18 @@ const syncFromGeneral = () => {
 
 /* ================= ROUTES ================= */
 
+/* 🔒 Auth middleware for protected routes */
+router.use((req, res, next) => {
+  if (!req.session || !req.session.user) {
+    return res.redirect("/login");
+  }
+  next();
+});
+
 /* 📋 General Form (GET) */
 router.get("/", (req, res) => {
   let raw = readJSON(generalFile, {});
+  const phone = req.session.user && req.session.user.phoneNumber;
   
   // Auto-migrate if array is detected
   if (Array.isArray(raw)) {
@@ -281,7 +291,7 @@ router.get("/", (req, res) => {
   }
 
   let allGroups = flattenData(raw);
-  const isCreation = req.query.mode === 'create';
+  let isCreation = req.query.mode === 'create';
 
   let selectedGroup = null;
   if (req.query.groupName) {
@@ -367,18 +377,193 @@ router.get("/", (req, res) => {
     return false;
   };
 
-  const userPhone = req.session?.user?.phoneNumber;
-  const showAgent = userPhone ? searchInFile(agents, userPhone) : false;
-  const showDealer = userPhone ? searchInFile(dealers, userPhone) : false;
+const userPhone = req.session?.user?.phoneNumber;
+   const showAgent = userPhone ? searchInFile(agents, userPhone) : false;
+   const showDealer = userPhone ? searchInFile(dealers, userPhone) : false;
 
-  res.render("general_new", {
-    groups: allGroups,
-    isCreation,
-    selectedGroup,
-    user: req.session ? req.session.user : null,
-    showAgent,
-    showDealer
-  });
+   // Filter groups to only those the user is a member of
+   const userGroups = allGroups.filter(group => {
+     for (const key in group) {
+       if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+         const item = group[key];
+         if (item && typeof item === 'object' && item.phone && norm(item.phone) === norm(userPhone)) {
+           return true;
+         }
+       }
+     }
+     // Also check top-level phone properties
+     if (group.phone && norm(group.phone) === norm(userPhone)) {
+       return true;
+     }
+     return false;
+   });
+
+   // If no groups found and not in creation mode, switch to creation mode
+   if (userGroups.length === 0 && !isCreation) {
+     isCreation = true;
+   }
+
+   res.render("general_new", {
+     groups: userGroups,
+     isCreation,
+     selectedGroup,
+     user: req.session ? req.session.user : null,
+     showAgent,
+     showDealer
+   });
+});
+
+/* 🆕 Create Group Request (POST) — MongoDB only */
+router.post("/", async (req, res) => {
+  try {
+    const {
+      groupName,
+      chairpersonalphonenumber,
+      firstName,
+      secondName,
+      lastName,
+      county,
+      constituency,
+      ward,
+      trustees,
+      officials,
+      members,
+      totalProposedMembers
+    } = req.body;
+
+    const cleanGroupName = String(groupName || "").trim();
+    const cleanPhone = String(chairpersonalphonenumber || "").trim();
+
+    if (!cleanGroupName || !cleanPhone || !county || !constituency || !ward) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(400).json({ success: false, message: "Missing required fields. Please fill in all details." });
+      }
+      return res.status(400).send("Missing required fields (Check county, constituency, and ward).");
+    }
+
+    if (!firstName || !lastName) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.json({ success: false, message: "Chairperson full name is required." });
+      }
+      return res.status(400).send("Chairperson full name is required.");
+    }
+
+    // Check if group name already exists
+    const availability = await isGroupNameAvailableInMongo(cleanGroupName);
+    if (availability.unavailable) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.json({ success: false, message: availability.message || "Database is currently unavailable. Please try again shortly." });
+      }
+      return res.status(503).send(availability.message || "Database is currently unavailable.");
+    }
+    if (availability.exists) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.json({ success: false, message: "Group name already exists. Please choose a different name." });
+      }
+      return res.status(400).send("Group name already exists. Please choose a different name.");
+    }
+
+    const nowIso = new Date().toISOString();
+    const groupData = {
+      groupName: cleanGroupName,
+      chairpersonalphonenumber: cleanPhone,
+      phone: cleanPhone,
+      firstName: String(firstName || "").trim(),
+      secondName: String(secondName || "").trim(),
+      lastName: String(lastName || "").trim(),
+      county: String(county).trim(),
+      constituency: String(constituency).trim(),
+      ward: String(ward).trim(),
+      phase: 1,
+      totalProposedMembers: parseInt(totalProposedMembers) || 0,
+      createdAt: nowIso,
+      createdBy: req.session?.user?.phoneNumber || "unknown",
+    };
+
+    // Sync to MongoDB first
+    const mongoResult = await saveGeneralGroupToMongo(groupData);
+    if (!mongoResult) {
+      return res.status(503).json({ success: false, message: "Database unavailable. Please try again shortly." });
+    }
+
+    // Send creation notifications
+    const { notificationContent } = notification.sendGroupCreationAlerts({
+      groupName: cleanGroupName,
+      phone: cleanPhone,
+      firstName: groupData.firstName,
+      secondName: groupData.secondName,
+      lastName: groupData.lastName,
+      ward,
+      constituency,
+      county,
+      processorPhone: req.session?.user?.phoneNumber || "Anonymous"
+    }, req.session?.user?.phoneNumber);
+
+    // Log activity
+    perfLogger.logActivity(county, constituency, ward, 1);
+
+    try {
+      regPerfLogger.logRegistration(county, constituency, ward, 'groups');
+      if (groupData.totalProposedMembers > 0) {
+        regPerfLogger.logRegistration(county, constituency, ward, 'members', groupData.totalProposedMembers);
+      }
+    } catch (e) {
+      console.error("Registration performance log error:", e);
+    }
+
+    if (req.headers['content-type'] === 'application/json') {
+      return res.json({ success: true, redirect: '/general?groupName=' + encodeURIComponent(cleanGroupName), message: 'Group created successfully!' });
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Submission Successful</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+          body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+          .success-card { background: white; color: #1e293b; padding: 40px; border-radius: 24px; text-align: center; max-width: 400px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+          .icon-box { background: #dcfce7; color: #16a34a; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; }
+          h2 { margin: 0 0 12px; font-weight: 800; color: #0f172a; }
+          p { color: #64748b; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px; }
+          .btn { display: inline-block; background: #0f9d58; color: white; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; transition: all 0.3s; width: 100%; box-sizing: border-box; }
+          .btn:hover { background: #0b7d46; transform: translateY(-2px); }
+        </style>
+      </head>
+      <body>
+        <div class="success-card">
+          <div class="icon-box"><i class="fas fa-check"></i></div>
+          <h2>Group Creation</h2>
+          <p>${notificationContent}</p>
+          <p>Please wait for agent response. This notice has been posted to your inbox.</p>
+          <a href="/personal" class="btn">Back to Wallet</a>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error("Error creating group (POST /general):", err.message);
+    // Handle duplicate key errors specifically
+    if (err.code === 11000 || err.message?.includes('E11000') || err.message?.includes('duplicate key')) {
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(500).json({
+          success: false,
+          message: "A group with this name already exists in the database. Please choose a different group name.",
+        });
+      }
+      return res.status(500).send("A group with this name already exists in the database. Please choose a different group name.");
+    }
+    if (req.headers['content-type'] === 'application/json') {
+      return res.status(500).json({
+        success: false,
+        message: "Server error while creating group. Please try again.",
+      });
+    }
+    return res.status(500).send("Server error while creating group. Please try again.");
+  }
 });
 
 /* 🔍 Verify Chairperson & Get TBank Config (POST) */
@@ -400,8 +585,8 @@ router.post("/verify", (req, res) => {
   const account = flatAccounts.find(
     (acc) =>
       acc.groupName === groupName &&
-      (acc.chairpersonalphonenumber === chairpersonalphonenumber ||
-        acc.phone === chairpersonalphonenumber),
+      (norm(acc.chairpersonalphonenumber) === norm(chairpersonalphonenumber) ||
+        norm(acc.phone) === norm(chairpersonalphonenumber)),
   );
 
   if (!account) {
@@ -617,161 +802,44 @@ router.post("/verify-members", (req, res) => {
   }
 });
 
-/* 💾 Save General Account (POST) */
-router.post("/", (req, res) => {
-  const {
-    groupName,
-    chairpersonalphonenumber,
-    firstName,
-    secondName,
-    lastName,
-    county,
-    constituency,
-    ward,
-    // New fields from the form
-    trustees,
-    officials,
-    members,
-    totalProposedMembers
-  } = req.body;
-
-  let accounts = readJSON(generalFile, {});
-  if (Array.isArray(accounts)) {
-    accounts = restructureData(accounts);
-  }
-
-  if (!groupName || !chairpersonalphonenumber || !firstName || !county || !constituency || !ward) {
-    if (req.headers['content-type'] === 'application/json') {
-      return res.status(400).json({ success: false, message: "Missing required fields (Check county, constituency, and ward)." });
-    }
-    return res.status(400).send("Missing required fields (Check county, constituency, and ward).");
-  }
-
-  const newAccount = {
-    groupName,
-    phone: chairpersonalphonenumber,
-    firstName,
-    secondName,
-    lastName,
-    processorPhone: req.session?.user?.phoneNumber || "Anonymous",
-    createdAt: new Date().toISOString(),
-    totalProposedMembers: parseInt(totalProposedMembers) || 0,
-    phase: 1 // Initial phase
-  };
-
-  // Centralized Notification Service - Pass location data explicitly since it's not stored in newAccount
-  const { notificationContent } = notification.sendGroupCreationAlerts({
-    ...newAccount,
-    ward,
-    constituency,
-    county
-  }, req.session?.user?.phoneNumber);
-
-  // 1. Chairperson is always trustee_1
-  newAccount.trustee_1 = {
-      phone: chairpersonalphonenumber,
-      type: 'trustee',
-      title: 'Chairperson'
-  };
-
-  // 2. Add other trustees
-  if (Array.isArray(trustees)) {
-      trustees.slice(0, 2).forEach((t, i) => {
-          if (t && t.phone && t.name) {
-              newAccount[`trustee_${i + 2}`] = { phone: t.phone, name: t.name, id: t.id || null, type: 'trustee' };
-          }
-      });
-  }
-
-  // 3. Add officials
-  if (Array.isArray(officials)) {
-      officials.slice(0, 3).forEach((o, i) => {
-          if (o && o.phone && o.name) {
-              newAccount[`official_${4 + i}`] = { phone: o.phone, name: o.name, id: o.id || null, type: 'official' };
-          }
-      });
-  }
-
-  // 4. Add members
-  if (Array.isArray(members)) {
-      members.forEach((m, i) => {
-          if (m && m.phone && m.name) {
-              newAccount[`member_${7 + i}`] = { phone: m.phone, name: m.name, id: m.id || null, type: 'member' };
-          }
-      });
-  }
-
-  if (!accounts[county]) accounts[county] = {};
-  if (!accounts[county][constituency]) accounts[county][constituency] = [];
-
-  // Remove redundant location fields (county, constituency, and ward) as they are already in the hierarchy
-  const { county: _co, constituency: _cn, ward: _wd, ...accountToSave } = newAccount;
-
-  const constituencyArray = accounts[county][constituency];
-  let wardIndex = constituencyArray.findIndex(item => typeof item === 'string' && item.toLowerCase() === ward.toLowerCase());
-
-  if (wardIndex === -1) {
-    // Ward doesn't exist, append ward name then the group
-    constituencyArray.push(ward);
-    constituencyArray.push(accountToSave);
-  } else {
-    // Ward exists, find the position of the last group in this ward
-    let insertIndex = wardIndex + 1;
-    while (insertIndex < constituencyArray.length && typeof constituencyArray[insertIndex] === 'object') {
-      insertIndex++;
-    }
-    constituencyArray.splice(insertIndex, 0, accountToSave);
-  }
-
-  // Log Performance (New Group Created in Phase 1)
-  perfLogger.logActivity(county, constituency, ward, 1);
-  
-  // Log Registration Performance
+/* ✅ Verify Group Name Availability (GET) */
+router.get("/verify-group-name", async (req, res) => {
   try {
-      regPerfLogger.logRegistration(county, constituency, ward, 'groups');
-      if (newAccount.totalProposedMembers > 0) {
-          regPerfLogger.logRegistration(county, constituency, ward, 'members', newAccount.totalProposedMembers);
-      }
-  } catch (e) {
-      console.error("Registration performance log error:", e);
+    const { groupName } = req.query;
+    if (!groupName) {
+      return res.json({ exists: false, unavailable: true, message: "Group name is required" });
+    }
+
+    const verificationResult = await isGroupNameAvailableInMongo(groupName);
+    return res.json(verificationResult);
+  } catch (err) {
+    console.error("Error verifying group name:", err);
+    return res.status(500).json({ unavailable: true, message: "Server error verifying group name" });
   }
+});
 
-  writeJSON(generalFile, accounts);
+/* 📍 Locations API */
+router.get("/locations/counties", (req, res) => {
+  const locationsFile = path.join(__dirname, "../locations.json");
+  const locationsData = readJSON(locationsFile, {});
+  res.json(Object.keys(locationsData).sort());
+});
 
-  if (req.headers['content-type'] === 'application/json') {
-    return res.json({ success: true, redirect: '/personal', message: 'Group created successfully!' });
-  }
+router.get("/locations/constituencies", (req, res) => {
+  const { county } = req.query;
+  const locationsData = readJSON(path.join(__dirname, "../locations.json"), {});
+  const data = locationsData[county];
+  if (!data) return res.json([]);
+  res.json(Object.keys(data).sort());
+});
 
-  // Return a success view with the message
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Submission Successful</title>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-      <style>
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-        .success-card { background: white; color: #1e293b; padding: 40px; border-radius: 24px; text-align: center; max-width: 400px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .icon-box { background: #dcfce7; color: #16a34a; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; }
-        h2 { margin: 0 0 12px; font-weight: 800; color: #0f172a; }
-        p { color: #64748b; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px; }
-        .btn { display: inline-block; background: #0f9d58; color: white; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 700; transition: all 0.3s; width: 100%; box-sizing: border-box; }
-        .btn:hover { background: #0b7d46; transform: translateY(-2px); }
-      </style>
-    </head>
-    <body>
-      <div class="success-card">
-        <div class="icon-box"><i class="fas fa-check"></i></div>
-        <h2>Group Creation</h2>
-        <p>${notificationContent}</p>
-        <p>Please wait for agent response. This notice has been posted to your inbox.</p>
-        <a href="/personal" class="btn">Back to Wallet</a>
-      </div>
-    </body>
-    </html>
-  `);
+router.get("/locations/wards", (req, res) => {
+  const { county, constituency } = req.query;
+  const locationsData = readJSON(path.join(__dirname, "../locations.json"), {});
+  const constData = locationsData?.[county]?.[constituency];
+  if (!constData) return res.json([]);
+  const wards = Array.isArray(constData) ? constData : (constData.wards || []);
+  res.json(wards.sort());
 });
 
 /* 📝 Update Group Members (Agent Submission) */
@@ -803,8 +871,8 @@ router.post("/update-members", (req, res) => {
           (acc) =>
             typeof acc === 'object' && acc !== null &&
             acc.groupName === groupName &&
-            (acc.chairpersonalphonenumber === chairpersonalphonenumber ||
-              acc.phone === chairpersonalphonenumber),
+            (norm(acc.chairpersonalphonenumber) === norm(chairpersonalphonenumber) ||
+              norm(acc.phone) === norm(chairpersonalphonenumber)),
         );
         if (idx !== -1) {
           targetGroup = list[idx];
@@ -1121,7 +1189,7 @@ router.post("/verify-access", (req, res) => {
     for (const key in group) {
       if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
         const memberInfo = group[key];
-        if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+        if (memberInfo && norm(memberInfo.phone) === norm(userPhone)) {
           userGroups.push(group);
           break;
         }
@@ -1143,8 +1211,8 @@ router.post("/verify-access", (req, res) => {
       return res.json({ success: false, message: "Group not found" });
     }
 
-    const chairpersonPhoneMatch = targetGroup.phone === chairpersonPhone || 
-                                  targetGroup.chairpersonalphonenumber === chairpersonPhone;
+    const chairpersonPhoneMatch = norm(targetGroup.phone) === norm(chairpersonPhone) || 
+                                  norm(targetGroup.chairpersonalphonenumber) === norm(chairpersonPhone);
     
     if (!chairpersonPhoneMatch) {
       return res.json({ success: false, message: "Chairperson phone does not match the group" });
@@ -1213,7 +1281,7 @@ router.post("/verify-member", (req, res) => {
   for (const key in group) {
     if (key.startsWith("trustee_") || key.startsWith("official_")) {
       const info = group[key];
-      if (info && String(info.phone).trim() === String(userPhone).trim()) {
+      if (info && norm(info.phone) === norm(userPhone)) {
         userRole = info.type;
         memberInfo = info;
         break;
@@ -1341,7 +1409,7 @@ router.post("/generate-key", async (req, res) => {
   for (const key in targetGroup) {
     if (key.startsWith("trustee_") || key.startsWith("official_")) {
       const info = targetGroup[key];
-      if (info && String(info.phone).trim() === String(userPhone).trim()) {
+      if (info && norm(info.phone) === norm(userPhone)) {
         isAuthorized = true;
         currentUserRole = info.type;
         break;
@@ -1442,7 +1510,7 @@ router.get("/user-role-type", (req, res) => {
     
     // Check if user is the chairperson
     const chairPhone = group.phone || group.chairpersonalphonenumber;
-    if (!userRoleInGroup && chairPhone && String(chairPhone).trim() === String(userPhone).trim()) {
+    if (!userRoleInGroup && chairPhone && norm(chairPhone) === norm(userPhone)) {
       userRoleInGroup = "trustee";
       userTitleInGroup = "Chairperson";
     }
@@ -1450,7 +1518,7 @@ router.get("/user-role-type", (req, res) => {
     for (const key in group) {
       if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
         const memberInfo = group[key];
-        if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+        if (memberInfo && norm(memberInfo.phone) === norm(userPhone)) {
           userTitleInGroup = memberInfo.title || memberInfo.type || "";
           if (key.startsWith("trustee_")) {
             isTrustee = true;
@@ -1535,7 +1603,7 @@ router.post("/user-role", (req, res) => {
   for (const key in group) {
     if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
       const memberInfo = group[key];
-      if (memberInfo && String(memberInfo.phone).trim() === String(userPhone).trim()) {
+      if (memberInfo && norm(memberInfo.phone) === norm(userPhone)) {
         userRole = memberInfo.type;
         break;
       }
@@ -1574,7 +1642,7 @@ router.get("/group/:groupName", (req, res) => {
   for (const key in group) {
     if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
       const info = group[key];
-      if (info && String(info.phone).trim() === String(userPhone).trim()) {
+      if (info && norm(info.phone) === norm(userPhone)) {
         userRole = info.type; // 'trustee' | 'official' | 'member'
         break;
       }
@@ -1951,6 +2019,40 @@ router.post("/delete-group", (req, res) => {
   } catch (err) {
     console.error("Error deleting group request:", err);
     return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+/* 🔧 Cleanup null groupKeys in MongoDB (admin endpoint) */
+router.post("/cleanup-group-keys", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ success: false, message: "MongoDB not connected" });
+    }
+    const db = mongoose.connection.db;
+    const col = db.collection('groups');
+    const cleaned = await cleanupStaleGroupKeys(col);
+    const indexFixed = await fixGroupKeyIndex();
+    res.json({ success: true, cleaned, indexFixed, message: `Cleaned ${cleaned} documents with null/empty groupKey` });
+  } catch (err) {
+    console.error("Cleanup error:", err);
+    res.status(500).json({ success: false, message: "Cleanup failed: " + err.message });
+  }
+});
+
+/* 🔧 Full fix for groupKey index issues */
+router.post("/fix-groupkey-index", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ success: false, message: "MongoDB not connected" });
+    }
+    const db = mongoose.connection.db;
+    const col = db.collection('groups');
+    const cleaned = await cleanupStaleGroupKeys(col);
+    const indexFixed = await fixGroupKeyIndex();
+    res.json({ success: true, cleaned, indexFixed, message: `Fixed ${cleaned} null documents and recreated sparse index` });
+  } catch (err) {
+    console.error("Fix index error:", err);
+    res.status(500).json({ success: false, message: "Fix failed: " + err.message });
   }
 });
 

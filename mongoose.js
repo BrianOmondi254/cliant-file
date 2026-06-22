@@ -222,17 +222,261 @@ const normalizeGroupName = (groupName) => String(groupName || '').trim().replace
 
 const escapeGroupNameRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const matchRegionalGroup = (group, target, countyDoc, constituency, ward) => {
-  if (!group) return null;
-  const name = normalizeGroupName(group.groupName);
-  const id = normalizeGroupName(group.groupId);
-  if (name !== target && id !== target) return null;
-  return {
-    group,
-    county: group.county || countyDoc.county,
-    constituency: group.constituency || constituency.name,
-    ward: group.ward || ward.name
-  };
+const flattenMongoCountyDoc = (doc) => {
+  const flat = [];
+  if (!doc) return flat;
+
+  // Handle flat group documents (groupKey at top level, no nested arrays)
+  const hasNestedArrays = Object.keys(doc).some(k =>
+    k !== '_id' && k !== 'county' && Array.isArray(doc[k])
+  );
+  if (!hasNestedArrays && doc.groupName) {
+    flat.push({
+      ...doc,
+      county: doc.county || 'Unknown',
+      constituency: doc.constituency || 'Unknown',
+      ward: doc.ward || 'Unknown Ward'
+    });
+    return flat;
+  }
+
+  // Handle county documents with nested constituency/ward arrays
+  const county = doc.county;
+  for (const key in doc) {
+    if (key === '_id' || key === 'county') continue;
+    const items = doc[key];
+    if (!Array.isArray(items)) continue;
+    let currentWard = "Unknown Ward";
+    items.forEach(item => {
+      if (typeof item === 'string') {
+        currentWard = item;
+      } else if (item && typeof item === 'object') {
+        flat.push({ ...item, county, constituency: key, ward: currentWard });
+      }
+    });
+  }
+  return flat;
+};
+
+const saveGeneralGroupToMongo = async (groupData) => {
+  if (mongoose.connection.readyState !== 1) {
+    console.warn('[GeneralGroup] MongoDB not connected, skipping DB sync');
+    return null;
+  }
+
+  const db = mongoose.connection.db;
+  if (!db) {
+    console.warn('[GeneralGroup] MongoDB database unavailable, skipping DB sync');
+    return null;
+  }
+
+  const { county, constituency, ward, ...accountFields } = groupData;
+  const groupName = accountFields.groupName;
+  const normalizedGroupName = groupName ? String(groupName).trim() : "";
+
+  if (!normalizedGroupName) {
+    console.warn('[GeneralGroup] groupName is missing/empty, skipping MongoDB sync', {
+      county,
+      constituency,
+      ward,
+      receivedGroupName: groupName,
+    });
+    return null;
+  }
+
+  if (!county || !constituency || !ward) {
+    console.warn('[GeneralGroup] county, constituency, ward and groupName are required for MongoDB sync');
+    return null;
+  }
+
+  const col = db.collection('groups');
+  const now = new Date().toISOString();
+
+  try {
+    // Fix non-sparse groupKey index if it exists (prevents E11000 on county docs without groupKey)
+    try {
+      const indexes = await col.listIndexes().toArray();
+      const idx = indexes.find(i => i.name === 'groupKey_1');
+      if (idx && !idx.sparse) {
+        await col.dropIndex('groupKey_1');
+        await col.createIndex(
+          { groupKey: 1 },
+          { unique: true, sparse: true, name: 'groupKey_1', background: true }
+        );
+        console.log('[GeneralGroup] Recreated groupKey_1 as sparse index');
+      }
+    } catch (idxErr) {
+      // Index might not exist or other error — continue
+    }
+
+    // Build the group object (no groupKey on nested objects — county docs don't need it)
+    const accountToSave = {
+      ...accountFields,
+      updatedAt: now,
+      syncedAt: now,
+      source: 'general'
+    };
+
+    let countyDoc = await col.findOne({ county });
+
+    if (!countyDoc) {
+      const newDoc = { county };
+      newDoc[constituency] = [ward, accountToSave];
+      const insertResult = await col.insertOne(newDoc);
+      console.log(`[GeneralGroup] Created county doc for ${county} & inserted group: ${groupName}`);
+      return insertResult;
+    }
+
+    const constituencyArray = Array.isArray(countyDoc[constituency]) ? [...countyDoc[constituency]] : [];
+
+    const existingIdx = constituencyArray.findIndex(
+      item => typeof item === 'object' && item !== null && item.groupName === groupName
+    );
+
+    if (existingIdx !== -1) {
+      constituencyArray[existingIdx] = { ...constituencyArray[existingIdx], ...accountToSave };
+    } else {
+      let wardIndex = constituencyArray.findIndex(
+        item => typeof item === 'string' && item.toLowerCase() === ward.toLowerCase()
+      );
+
+      if (wardIndex === -1) {
+        constituencyArray.push(ward, accountToSave);
+      } else {
+        let insertIndex = wardIndex + 1;
+        while (insertIndex < constituencyArray.length && typeof constituencyArray[insertIndex] === 'object') {
+          insertIndex++;
+        }
+        constituencyArray.splice(insertIndex, 0, accountToSave);
+      }
+    }
+
+    const result = await col.updateOne(
+      { county },
+      { $set: { [constituency]: constituencyArray } }
+    );
+
+    console.log(`[GeneralGroup] Synced group into MongoDB 'groups' (county doc): ${groupName}`);
+    return result;
+  } catch (err) {
+    console.error('[GeneralGroup] MongoDB sync error:', err.message);
+    return null;
+  }
+};
+
+/**
+ * Clean up existing documents with null/empty groupKey in the groups collection
+ * This fixes the E11000 duplicate key error when sparse index wasn't properly applied
+ */
+const cleanupNullGroupKeys = async (col) => {
+  try {
+    // Find documents with null or empty groupKey
+    const nullGroups = await col.find({
+      $or: [
+        { groupKey: { $type: "null" } },
+        { groupKey: "" }
+      ]
+    }).toArray();
+    let cleanedCount = 0;
+    
+    for (const doc of nullGroups) {
+      // Delete these problematic documents
+      await col.deleteOne({ _id: doc._id });
+      cleanedCount++;
+      console.log(`[GeneralGroup] Removed document with null/empty groupKey, _id: ${doc._id}`);
+    }
+    
+    return cleanedCount;
+  } catch (err) {
+    console.error('[GeneralGroup] Error during cleanup:', err.message);
+    return 0;
+  }
+};
+
+/**
+ * Drop and recreate the groupKey index with sparse:true to allow multiple null values
+ * Run this if the duplicate key error persists after cleanup
+ */
+const fixGroupKeyIndex = async () => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      console.warn('[GeneralGroup] MongoDB not connected, cannot fix index');
+      return false;
+    }
+    
+    const db = mongoose.connection.db;
+    const col = db.collection('groups');
+    
+    // Drop existing groupKey index (named groupKey_1)
+    try {
+      await col.dropIndex('groupKey_1');
+      console.log('[GeneralGroup] Dropped existing groupKey_1 index');
+    } catch (dropErr) {
+      console.log('[GeneralGroup] Could not drop index (may not exist):', dropErr.message);
+    }
+    
+    // Recreate index with sparse:true using the collection's createIndexes method
+    await col.createIndex(
+      { groupKey: 1 },
+      { 
+        unique: true, 
+        sparse: true, 
+        name: 'groupKey_1',
+        background: true 
+      }
+    );
+    console.log('[GeneralGroup] Created new sparse unique index on groupKey');
+    
+    return true;
+  } catch (err) {
+    console.error('[GeneralGroup] Error fixing index:', err.message);
+    return false;
+  }
+};
+
+/**
+ * Public function to clean up null groupKeys - can be called on startup or via endpoint
+ */
+const cleanupStaleGroupKeys = async () => {
+  if (mongoose.connection.readyState !== 1) return 0;
+  const db = mongoose.connection.db;
+  if (!db) return 0;
+  const col = db.collection('groups');
+  return cleanupNullGroupKeys(col);
+};
+
+const getGeneralGroupsFromMongo = async () => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const db = mongoose.connection.db;
+  if (!db) throw new Error('MongoDB database unavailable');
+
+  const countyDocs = await db.collection('groups').find({}).toArray();
+  return countyDocs.flatMap(flattenMongoCountyDoc);
+};
+
+const findGeneralGroupsByMemberPhone = async (phone) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const db = mongoose.connection.db;
+  if (!db) throw new Error('MongoDB database unavailable');
+
+  const normalized = normalizePhone(phone);
+  const countyDocs = await db.collection('groups').find({}).toArray();
+  const allGroups = countyDocs.flatMap(flattenMongoCountyDoc);
+
+  return allGroups.filter(group => {
+    if (normalizePhone(group.phone) === normalized) return true;
+    for (const key in group) {
+      if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+        const m = group[key];
+        if (m && m.phone && normalizePhone(m.phone) === normalized) return true;
+      }
+    }
+    return false;
+  });
 };
 
 const findGroupNameInMongoGroupsCollection = async (groupName) => {
@@ -244,27 +488,26 @@ const findGroupNameInMongoGroupsCollection = async (groupName) => {
   const target = normalizeGroupName(groupName);
   if (!target) return null;
 
-  const docs = await db.collection('groups').find({}).maxTimeMS(2000).toArray();
-  for (const doc of docs) {
-    if (!doc) continue;
-
-    const flatName = normalizeGroupName(doc.groupName);
-    const flatKey = normalizeGroupName(doc.groupKey);
-    if (flatName === target || flatKey === target) {
-      return { group: doc, county: doc.county || '', constituency: doc.constituency || '', ward: doc.ward || '', source: 'groups.flat' };
-    }
-
-    if (!Array.isArray(doc.constituencies)) continue;
-    for (const constituency of doc.constituencies) {
-      if (!constituency || !Array.isArray(constituency.wards)) continue;
-      for (const ward of constituency.wards) {
-        if (!ward || !Array.isArray(ward.data)) continue;
-        for (const group of ward.data) {
-          const match = matchRegionalGroup(group, target, doc, constituency, ward);
-          if (match) return { ...match, source: 'groups.regional' };
+  try {
+    const countyDocs = await db.collection('groups').find({}, { maxTimeMS: 3000 }).toArray();
+    for (const doc of countyDocs) {
+      const groups = flattenMongoCountyDoc(doc);
+      for (const group of groups) {
+        const flatName = normalizeGroupName(group.groupName);
+        const flatKey = normalizeGroupName(group.groupKey);
+        if (flatName === target || flatKey === target) {
+          return {
+            group,
+            county: group.county,
+            constituency: group.constituency,
+            ward: group.ward,
+            source: 'groups.county-doc'
+          };
         }
       }
     }
+  } catch (err) {
+    console.error('[findGroupNameInMongoGroupsCollection]', err.message);
   }
   return null;
 };
@@ -278,19 +521,31 @@ const findGroupNameInGroupsMembersCollection = async (groupName) => {
   const target = normalizeGroupName(groupName);
   if (!target) return null;
 
-  const docs = await db.collection('groups-members').find({}).maxTimeMS(2000).toArray();
-  for (const doc of docs) {
-    if (!doc || !Array.isArray(doc.constituencies)) continue;
-    for (const constituency of doc.constituencies) {
-      if (!constituency || !Array.isArray(constituency.wards)) continue;
-      for (const ward of constituency.wards) {
-        if (!ward || !Array.isArray(ward.data)) continue;
-        for (const group of ward.data) {
-          const match = matchRegionalGroup(group, target, doc, constituency, ward);
-          if (match) return { ...match, source: 'groups-members.regional' };
+  try {
+    const docs = await db.collection('groups-members').find({}, { maxTimeMS: 3000 }).toArray();
+    for (const doc of docs) {
+      if (!doc || !Array.isArray(doc.constituencies)) continue;
+      for (const constituency of doc.constituencies) {
+        if (!constituency || !Array.isArray(constituency.wards)) continue;
+        for (const ward of constituency.wards) {
+          if (!ward || !Array.isArray(ward.data)) continue;
+          for (const group of ward.data) {
+            const flatName = normalizeGroupName(group.groupName);
+            const flatId = normalizeGroupName(group.groupId);
+            if (!group || (flatName !== target && flatId !== target)) continue;
+            return {
+              group,
+              county: group.county || doc.county,
+              constituency: group.constituency || constituency.name,
+              ward: group.ward || ward.name,
+              source: 'groups-members.regional'
+            };
+          }
         }
       }
     }
+  } catch (err) {
+    console.error('[findGroupNameInGroupsMembersCollection]', err.message);
   }
   return null;
 };
@@ -313,119 +568,7 @@ const isGroupNameAvailableInMongo = async (groupName) => {
     return { available: false, exists: true, source: groupsMembersMatch.source, message: 'Group name exists' };
   }
 
-  const escaped = escapeGroupNameRegex(name);
-  const modelDoc = await MemberGroup.findOne({
-    $or: [
-      { groupKey: String(groupName).trim() },
-      { groupName: { $regex: new RegExp(`^${escaped}$`), $options: 'i' } }
-    ]
-  }).maxTimeMS(2000).lean();
-
-  if (modelDoc) return { available: false, exists: true, source: 'MemberGroup', message: 'Group name exists' };
-
   return { available: true, exists: false, source: 'mongo', message: 'Group name is available' };
-};
-
-/**
- * Save/update a general group document into MongoDB `groups` collection.
- * Uses native driver so it matches existing docs in that collection.
- */
-const saveGeneralGroupToMongo = async (groupData) => {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      console.warn('[GeneralGroup] MongoDB not connected, skipping DB sync');
-      return null;
-    }
-
-    const db = mongoose.connection.db;
-    if (!db) {
-      console.warn('[GeneralGroup] MongoDB database unavailable, skipping DB sync');
-      return null;
-    }
-
-    const groupName = groupData && groupData.groupName;
-    if (!groupName) {
-      console.warn('[GeneralGroup] groupName is required for MongoDB sync');
-      return null;
-    }
-
-    const col = db.collection('groups');
-    const now = new Date().toISOString();
-
-    // Build a clean MongoDB payload from general.json group data
-    // Preserve the field names as they already exist in general.json.
-    const payload = {
-      ...groupData,
-      groupName,
-      groupKey: groupName,
-      updatedAt: now,
-      syncedAt: now,
-      source: 'general'
-    };
-
-    const result = await col.updateOne(
-      { groupName },
-      { $set: payload },
-      { upsert: true }
-    );
-
-    if (result.upsertedId) {
-      console.log(`[GeneralGroup] Inserted group into MongoDB 'groups': ${groupName}`);
-    } else {
-      console.log(`[GeneralGroup] Updated group in MongoDB 'groups': ${groupName}`);
-    }
-
-    return result;
-  } catch (err) {
-    console.error('[GeneralGroup] MongoDB sync error:', err.message);
-    return null;
-  }
-};
-
-/**
- * Get all general groups from MongoDB
- */
-const getGeneralGroupsFromMongo = async () => {
-  const ready = await ensureMongoReady();
-  if (!ready) throw new Error('MongoDB not connected');
-
-  const db = mongoose.connection.db;
-  if (!db) throw new Error('MongoDB database unavailable');
-
-  return await db.collection('groups').find({}).toArray();
-};
-
-/**
- * Find general group by member phone in MongoDB
- */
-const findGeneralGroupsByMemberPhone = async (phone) => {
-  const ready = await ensureMongoReady();
-  if (!ready) throw new Error('MongoDB not connected');
-
-  const db = mongoose.connection.db;
-  if (!db) throw new Error('MongoDB database unavailable');
-
-  const normalized = String(phone || '').trim();
-  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  const regex = new RegExp(`^${escaped}$`, 'i');
-  const docs = await db.collection('groups').find({
-    $or: [
-      { phone: regex },
-      { 'trustee_1.phone': regex },
-      { 'official_2.phone': regex },
-      { 'official_3.phone': regex },
-      { 'official_4.phone': regex },
-      { 'member_5.phone': regex },
-      { 'member_6.phone': regex },
-      { 'member_7.phone': regex },
-      { 'member_8.phone': regex },
-      { 'member_9.phone': regex },
-      { 'member_10.phone': regex }
-    ]
-  }).toArray();
-
-  return docs;
 };
 
 /**
@@ -1093,15 +1236,17 @@ module.exports = {
   migratePinsFromJSON,
   flattenHierarchicalUsers,
   normalizePhone,
-  phoneMatches,
-  saveMemberGroupToMongo,
-  addMemberToMemberGroup,
-  updateMemberAccountInMongo,
-  getMemberGroupFromMongo,
-  saveMemberDataToMongo,
-  findOrCreateMemberGroup,
-  isGroupNameAvailableInMongo,
-  saveGeneralGroupToMongo,
-  getGeneralGroupsFromMongo,
-  findGeneralGroupsByMemberPhone
+phoneMatches,
+   saveMemberGroupToMongo,
+    addMemberToMemberGroup,
+    updateMemberAccountInMongo,
+    getMemberGroupFromMongo,
+    saveMemberDataToMongo,
+    findOrCreateMemberGroup,
+    isGroupNameAvailableInMongo,
+    saveGeneralGroupToMongo,
+    getGeneralGroupsFromMongo,
+    findGeneralGroupsByMemberPhone,
+    cleanupStaleGroupKeys,
+    fixGroupKeyIndex
 };

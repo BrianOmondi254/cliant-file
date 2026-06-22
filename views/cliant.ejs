@@ -1350,7 +1350,7 @@ const app = {
                     <div class="m-field"><label>Ward</label><select name="ward" id="newWardSelect" class="form-input" required><option value="">-- Select Ward --</option></select></div>
                     <div class="m-btn-row" style="margin-top:16px;">
                         <button type="button" class="m-submit-btn secondary" onclick="app.backToGroupForm()"><i class="fa-solid fa-arrow-left"></i> Back</button>
-                        <button type="submit" class="m-submit-btn"><i class="fa-solid fa-check-circle"></i> Submit</button>
+                        <button type="submit" id="createGroupSubmitBtn" class="m-submit-btn"><i class="fa-solid fa-check-circle"></i> Submit</button>
                     </div>
                 </div>
             </form></div>`;
@@ -1447,7 +1447,12 @@ const app = {
             ${!hasPin ? `<div style="padding:0 16px 14px;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;line-height:1.45;"><i class="fa-solid fa-circle-info" style="margin-right:5px;color:#f59e0b;"></i>Create your Personal PIN to unlock Send, Balance, Statement and Withdraw actions.</div>` : ''}
         </div>`;
 
-        html += `<div class="section-label">My Groups <span style="font-size:10px;color:#64748b;font-weight:600;text-transform:none;letter-spacing:0;">${groups.length} ${groups.length === 1 ? 'group' : 'groups'} · ${activeCount} active${pendingCount ? ' · ' + pendingCount + ' pending' : ''}</span></div>`;
+        html += `<div class="section-label" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>My Groups <span style="font-size:10px;color:#64748b;font-weight:600;text-transform:none;letter-spacing:0;">${groups.length} ${groups.length === 1 ? 'group' : 'groups'} · ${activeCount} active${pendingCount ? ' · ' + pendingCount + ' pending' : ''}</span></span>
+            <button onclick="app.openModal('Create Group')" onmouseover="this.style.backgroundColor='#e6fff3'; this.style.transform='translateY(-1px)'" onmouseout="this.style.backgroundColor='transparent'; this.style.transform='none'" style="background:none;border:none;color:var(--primary);font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;transition:all 0.2s;outline:none;">
+                <i class="fa-solid fa-plus-circle" style="font-size:13px;"></i> Create Group
+            </button>
+        </div>`;
 
         if (groups.length > 0) {
             groups.forEach(g => {
@@ -2721,6 +2726,7 @@ const app = {
             if (!nameOk) return;
             document.getElementById('cAccountStep').classList.add('hidden');
             document.getElementById('gRegionsStep').classList.remove('hidden');
+            this.initNewCounties(); // Re-init counties each time step 2 becomes visible
         } finally {
             if (nextBtn) {
                 nextBtn.disabled = false;
@@ -2789,52 +2795,151 @@ const app = {
     initNewCounties() {
         const sel = document.getElementById('newCountySelect');
         if (!sel) return;
-        sel.innerHTML = '<option value="">-- Select County --</option>';
-        fetch('/api/locations/counties').then(r => r.json()).then(list => {
-            list.forEach(county => { const o = document.createElement('option'); o.value = county; o.textContent = county; sel.appendChild(o); });
-        }).catch(() => this.showToast("Failed to load counties", "error"));
+        sel.innerHTML = '<option value="">⏳ Loading counties...</option>';
+        fetch('/general/locations/counties')
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(list => {
+                // Re-query inside callback to avoid stale reference if DOM was rebuilt
+                const freshSel = document.getElementById('newCountySelect');
+                if (!freshSel) return;
+                freshSel.innerHTML = '<option value="">-- Select County --</option>';
+                if (!Array.isArray(list) || list.length === 0) {
+                    this.showToast('No counties found', 'error'); return;
+                }
+                list.forEach(county => {
+                    const o = document.createElement('option');
+                    o.value = county; o.textContent = county;
+                    freshSel.appendChild(o);
+                });
+            })
+            .catch(err => {
+                const freshSel = document.getElementById('newCountySelect');
+                if (freshSel) freshSel.innerHTML = '<option value="">-- Select County --</option>';
+                this.showToast('Failed to load counties. Please try again.', 'error');
+                console.error('[initNewCounties]', err);
+            });
     },
     loadNewConstituencies() {
         const county = document.getElementById('newCountySelect').value;
         const cSel   = document.getElementById('newConstituencySelect');
         const wSel   = document.getElementById('newWardSelect');
-        cSel.innerHTML = '<option value="">-- Select Constituency --</option>';
+        cSel.innerHTML = '<option value="">⏳ Loading...</option>';
         wSel.innerHTML = '<option value="">-- Select Ward --</option>';
-        if (!county) return;
-        fetch(`/api/locations/${encodeURIComponent(county)}/constituencies`).then(r => r.json()).then(list => {
-            list.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; cSel.appendChild(o); });
-        });
+        if (!county) { cSel.innerHTML = '<option value="">-- Select Constituency --</option>'; return; }
+        fetch(`/general/locations/constituencies?county=${encodeURIComponent(county)}`)
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(list => {
+                // Re-query inside callback to avoid stale reference
+                const freshCSel = document.getElementById('newConstituencySelect');
+                if (!freshCSel) return;
+                freshCSel.innerHTML = '<option value="">-- Select Constituency --</option>';
+                if (!Array.isArray(list) || list.length === 0) {
+                    freshCSel.innerHTML += '<option disabled>No constituencies found</option>'; return;
+                }
+                list.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = c; o.textContent = c;
+                    freshCSel.appendChild(o);
+                });
+            })
+            .catch(err => {
+                const freshCSel = document.getElementById('newConstituencySelect');
+                if (freshCSel) freshCSel.innerHTML = '<option value="">-- Select Constituency --</option>';
+                this.showToast('Failed to load constituencies.', 'error');
+                console.error('[loadNewConstituencies]', err);
+            });
     },
     loadNewWards() {
         const county       = document.getElementById('newCountySelect').value;
         const constituency = document.getElementById('newConstituencySelect').value;
         const wSel         = document.getElementById('newWardSelect');
-        wSel.innerHTML = '<option value="">-- Select Ward --</option>';
-        if (!county || !constituency) return;
-        fetch(`/api/locations/${encodeURIComponent(county)}/${encodeURIComponent(constituency)}/wards`).then(r => r.json()).then(list => {
-            if (!Array.isArray(list) || list.length === 0) { const o = document.createElement('option'); o.value=''; o.textContent='(No Wards Listed)'; o.disabled=true; wSel.appendChild(o); return; }
-            list.sort().forEach(ward => { const o = document.createElement('option'); o.value = ward; o.textContent = ward; wSel.appendChild(o); });
-        });
+        wSel.innerHTML = '<option value="">⏳ Loading...</option>';
+        if (!county || !constituency) { wSel.innerHTML = '<option value="">-- Select Ward --</option>'; return; }
+        fetch(`/general/locations/wards?county=${encodeURIComponent(county)}&constituency=${encodeURIComponent(constituency)}`)
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(list => {
+                // Re-query inside callback to avoid stale reference
+                const freshWSel = document.getElementById('newWardSelect');
+                if (!freshWSel) return;
+                freshWSel.innerHTML = '<option value="">-- Select Ward --</option>';
+                if (!Array.isArray(list) || list.length === 0) {
+                    const o = document.createElement('option');
+                    o.value = ''; o.textContent = '(No Wards Listed)'; o.disabled = true;
+                    freshWSel.appendChild(o); return;
+                }
+                list.sort().forEach(ward => {
+                    const o = document.createElement('option');
+                    o.value = ward; o.textContent = ward;
+                    freshWSel.appendChild(o);
+                });
+            })
+            .catch(err => {
+                const freshWSel = document.getElementById('newWardSelect');
+                if (freshWSel) freshWSel.innerHTML = '<option value="">-- Select Ward --</option>';
+                this.showToast('Failed to load wards.', 'error');
+                console.error('[loadNewWards]', err);
+            });
     },
     async handleCreateGroupSubmit(event) {
         event.preventDefault();
+        
+        this.parseNewFullName();
+
         const wardSelect = document.getElementById('newWardSelect');
         if (wardSelect && wardSelect.value === 'OTHER') {
             const mw = prompt('Please enter your ward name:');
             if (!mw || !mw.trim()) { this.showToast('Please enter your ward name', 'error'); return false; }
             const o = document.createElement('option'); o.value = mw.trim(); o.text = mw.trim(); wardSelect.appendChild(o); wardSelect.value = mw.trim();
         }
+
+        // ── Pin the submit button until MongoDB responds ──
+        const submitBtn = document.getElementById('createGroupSubmitBtn');
+        const originalHTML = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Saving to database...';
+        }
+
+        const unlock = () => {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '';
+                submitBtn.style.cursor = '';
+                submitBtn.innerHTML = originalHTML || '<i class="fa-solid fa-check-circle"></i> Submit';
+            }
+        };
+
         const data = Object.fromEntries(new FormData(event.target).entries());
         try {
-            const res    = await fetch('/general', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+            const res    = await fetch('/general', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
             const result = await res.json();
-            if (result.success) { this.showToast('Group created successfully!', 'success'); this.closeModal(); if (result.redirect) window.location.href = result.redirect; }
-            else { this.showToast(result.message || 'Failed to create group', 'error'); }
-        } catch(e) { this.showToast('Server error occurred', 'error'); }
+            if (result.success) {
+                // Keep button locked — navigating away
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Saved!';
+                    submitBtn.style.background = '#16a34a';
+                }
+                this.showToast('Group created successfully!', 'success');
+                setTimeout(() => {
+                    this.closeModal();
+                    if (result.redirect) window.location.href = result.redirect;
+                }, 900);
+            } else {
+                // Unlock so user can retry or correct input
+                unlock();
+                this.showToast(result.message || 'Failed to create group. Please try again.', 'error');
+            }
+        } catch (e) {
+            unlock();
+            this.showToast('Network error. Please check your connection and try again.', 'error');
+            console.error('[handleCreateGroupSubmit]', e);
+        }
         return false;
     },
     handleDealerClick() { if (!this.data.isDealer) { this.showToast('You are not registered as a dealer.', 'error'); return; } this.switchRole('Dealer'); },
-    handleGeneralClick() { this.closeModal(); window.location.href = '/general'; },
+    handleGeneralClick() { this.closeModal(); this.data.role = 'General'; this.render(); },
 
     /* ─── SEND MONEY FLOWS ─── */
     selectGroupForSend(groupName) {

@@ -611,6 +611,708 @@
           }
         }
       }
+    },
+    "Kajiado": {
+      "totals": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "hourly": {
+        "2026-06-22-11": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "weekly": {
+        "2026-W26": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "monthly": {
+        "2026-06": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "constituencies": {
+        "Kajiado Central": {
+          "totals": {
+            "phase1": 1,
+            "phase2": 0,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 0
+          },
+          "hourly": {
+            "2026-06-22-11": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "weekly": {
+            "2026-W26": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "monthly": {
+            "2026-06": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "wards": {
+            "Dalalekutuk": {
+              "totals": {
+                "phase1": 1,
+                "phase2": 0,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 0
+              },
+              "hourly": {
+                "2026-06-22-11": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "weekly": {
+                "2026-W26": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "monthly": {
+                "2026-06": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Elgeyo Marakwet": {
+      "totals": {
+        "phase1": 2,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "hourly": {
+        "2026-06-22-11": {
+          "phase1": 2,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "weekly": {
+        "2026-W26": {
+          "phase1": 2,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "monthly": {
+        "2026-06": {
+          "phase1": 2,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "constituencies": {
+        "Marakwet East": {
+          "totals": {
+            "phase1": 1,
+            "phase2": 0,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 0
+          },
+          "hourly": {
+            "2026-06-22-11": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "weekly": {
+            "2026-W26": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "monthly": {
+            "2026-06": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "wards": {
+            "Embobut": {
+              "totals": {
+                "phase1": 1,
+                "phase2": 0,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 0
+              },
+              "hourly": {
+                "2026-06-22-11": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "weekly": {
+                "2026-W26": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "monthly": {
+                "2026-06": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              }
+            }
+          }
+        },
+        "Keiyo South": {
+          "totals": {
+            "phase1": 1,
+            "phase2": 0,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 0
+          },
+          "hourly": {
+            "2026-06-22-11": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "weekly": {
+            "2026-W26": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "monthly": {
+            "2026-06": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "wards": {
+            "Chepkorio": {
+              "totals": {
+                "phase1": 1,
+                "phase2": 0,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 0
+              },
+              "hourly": {
+                "2026-06-22-11": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "weekly": {
+                "2026-W26": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "monthly": {
+                "2026-06": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Baringo": {
+      "totals": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "hourly": {
+        "2026-06-22-11": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "weekly": {
+        "2026-W26": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "monthly": {
+        "2026-06": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "constituencies": {
+        "Baringo North": {
+          "totals": {
+            "phase1": 1,
+            "phase2": 0,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 0
+          },
+          "hourly": {
+            "2026-06-22-11": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "weekly": {
+            "2026-W26": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "monthly": {
+            "2026-06": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "wards": {
+            "Bartabwa": {
+              "totals": {
+                "phase1": 1,
+                "phase2": 0,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 0
+              },
+              "hourly": {
+                "2026-06-22-11": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "weekly": {
+                "2026-W26": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "monthly": {
+                "2026-06": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Busia": {
+      "totals": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "hourly": {
+        "2026-06-22-11": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "weekly": {
+        "2026-W26": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "monthly": {
+        "2026-06": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "constituencies": {
+        "Butula": {
+          "totals": {
+            "phase1": 1,
+            "phase2": 0,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 0
+          },
+          "hourly": {
+            "2026-06-22-11": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "weekly": {
+            "2026-W26": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "monthly": {
+            "2026-06": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "wards": {
+            "Marachi Central": {
+              "totals": {
+                "phase1": 1,
+                "phase2": 0,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 0
+              },
+              "hourly": {
+                "2026-06-22-11": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "weekly": {
+                "2026-W26": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "monthly": {
+                "2026-06": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Garissa": {
+      "totals": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "hourly": {
+        "2026-06-22-12": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "weekly": {
+        "2026-W26": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "monthly": {
+        "2026-06": {
+          "phase1": 1,
+          "phase2": 0,
+          "phase3": 0,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        }
+      },
+      "constituencies": {
+        "Fafi": {
+          "totals": {
+            "phase1": 1,
+            "phase2": 0,
+            "phase3": 0,
+            "phase4": 0,
+            "phase5": 0,
+            "totalMembers": 0
+          },
+          "hourly": {
+            "2026-06-22-12": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "weekly": {
+            "2026-W26": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "monthly": {
+            "2026-06": {
+              "phase1": 1,
+              "phase2": 0,
+              "phase3": 0,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            }
+          },
+          "wards": {
+            "Bura": {
+              "totals": {
+                "phase1": 1,
+                "phase2": 0,
+                "phase3": 0,
+                "phase4": 0,
+                "phase5": 0,
+                "totalMembers": 0
+              },
+              "hourly": {
+                "2026-06-22-12": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "weekly": {
+                "2026-W26": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              },
+              "monthly": {
+                "2026-06": {
+                  "phase1": 1,
+                  "phase2": 0,
+                  "phase3": 0,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "global": {
@@ -678,6 +1380,22 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-06-22-11": {
+        "phase1": 5,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "2026-06-22-12": {
+        "phase1": 1,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
       }
     },
     "weekly": {
@@ -712,6 +1430,14 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-W26": {
+        "phase1": 6,
+        "phase2": 0,
+        "phase3": 0,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
       }
     },
     "monthly": {
@@ -732,7 +1458,7 @@
         "totalMembers": 0
       },
       "2026-06": {
-        "phase1": 1,
+        "phase1": 7,
         "phase2": 0,
         "phase3": 0,
         "phase4": 0,
@@ -741,7 +1467,7 @@
       }
     },
     "totals": {
-      "phase1": 12,
+      "phase1": 18,
       "phase2": 0,
       "phase3": 3,
       "phase4": 0,

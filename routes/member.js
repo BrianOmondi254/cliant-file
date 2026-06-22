@@ -106,9 +106,20 @@ const submitMemberDataToMongo = async (memberData, source) => {
       const group = groupsMap[key];
       const payload = {};
       Object.assign(payload, group);
-      payload.groupName = group.groupName || key;
-      const result = await saveMemberGroupToMongo(payload);
-      results.push(result);
+      // Guard: Ensure groupName is set, use key as fallback but generate a unique key if both are empty
+      const effectiveGroupName = (group.groupName && String(group.groupName).trim()) ? String(group.groupName).trim() : key;
+      if (!effectiveGroupName) {
+        console.warn('[Mongo] Skipping group with empty groupName and key, source:', source, 'key:', key);
+        continue;
+      }
+      payload.groupName = effectiveGroupName;
+      try {
+        const result = await saveMemberGroupToMongo(payload);
+        results.push(result);
+      } catch (err) {
+        console.error('[Mongo] Failed to save group:', err.message, 'groupName:', effectiveGroupName);
+        // Continue with other groups instead of failing completely
+      }
     }
     return results;
   } catch (err) {
@@ -689,13 +700,20 @@ router.post("/init", (req, res) => {
 
 router.post("/group", (req, res) => {
   const { groupNumber, accountNumber, groupName } = req.body;
+  
+  // Guard: groupName is required
+  if (!groupName || !String(groupName).trim()) {
+    return res.status(400).json({ success: false, error: "groupName is required" });
+  }
+  
   const data = readJSON(memberFile, defaultMemberStructure());
+  const cleanGroupName = String(groupName).trim();
 
   const accountNum = accountNumber || "ACC" + (Object.keys(data.groups).length + 1);
 
   const newGroup = {
     groupNumber: groupNumber || Object.keys(data.groups).length + 1,
-    groupName: groupName || "",
+    groupName: cleanGroupName,
     members: {}
   };
 
