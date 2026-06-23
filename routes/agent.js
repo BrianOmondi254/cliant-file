@@ -5,7 +5,7 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const PDFDocument = require("pdfkit");
 
-const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings, saveMessageToMongo } = require("../mongoose");
 
 const agentFile = path.join(__dirname, "../agent.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
@@ -767,7 +767,27 @@ router.post("/activate-group", async (req, res) => {
   group.constitutionKeyGeneratedAt = new Date().toISOString();
   group.principlesSetAt = new Date().toISOString();
   group.principles = {};
-  group.messages = messages;
+  
+  // Initialize messages array and add constitution key message for chairperson
+  if (!group.messages) group.messages = [];
+  if (phone && constitutionStartKey) {
+    const constitutionKeyMsg = {
+      to: phone,
+      type: "security_alert",
+      title: "Constitution Key",
+      key: constitutionStartKey,
+      createdAt: new Date().toISOString(),
+      isNew: true
+    };
+    group.messages.push(constitutionKeyMsg);
+    // Save to messages collection
+    saveMessageToMongo({ ...constitutionKeyMsg, groupName: groupName }).catch(e => 
+      console.error('[AGENT] Failed to save constitution key message:', e.message)
+    );
+  }
+  if (messages && Array.isArray(messages)) {
+    group.messages = [...group.messages, ...messages];
+  }
 
   try {
     const saveResult = await saveGeneralGroupToMongo(group);

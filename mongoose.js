@@ -224,6 +224,51 @@ const tbankSettingsSchema = new mongoose.Schema({
 const TbankSettings = mongoose.models.TbankSettings || mongoose.model('TbankSettings', tbankSettingsSchema, 'tbank');
 
 /**
+ * Message Schema - For storing group notifications and constitution keys
+ */
+const messageSchema = new mongoose.Schema({
+  groupName: { type: String, required: true, index: true },
+  to: { type: String, required: true, index: true },
+  type: { type: String, default: "general" },
+  title: { type: String },
+  content: { type: String },
+  key: { type: String },
+  broadcast: { type: Boolean, default: false },
+  roles: [{ type: String }],
+  createdAt: { type: String, default: () => new Date().toISOString() }
+}, { timestamps: true });
+
+const Message = mongoose.models.Message || mongoose.model('Message', messageSchema, 'messages');
+
+/**
+ * Save message to MongoDB
+ */
+const saveMessageToMongo = async (message) => {
+  if (mongoose.connection.readyState !== 1) return false;
+  try {
+    await Message.create(message);
+    return true;
+  } catch (e) {
+    console.error('[messages] saveMessageToMongo error:', e.message);
+    return false;
+  }
+};
+
+/**
+ * Get messages for a user by phone number
+ */
+const getMessagesForUser = async (phone) => {
+  if (mongoose.connection.readyState !== 1) return [];
+  try {
+    const msgs = await Message.find({ to: phone }).sort({ createdAt: -1 }).lean();
+    return msgs;
+  } catch (e) {
+    console.error('[messages] getMessagesForUser error:', e.message);
+    return [];
+  }
+};
+
+/**
  * Save tbank settings to MongoDB
  */
 const saveTbankSettings = async (settings) => {
@@ -1300,6 +1345,9 @@ module.exports = {
   PersonalAccount,
   MemberGroup,
   TbankSettings,
+  Message,
+  saveMessageToMongo,
+  getMessagesForUser,
   saveUserToMongoDB,
   findUserByPhone,
   getUserNameByPhone,

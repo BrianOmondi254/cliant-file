@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady, getMessagesForUser } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -466,12 +466,21 @@ router.get("/", async (req, res) => {
       if (group.messages && Array.isArray(group.messages)) {
         group.messages.forEach(msg => {
           if (msg.to && norm(msg.to) === norm(phone)) {
-            constitutionKeys.push({
-              groupName: msg.title || group.groupName,
-              type: msg.type,
-              content: msg.content,
-              isNew: true
-            });
+            // Check if this is a constitution key notification
+            if (msg.type === 'security_alert' && msg.title === 'Constitution Key') {
+              constitutionKeys.push({
+                groupName: msg.title || group.groupName,
+                key: msg.content,
+                type: 'security_alert'
+              });
+            } else {
+              constitutionKeys.push({
+                groupName: msg.title || group.groupName,
+                type: msg.type,
+                content: msg.content,
+                isNew: true
+              });
+            }
           } else if (msg.broadcast && msg.roles && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
             constitutionKeys.push({
               groupName: msg.title || group.groupName,
@@ -483,14 +492,37 @@ router.get("/", async (req, res) => {
         });
       }
 
-      if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
-        constitutionKeys.push({
-          groupName: group.groupName,
-          key: group.constitutionStartKey,
-          type: 'legacy'
-        });
-      }
-    });
+if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
+         constitutionKeys.push({
+           groupName: group.groupName,
+           key: group.constitutionStartKey,
+           type: 'legacy'
+         });
+       }
+     });
+
+    // Fetch messages from MongoDB messages collection
+    try {
+      const mongoMessages = await getMessagesForUser(phone);
+      mongoMessages.forEach(msg => {
+        if (msg.type === 'security_alert' && msg.title === 'Constitution Key' && msg.key) {
+          constitutionKeys.push({
+            groupName: msg.groupName,
+            key: msg.key,
+            type: 'security_alert'
+          });
+        } else if (msg.to && norm(msg.to) === norm(phone)) {
+          constitutionKeys.push({
+            groupName: msg.title || 'Notification',
+            type: msg.type,
+            content: msg.content,
+            isNew: true
+          });
+        }
+      });
+    } catch (e) {
+      console.error("Error fetching messages from MongoDB:", e.message);
+    }
 
     const normalizedPhone = norm(phone);
 

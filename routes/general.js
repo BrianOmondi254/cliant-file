@@ -783,7 +783,7 @@ router.post("/verify-members", async (req, res) => {
                           id: m.id || null,
                           memberNumber: m.memberNumber || null,
                           county: doc.county || 'Unknown'
-                        });
+                       });
                       }
                     }
                   }
@@ -841,7 +841,7 @@ router.post("/verify-members", async (req, res) => {
         verified: false,
         name: "Not Found in Registry",
         status: "not-found"
-      };
+        };
     });
 
     return res.json({ success: true, results, members: results });
@@ -1087,6 +1087,32 @@ router.post("/set-principles", (req, res) => {
 
   writeJSON(generalFile, accounts);
 
+  // Also save to MongoDB groups collection
+  const groupForMongo = {
+    ...accounts[locationPath.c][locationPath.consti][locationPath.idx],
+    county: locationPath.c,
+    constituency: locationPath.consti,
+    ward: locationPath.w,
+    principles: principles,
+    principlesSetAt: new Date().toISOString(),
+    phase: 3,
+    accountNumber: accountNumber,
+    pin: targetGroup.constitutionStartKey || null
+  };
+  saveGeneralGroupToMongo(groupForMongo).catch(e => console.error('[general/set-principles] MongoDB save error:', e.message));
+
+  // Send notification to chairperson about constitution key being set
+  const chairpersonPhone = targetGroup.phone || targetGroup.trustee_1?.phone;
+  if (chairpersonPhone && targetGroup.constitutionStartKey) {
+    notification.processMessage(targetGroup.groupName, {
+      to: chairpersonPhone,
+      type: "security_alert",
+      title: "Constitution Key",
+      key: targetGroup.constitutionStartKey,
+      content: `Constitution Start Key: ${targetGroup.constitutionStartKey}`
+    });
+  }
+
   const totalMembers = Object.keys(targetGroup).filter(k => 
     k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
   ).length;
@@ -1178,7 +1204,21 @@ router.get("/my-groups", async (req, res) => {
     }
 
     const userGroups = [];
-    const agents = readJSON(agentFile, []);
+    let agents = readJSON(agentFile, []);
+    
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const db = mongoose.connection.db;
+        if (db) {
+          const mongoAgents = await db.collection('agents').find({}).toArray();
+          if (mongoAgents && mongoAgents.length > 0) {
+            agents = mongoAgents;
+          }
+        }
+      } catch (agentErr) {
+        console.error('[general/my-groups] MongoDB agents fetch error:', agentErr.message);
+      }
+    }
 
     for (const group of flat) {
       for (const key in group) {
@@ -1240,7 +1280,7 @@ router.get("/mongo-groups", async (req, res) => {
   try {
     const mongoGroups = await findGeneralGroupsByMemberPhone(userPhone);
 
-    const userGroups = mongoGroups.map(group => {
+    const userGroups = await Promise.all(mongoGroups.map(async group => {
       // Determine user's role in this group from MongoDB data
       let userRoleInGroup = null;
       let userTitleInGroup = null;
@@ -1267,28 +1307,47 @@ router.get("/mongo-groups", async (req, res) => {
         }
       }
 
-      const now = new Date();
-      const created = new Date(group.createdAt || now);
-      const diffDays = Math.ceil(Math.abs(now - created) / (1000 * 60 * 60 * 24));
-      const activeRound = Math.ceil(diffDays / 7) || 1;
+const now = new Date();
+       const created = new Date(group.createdAt || now);
+       const diffDays = Math.ceil(Math.abs(now - created) / (1000 * 60 * 60 * 24));
+       const activeRound = Math.ceil(diffDays / 7) || 1;
 
-      return {
-        groupName: group.groupName,
-        role: userRoleInGroup || "member",
-        roleTitle: userTitleInGroup || "",
-        phone: group.phone || group.chairpersonalphonenumber || "",
-        phase: group.phase || 1,
-        assignedAgentName: group.assignedAgentName || "To be assigned",
-        assignedAgentPhone: group.assignedAgentPhone || "N/A",
-        createdAt: group.createdAt,
-        membersPopulatedAt: group.membersPopulatedAt,
-        activeRound: activeRound,
-        remainRounds: Math.max(0, 52 - activeRound),
-        accountNumber: group.accountNumber || "",
-        constitutionStartKey: group.constitutionStartKey || "",
-        source: "mongo"
-      };
-    });
+       let assignedAgentName = group.assignedAgentName || "To be assigned";
+       let assignedAgentPhone = group.assignedAgentPhone || "N/A";
+       
+       if (!group.assignedAgentName && mongoose.connection.readyState === 1) {
+         try {
+           const db = mongoose.connection.db;
+           if (db) {
+             const matchedAgent = await db.collection('agents').findOne({
+               county: { $regex: `^${group.county || ''}$`, $options: 'i' },
+               constituency: { $regex: `^${group.constituency || ''}$`, $options: 'i' }
+             });
+             if (matchedAgent) {
+               assignedAgentName = matchedAgent.name || "To be assigned";
+               assignedAgentPhone = matchedAgent.phoneNumber || "N/A";
+             }
+           }
+         } catch (e) {}
+       }
+
+       return {
+         groupName: group.groupName,
+         role: userRoleInGroup || "member",
+         roleTitle: userTitleInGroup || "",
+         phone: group.phone || group.chairpersonalphonenumber || "",
+         phase: group.phase || 1,
+         assignedAgentName: assignedAgentName,
+         assignedAgentPhone: assignedAgentPhone,
+         createdAt: group.createdAt,
+         membersPopulatedAt: group.membersPopulatedAt,
+         activeRound: activeRound,
+         remainRounds: Math.max(0, 52 - activeRound),
+         accountNumber: group.accountNumber || "",
+         constitutionStartKey: group.constitutionStartKey || "",
+          source: "mongo"
+        };
+    }));
 
     res.json({
       success: true,
@@ -1303,7 +1362,7 @@ router.get("/mongo-groups", async (req, res) => {
 
 
 // GET /general/agent-for-group -> returns agent assigned to a group's ward
-router.get("/agent-for-group", (req, res) => {
+router.get("/agent-for-group", async (req, res) => {
   const { groupName } = req.query;
   if (!groupName) {
     return res.status(400).json({ success: false, message: "Missing groupName" });
@@ -1318,8 +1377,18 @@ router.get("/agent-for-group", (req, res) => {
     return res.status(404).json({ success: false, message: "Group not found" });
   }
 
-  const agentFile = path.join(__dirname, "../agent.json");
-  const agents = readJSON(agentFile, []);
+  let agents = readJSON(agentFile, []);
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const db = mongoose.connection.db;
+      if (db) {
+        const mongoAgents = await db.collection('agents').find({}).toArray();
+        if (mongoAgents && mongoAgents.length > 0) {
+          agents = mongoAgents;
+        }
+      }
+    } catch (e) {}
+  }
 
   // Find agent matching group's county+constituency+ward
   const agent = agents.find(a =>

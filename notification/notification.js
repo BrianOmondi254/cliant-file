@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { saveMessageToMongo, ensureMongoReady } = require('../mongoose');
 
 const logFile = path.join(__dirname, 'sent-messages.json');
 
@@ -64,7 +65,7 @@ const getAllocatedOfficial = (ward, constituency) => {
 
 /**
  * Core function to process a message.
- * It logs it to a separate sent-messages.json file instead of general.json.
+ * It logs it to a separate sent-messages.json file and MongoDB messages collection.
  */
 const processMessage = (groupName, message) => {
   const allMessages = readJSON(logFile, []);
@@ -75,6 +76,9 @@ const processMessage = (groupName, message) => {
     type: message.type || "general",
     title: message.title || "Notification",
     content: message.content,
+    key: message.key || null,
+    broadcast: message.broadcast || false,
+    roles: message.roles || [],
     createdAt: new Date().toISOString(),
   };
 
@@ -89,6 +93,13 @@ const processMessage = (groupName, message) => {
     allMessages.push(msg);
     writeJSON(logFile, allMessages);
   }
+
+  // Also save to MongoDB if available
+  ensureMongoReady().then(ready => {
+    if (ready) {
+      saveMessageToMongo(msg).catch(e => console.error('[notification] MongoDB save error:', e.message));
+    }
+  }).catch(() => {});
   
   // Return message for potential immediate UI feedback
   return msg;
@@ -159,7 +170,7 @@ const sendMemberAddedNotices = (group, membersData, agentName, agentPhone) => {
  * Logic for full group registration/activation (Used in Activate Group)
  */
 const sendActivationNotices = (group, payload, agentName, agentPhone) => {
-  const { groupName } = group;
+  const { groupName, constitutionStartKey } = group;
   const chairPhone = group.phone || (payload.trustees && payload.trustees[0] ? payload.trustees[0].phone : '');
 
   // Collect all people to notify
@@ -167,6 +178,16 @@ const sendActivationNotices = (group, payload, agentName, agentPhone) => {
   if (payload.trustees) allPeople.push(...payload.trustees);
   if (payload.officials) allPeople.push(...payload.officials);
   if (payload.members) allPeople.push(...payload.members);
+
+  // Send constitution key to chairperson (trustee) specifically
+  if (chairPhone && constitutionStartKey) {
+    processMessage(groupName, {
+      to: chairPhone,
+      type: "security_alert",
+      title: "Constitution Key",
+      content: constitutionStartKey
+    });
+  }
 
   allPeople.forEach(person => {
     if (person && person.phone) {
