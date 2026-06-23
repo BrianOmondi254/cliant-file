@@ -10,6 +10,8 @@ const {
   updateLastLogin,
   updateUserPassword,
   PersonalAccount,
+  Agent,
+  Dealer,
 } = require("../mongoose");
 
 const router = express.Router();
@@ -588,62 +590,33 @@ router.post("/login", async (req, res) => {
   const currentSeason = tbankData.compliance?.periods?.season || "Annual";
   req.session.loginSeason = currentSeason;
 
-  // Determine if user is agent or dealer and save to session
-  const agentFile = path.join(__dirname, "../agent.json");
-  const dealerFile = path.join(__dirname, "../dealer.json");
-  const agents = readJSON(agentFile, []);
-  const dealers = readJSON(dealerFile, []);
-
-  const checkItem = (item, phone) => {
-    if (!item) return false;
-    let itemPhone = "";
-    if (typeof item === 'string') itemPhone = item;
-    else if (item.phoneNumber) itemPhone = item.phoneNumber;
-    else if (item.phone) itemPhone = item.phone;
-    return norm(itemPhone) === norm(phone);
-  };
-
-  const searchInFile = (data, phone) => {
-    if (!data) return false;
-    if (checkItem(data, phone)) return true;
-    if (Array.isArray(data)) return data.some(item => searchInFile(item, phone));
-    if (typeof data === 'object') {
-      const keyMatch = Object.keys(data).some(k => norm(k) === norm(phone));
-      if (keyMatch) return true;
-      // Only recurse into objects/arrays to avoid matching relationship strings (like dealerPhone)
-      return Object.values(data).some(val => (typeof val === 'object' || Array.isArray(val)) && searchInFile(val, phone));
+  // Determine if user is agent or dealer and save to session (MongoDB only)
+  let mongoAgent = null;
+  let mongoDealer = null;
+  try {
+    const dbReady = await ensureMongoReady();
+    if (dbReady) {
+      mongoAgent = await Agent.findOne({ phoneNumber: user.phoneNumber }).lean();
+      mongoDealer = await Dealer.findOne({ phoneNumber: user.phoneNumber }).lean();
     }
-    return false;
-  };
+  } catch (dbErr) {
+    console.error("MongoDB agent/dealer lookup error during login:", dbErr.message);
+  }
 
-  req.session.isAgent = searchInFile(agents, user.phoneNumber);
-  req.session.isDealer = searchInFile(dealers, user.phoneNumber);
+  req.session.isAgent = !!mongoAgent;
+  req.session.isDealer = !!mongoDealer;
 
-  // If user is an agent, store the agent object and pin status in session
   if (req.session.isAgent) {
-    let agent = null;
-    if (Array.isArray(agents)) {
-      agent = agents.find(a => norm(a.phoneNumber) === norm(user.phoneNumber));
-    } else {
-      agent = { phoneNumber: user.phoneNumber };
-    }
-    req.session.agent = agent;
-    req.session.hasAgentPin = agent ? (agent.pin && !(typeof agent.pin === 'object' && Object.keys(agent.pin).length === 0)) : false;
+    req.session.agent = mongoAgent || { phoneNumber: user.phoneNumber };
+    req.session.hasAgentPin = !!req.session.agent.pin;
   } else {
     req.session.agent = null;
     req.session.hasAgentPin = false;
   }
 
-  // If user is a dealer, store the dealer object and pin status in session
   if (req.session.isDealer) {
-    let dealer = null;
-    if (Array.isArray(dealers)) {
-      dealer = dealers.find(d => norm(d.phoneNumber) === norm(user.phoneNumber));
-    } else {
-      dealer = { phoneNumber: user.phoneNumber }; 
-    }
-    req.session.dealer = dealer;
-    req.session.hasDealerPin = dealer ? !!dealer.pin : false;
+    req.session.dealer = mongoDealer || { phoneNumber: user.phoneNumber };
+    req.session.hasDealerPin = !!req.session.dealer.pin;
   } else {
     req.session.dealer = null;
     req.session.hasDealerPin = false;

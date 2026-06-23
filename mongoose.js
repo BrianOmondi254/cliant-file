@@ -888,6 +888,50 @@ const personalAccountSchema = new mongoose.Schema({
 const PersonalAccount = mongoose.models.PersonalAccount || mongoose.model('PersonalAccount', personalAccountSchema);
 
 /**
+ * Agent Schema - Mirrors agent.json structure
+ */
+const agentSchema = new mongoose.Schema({
+  name: { type: String },
+  phoneNumber: { type: String, required: true, unique: true },
+  dealerPhone: { type: String },
+  county: { type: String },
+  constituency: { type: String },
+  ward: { type: String },
+  isBlocked: { type: Boolean, default: false },
+  passkey: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  groupsTotal: [{ type: mongoose.Schema.Types.Mixed }],
+  totalMembers: { type: Number, default: 0 },
+  members: { type: mongoose.Schema.Types.Mixed },
+  group: { type: mongoose.Schema.Types.Mixed }
+});
+
+const Agent = mongoose.models.Agent || mongoose.model('Agent', agentSchema, 'agents');
+
+/**
+ * Dealer Schema - Mirrors dealer.json structure
+ */
+const dealerSchema = new mongoose.Schema({
+  phoneNumber: { type: String, required: true, unique: true },
+  hqPhone: { type: String },
+  county: { type: String },
+  constituency: { type: String },
+  ward: { type: String },
+  name: { type: String },
+  isBlocked: { type: Boolean, default: false },
+  pin: { type: String },
+  passkey: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  stats: {
+    agent_creation: { type: Number, default: 0 },
+    personal_account_creation: { type: Number, default: 0 },
+    dealer_creation: { type: Number, default: 0 }
+  }
+});
+
+const Dealer = mongoose.models.Dealer || mongoose.model('Dealer', dealerSchema, 'dealers');
+
+/**
  * Connect to MongoDB database (idempotent — safe to call multiple times)
  */
 const connectDB = async () => {
@@ -1346,6 +1390,8 @@ module.exports = {
   MemberGroup,
   TbankSettings,
   Message,
+  Agent,
+  Dealer,
   saveMessageToMongo,
   getMessagesForUser,
   saveUserToMongoDB,

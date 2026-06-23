@@ -5,7 +5,7 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const PDFDocument = require("pdfkit");
 
-const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings, saveMessageToMongo } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings, saveMessageToMongo, Agent, Dealer } = require("../mongoose");
 
 const agentFile = path.join(__dirname, "../agent.json");
 const dealerFile = path.join(__dirname, "../dealer.json");
@@ -80,6 +80,15 @@ const buildUserDetailMap = (users) => {
     }
   });
   return userMap;
+};
+
+const getAgentFromMongo = async (phone) => {
+  try {
+    return await Agent.findOne({ phoneNumber: phone }).lean();
+  } catch (err) {
+    console.error("[AGENT] MongoDB lookup error:", err.message);
+    return null;
+  }
 };
 
 const flattenData = (data) => {
@@ -276,43 +285,15 @@ router.get("/", async (req, res) => {
   }
 
   const currentPhoneNumber = req.session.user.phoneNumber;
-  const agents = loadJSON(agentFile, []);
   const users = await getUsersFromMongo();
 
-  // 2. Try agent.json first (fastest)
-  let agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
-
-  // 3. Verify against MongoDB counties collection
-  let mongoUser = findUserInList(users, currentPhoneNumber);
-  if (!mongoUser) {
-    try {
-      mongoUser = await findUserByPhone(currentPhoneNumber);
-    } catch (dbErr) {
-      console.error("[AGENT] MongoDB verification error:", dbErr.message);
-    }
-  }
-  if (mongoUser && !agent) {
-    agent = agents.find((a) => normPhone(a.phoneNumber) === normPhone(mongoUser.phoneNumber));
+  let agent = null;
+  try {
+    agent = await Agent.findOne({ phoneNumber: currentPhoneNumber }).lean();
+  } catch (dbErr) {
+    console.error("[AGENT] MongoDB agent lookup error:", dbErr.message);
   }
 
-  const userMap = buildUserNameMap(users);
-
-  // Helper to render safe views (No dashboard data)
-  const renderSafe = (step, msg = null) => {
-    return res.render("agent/agent", {
-      step: step,
-      phoneNumber: currentPhoneNumber,
-      agentName: agent ? agent.name : "Unknown",
-      agent: agent ? { name: agent.name, phoneNumber: agent.phoneNumber } : null, // Strict sanitization
-      user: req.session.user,
-      message: msg,
-      groups: [],
-      regionalGroups: {},
-      dealer: null
-    });
-  };
-
-  // If the determined phone number doesn't belong to an agent, render a diagnostic message
   if (!agent) {
     return res.render("agent/agent", {
       step: "not-agent",
@@ -325,15 +306,22 @@ router.get("/", async (req, res) => {
         text: "Not qualified to be an agent.",
         details:
           "Session phone: " + currentPhoneNumber +
-          " | agent.json match: " + (agent ? "yes" : "no") +
-          " | MongoDB user: " + (mongoUser ? "found" : "not found") +
-          " | MongoDB users total: " + users.length +
-          " | registry match: " + (mongoUser ? "yes" : "no")
+          " | MongoDB agents match: no" +
+          " | MongoDB users total: " + users.length
       },
       groups: [],
       regionalGroups: {},
       dealer: null
     });
+  }
+
+  let mongoUser = findUserInList(users, currentPhoneNumber);
+  if (!mongoUser) {
+    try {
+      mongoUser = await findUserByPhone(currentPhoneNumber);
+    } catch (dbErr) {
+      console.error("[AGENT] MongoDB verification error:", dbErr.message);
+    }
   }
 
   // Load groups from MongoDB only (general.json removed)
@@ -371,6 +359,7 @@ router.get("/", async (req, res) => {
   }
 
   // Augment managed groups with a list of members including their full names
+  const userMap = buildUserNameMap(users);
   managedGroups.forEach(group => {
     // Only create a membersList if the group is already populated with members
     if (group.membersPopulatedAt || (group.phase && group.phase >= 2)) {
@@ -411,9 +400,8 @@ router.get("/", async (req, res) => {
     }
   });
 
-  const dealers = loadJSON(dealerFile);
-  const dealer = (agentProfile && Array.isArray(dealers))
-    ? dealers.find((d) => normPhone(d.phoneNumber) === normPhone(agentProfile.dealerPhone))
+  const dealer = (agentProfile && agentProfile.dealerPhone)
+    ? { phoneNumber: agentProfile.dealerPhone }
     : null;
 
   const displayAgent = agentProfile
@@ -449,13 +437,7 @@ router.get("/", async (req, res) => {
 
   const regionalGroups = buildRegionalGroups(managedGroups, agentProfile);
 
-  // Calculate business account float from business.json based on agent's phone
-  const getBusinessPhone = () => {
-    if (!Array.isArray(agents)) return currentPhoneNumber;
-    const found = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
-    return found ? found.phoneNumber : currentPhoneNumber;
-  };
-  const businessPhone = getBusinessPhone();
+  const businessPhone = agent ? agent.phoneNumber : currentPhoneNumber;
   let businessFloat = 0;
   let businessShare = 0;
   let businessTotal = 0;
@@ -508,10 +490,9 @@ router.get("/new-group", async (req, res) => {
   }
 
   const { groupName } = req.query;
-  const agents = loadJSON(agentFile);
 
   const currentPhoneNumber = req.session.user.phoneNumber;
-  const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+  const agent = await getAgentFromMongo(currentPhoneNumber);
 
   if (!agent) {
     return res.redirect("/agent");
@@ -679,8 +660,7 @@ router.post("/register-new-group", async (req, res) => {
     
     await updateGroupInMongo(groupName, updated => ({ ...updated, ...g }));
     
-    const agents = loadJSON(agentFile, []);
-    const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(req.session.user.phoneNumber));
+    const agent = req.session.agent || await getAgentFromMongo(req.session.user.phoneNumber);
     if (agent) {
       try {
         regPerfLogger.logRegistration(agent.county, agent.constituency, agent.ward, 'groups');
@@ -713,8 +693,7 @@ router.post("/activate-group", async (req, res) => {
   }
 
   const agentPhone = req.session.user.phoneNumber;
-  const agents = loadJSON(agentFile, []);
-  const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(agentPhone));
+  const agent = req.session.agent || await getAgentFromMongo(agentPhone);
   
   if (!agent) {
     return res.json({ success: false, message: "Agent not found" });
@@ -858,11 +837,10 @@ router.get("/group-form/:groupName", async (req, res) => {
 
   const { groupName } = req.params;
   const decodedGroupName = decodeURIComponent(groupName);
-  const agents = loadJSON(agentFile);
   const general = await getGeneralGroupsFromMongo().catch(() => []);
 
   const currentPhoneNumber = req.session.user.phoneNumber;
-  const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+  const agent = await getAgentFromMongo(currentPhoneNumber);
 
   if (!agent) {
     return res.status(403).json({ error: "Agent not found" });
@@ -921,12 +899,11 @@ router.get("/group-registration-pdf/:groupName", async (req, res) => {
 
     const { groupName } = req.params;
     const decodedGroupName = decodeURIComponent(groupName);
-    const agents = loadJSON(agentFile);
     const general = await getGeneralGroupsFromMongo().catch(() => []);
     const users = await getUsersFromMongo();
 
     const currentPhoneNumber = req.session.user.phoneNumber;
-    const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+    const agent = await getAgentFromMongo(currentPhoneNumber);
 
     if (!agent) {
       return res.status(403).json({ error: "Agent not found" });
@@ -1235,12 +1212,11 @@ router.get("/con-group", async (req, res) => {
     return res.redirect("/agent");
   }
 
-  const agents = loadJSON(agentFile);
   const general = await getGeneralGroupsFromMongo().catch(() => []);
   const users = await getUsersFromMongo();
 
   const currentPhoneNumber = req.session.user.phoneNumber;
-  const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+  const agent = await getAgentFromMongo(currentPhoneNumber);
 
   if (!agent) {
     return res.redirect("/agent");
@@ -1339,13 +1315,12 @@ const generalData = await getGeneralGroupsFromMongo().catch(() => []);
         return res.status(404).send("Group not found");
       }
 
-     const agents = loadJSON(agentFile);
       const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
       const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
       const users = await getUsersFromMongo();
 
       const currentPhoneNumber = req.session.user.phoneNumber;
-      const agent = agents.find(a => normPhone(a.phoneNumber) === normPhone(currentPhoneNumber));
+      const agent = await getAgentFromMongo(currentPhoneNumber);
 
       if (!agent) {
         return res.redirect("/agent");
