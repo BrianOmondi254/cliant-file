@@ -356,8 +356,15 @@ router.get("/", async (req, res) => {
     ? resolveAgentProfile(agent, mongoUser, phoneMatchedGroups)
     : null;
   let managedGroups = phoneMatchedGroups;
-  if (managedGroups.length === 0 && agentProfile) {
-    managedGroups = general.filter((g) => isGroupManagedByAgent(g, currentPhoneNumber, agentProfile));
+  if (agentProfile) {
+    const regionMatched = general.filter((g) => isGroupManagedByAgent(g, currentPhoneNumber, agentProfile));
+    const merged = [...phoneMatchedGroups];
+    regionMatched.forEach(g => {
+      if (!merged.some(m => (m._id && g._id && m._id.toString() === g._id.toString()) || m.groupName === g.groupName)) {
+        merged.push(g);
+      }
+    });
+    managedGroups = merged;
   }
   if (!agentProfile?.county && managedGroups.length > 0) {
     agentProfile = resolveAgentProfile(agent, mongoUser, managedGroups);
