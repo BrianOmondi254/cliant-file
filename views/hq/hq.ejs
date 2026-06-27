@@ -2,434 +2,1140 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>HQ Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-Bank HQ Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* === GLOBAL RESET & TYPOGRAPHY === */
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-      margin: 0; 
-      background: #f4f6f9; 
-      color: #333;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-900: #0a1628;
+      --blue-800: #102040;
+      --blue-700: #1a3060;
+      --blue-600: #1e4080;
+      --blue-500: #1f5cbf;
+      --blue-400: #2e72d2;
+      --blue-300: #5a96e8;
+      --blue-100: #dce8fa;
+      --blue-50:  #f0f5fd;
+
+      --teal-500: #0e7c6e;
+      --teal-400: #15977c;
+      --teal-100: #d5f0eb;
+
+      --gold-500: #b07d1a;
+      --gold-100: #fdf0cc;
+
+      --gray-900: #111827;
+      --gray-700: #374151;
+      --gray-600: #4b5563;
+      --gray-400: #9ca3af;
+      --gray-200: #e5e7eb;
+      --gray-100: #f3f4f6;
+      --gray-50:  #f9fafb;
+
+      --green-500: #16a34a;
+      --red-500:   #dc2626;
+
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+      --transition: 0.18s ease;
     }
 
-    /* === HEADER STYLING === */
-    header { 
-      background: linear-gradient(90deg, #0056b3, #007bff); 
-      color: white; 
-      padding: 15px 30px; 
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    body {
+      font-family: var(--font);
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+    }
+
+    /* ─── TOPBAR ─── */
+    header {
+      background: var(--blue-900);
+      border-bottom: 1px solid var(--blue-800);
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 200;
     }
 
-    .header-container { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      max-width: 1400px;
+    .topbar {
+      max-width: 1280px;
       margin: 0 auto;
-    }
-
-    .header-title { 
-      margin: 0; 
-      font-size: 24px; 
-      text-align: center; 
-      flex-grow: 1; 
-      font-weight: 700; 
-      letter-spacing: 0.5px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .header-buttons {
+      padding: 0 28px;
+      height: 64px;
       display: flex;
-      gap: 12px;
       align-items: center;
-      min-width: 220px; /* Prevent layout shift */
-      justify-content: flex-end;
+      gap: 20px;
     }
 
-    .header-buttons button {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: var(--blue-400);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+
+    .brand-name {
+      font-size: 15px;
       font-weight: 600;
-      cursor: pointer;
       color: white;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      letter-spacing: 0.02em;
     }
 
-    .header-buttons button:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.1);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    .brand-name span {
+      color: var(--blue-300);
+      font-weight: 400;
     }
 
-    .header-buttons button:active {
-      transform: translateY(1px);
+    .topbar-divider {
+      width: 1px;
+      height: 28px;
+      background: var(--blue-700);
+      flex-shrink: 0;
     }
 
-    .login-btn { background-color: #28a745; }
-    .logout-btn { background-color: #dc3545; }
-    /* Extra class for the span created by JS */
-    .header-buttons span {
+    .topbar-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--blue-300);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      flex: 1;
+    }
+
+    .topbar-auth {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .topbar-auth .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-auth .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--blue-600);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
       font-weight: 600;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      margin-right: 5px;
+      color: var(--blue-100);
     }
 
-    /* === DASHBOARD GRID & CARDS === */
-    .dashboard-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 25px;
-      padding: 40px 30px;
-      max-width: 1200px;
-      margin: 0 auto;
+    .topbar-auth .user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-200);
     }
 
-    .docet {
-      background: white;
-      border-radius: 12px;
-      padding: 40px 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      text-align: center;
+    .btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
       cursor: pointer;
-      border: 1px solid #e1e4e8;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transition: all var(--transition);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--blue-500);
+      color: white;
+      border-color: var(--blue-400);
+    }
+
+    .btn-primary:hover {
+      background: var(--blue-400);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray-400);
+      border-color: var(--blue-700);
+    }
+
+    .btn-ghost:hover {
+      background: var(--blue-800);
+      color: white;
+      border-color: var(--blue-600);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: #f87171;
+      border-color: rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(220, 38, 38, 0.1);
+      color: #fca5a5;
+    }
+
+    .hidden { display: none !important; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spin {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .spin-dark {
+      border-color: rgba(0,0,0,0.15);
+      border-top-color: var(--blue-500);
+    }
+
+    /* ─── PAGE BODY ─── */
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 40px 28px 60px;
+    }
+
+    .page-header {
+      margin-bottom: 36px;
+    }
+
+    .page-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--blue-500);
+      margin-bottom: 6px;
+    }
+
+    .page-heading {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+
+    .page-sub {
+      font-size: 14px;
+      color: var(--gray-600);
+    }
+
+    .page-divider {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 28px 0;
+    }
+
+    /* ─── DEPARTMENT GRID ─── */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .dept-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 28px 20px 24px;
+      cursor: pointer;
+      transition: all var(--transition);
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+      text-decoration: none;
     }
 
-    .docet:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      border-color: #007bff;
+    .dept-card:hover {
+      border-color: var(--blue-300);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
     }
 
-    .docet h2 {
-      margin: 0;
-      font-size: 20px;
-      color: #2c3e50;
-      font-weight: 600;
-      position: relative;
-      z-index: 1;
+    .dept-card:hover .dept-arrow {
+      opacity: 1;
+      transform: translateX(2px);
     }
 
-    /* Decorative subtle background for card text */
-    .docet::before {
+    .dept-card::after {
       content: '';
       position: absolute;
-      top: 0; left: 0; width: 100%; height: 4px;
-      background: #007bff;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      background: var(--blue-400);
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity var(--transition);
     }
-    .docet:hover::before { opacity: 1; }
 
-    /* === OVERLAY & FORM STYLING === */
-    .overlay {
+    .dept-card:hover::after { opacity: 1; }
+
+    .dept-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .dept-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .dept-icon.blue   { background: var(--blue-50);  }
+    .dept-icon.teal   { background: var(--teal-100); }
+    .dept-icon.gold   { background: var(--gold-100); }
+    .dept-icon.purple { background: #f0effe; }
+    .dept-icon.slate  { background: #f1f5f9; }
+    .dept-icon.rose   { background: #fff1f3; }
+
+    .dept-icon.blue   svg { color: var(--blue-500); fill: var(--blue-500); }
+    .dept-icon.teal   svg { color: var(--teal-500); fill: var(--teal-500); }
+    .dept-icon.gold   svg { color: var(--gold-500); fill: var(--gold-500); }
+    .dept-icon.purple svg { color: #6d47c9; fill: #6d47c9; }
+    .dept-icon.slate  svg { color: #475569; fill: #475569; }
+    .dept-icon.rose   svg { color: #be3054; fill: #be3054; }
+
+    .dept-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dept-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .dept-desc {
+      font-size: 12px;
+      color: var(--gray-400);
+      line-height: 1.4;
+    }
+
+    .dept-arrow {
+      position: absolute;
+      top: 20px;
+      right: 18px;
+      color: var(--gray-400);
+      opacity: 0;
+      transition: all var(--transition);
+    }
+
+    .dept-arrow svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+    }
+
+    /* ─── MODAL ─── */
+    .modal-wrap {
       display: none;
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(3px);
+      inset: 0;
+      background: rgba(10, 22, 40, 0.72);
       z-index: 1000;
-      justify-content: center;
       align-items: center;
-      animation: fadeIn 0.2s ease-out;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+    .modal-wrap.open { display: flex; }
 
-    .overlay-box {
+    .modal {
       background: white;
-      padding: 35px;
-      border-radius: 12px;
-      width: 340px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-      border-top: 5px solid #007bff;
-    }
-
-    .overlay-box h3 {
-      margin: 0 0 10px 0;
-      font-size: 22px;
-      color: #007bff;
-    }
-
-    .overlay-box p {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-
-    .overlay-box input {
+      border-radius: var(--radius-lg);
       width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 6px;
-      border: 1px solid #ddd;
-      box-sizing: border-box; /* Ensures padding doesn't affect width */
+      max-width: 400px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      animation: slideUp 0.2s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .modal-header {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .modal-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: var(--blue-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .modal-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--blue-500);
+      fill: none;
+    }
+
+    .modal-header-text { flex: 1; }
+
+    .modal-title {
       font-size: 15px;
-      transition: border 0.2s;
-    }
-
-    .overlay-box input:focus {
-      border-color: #007bff;
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-    }
-
-    .overlay-box button {
-      padding: 12px;
-      margin-top: 15px;
-      border: none;
-      border-radius: 6px;
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      width: 100%;
-      font-size: 16px;
       font-weight: 600;
-      transition: background 0.2s;
+      color: var(--gray-900);
+      margin-bottom: 2px;
     }
 
-    .overlay-box button:hover {
-      background: #0056b3;
+    .modal-subtitle {
+      font-size: 12px;
+      color: var(--gray-400);
     }
 
-    .close-overlay {
-      position: absolute;
-      top: 15px;
-      right: 15px;
+    .modal-close {
+      background: none;
+      border: none;
       cursor: pointer;
-      font-size: 20px;
-      color: #999;
-      transition: color 0.2s;
+      color: var(--gray-400);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      transition: background var(--transition), color var(--transition);
+      display: flex;
     }
-    
-    .close-overlay:hover { color: #333; }
+
+    .modal-close:hover {
+      background: var(--gray-100);
+      color: var(--gray-700);
+    }
+
+    .modal-close svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+
+    .modal-body {
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gray-700);
+    }
+
+    .field-input {
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .field-input:focus {
+      border-color: var(--blue-400);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(46, 114, 210, 0.12);
+    }
+
+    .field-input::placeholder { color: var(--gray-400); }
+
+    .modal-footer {
+      padding: 14px 24px 20px;
+    }
+
+    .btn-full {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      background: var(--blue-500);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background var(--transition);
+      font-family: var(--font);
+    }
+
+    .btn-full:hover { background: var(--blue-400); }
+
+    .register-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--blue-50);
+      border: 1px solid var(--blue-100);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--blue-800);
+    }
+
+    .register-name-row svg {
+      width: 15px;
+      height: 15px;
+      stroke: var(--blue-500);
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
 
+<!-- ─── TOPBAR ─── -->
 <header>
-  <div class="header-container">
-    <div class="header-buttons" id="auth-area">
-      <button class="login-btn" id="login-btn">Login</button>
-      <button class="logout-btn" id="register-btn">Register</button>
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="brand-name">T-Bank <span>Investment</span></span>
     </div>
 
-    <h1 class="header-title">WELCOME TO T-BANK   HQ DASHBOARD</h1>
-    <div style="width:100px;"></div>
+    <div class="topbar-divider"></div>
+    <span class="topbar-title">HQ Dashboard</span>
+
+    <div class="topbar-auth" id="auth-area">
+      <button class="btn btn-ghost" id="login-btn">Sign in</button>
+        <button class="btn btn-primary" id="register-btn"><span id="admin-btn-text">Admin</span> <span id="admin-spinner" class="spin hidden"></span></button>
+    </div>
   </div>
 </header>
 
-<div class="dashboard-container">
-  <div class="docet" id="finance"><h2>Finance</h2></div>
-  <div class="docet" id="relations"><h2>Relations</h2></div>
-  <div class="docet" id="it"><h2>IT Department</h2></div>
-  <div class="docet" id="operations"><h2>Operations</h2></div>
-  <div class="docet" id="compliance"><h2>Regions </h2></div>
-  <div class="docet" id="hr"><h2>Human Resources</h2></div>
-</div>
+<!-- ─── PAGE ─── -->
+<main class="page">
+  <div class="page-header">
+    <p class="page-eyebrow">Headquarters</p>
+    <h1 class="page-heading">Department overview</h1>
+    <p class="page-sub">Select a department to access its portal. Sign in first to continue.</p>
+  </div>
+  <hr class="page-divider">
 
-<!-- REGISTER -->
-<div class="overlay" id="register-overlay">
-  <div class="overlay-box">
-    <span class="close-overlay">&times;</span>
-    <h3 id="register-name"></h3>
-    <p id="register-label">Create PIN for your admin account</p>
+  <div class="dept-grid">
 
-    <input type="text" placeholder="Enter Phone Number" id="register-phone">
-    <input type="password" placeholder="Enter PIN" id="register-pin" style="display:none;">
-    <input type="password" placeholder="Confirm PIN" id="register-pin-confirm" style="display:none;">
-    <button id="register-submit">Submit</button>
+    <div class="dept-card" id="finance">
+      <div class="dept-icon blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">Finance</p>
+        <p class="dept-desc">Accounts, budgets & reports</p>
+      </div>
+      <div class="dept-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>
+
+    <div class="dept-card" id="relations">
+      <div class="dept-icon teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">Relations</p>
+        <p class="dept-desc">Member & partner engagement</p>
+      </div>
+      <div class="dept-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>
+
+    <div class="dept-card" id="it">
+      <div class="dept-icon purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">IT Department</p>
+        <p class="dept-desc">Systems, security & support</p>
+      </div>
+      <div class="dept-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>
+
+    <div class="dept-card" id="operations">
+      <div class="dept-icon gold">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">Operations</p>
+        <p class="dept-desc">Workflows & field activity</p>
+      </div>
+      <div class="dept-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>
+
+    <div class="dept-card" id="compliance">
+      <div class="dept-icon slate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">Regions</p>
+        <p class="dept-desc">County, constituency & ward</p>
+      </div>
+      <div class="dept-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>
+
+    <div class="dept-card" id="hr">
+      <div class="dept-icon rose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">Human Resources</p>
+        <p class="dept-desc">Staff, payroll & records</p>
+      </div>
+      <div class="dept-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ─── REGISTER MODAL ─── -->
+<div class="modal-wrap" id="register-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+        </svg>
+      </div>
+      <div class="modal-header-text">
+        <p class="modal-title">Create admin account</p>
+        <p class="modal-subtitle" id="register-subtitle">Enter your registered phone number</p>
+      </div>
+      <button class="modal-close" id="register-close">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="register-name-row" id="register-name-row" style="display:none;">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="register-name"></span>
+      </div>
+      <div class="field-group" id="phone-field">
+        <label class="field-label">Phone number</label>
+        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="register-phone">
+        <p id="phone-error" style="color:var(--red-500,#dc2626);font-size:12px;margin-top:4px;display:none;"></p>
+      </div>
+      <div class="field-group" id="dept-field" style="display:none;">
+        <label class="field-label">Department</label>
+        <select class="field-input" id="register-department">
+          <option value="">-- Select Department --</option>
+          <option value="Finance">Finance</option>
+          <option value="Relations">Relations</option>
+          <option value="IT Department">IT Department</option>
+          <option value="Operations">Operations</option>
+          <option value="Regions">Regions</option>
+          <option value="Human Resources">Human Resources</option>
+        </select>
+      </div>
+      <div class="register-name-row" id="otp-message-row" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46;">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="otp-message"></span>
+      </div>
+      <div class="register-name-row" id="verified-banner" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;cursor:pointer;" onclick="app.showPinFields()">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>Passkey verified for <strong id="verified-phone"></strong> — click to create your PIN</span>
+      </div>
+      <div class="field-group" id="passkey-field" style="display:none;">
+        <label class="field-label">Enter Passkey</label>
+        <input class="field-input" type="text" placeholder="Enter 6-digit passkey" id="register-passkey" inputmode="numeric" maxlength="6">
+      </div>
+      <div class="field-group" id="pin-field" style="display:none;">
+        <label class="field-label">PIN</label>
+        <input class="field-input" type="password" placeholder="Enter PIN" id="register-pin">
+      </div>
+      <div class="field-group" id="pin-confirm-field" style="display:none;">
+        <label class="field-label">Confirm PIN</label>
+        <input class="field-input" type="password" placeholder="Re-enter PIN" id="register-pin-confirm">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-full" id="register-submit"><span>Continue</span> <span class="spin hidden"></span></button>
+    </div>
   </div>
 </div>
 
-<!-- LOGIN -->
-<div class="overlay" id="login-overlay">
-  <div class="overlay-box">
-    <span class="close-overlay">&times;</span>
-    <h3 style="display:block;">Login to HQ</h3>
-    <input type="text" placeholder="Enter Phone Number" id="login-phone">
-    <input type="password" placeholder="Enter PIN" id="login-pin">
-    <button id="login-submit">Login</button>
+<!-- ─── LOGIN MODAL ─── -->
+<div class="modal-wrap" id="login-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+      </div>
+      <div class="modal-header-text">
+        <p class="modal-title">Sign in to HQ</p>
+        <p class="modal-subtitle">Use your admin credentials</p>
+      </div>
+      <button class="modal-close" id="login-close">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Phone number</label>
+        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="login-phone">
+      </div>
+      <div class="field-group">
+        <label class="field-label">PIN</label>
+        <input class="field-input" type="password" placeholder="Enter PIN" id="login-pin">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-full" id="login-submit">Sign in</button>
+    </div>
   </div>
 </div>
 
 <script>
-  /* ================= REGISTER ================= */
-  const registerBtn = document.getElementById("register-btn");
-  const registerOverlay = document.getElementById("register-overlay");
-  const registerSubmit = document.getElementById("register-submit");
-  const registerName = document.getElementById("register-name");
-  const registerLabel = document.getElementById("register-label");
-  const registerPhone = document.getElementById("register-phone");
-  const registerPin = document.getElementById("register-pin");
-  const registerPinConfirm = document.getElementById("register-pin-confirm");
-
+  let isLoggedIn = false;
   let step = "PHONE";
   let currentPhone = "";
-  let isLoggedIn= false
+  let superAdminExists = false;
+  let otpExpiryTimer = null;
+  let otpSentAt = 0;
+  const OTP_COOLDOWN_MS = 180000;
 
-  registerBtn.onclick = () => {
-    resetRegister();
-    registerOverlay.style.display = "flex";
-  };
+  /* ─── Register ─── */
+  const registerOverlay = document.getElementById("register-overlay");
+  const registerSubmit  = document.getElementById("register-submit");
+  const registerName    = document.getElementById("register-name");
+  const registerNameRow = document.getElementById("register-name-row");
+  const registerSubtitle= document.getElementById("register-subtitle");
+  const registerPhone   = document.getElementById("register-phone");
+  const registerPin     = document.getElementById("register-pin");
+  const registerPinConfirm = document.getElementById("register-pin-confirm");
+  const registerDepartment = document.getElementById("register-department");
+  const registerPasskey = document.getElementById("register-passkey");
+  const otpMessageRow = document.getElementById("otp-message-row");
+  const otpMessage = document.getElementById("otp-message");
+  const verifiedBanner = document.getElementById("verified-banner");
+  const verifiedPhone = document.getElementById("verified-phone");
+  const phoneField      = document.getElementById("phone-field");
+  const phoneError      = document.getElementById("phone-error");
+  const deptField       = document.getElementById("dept-field");
+  const passkeyField    = document.getElementById("passkey-field");
+  const pinField        = document.getElementById("pin-field");
+  const pinConfirmField = document.getElementById("pin-confirm-field");
 
-  registerOverlay.querySelector(".close-overlay").onclick = () => {
-    registerOverlay.style.display = "none";
-  };
+  function clearOtpTimer() {
+    if (otpExpiryTimer) clearTimeout(otpExpiryTimer);
+    otpExpiryTimer = null;
+  }
+
+  function setSpinning(btn, spinning) {
+    const textSpan = btn.querySelector ? btn.querySelector(":scope > span:first-child") : null;
+    const spinner = btn.querySelector ? btn.querySelector(".spin") : null;
+    if (spinning) {
+      btn.disabled = true;
+      if (textSpan) textSpan.style.display = "none";
+      if (spinner) spinner.classList.remove("hidden");
+    } else {
+      btn.disabled = false;
+      if (textSpan) textSpan.style.display = "";
+      if (spinner) spinner.classList.add("hidden");
+    }
+  }
+
+  function setRegisterBtnText(text) {
+    const textSpan = registerSubmit.querySelector ? registerSubmit.querySelector(":scope > span:first-child") : null;
+    if (textSpan) textSpan.textContent = text;
+  }
 
   function resetRegister() {
     step = "PHONE";
     currentPhone = "";
+    superAdminExists = false;
+    otpSentAt = 0;
+    clearOtpTimer();
     registerPhone.value = "";
+    registerPhone.readOnly = false;
     registerPin.value = "";
     registerPinConfirm.value = "";
-
-    registerPhone.style.display = "block";
-    registerPin.style.display = "none";
-    registerPinConfirm.style.display = "none";
-    registerName.style.display = "none";
-    registerLabel.style.display = "none";
+    registerPasskey.value = "";
+    registerDepartment.value = "";
+    registerNameRow.style.display = "none";
+    verifiedBanner.style.display = "none";
+    otpMessageRow.style.display = "none";
+    phoneError.style.display = "none";
+    phoneField.style.display = "block";
+    deptField.style.display = "none";
+    passkeyField.style.display = "none";
+    pinField.style.display = "none";
+    pinConfirmField.style.display = "none";
+    registerSubtitle.textContent = "Enter your registered phone number";
+    setRegisterBtnText("Continue");
   }
+
+  document.getElementById("register-btn").onclick = async () => {
+    const adminBtn = document.getElementById("register-btn");
+    const adminSpinner = document.getElementById("admin-spinner");
+    const adminBtnText = document.getElementById("admin-btn-text");
+
+    adminBtn.disabled = true;
+    if (adminBtnText) adminBtnText.style.display = "none";
+    if (adminSpinner) adminSpinner.classList.remove("hidden");
+
+    let data;
+    try {
+      const res = await fetch("/hq/admin/check-superadmin");
+      data = await res.json();
+    } catch (err) {
+      adminBtn.disabled = false;
+      if (adminBtnText) adminBtnText.style.display = "";
+      if (adminSpinner) adminSpinner.classList.add("hidden");
+      resetRegister();
+      registerOverlay.classList.add("open");
+      phoneError.style.display = "block";
+      phoneError.textContent = "Network error. Please try again.";
+      return;
+    }
+
+    adminBtn.disabled = false;
+    if (adminBtnText) adminBtnText.style.display = "";
+    if (adminSpinner) adminSpinner.classList.add("hidden");
+
+    if (data.status === "OK" && !data.exists) {
+      resetRegister();
+      registerNameRow.style.display = "none";
+      otpMessageRow.style.display = "none";
+      phoneError.style.display = "none";
+      phoneField.style.display = "block";
+      deptField.style.display = "none";
+      passkeyField.style.display = "none";
+      pinField.style.display = "none";
+      pinConfirmField.style.display = "none";
+      registerSubtitle.textContent = "Create Super Admin — enter phone number";
+      setRegisterBtnText("Continue");
+      step = "PHONE";
+      superAdminExists = false;
+      registerOverlay.classList.add("open");
+      requestAnimationFrame(() => {
+        phoneField.style.display = "block";
+      });
+      return;
+    }
+
+    if (data.status === "ERROR") {
+      resetRegister();
+      registerOverlay.classList.add("open");
+      requestAnimationFrame(() => {
+        phoneField.style.display = "block";
+      });
+      phoneError.style.display = "block";
+      phoneError.textContent = data.message || "Error checking admin status.";
+      return;
+    }
+
+    resetRegister();
+    superAdminExists = true;
+    phoneField.style.display = "block";
+    phoneError.style.display = "none";
+    verifiedBanner.style.display = "none";
+    registerOverlay.classList.add("open");
+    setTimeout(() => { phoneField.style.display = "block"; }, 100);
+  };
 
   registerSubmit.onclick = async () => {
     if (step === "PHONE") {
       const phone = registerPhone.value.trim();
-      if (!phone) return alert("Enter phone number");
+      if (!phone) {
+        phoneError.style.display = "block";
+        phoneError.textContent = "Enter a phone number";
+        return;
+      }
+      phoneError.style.display = "none";
 
-      const res = await fetch("/hq/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone })
-      });
+      if (!superAdminExists) {
+        const now = Date.now();
+        if (otpSentAt && (now - otpSentAt) < OTP_COOLDOWN_MS) {
+          const remaining = Math.ceil((OTP_COOLDOWN_MS - (now - otpSentAt)) / 1000);
+          phoneError.style.display = "block";
+          phoneError.textContent = `Please wait ${remaining} seconds before requesting another passkey.`;
+          return;
+        }
 
+        setSpinning(registerSubmit, true);
+        const verifyRes = await fetch("/hq/admin/verify-phone", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
+        const verifyData = await verifyRes.json();
+        setSpinning(registerSubmit, false);
+        if (verifyData.status === "NOT_REGISTERED") {
+          phoneError.style.display = "block";
+          phoneError.textContent = verifyData.message || "Phone not registered in TBank system.";
+          return;
+        }
+        if (verifyData.status !== "FOUND") {
+          phoneError.style.display = "block";
+          phoneError.textContent = "Phone verification failed.";
+          return;
+        }
+        phoneError.style.display = "none";
+
+        setSpinning(registerSubmit, true);
+        const otpRes = await fetch("/hq/admin/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
+        const otpData = await otpRes.json();
+        setSpinning(registerSubmit, false);
+        if (otpData.status !== "SENT") {
+          phoneError.style.display = "block";
+          phoneError.textContent = otpData.message || "Failed to send passkey.";
+          return;
+        }
+
+        otpSentAt = Date.now();
+        currentPhone = phone;
+        registerName.textContent = verifyData.name;
+        registerNameRow.style.display = "flex";
+        otpMessageRow.style.display = "flex";
+        otpMessage.textContent = "Passkey sent to " + phone + ". Expires in 3 minutes.";
+        registerPhone.readOnly = true;
+        phoneField.style.display = "block";
+        deptField.style.display = "none";
+        passkeyField.style.display = "block";
+        pinField.style.display = "none";
+        pinConfirmField.style.display = "none";
+        registerSubtitle.textContent = "Enter the passkey sent to your device";
+        setRegisterBtnText("Verify Passkey");
+        step = "PASSKEY";
+
+        clearOtpTimer();
+        otpExpiryTimer = setTimeout(() => {
+          alert("Passkey expired. Please try again.");
+          resetRegister();
+          registerOverlay.classList.remove("open");
+        }, 180000);
+
+        return;
+      }
+
+      setSpinning(registerSubmit, true);
+      const res = await fetch("/hq/admin/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
       const data = await res.json();
-
-      if (data.status === "NOT_REGISTERED") return alert(data.message);
-      if (data.status === "ALREADY_REGISTERED") return alert("The phone number is already registered as admin.");
-
+      setSpinning(registerSubmit, false);
+      if (data.status === "NOT_REGISTERED") {
+        phoneError.style.display = "block";
+        phoneError.textContent = data.message || "Phone not registered in TBank system.";
+        return;
+      }
+      if (data.status === "ALREADY_REGISTERED") {
+        phoneError.style.display = "block";
+        phoneError.textContent = "This number is already registered as admin.";
+        return;
+      }
+      phoneError.style.display = "none";
       if (data.status === "ALLOW_PIN") {
         currentPhone = phone;
         registerName.textContent = data.name;
-        registerName.style.display = "block";
-        registerLabel.style.display = "block";
-        registerPhone.style.display = "none";
-        registerPin.style.display = "block";
-        registerPinConfirm.style.display = "block";
-        step = "PIN";
+        registerNameRow.style.display = "flex";
+        phoneField.style.display = "none";
+        deptField.style.display = "block";
+        pinField.style.display = "block";
+        pinConfirmField.style.display = "block";
+        registerSubtitle.textContent = "Select your department and set a secure PIN";
+        setRegisterBtnText("Create account");
+        step = "DEPT_PIN";
       }
-    }
+    } else if (step === "PASSKEY") {
+      const passkey = registerPasskey.value.trim();
+      if (!passkey) return alert("Enter the passkey");
 
-    else if (step === "PIN") {
+      setSpinning(registerSubmit, true);
+      const res = await fetch("/hq/superadmin/create-pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentPhone, pin: "", passkey }) });
+      const data = await res.json();
+      setSpinning(registerSubmit, false);
+      if (data.status === "WRONG_PASSKEY") return alert(data.message);
+      if (data.status === "EXPIRED") {
+        alert(data.message);
+        resetRegister();
+        registerOverlay.classList.remove("open");
+        return;
+      }
+      if (data.status !== "SUCCESS") return alert(data.message || "Passkey verification failed.");
+
+      clearOtpTimer();
+      passkeyField.style.display = "none";
+      otpMessageRow.style.display = "none";
+      verifiedBanner.style.display = "flex";
+      verifiedPhone.textContent = currentPhone;
+      registerNameRow.style.display = "none";
+      phoneField.style.display = "none";
+      deptField.style.display = "none";
+      pinField.style.display = "none";
+      pinConfirmField.style.display = "none";
+      registerSubtitle.textContent = "Passkey verified";
+      setRegisterBtnText("Continue");
+      step = "VERIFIED";
+    } else if (step === "SUPERADMIN_PIN") {
       const pin = registerPin.value.trim();
       const confirm = registerPinConfirm.value.trim();
-      if (!pin || !confirm) return alert("Enter PIN");
+      if (!pin || !confirm) return alert("Enter your PIN");
       if (pin !== confirm) return alert("PINs do not match");
-
-      const res = await fetch("/hq/create-pin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentPhone, pin })
-      });
-
+      setSpinning(registerSubmit, true);
+      const res = await fetch("/hq/superadmin/create-pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentPhone, pin }) });
       const data = await res.json();
-
+      setSpinning(registerSubmit, false);
       if (data.status === "SUCCESS") {
-        alert("Account created successfully");
-        registerOverlay.style.display = "none";
+        alert("Super Admin account created successfully");
+        registerOverlay.classList.remove("open");
         resetRegister();
       } else {
-        alert(data.message || "Error");
+        alert(data.message || "Something went wrong");
       }
+    } else if (step === "DEPT_PIN") {
+      const department = registerDepartment.value;
+      const pin = registerPin.value.trim();
+      const confirm = registerPinConfirm.value.trim();
+      if (!department) return alert("Select a department");
+      if (!pin || !confirm) return alert("Enter your PIN");
+      if (pin !== confirm) return alert("PINs do not match");
+      setSpinning(registerSubmit, true);
+      const res = await fetch("/hq/admin/create-pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentPhone, pin, department }) });
+      const data = await res.json();
+      setSpinning(registerSubmit, false);
+      if (data.status === "SUCCESS") { alert("Admin account created successfully"); registerOverlay.classList.remove("open"); resetRegister(); }
+      else alert(data.message || "Something went wrong");
     }
   };
 
-//adjust ment that make button docet buttons clickable
-  const sections = ['finance','relations','it','operations','compliance','hr'];
+  document.getElementById("register-close").onclick = () => { registerOverlay.classList.remove("open"); clearOtpTimer(); phoneError.style.display = "none"; };
 
-  sections.forEach(section => {
-    const el = document.getElementById(section);
-    if (el) {
-      el.addEventListener('click', () => {
-        if (!isLoggedIn) {
-          // Show login overlay if not logged in
-          loginOverlay.style.display = "flex";
-          return;
-        }
-        // Navigate if logged in
-        window.location.href = `/hq/${section}`;
-      });
-    }
-  });
+  window.showPinFields = function() {
+    verifiedBanner.style.display = "none";
+    pinField.style.display = "block";
+    pinConfirmField.style.display = "block";
+    registerSubtitle.textContent = "Set a secure PIN for your Super Admin account";
+    setRegisterBtnText("Create Super Admin");
+    step = "SUPERADMIN_PIN";
+  };
 
-  /* ================= LOGIN ================= */
-  const authArea = document.getElementById("auth-area");
-  const loginBtn = document.getElementById("login-btn");
+  /* ─── Login ─── */
   const loginOverlay = document.getElementById("login-overlay");
-  const loginSubmit = document.getElementById("login-submit");
-  const loginPhone = document.getElementById("login-phone");
-  const loginPin = document.getElementById("login-pin");
+  const loginPhone   = document.getElementById("login-phone");
+  const loginPin     = document.getElementById("login-pin");
 
-  loginBtn.onclick = () => loginOverlay.style.display = "flex";
-  loginOverlay.querySelector(".close-overlay").onclick = () => loginOverlay.style.display = "none";
+  document.getElementById("login-btn").onclick  = () => loginOverlay.classList.add("open");
+  document.getElementById("login-close").onclick = () => loginOverlay.classList.remove("open");
 
-  loginSubmit.onclick = async () => {
+  document.getElementById("login-submit").onclick = async () => {
     const phone = loginPhone.value.trim();
-    const pin = loginPin.value.trim();
-    if (!phone || !pin) return alert("Enter credentials");
-
-    const res = await fetch("/hq/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, pin })
-    });
-
+    const pin   = loginPin.value.trim();
+    if (!phone || !pin) return alert("Enter your credentials");
+    const res  = await fetch("/hq/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, pin }) });
     const data = await res.json();
-
     if (data.status === "SUCCESS") {
-      loginOverlay.style.display = "none";
-      isLoggedIn =true
-      showLoggedIn(data.name);
+      loginOverlay.classList.remove("open");
+      isLoggedIn = true;
+      showLoggedIn(data.name, data.department);
     } else {
       alert(data.message);
     }
   };
 
-  function showLoggedIn(name) {
+  function showLoggedIn(name, department) {
+    const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+    const authArea = document.getElementById("auth-area");
     authArea.innerHTML = `
-      <span style="font-weight:bold;color:white;">${name}</span>
-      <button class="logout-btn" id="logout-btn" onclick="window.location.href='/logout'">Logout</button>
+      <div class="user-badge">
+        <div class="avatar">${initials}</div>
+        <span class="user-name">${name} <small style="color:var(--gray-400);font-weight:400">(${department})</small></span>
+      </div>
+      <button class="btn btn-danger" onclick="window.location.href='/logout'">Sign out</button>
     `;
-    // No need to bind onclick via JS since we added it to HTML directly above
   }
 
-  function showLoggedOut() {
-    isLoggedIn =false
-    authArea.innerHTML = `
-      <button class="login-btn" id="login-btn">Login</button>
-      <button class="logout-btn" id="register-btn">Register</button>
-    `;
+  /* ─── Department navigation ─── */
+  const sections = ['finance','relations','it','operations','compliance','hr'];
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => {
+      if (!isLoggedIn) { loginOverlay.classList.add("open"); return; }
+      window.location.href = `/hq/${id}`;
+    });
+  });
 
-    document.getElementById("login-btn").onclick = () => loginOverlay.style.display = "flex";
-    document.getElementById("register-btn").onclick = () => {
-      resetRegister();
-      registerOverlay.style.display = "flex";
-    };
-  }
+  /* ─── Close on backdrop click ─── */
+  [registerOverlay, loginOverlay].forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        overlay.classList.remove("open");
+        if (overlay === registerOverlay) clearOtpTimer();
+      }
+    });
+  });
 </script>
 
 </body>

@@ -2,13 +2,12 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const { findUserInCounties } = require("../mongoose");
 
 const router = express.Router();
 
 /* ================= FILE PATHS ================= */
-const dataFile = path.join(__dirname, "../data.json");
 const officialFile = path.join(__dirname, "../official.json");
-const statsFile = path.join(__dirname, "../personal_stats.json");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback = []) => {
@@ -47,19 +46,17 @@ router.get("/:section", (req, res) => {
 
 
 /* ================= REGISTER: VERIFY PHONE ================= */
-router.post("/register", (req, res) => {
+router.post("/register", async (req, res) => {
   let { phone } = req.body;
   if (!phone) {
     return res.json({ status: "ERROR", message: "Phone number required." });
   }
   phone = phone.trim();
 
-  const dataUsers = readJSON(dataFile);
   const officialUsers = readJSON(officialFile);
 
-  const user = dataUsers.find(u => {
-    return norm(u.phoneNumber) === norm(phone);
-  });
+  const user = await findUserInCounties(phone);
+
   if (!user) {
     return res.json({
       status: "NOT_REGISTERED",
@@ -77,7 +74,7 @@ router.post("/register", (req, res) => {
 
   return res.json({
     status: "ALLOW_PIN",
-    name: `${user.FirstName} ${user.MiddleName} ${user.LastName}`.toUpperCase()
+    name: `${user.FirstName} ${user.MiddleName || ""} ${user.LastName || ""}`.toUpperCase()
   });
 });
 
@@ -88,10 +85,10 @@ router.post("/create-pin", async (req, res) => {
     return res.json({ status: "ERROR", message: "Phone and PIN required." });
   }
 
-  const dataUsers = readJSON(dataFile);
   const officialUsers = readJSON(officialFile);
 
-  const user = dataUsers.find(u => norm(u.phoneNumber) === norm(phone));
+  const user = await findUserInCounties(phone);
+
   if (!user) {
     return res.json({ status: "ERROR", message: "User not found." });
   }
@@ -104,7 +101,7 @@ router.post("/create-pin", async (req, res) => {
 
   officialUsers.push({
     phoneNumber: phone,
-    name: `${user.FirstName} ${user.MiddleName} ${user.LastName}`.toUpperCase(),
+    name: `${user.FirstName} ${user.MiddleName || ""} ${user.LastName || ""}`.toUpperCase(),
     pin: hashedPin,
     createdAt: new Date().toISOString()
   });
@@ -124,14 +121,13 @@ router.post("/login", async (req, res) => {
     return res.json({ status: "ERROR", message: "Phone and PIN required." });
   }
 
-  const dataUsers = readJSON(dataFile);
   const officialUsers = readJSON(officialFile);
 
-  const inData = dataUsers.find(u => norm(u.phoneNumber) === norm(phone));
+  const userExists = await findUserInCounties(phone);
+
   const inOfficial = officialUsers.find(u => norm(u.phoneNumber) === norm(phone));
 
-  // ❌ Must exist in BOTH files
-  if (!inData || !inOfficial) {
+  if (!userExists || !inOfficial) {
     return res.json({
       status: "NOT_REGISTERED",
       message: "Account not registered."
@@ -146,7 +142,6 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  // ✅ Save session user
   req.session.hqUser = {
     phoneNumber: phone,
     name: inOfficial.name

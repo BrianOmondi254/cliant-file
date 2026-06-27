@@ -482,6 +482,54 @@ const saveGeneralGroupToMongo = async (groupData) => {
   }
 };
 
+const deleteGeneralGroupFromMongo = async (groupName) => {
+  if (mongoose.connection.readyState !== 1) {
+    console.warn('[GeneralGroup] MongoDB not connected, cannot delete');
+    return false;
+  }
+
+  const db = mongoose.connection.db;
+  if (!db) {
+    console.warn('[GeneralGroup] MongoDB database unavailable, cannot delete');
+    return false;
+  }
+
+  const col = db.collection('groups');
+  const target = String(groupName || "").trim().toLowerCase();
+  if (!target) return false;
+
+  try {
+    const countyDocs = await col.find({}).toArray();
+    for (const doc of countyDocs) {
+      for (const key in doc) {
+        if (key === '_id' || key === 'county') continue;
+        const items = doc[key];
+        if (!Array.isArray(items)) continue;
+        
+        const idx = items.findIndex(
+          item => item && typeof item === 'object' && item.groupName && String(item.groupName).trim().toLowerCase() === target
+        );
+        
+        if (idx !== -1) {
+          items.splice(idx, 1);
+          await col.updateOne(
+            { county: doc.county },
+            { $set: { [key]: items } }
+          );
+          console.log(`[GeneralGroup] Deleted group '${groupName}' from MongoDB 'groups'`);
+          return true;
+        }
+      }
+    }
+    
+    console.warn(`[GeneralGroup] Group '${groupName}' not found in MongoDB for deletion`);
+    return false;
+  } catch (err) {
+    console.error('[GeneralGroup] MongoDB delete error:', err.message);
+    return false;
+  }
+};
+
 /**
  * Clean up existing documents with null/empty groupKey in the groups collection
  * This fixes the E11000 duplicate key error when sparse index wasn't properly applied
@@ -932,6 +980,34 @@ const dealerSchema = new mongoose.Schema({
 const Dealer = mongoose.models.Dealer || mongoose.model('Dealer', dealerSchema, 'dealers');
 
 /**
+ * Admin Schema - HQ administrators with department assignment
+ */
+const adminSchema = new mongoose.Schema({
+  phoneNumber: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  department: { type: String, required: true },
+  pin: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const adminConn = mongoose.createConnection(MONGODB_URI);
+const adminDb = adminConn.useDb('tbank-admin');
+const Admin = adminDb.model('Admin', adminSchema, 'admins');
+
+/**
+ * SuperAdmin Schema - Tier above administrators
+ */
+const superAdminSchema = new mongoose.Schema({
+  phoneNumber: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  pin: { type: String, required: true },
+  permissions: [{ type: String }],
+  createdAt: { type: Date, default: Date.now }
+});
+
+const SuperAdmin = adminDb.model('SuperAdmin', superAdminSchema, 'superAdmins');
+
+/**
  * Connect to MongoDB database (idempotent — safe to call multiple times)
  */
 const connectDB = async () => {
@@ -966,7 +1042,8 @@ const connectDB = async () => {
         process.on("SIGINT", async () => {
           try {
             await mongoose.connection.close();
-            console.log("MongoDB connection closed through app termination");
+            await adminConn.close();
+            console.log("MongoDB connections closed through app termination");
             process.exit(0);
           } catch (err) {
             console.error("Error closing MongoDB connection:", err);
@@ -1392,10 +1469,14 @@ module.exports = {
   Message,
   Agent,
   Dealer,
+  Admin,
+  SuperAdmin,
+  adminConn,
   saveMessageToMongo,
   getMessagesForUser,
   saveUserToMongoDB,
   findUserByPhone,
+  findUserInCounties,
   getUserNameByPhone,
   updateLastLogin,
   getAllUsersFlattened,
@@ -1413,6 +1494,7 @@ module.exports = {
   findOrCreateMemberGroup,
   isGroupNameAvailableInMongo,
   saveGeneralGroupToMongo,
+  deleteGeneralGroupFromMongo,
   getGeneralGroupsFromMongo,
   findGeneralGroupsByMemberPhone,
   cleanupStaleGroupKeys,

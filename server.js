@@ -25,6 +25,8 @@ const businessAccountRoutes = require("./p_account/business.js");
 
 /* ================= HQ ROUTES ================= */
 const hqAccountRoutes = require("./route-hq/account"); 
+const hqAdminRoutes = require("./route-hq/admin");
+const hqSuperAdminRoutes = require("./route-hq/superadmin");
 const hqOperationsRoutes = require("./route-hq/operations"); 
 const complianceRoutes = require("./route-hq/compliance");
 
@@ -94,6 +96,8 @@ app.set("views", path.join(__dirname, "views"));
 // 1️⃣ Public HQ route (accessible without login)
 app.use("/hq", complianceRoutes);
 app.use("/hq", hqAccountRoutes);
+app.use("/hq/admin", hqAdminRoutes);
+app.use("/hq/superadmin", hqSuperAdminRoutes);
 app.use("/hq", hqOperationsRoutes);
 
 
@@ -104,6 +108,15 @@ app.use("/general", generalRoutes);
 app.use("/member", memberRoutes);
 app.use("/api/locations", locationsRoutes);
 app.use("/api/mpesa", mpesaRoutes);
+
+// Inbox message delete
+app.post("/api/inbox/delete", (req, res) => {
+  const { id } = req.body;
+  if (!req.session.user) return res.json({ success: false });
+  if (!req.session.user.inbox) return res.json({ success: true });
+  req.session.user.inbox = req.session.user.inbox.filter(m => m.id !== id);
+  res.json({ success: true });
+});
 
 // 3️⃣ Protected routes (require login)
 const protect = (req, res, next) => {

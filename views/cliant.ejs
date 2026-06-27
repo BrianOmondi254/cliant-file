@@ -1166,22 +1166,35 @@ if (keys.length > 0) {
                 } else if (isLegacy) {
                      html += `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
                      <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
-                } else {
-                    html += `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
-                }
-                html += `</div>`;
+                 } else {
+                     html += `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                 }
+                 if (k.redirect) {
+                     html += `<button onclick="window.location.href='${k.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
+                 }
+                 html += `</div>`;
             });
         }
 
         if (inbox.length > 0) {
-            html += `<div class="m-section-label"><i class="fa-solid fa-calendar-check" style="margin-right:5px;color:#059669;"></i>Meeting Invitations</div>`;
+            html += `<div class="m-section-label"><i class="fa-solid fa-calendar-check" style="margin-right:5px;color:#059669;"></i>Notifications</div>`;
             [...inbox].reverse().forEach(msg => {
-                html += `<div style="background:#f0fdf4;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #dcfce7;border-left:4px solid #10b981;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:7px;">
-                        <h4 style="color:#065f46;font-size:13px;font-weight:700;">📅 ${msg.groupName}</h4>
-                        <span style="font-size:10px;color:#059669;font-weight:600;">${new Date(msg.date).toLocaleDateString()}</span>
+                const isSecurity = msg.type === 'security_alert';
+                const bgColor = isSecurity ? '#fef3c7' : '#f0fdf4';
+                const borderColor = isSecurity ? '#f59e0b' : '#bbf7d0';
+                const iconColor = isSecurity ? '#f59e0b' : '#10b981';
+                const icon = isSecurity ? 'fa-triangle-exclamation' : 'fa-envelope';
+                const titleColor = isSecurity ? '#92400e' : '#065f46';
+                html += `<div style="background:${bgColor};padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid ${borderColor};border-left:4px solid ${iconColor};">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+                        <h4 style="color:${titleColor};font-size:13px;font-weight:700;"><i class="fa-solid ${icon}" style="color:${iconColor};margin-right:7px;"></i>${msg.title || 'Message'}</h4>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:10px;color:#059669;font-weight:600;">${new Date(msg.date).toLocaleDateString()}</span>
+                            ${msg.id ? `<button onclick="window.deleteInboxMessage(${JSON.stringify(msg.id)})" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px;font-size:14px;line-height:1;" title="Delete message"><i class="fa-solid fa-circle-xmark"></i></button>` : ''}
+                        </div>
                     </div>
                     <div style="font-size:12px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">${msg.content}</div>
+                    ${msg.redirect ? `<button onclick="window.location.href='${msg.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>` : ''}
                 </div>`;
             });
         }
@@ -1466,11 +1479,12 @@ if (keys.length > 0) {
                 const phaseColor = phase === 3 ? '#16a34a' : '#64748b';
                 const phaseBg = phase === 3 ? '#dcfce7' : '#f1f5f9';
                 const hasBalance = g.myBalance !== undefined && g.myBalance !== null && g.myBalance !== '';
-                const bal = hasBalance ? `KSh ${Number(g.myBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
+                const bal = hasBalance ? `${Number(g.myBalance).toLocaleString()}` : '';
                 const role = g.roleTitle || g.role || 'Member';
+                const cleanGroupName = (g.groupName || '').replace(/[kK][sS][hH]\s*/g, '').trim() || g.groupName;
                 html += `<div class="account-card" style="cursor:pointer;" onclick="app.renderGroupView('${encodeURIComponent(g.groupName)}')">
                     <div>
-                        <div class="acc-name">${g.groupName}</div>
+                        <div class="acc-name">${cleanGroupName}</div>
                         <small>${g.county||''} ${g.ward ? '• '+g.ward : ''} • ${role}</small>
                     </div>
                     <div style="text-align:right;">
@@ -3466,6 +3480,24 @@ function moveIndicator(idx, total) {
 }
 
 document.addEventListener('DOMContentLoaded', () => app.init());
+
+window.deleteInboxMessage = async function(id) {
+    if (!window.app || !id) return;
+    try {
+        const res = await fetch('/api/inbox/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success && window.app.data) {
+            window.app.data.user.inbox = (window.app.data.user.inbox || []).filter(m => m.id !== id);
+            window.app.openInbox();
+        }
+    } catch (err) {
+        console.error('Failed to delete message:', err);
+    }
+};
 </script>
 </body>
 </html>
