@@ -93,12 +93,12 @@ app.set("views", path.join(__dirname, "views"));
 
 /* ================= ROUTE MOUNTING ================= */
 
-// 1️⃣ Public HQ route (accessible without login)
-app.use("/hq", complianceRoutes);
-app.use("/hq", hqAccountRoutes);
-app.use("/hq/admin", hqAdminRoutes);
-app.use("/hq/superadmin", hqSuperAdminRoutes);
-app.use("/hq", hqOperationsRoutes);
+  // 1️⃣ Public HQ routes (must be before generic :section route to avoid conflicts)
+  app.use("/hq/admin", hqAdminRoutes);
+  app.use("/hq/superadmin", hqSuperAdminRoutes);
+  app.use("/hq", complianceRoutes);
+  app.use("/hq", hqAccountRoutes);
+  app.use("/hq", hqOperationsRoutes);
 
 
 // 2️⃣ Public routes (auth + tbank + general)

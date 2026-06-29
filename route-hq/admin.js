@@ -5,6 +5,17 @@ const { processMessage } = require("../notification/notification");
 
 const router = express.Router();
 
+const requireAuth = (req, res, next) => {
+  if (!req.session || !req.session.hqUser) {
+    return res.redirect("/hq");
+  }
+  next();
+};
+
+router.get("/", requireAuth, async (req, res) => {
+  res.render("hq/admin");
+});
+
 const norm = (p) => {
   if (!p) return "";
   let s = String(p).trim();
@@ -57,10 +68,24 @@ router.post("/send-otp", async (req, res) => {
 
   const passkey = Math.floor(100000 + Math.random() * 900000).toString();
   req.session.adminOTP = {
-    phone: phone.trim(),
+    phone: norm(phone),
     passkey,
     expiresAt: Date.now() + 180000
   };
+
+  // Store in shared pending map so cliant.ejs can pick it up
+  const normalizedPhone = norm(phone);
+  const user = await findUserInCounties(phone);
+  const userName = user ? `${user.FirstName} ${user.LastName || ""}`.trim() : "";
+
+  if (req.app && req.app.locals && req.app.locals.pendingAdminPasskeys) {
+    req.app.locals.pendingAdminPasskeys.set(normalizedPhone, {
+      passkey,
+      expiresAt: Date.now() + 180000,
+      name: userName,
+      verified: false
+    });
+  }
 
   processMessage("HQ Admin", {
     to: phone.trim(),
@@ -193,6 +218,70 @@ router.post("/login", async (req, res) => {
     name: admin.name,
     department: admin.department
   });
+});
+
+router.get("/departments", async (req, res) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) {
+      return res.json({ status: "ERROR", message: "Database not available" });
+    }
+    const departments = await Admin.distinct("department");
+    const deptsWithCounts = await Admin.aggregate([
+      { $group: { _id: "$department", count: { $sum: 1 } } },
+      { $project: { name: "$_id", count: 1, _id: 0 } }
+    ]);
+    return res.json({ status: "OK", departments: deptsWithCounts });
+  } catch (err) {
+    console.error("Error listing departments:", err);
+    return res.json({ status: "ERROR", message: err.message });
+  }
+});
+
+router.post("/create", async (req, res) => {
+  const { department, phone } = req.body;
+  if (!department || !phone) {
+    return res.json({ status: "ERROR", message: "Department and phone number required." });
+  }
+
+  const normalised = norm(phone);
+  const existing = await Admin.findOne({ phoneNumber: normalised }).lean();
+  if (existing) {
+    return res.json({ status: "ALREADY_REGISTERED", message: "Admin already exists." });
+  }
+
+  const user = await findUserInCounties(phone);
+  if (!user) {
+    return res.json({ status: "NOT_REGISTERED", message: "Phone not registered in TBank system." });
+  }
+
+  const validDepts = ["Finance", "Relations", "IT Department", "Operations", "Regions", "Human Resources"];
+  if (!validDepts.includes(department)) {
+    return res.json({ status: "ERROR", message: "Invalid department." });
+  }
+
+  const fullName = `${user.FirstName} ${user.MiddleName || ""} ${user.LastName || ""}`.trim().toUpperCase();
+  const tempPin = Math.floor(100000 + Math.random() * 900000).toString();
+  const hashedPin = await bcrypt.hash(tempPin, 10);
+
+  const admin = new Admin({
+    phoneNumber: normalised,
+    name: fullName,
+    department,
+    pin: hashedPin,
+    createdAt: new Date()
+  });
+
+  await admin.save();
+
+  processMessage("HQ Admin", {
+    to: phone.trim(),
+    type: "security_alert",
+    title: "Admin Account Created",
+    content: `Your admin account for ${department} has been created. Temporary PIN: ${tempPin}`
+  });
+
+  return res.json({ status: "SUCCESS", message: "Admin account created successfully." });
 });
 
 module.exports = router;

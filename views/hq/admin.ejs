@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-Bank HQ Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-900: #0a1628;
+      --blue-800: #102040;
+      --blue-700: #1a3060;
+      --blue-600: #1e4080;
+      --blue-500: #1f5cbf;
+      --blue-400: #2e72d2;
+      --blue-300: #5a96e8;
+      --blue-100: #dce8fa;
+      --blue-50:  #f0f5fd;
+
+      --teal-500: #0e7c6e;
+      --teal-400: #15977c;
+      --teal-100: #d5f0eb;
+
+      --gold-500: #b07d1a;
+      --gold-100: #fdf0cc;
+
+      --gray-900: #111827;
+      --gray-700: #374151;
+      --gray-600: #4b5563;
+      --gray-400: #9ca3af;
+      --gray-200: #e5e7eb;
+      --gray-100: #f3f4f6;
+      --gray-50:  #f9fafb;
+
+      --green-500: #16a34a;
+      --red-500:   #dc2626;
+
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+      --transition: 0.18s ease;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--blue-900);
+      border-bottom: 1px solid var(--blue-800);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    .topbar {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 28px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: var(--blue-400);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-logo svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-name span {
+      color: var(--blue-300);
+      font-weight: 400;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 40px 28px 60px;
+    }
+
+    .page-header {
+      margin-bottom: 36px;
+    }
+
+    .page-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--blue-500);
+      margin-bottom: 6px;
+    }
+
+    .page-heading {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+
+    .page-sub {
+      font-size: 14px;
+      color: var(--gray-600);
+    }
+
+    .page-divider {
+      border: none;
+      border-top: 1px solid var(--gray-200);
+      margin: 28px 0;
+    }
+
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .dept-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 28px 20px 24px;
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+      text-decoration: none;
+    }
+
+    .dept-card:hover {
+      border-color: var(--blue-300);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .dept-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .dept-icon.blue   { background: var(--blue-50); }
+    .dept-icon.teal   { background: var(--teal-100); }
+    .dept-icon.gold   { background: var(--gold-100); }
+    .dept-icon.purple { background: #f0effe; }
+    .dept-icon.slate  { background: #f1f5f9; }
+    .dept-icon.rose   { background: #fff1f3; }
+
+    .dept-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .dept-desc {
+      font-size: 12px;
+      color: var(--gray-400);
+      line-height: 1.4;
+    }
+
+    .btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--blue-500);
+      color: white;
+      border-color: var(--blue-400);
+    }
+
+    .btn-primary:hover {
+      background: var(--blue-400);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray-400);
+      border-color: var(--blue-700);
+    }
+
+    .btn-ghost:hover {
+      background: var(--blue-800);
+      color: white;
+      border-color: var(--blue-600);
+    }
+
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: white;
+      min-width: 200px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+      margin-top: 8px;
+    }
+
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
+
+    .dropdown-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--gray-700);
+    }
+
+    .dropdown-item:hover {
+      background: var(--gray-50);
+    }
+
+    .hidden { display: none !important; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spin {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    .field-input {
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--gray-900);
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .field-input:focus {
+      border-color: var(--blue-400);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(46, 114, 210, 0.12);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="brand-name">T-Bank <span>Investment</span></span>
+    </div>
+    <span class="topbar-title" style="color: var(--blue-300); font-size: 13px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;">Admin Dashboard</span>
+    <div class="dropdown" style="margin-left: auto;">
+      <button class="btn btn-ghost" id="admin-btn">Admin ▼</button>
+      <div class="dropdown-content">
+        <div class="dropdown-item" id="create-dept-btn">Create Department</div>
+        <div class="dropdown-item" id="list-dept-btn">List Departments</div>
+        <div class="dropdown-item" onclick="window.location.href='/logout'">Sign Out</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="page-header">
+    <p class="page-eyebrow">Administration</p>
+    <h1 class="page-heading">Admin Panel</h1>
+    <p class="page-sub">Create and manage departments. Select an option below to begin.</p>
+  </div>
+  <hr class="page-divider">
+
+  <div class="dept-grid" id="admin-options">
+    <div class="dept-card" id="create-dept-option">
+      <div class="dept-icon blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">Create Department</p>
+        <p class="dept-desc">Add a new department to the system</p>
+      </div>
+    </div>
+
+    <div class="dept-card" id="list-dept-option">
+      <div class="dept-icon teal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+          <line x1="8" x1="21" y1="6" y2="6"/><line x1="8" x1="21" y1="12" y2="12"/><line x1="8" x1="21" y2="18" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>
+        </svg>
+      </div>
+      <div class="dept-body">
+        <p class="dept-name">List Departments</p>
+        <p class="dept-desc">View all existing departments</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="create-dept-section" class="hidden">
+    <div class="page-header">
+      <p class="page-eyebrow">Create Department</p>
+      <h1 class="page-heading">Add New Department</h1>
+      <p class="page-sub">Select a department type to create</p>
+    </div>
+    <hr class="page-divider">
+    <div class="dept-grid">
+      <div class="dept-card" data-dept="Finance">
+        <div class="dept-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+          </svg>
+        </div>
+        <div class="dept-body"><p class="dept-name">Finance</p></div>
+      </div>
+      <div class="dept-card" data-dept="Relations">
+        <div class="dept-icon teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="dept-body"><p class="dept-name">Relations</p></div>
+      </div>
+      <div class="dept-card" data-dept="IT Department">
+        <div class="dept-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div class="dept-body"><p class="dept-name">IT Department</p></div>
+      </div>
+      <div class="dept-card" data-dept="Operations">
+        <div class="dept-icon gold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div class="dept-body"><p class="dept-name">Operations</p></div>
+      </div>
+      <div class="dept-card" data-dept="Regions">
+        <div class="dept-icon slate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <div class="dept-body"><p class="dept-name">Regions</p></div>
+      </div>
+      <div class="dept-card" data-dept="Human Resources">
+        <div class="dept-icon rose">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="dept-body"><p class="dept-name">Human Resources</p></div>
+      </div>
+    </div>
+    <div id="phone-input-section" class="hidden" style="margin-top: 40px;">
+      <div class="page-header">
+        <p class="page-eyebrow">Create Admin Account</p>
+        <h1 class="page-heading">Enter Phone Number</h1>
+        <p class="page-sub">Provide a phone number for the department head</p>
+      </div>
+      <div class="field-group" style="max-width: 400px;">
+        <label style="font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:4px;">Phone number</label>
+        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="admin-phone" style="font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 12px;width:100%;outline:none;">
+      </div>
+      <button class="btn btn-primary" id="create-admin-submit" style="margin-top: 16px;">Create Admin</button>
+    </div>
+  </div>
+
+  <div id="list-dept-section" class="hidden">
+    <div class="page-header">
+      <p class="page-eyebrow">Departments</p>
+      <h1 class="page-heading">List of Departments</h1>
+      <p class="page-sub">All departments in the system</p>
+    </div>
+    <hr class="page-divider">
+    <div class="dept-grid" id="departments-list">
+      <p style="color: var(--gray-600);">Loading departments...</p>
+    </div>
+  </div>
+</main>
+
+<script>
+  let selectedDept = null;
+
+  document.getElementById("create-dept-option").onclick = () => {
+    document.getElementById("admin-options").classList.add("hidden");
+    document.getElementById("create-dept-section").classList.remove("hidden");
+  };
+
+  document.getElementById("list-dept-option").onclick = async () => {
+    document.getElementById("admin-options").classList.add("hidden");
+    document.getElementById("list-dept-section").classList.remove("hidden");
+    
+    const listEl = document.getElementById("departments-list");
+    try {
+      const res = await fetch("/hq/admin/departments");
+      const data = await res.json();
+      if (data.status === "OK" && data.departments) {
+        listEl.innerHTML = data.departments.map(dept => {
+          const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
+          return `
+            <div class="dept-card">
+              <div class="dept-icon ${icons[dept.name] || "blue"}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/>
+                </svg>
+              </div>
+              <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
+            </div>
+          `;
+        }).join("");
+      } else {
+        listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
+      }
+    } catch (err) {
+      listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
+    }
+  };
+
+document.getElementById("create-dept-btn").onclick = () => {
+    document.getElementById("create-dept-section").classList.remove("hidden");
+    document.getElementById("list-dept-section").classList.add("hidden");
+    document.getElementById("admin-options").classList.add("hidden");
+    document.getElementById("phone-input-section").classList.add("hidden");
+  };
+  
+  document.getElementById("list-dept-btn").onclick = async () => {
+    document.getElementById("create-dept-section").classList.add("hidden");
+    document.getElementById("list-dept-section").classList.remove("hidden");
+    document.getElementById("admin-options").classList.add("hidden");
+    document.getElementById("phone-input-section").classList.add("hidden");
+    
+    const listEl = document.getElementById("departments-list");
+    listEl.innerHTML = '<p style="color: var(--gray-600);">Loading departments...</p>';
+    try {
+      const res = await fetch("/hq/admin/departments");
+      const data = await res.json();
+      if (data.status === "OK" && data.departments) {
+        listEl.innerHTML = data.departments.map(dept => {
+          const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
+          return `
+            <div class="dept-card">
+              <div class="dept-icon ${icons[dept.name] || "blue"}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/>
+                </svg>
+              </div>
+              <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
+            </div>
+          `;
+        }).join("");
+      } else {
+        listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
+      }
+    } catch (err) {
+      listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
+    }
+  };
+
+  document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
+    card.onclick = () => {
+      selectedDept = card.getAttribute("data-dept");
+      document.getElementById("phone-input-section").classList.remove("hidden");
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+  });
+
+  document.getElementById("create-admin-submit").onclick = async () => {
+    const phone = document.getElementById("admin-phone").value.trim();
+    if (!phone) return alert("Enter a phone number");
+    if (!selectedDept) return alert("Select a department first");
+    
+    const res = await fetch("/hq/admin/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ department: selectedDept, phone })
+    });
+    const data = await res.json();
+    if (data.status === "SUCCESS") {
+      alert("Admin account created successfully");
+      document.getElementById("phone-input-section").classList.add("hidden");
+      document.getElementById("admin-phone").value = "";
+      document.getElementById("create-dept-section").classList.add("hidden");
+      document.getElementById("admin-options").classList.remove("hidden");
+      selectedDept = null;
+    } else {
+      alert(data.message || "Failed to create admin");
+    }
+  };
+</script>
+
+</body>
+</html>
