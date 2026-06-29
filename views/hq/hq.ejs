@@ -564,10 +564,10 @@
     <div class="topbar-divider"></div>
     <span class="topbar-title">HQ Dashboard</span>
 
-    <div class="topbar-auth" id="auth-area">
-      <button class="btn btn-ghost" id="login-btn">Sign in</button>
+<div class="topbar-auth" id="auth-area">
         <button class="btn btn-primary" id="register-btn"><span id="admin-btn-text">Admin</span> <span id="admin-spinner" class="spin hidden"></span></button>
-    </div>
+        <button class="btn btn-ghost" id="login-btn" style="display:none;">Login</button>
+     </div>
   </div>
 </header>
 
@@ -885,6 +885,8 @@
       step = "PHONE";
       superAdminExists = false;
       registerOverlay.classList.add("open");
+      document.getElementById("register-btn").style.display = "inline-flex";
+      document.getElementById("login-btn").style.display = "none";
       requestAnimationFrame(() => {
         phoneField.style.display = "block";
       });
@@ -894,6 +896,8 @@
     if (data.status === "ERROR") {
       resetRegister();
       registerOverlay.classList.add("open");
+      document.getElementById("register-btn").style.display = "inline-flex";
+      document.getElementById("login-btn").style.display = "none";
       requestAnimationFrame(() => {
         phoneField.style.display = "block";
       });
@@ -907,8 +911,9 @@
     phoneField.style.display = "block";
     phoneError.style.display = "none";
     verifiedBanner.style.display = "none";
-    registerOverlay.classList.add("open");
-    setTimeout(() => { phoneField.style.display = "block"; }, 100);
+    document.getElementById("register-btn").style.display = "none";
+    document.getElementById("login-btn").style.display = "inline-flex";
+    loginOverlay.classList.add("open");
   };
 
   registerSubmit.onclick = async () => {
@@ -982,6 +987,7 @@
         return;
       }
 
+      // If superAdminExists is true, this is an existing admin registration
       setSpinning(registerSubmit, true);
       const res = await fetch("/hq/admin/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
       const data = await res.json();
@@ -1027,18 +1033,15 @@
       if (data.status !== "SUCCESS") return alert(data.message || "Passkey verification failed.");
 
       clearOtpTimer();
-      passkeyField.style.display = "none";
-      otpMessageRow.style.display = "none";
-      verifiedBanner.style.display = "flex";
-      verifiedPhone.textContent = currentPhone;
+      verifiedBanner.style.display = "none";
       registerNameRow.style.display = "none";
       phoneField.style.display = "none";
       deptField.style.display = "none";
-      pinField.style.display = "none";
-      pinConfirmField.style.display = "none";
-      registerSubtitle.textContent = "Passkey verified";
-      setRegisterBtnText("Continue");
-      step = "VERIFIED";
+      pinField.style.display = "block";
+      pinConfirmField.style.display = "block";
+      registerSubtitle.textContent = "Set a secure PIN for your Super Admin account";
+      setRegisterBtnText("Create Super Admin");
+      step = "SUPERADMIN_PIN";
     } else if (step === "SUPERADMIN_PIN") {
       const pin = registerPin.value.trim();
       const confirm = registerPinConfirm.value.trim();
@@ -1073,15 +1076,6 @@
 
   document.getElementById("register-close").onclick = () => { registerOverlay.classList.remove("open"); clearOtpTimer(); phoneError.style.display = "none"; };
 
-  window.showPinFields = function() {
-    verifiedBanner.style.display = "none";
-    pinField.style.display = "block";
-    pinConfirmField.style.display = "block";
-    registerSubtitle.textContent = "Set a secure PIN for your Super Admin account";
-    setRegisterBtnText("Create Super Admin");
-    step = "SUPERADMIN_PIN";
-  };
-
   /* ─── Login ─── */
   const loginOverlay = document.getElementById("login-overlay");
   const loginPhone   = document.getElementById("login-phone");
@@ -1094,12 +1088,13 @@
     const phone = loginPhone.value.trim();
     const pin   = loginPin.value.trim();
     if (!phone || !pin) return alert("Enter your credentials");
-    const res  = await fetch("/hq/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, pin }) });
+    const res  = await fetch("/hq/superadmin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, pin }) });
     const data = await res.json();
     if (data.status === "SUCCESS") {
       loginOverlay.classList.remove("open");
       isLoggedIn = true;
       showLoggedIn(data.name, data.department);
+      window.location.href = "/hq/admin";
     } else {
       alert(data.message);
     }
@@ -1116,6 +1111,19 @@
       <button class="btn btn-danger" onclick="window.location.href='/logout'">Sign out</button>
     `;
   }
+
+  async function initAuthButtons() {
+    try {
+      const res = await fetch("/hq/admin/check-superadmin");
+      const data = await res.json();
+      if (data.status === "OK" && data.exists) {
+        document.getElementById("register-btn").style.display = "none";
+        document.getElementById("login-btn").style.display = "inline-flex";
+      }
+    } catch (e) {}
+  }
+
+  document.addEventListener("DOMContentLoaded", initAuthButtons);
 
   /* ─── Department navigation ─── */
   const sections = ['finance','relations','it','operations','compliance','hr'];

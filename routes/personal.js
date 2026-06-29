@@ -333,6 +333,48 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 }
             }
         }
+
+        // Legacy flat constituency-as-key format: { county: "X", ConstituencyName: ["ward", ...groups] }
+        if (doc.county && !doc.groupName) {
+            for (const key of Object.keys(doc)) {
+                if (key === '_id' || key === 'county' || key === 'performance') continue;
+                const items = doc[key];
+                if (!Array.isArray(items)) continue;
+                
+                let currentWard = "Unknown Ward";
+                for (const item of items) {
+                    if (typeof item === 'string') {
+                        currentWard = item;
+                        continue;
+                    }
+                    if (!item || typeof item !== 'object' || item.isPerformance) continue;
+                    if (!groupContainsPhone(item, targetPhone)) continue;
+
+                    const roleInfo = Object.keys(item).reduce((found, k) => {
+                        if (found) return found;
+                        const member = item[k];
+                        if (member && typeof member === 'object' && member.phone && norm(member.phone) === targetPhone) {
+                            return { key: k, member };
+                        }
+                        return found;
+                    }, null);
+
+                    const isChairperson = norm(item.phone) === targetPhone || norm(item.chairpersonalphonenumber) === targetPhone;
+
+                    groups.push({
+                        ...item,
+                        county: item.county || doc.county,
+                        constituency: item.constituency || key,
+                        ward: item.ward || currentWard,
+                        role: roleInfo && roleInfo.key.startsWith('trustee_') ? 'trustee' : (roleInfo && roleInfo.key.startsWith('official_') ? 'official' : (isChairperson ? 'trustee' : 'member')),
+                        roleTitle: (roleInfo && (roleInfo.member.title || roleInfo.member.type)) || (isChairperson ? 'Chairperson' : ''),
+                        memberNumber: (roleInfo && roleInfo.member.memberNumber) || '',
+                        memberId: (roleInfo && roleInfo.member.phone) || item.phone || item.chairpersonalphonenumber || '',
+                        source: 'groups'
+                    });
+                }
+            }
+        }
     }
 
     return groups;
@@ -561,6 +603,8 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
 
     const generalExists = userGroups.length > 0;
 
+    const activeUserGroups = userGroups.filter(g => parseInt(g.phase || 0) === 3);
+
     let hasPersonalPin = false;
     try {
       const dbUser = await findUserByPhone(phone);
@@ -590,7 +634,7 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
       hasDealerPin: req.session.hasDealerPin || false,
       constitutionKeys, // Pass keys to view
       groupMessages, // Pass user's group messages to inbox
-      userGroups,
+      userGroups: activeUserGroups,
       normalizedPhone
     });
   } catch (err) {
@@ -816,9 +860,11 @@ router.get("/myaccount", (req, res) => {
       console.log(`[MyAccount] Group names found: ${userGroups.map(g => g.groupName).join(', ')}`);
     }
 
+    const activeGroups = userGroups.filter(g => parseInt(g.phase || 0) === 3);
+
     res.render("myaccount", { 
       user: req.session.user,
-      groups: userGroups,
+      groups: activeGroups,
       alert: req.query.alert || null
     });
   } catch (err) {
@@ -1228,9 +1274,11 @@ router.get("/send-money", (req, res) => {
       return false;
     });
 
+    const activeGroups = userGroups.filter(g => parseInt(g.phase || 0) === 3);
+
     res.render("send-money", { 
       user: req.session.user,
-      groups: userGroups,
+      groups: activeGroups,
       step: "select-account" 
     });
   } catch (err) {

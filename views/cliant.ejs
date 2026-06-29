@@ -639,6 +639,7 @@ const app = {
         userGroups: <%- JSON.stringify(typeof userGroups !== 'undefined' ? userGroups : []) %>,
         constitutionKeys: <%- JSON.stringify(typeof constitutionKeys !== 'undefined' ? constitutionKeys : []) %>,
         groupMessages: <%- JSON.stringify(typeof groupMessages !== 'undefined' ? groupMessages : []) %>,
+        pendingAdminPasskey: <%- JSON.stringify(typeof pendingAdminPasskey !== 'undefined' ? pendingAdminPasskey : null) %>,
         isAgent: <%- JSON.stringify(showAgent) %>,
         hasAgentPin: <%- JSON.stringify(hasAgentPin) %>,
         hasPersonalPin: <%- JSON.stringify(typeof hasPersonalPin !== 'undefined' ? hasPersonalPin : false) %>,
@@ -677,6 +678,19 @@ const app = {
         this.render();
         this.updateBadge();
         this.setupPhoneListeners();
+        
+        // Check for pending admin passkey
+        const pending = this.data.pendingAdminPasskey;
+        if (pending && !pending.verified) {
+            setTimeout(() => {
+                this.showToast('You have a pending admin passkey. Open inbox to enter it.', 'success');
+                this.updateBadge();
+            }, 1500);
+        } else if (pending && pending.verified) {
+            setTimeout(() => {
+                this.showAdminPinModal();
+            }, 800);
+        }
     },
 
     refreshPersonalDashboardIfVisible() {
@@ -1135,73 +1149,130 @@ const app = {
         const groupMsgs = this.data.groupMessages || [];
         let html = '';
 
-        if (keys.length === 0 && inbox.length === 0 && groupMsgs.length === 0) {
+        let allMessages = [];
+
+        groupMsgs.forEach((m, idx) => {
+            allMessages.push({
+                _source: 'groupMessages',
+                _origIndex: idx,
+                title: m.title || 'Group Update',
+                content: m.content,
+                date: new Date(m.createdAt || Date.now()),
+                icon: 'fa-users',
+                iconColor: '#10b981',
+                bgColor: '#f0fdf4',
+                borderColor: '#dcfce7',
+                titleColor: '#065f46'
+            });
+        });
+
+        keys.forEach((k, idx) => {
+            const isAlert  = k.type === 'security_alert';
+            const isLegacy = k.type === 'legacy';
+            const isConstitutionKey = k.key && !k.content;
+            
+            let contentHtml = '';
+            if (isConstitutionKey) {
+                contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
+                <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+            } else if (isLegacy) {
+                contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
+                <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+            } else {
+                contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+            }
+            if (k.redirect) {
+                 contentHtml += `<button onclick="window.location.href='${k.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
+            }
+
+            allMessages.push({
+                _source: 'constitutionKeys',
+                _origIndex: idx,
+                title: k.groupName,
+                contentHtml: contentHtml,
+                date: new Date(k.date || Date.now()),
+                icon: isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved',
+                iconColor: isAlert ? '#f59e0b' : '#0c8f44',
+                bgColor: '#f8fafc',
+                borderColor: '#e2e8f0',
+                titleColor: '#1e293b'
+            });
+        });
+
+        [...inbox].forEach((msg, loopIndex) => {
+            const isSecurity = msg.type === 'security_alert';
+            allMessages.push({
+                _source: 'inbox',
+                _id: msg.id || null,
+                _origIndex: loopIndex,
+                title: msg.title || 'Message',
+                content: msg.content,
+                redirect: msg.redirect,
+                date: new Date(msg.date || Date.now()),
+                icon: isSecurity ? 'fa-triangle-exclamation' : 'fa-envelope',
+                iconColor: isSecurity ? '#f59e0b' : '#10b981',
+                bgColor: isSecurity ? '#fef3c7' : '#f0fdf4',
+                borderColor: isSecurity ? '#f59e0b' : '#bbf7d0',
+                titleColor: isSecurity ? '#92400e' : '#065f46'
+            });
+        });
+
+        allMessages.sort((a, b) => b.date - a.date);
+        
+        if (allMessages.length === 0) {
             html += `<div class="m-empty-state"><i class="fa-solid fa-envelope-open"></i><p>Your inbox is empty.</p></div>`;
-        }
+        } else {
+            html += `<div class="m-section-label"><i class="fa-solid fa-bell" style="margin-right:5px;color:#059669;"></i>All Notifications</div>`;
+            allMessages.forEach((m, mi) => {
+                const dataId   = m._id     ? ` data-id="${m._id}"` : '';
+                const dataIdx  = ` data-index="${m._origIndex}"`;
+                const dataSrc  = ` data-source="${m._source}"`;
 
-        if (groupMsgs.length > 0) {
-            html += `<div class="m-section-label"><i class="fa-solid fa-users" style="margin-right:5px;color:#10b981;"></i>Group Notifications</div>`;
-            groupMsgs.forEach(m => {
-                html += `<div style="background:#f0fdf4;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #dcfce7;border-left:4px solid #10b981;">
-                    <h4 style="color:#065f46;margin-bottom:7px;font-size:13px;font-weight:700;"><i class="fa-solid fa-users" style="color:#10b981;margin-right:7px;"></i>${m.title||'Group Update'}</h4>
-                    <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${m.content}</div>
-                    <div style="font-size:10px;color:#059669;">${new Date(m.createdAt).toLocaleString()}</div>
-                </div>`;
-            });
-        }
-
-if (keys.length > 0) {
-            html += `<div class="m-section-label"><i class="fa-solid fa-shield-halved" style="margin-right:5px;color:var(--primary);"></i>Security Notifications</div>`;
-            keys.forEach(k => {
-                const isAlert  = k.type === 'security_alert';
-                const isLegacy = k.type === 'legacy';
-                const isConstitutionKey = k.key && !k.content;
-                const borderColor = isAlert ? '#f59e0b' : '#0c8f44';
-                const icon = isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved';
-                html += `<div style="background:#f8fafc;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid #e2e8f0;border-left:4px solid ${borderColor};">
-                    <h4 style="color:#1e293b;margin-bottom:7px;font-size:13px;font-weight:700;"><i class="fa-solid ${icon}" style="color:${borderColor};margin-right:7px;"></i>${k.groupName}</h4>`;
-                if (isConstitutionKey) {
-                    html += `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
-                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
-                } else if (isLegacy) {
-                     html += `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
-                     <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
-                 } else {
-                     html += `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
-                 }
-                 if (k.redirect) {
-                     html += `<button onclick="window.location.href='${k.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
-                 }
-                 html += `</div>`;
-            });
-        }
-
-        if (inbox.length > 0) {
-            html += `<div class="m-section-label"><i class="fa-solid fa-calendar-check" style="margin-right:5px;color:#059669;"></i>Notifications</div>`;
-            [...inbox].reverse().forEach(msg => {
-                const isSecurity = msg.type === 'security_alert';
-                const bgColor = isSecurity ? '#fef3c7' : '#f0fdf4';
-                const borderColor = isSecurity ? '#f59e0b' : '#bbf7d0';
-                const iconColor = isSecurity ? '#f59e0b' : '#10b981';
-                const icon = isSecurity ? 'fa-triangle-exclamation' : 'fa-envelope';
-                const titleColor = isSecurity ? '#92400e' : '#065f46';
-                html += `<div style="background:${bgColor};padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid ${borderColor};border-left:4px solid ${iconColor};">
+                html += `<div style="background:${m.bgColor};padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid ${m.borderColor};border-left:4px solid ${m.iconColor};">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                        <h4 style="color:${titleColor};font-size:13px;font-weight:700;"><i class="fa-solid ${icon}" style="color:${iconColor};margin-right:7px;"></i>${msg.title || 'Message'}</h4>
+                        <h4 style="color:${m.titleColor};margin-bottom:0;font-size:13px;font-weight:700;"><i class="fa-solid ${m.icon}" style="color:${m.iconColor};margin-right:7px;"></i>${m.title}</h4>
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:10px;color:#059669;font-weight:600;">${new Date(msg.date).toLocaleDateString()}</span>
-                            ${msg.id ? `<button onclick="window.deleteInboxMessage(${JSON.stringify(msg.id)})" style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:2px;font-size:14px;line-height:1;" title="Delete message"><i class="fa-solid fa-circle-xmark"></i></button>` : ''}
+                            <span style="font-size:10px;color:#059669;font-weight:600;">${m.date.toLocaleDateString()}</span>
+                            <button class="inbox-del-btn" ${dataId}${dataIdx}${dataSrc} style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px 6px;font-size:18px;line-height:1;" title="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
                         </div>
-                    </div>
-                    <div style="font-size:12px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">${msg.content}</div>
-                    ${msg.redirect ? `<button onclick="window.location.href='${msg.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>` : ''}
-                </div>`;
+                    </div>`;
+                
+                if (m.contentHtml) {
+                    html += m.contentHtml;
+                } else {
+                    html += `<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${m.content}</div>`;
+                    if (m.redirect) {
+                        html += `<button onclick="window.location.href='${m.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
+                    }
+                }
+                html += `</div>`;
             });
         }
 
         this.updateModalContent("Inbox", html, null, 'fa-envelope');
         this.openModal();
         this.updateBadge();
+
+        // Attach delete handlers after DOM is ready
+        setTimeout(() => {
+            document.querySelectorAll('.inbox-del-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const src   = this.dataset.source;
+                    const idx   = parseInt(this.dataset.index, 10);
+                    const id    = this.dataset.id || null;
+
+                    // Show spinner
+                    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    this.style.pointerEvents = 'none';
+
+                    if (src === 'inbox') {
+                        window.deleteInboxMessage(id, idx);
+                    } else {
+                        window.deleteLocalMessage(src, idx);
+                    }
+                });
+            });
+        }, 0);
     },
 
     /* ─── OPEN MODAL (action dispatcher) ─── */
@@ -1221,22 +1292,44 @@ if (keys.length > 0) {
         /* ── Send Money ── */
         if (action === 'Send Money') {
             const groups = this.data.userGroups || [];
-            const activeGroups = groups.filter(g => g.phase === 3);
             let html = '';
-            if (activeGroups.length === 0) {
-                html = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No active Phase 3 groups found.</p></div>`;
+            if (groups.length === 0) {
+                html = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>You have no groups yet.</p></div>`;
             } else {
-                html = `<div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Select an <b>Active Group</b> to send money into.</span></div>
-                <div class="m-section-label">Active Groups</div>`;
-                activeGroups.forEach(g => {
-                    html += `<button class="m-action-btn" onclick="app.selectGroupForSend('${encodeURIComponent(g.groupName)}')">
-                        <div class="btn-icon-box bib-green"><i class="fa-solid fa-users"></i></div>
-                        <div class="btn-text-block">
-                            <span class="btn-label-text">${g.groupName}</span>
-                            <span class="btn-hint-text">${g.county||''} ${g.ward ? '• '+g.ward : ''}</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
-                    </button>`;
+                html = `<div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Select a <b>group</b> to send money into.</span></div>
+                <div class="m-section-label">My Groups</div>`;
+                groups.forEach(g => {
+                    const phase     = parseInt(g.phase);
+                    const isActive  = phase === 3;
+                    const phaseLabel = isActive ? 'Active' : `Phase ${g.phase || 'N/A'}`;
+                    const phaseColor = isActive ? '#16a34a' : '#64748b';
+                    const phaseBg   = isActive ? '#dcfce7' : '#f1f5f9';
+                    const hasBalance = g.myBalance !== undefined && g.myBalance !== null && g.myBalance !== '';
+                    const bal        = hasBalance ? `KSh ${Number(g.myBalance).toLocaleString()}` : '';
+                    const cleanName  = (g.groupName || '').replace(/[kK][sS][hH]\s*/g, '').trim() || g.groupName;
+                    const role       = g.roleTitle || g.role || 'Member';
+
+                    if (isActive) {
+                        // Active groups → clickable to send
+                        html += `<button class="m-action-btn" onclick="app.selectGroupForSend('${encodeURIComponent(g.groupName)}')">
+                            <div class="btn-icon-box bib-green"><i class="fa-solid fa-users"></i></div>
+                            <div class="btn-text-block">
+                                <span class="btn-label-text">${cleanName}</span>
+                                <span class="btn-hint-text">${g.county||''} ${g.ward ? '• '+g.ward : ''} • ${role} • <span style="color:${phaseColor};font-weight:700;">${phaseLabel}</span>${bal ? ' • '+bal : ''}</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right btn-arrow-icon"></i>
+                        </button>`;
+                    } else {
+                        // Non-active groups → shown but disabled/greyed
+                        html += `<div class="m-action-btn" style="opacity:0.55;cursor:not-allowed;">
+                            <div class="btn-icon-box" style="background:#f1f5f9;"><i class="fa-solid fa-users" style="color:#94a3b8;"></i></div>
+                            <div class="btn-text-block">
+                                <span class="btn-label-text">${cleanName}</span>
+                                <span class="btn-hint-text">${g.county||''} ${g.ward ? '• '+g.ward : ''} • ${role} • <span style="color:${phaseColor};font-weight:700;">${phaseLabel}</span></span>
+                            </div>
+                            <i class="fa-solid fa-lock" style="color:#cbd5e1;margin-left:auto;font-size:13px;"></i>
+                        </div>`;
+                    }
                 });
             }
             this.updateModalContent('Send Money', html, null, 'fa-paper-plane');
@@ -1431,7 +1524,7 @@ if (keys.length > 0) {
                     <span style="font-size:16px;background:#efebe9;color:#5d4037;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-wallet"></i></span>
                     <div style="text-align:left;">
                         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">My Wallet</span>
-                        <span style="display:block;font-size:10.5px;color:#64748b;margin-top:1px;">Available balance: <strong id="walletBalanceText" style="color:var(--primary);">KSh ${balanceAmount}</strong></span>
+                        ${parseFloat(balanceAmount) > 0 ? `<span style="display:block;font-size:10.5px;color:#64748b;margin-top:1px;">Available balance: <strong id="walletBalanceText" style="color:var(--primary);">KSh ${balanceAmount}</strong></span>` : ''}
                     </div>
                 </div>
                 <span onclick="app.toggleHeaderBalance()" style="font-size: 13px; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: white; padding: 4px 8px; border-radius: 20px; border: 1px solid #e2e8f0;">
@@ -1466,7 +1559,7 @@ if (keys.length > 0) {
         </div>`;
 
         html += `<div class="section-label" style="display:flex;justify-content:space-between;align-items:center;">
-            <span>My Groups <span style="font-size:10px;color:#64748b;font-weight:600;text-transform:none;letter-spacing:0;">${groups.length} ${groups.length === 1 ? 'group' : 'groups'} · ${activeCount} active${pendingCount ? ' · ' + pendingCount + ' pending' : ''}</span></span>
+            <span>My Groups${groups.length > 0 ? ` <span style="font-size:10px;color:#64748b;font-weight:600;text-transform:none;letter-spacing:0;">${groups.length} ${groups.length === 1 ? 'group' : 'groups'} · ${activeCount} active${pendingCount ? ' · ' + pendingCount + ' pending' : ''}</span>` : ''}</span>
             <button onclick="app.openModal('Create Group')" onmouseover="this.style.backgroundColor='#e6fff3'; this.style.transform='translateY(-1px)'" onmouseout="this.style.backgroundColor='transparent'; this.style.transform='none'" style="background:none;border:none;color:var(--primary);font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;transition:all 0.2s;outline:none;">
                 <i class="fa-solid fa-plus-circle" style="font-size:13px;"></i> Create Group
             </button>
@@ -1548,19 +1641,6 @@ if (keys.length > 0) {
                 </div>
             </div>
 
-            <!-- GROUP PLAN / CONTENT SECTION -->
-            <div style="background:white;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px;">
-                <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#f0fdf4;">
-                    <span style="font-size:16px;background:#dcfce7;color:#15803d;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-file-lines"></i></span>
-                    <div style="text-align:left;">
-                        <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">Group Constitution & Plan</span>
-                    </div>
-                </div>
-                <div style="padding:14px 16px;font-size:12px;color:#475569;line-height:1.6;">
-                    ${this.renderGroupPlan(g)}
-                </div>
-            </div>
-
             <!-- ACTION BUTTONS GRID -->
             <div style="display:flex;flex-direction:column;gap:12px;">
                 <div style="background:white;border-radius:12px;box-shadow:var(--shadow-sm);border:1px solid #e2e8f0;overflow:hidden;">
@@ -1631,6 +1711,10 @@ if (keys.length > 0) {
                         <button class="action-btn" onclick="app.openGroupTerminateModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:16px;margin-bottom:2px;">❌</span>
                             <span style="font-size:10px;font-weight:600;">Terminate</span>
+                        </button>
+                        <button class="action-btn" onclick="app.openGroupConstitutionModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
+                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📜</span>
+                            <span style="font-size:10px;font-weight:600;">Constitution</span>
                         </button>
                     </div>
                 </div>
@@ -2427,6 +2511,23 @@ if (keys.length > 0) {
             <button class="m-submit-btn" onclick="app.closeModal()">Finish</button>
         </div>`;
         this.updateModalContent('Status Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #10b981, #059669)');
+    },
+
+    openGroupConstitutionModal(groupNameEncoded) {
+        document.getElementById('modalOverlay').classList.add('open');
+        const groupName = decodeURIComponent(groupNameEncoded);
+        const groups = this.data.userGroups || [];
+        const g = groups.find(item => item.groupName === groupName);
+        if (!g) return;
+
+        const html = `
+        <div class="m-info-banner blue" style="margin-bottom:14px;"><i class="fa-solid fa-file-lines"></i><span>Group Constitution & Plan for <b>${groupName}</b>.</span></div>
+        <div style="font-size:12px;color:#475569;line-height:1.6;">
+            ${this.renderGroupPlan(g)}
+        </div>
+        `;
+
+        this.updateModalContent('Group Constitution & Plan', html, null, 'fa-file-lines', 'linear-gradient(135deg, #0c8f44, #34d399)');
     },
 
     openGroupTerminateModal(groupName) {
@@ -3479,24 +3580,41 @@ function moveIndicator(idx, total) {
     document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
 }
 
+window.app = app;
+
 document.addEventListener('DOMContentLoaded', () => app.init());
 
-window.deleteInboxMessage = async function(id) {
-    if (!window.app || !id) return;
+window.deleteInboxMessage = async function(id, index) {
+    if (!window.app) return;
+    if (!id && index === undefined) return;
     try {
         const res = await fetch('/api/inbox/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
+            body: JSON.stringify({ id, index })
         });
         const data = await res.json();
         if (data.success && window.app.data) {
-            window.app.data.user.inbox = (window.app.data.user.inbox || []).filter(m => m.id !== id);
+            if (id) {
+                window.app.data.user.inbox = (window.app.data.user.inbox || []).filter(m => m.id !== id);
+            } else if (index !== undefined) {
+                const arr = window.app.data.user.inbox || [];
+                arr.splice(index, 1);
+                window.app.data.user.inbox = arr;
+            }
             window.app.openInbox();
         }
     } catch (err) {
         console.error('Failed to delete message:', err);
     }
+};
+
+window.deleteLocalMessage = function(arrayName, index) {
+    if (!window.app || !window.app.data || !window.app.data[arrayName]) return;
+    setTimeout(() => {
+        window.app.data[arrayName].splice(index, 1);
+        window.app.openInbox();
+    }, 300);
 };
 </script>
 </body>

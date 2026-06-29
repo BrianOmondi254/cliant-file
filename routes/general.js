@@ -1912,7 +1912,7 @@ router.get("/group/:groupName", (req, res) => {
   const group = allGroups.find(g => g.groupName === groupName);
 
   if (!group) {
-    return res.render("group-details", { group: null, userRole: null, currentUserPhone: userPhone });
+    return res.redirect("/general");
   }
 
   // Determine logged-in user's role in this group

@@ -1054,8 +1054,8 @@
         }
 
         function downloadConstitution() {
-            const groupName  = <%- JSON.stringify(group.groupName || "Group") %>;
-            const updatedDate = <%- JSON.stringify(group.principlesSetAt ? new Date(group.principlesSetAt).toLocaleString() : (group.createdAt ? new Date(group.createdAt).toLocaleString() : "N/A")) %>;
+            const groupName  = <%- JSON.stringify(group?.groupName || "Group") %>;
+            const updatedDate = <%- JSON.stringify(group?.principlesSetAt ? new Date(group.principlesSetAt).toLocaleString() : (group?.createdAt ? new Date(group.createdAt).toLocaleString() : "N/A")) %>;
             const downloadedAt = new Date().toLocaleString();
             let content = `========================================================\n   ${groupName.toUpperCase()} - OFFICIAL CONSTITUTION\n   Last Updated: ${updatedDate}\n========================================================\n\n`;
             const categoryDivs = document.querySelectorAll('#constitutionContent > div.constitution-content > div');
