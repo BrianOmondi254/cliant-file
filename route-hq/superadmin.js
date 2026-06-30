@@ -129,4 +129,25 @@ router.post("/login", async (req, res) => {
   });
 });
 
+router.get("/contact", async (req, res) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) {
+      return res.json({ status: "OK", contact: null });
+    }
+    const superAdmin = await SuperAdmin.findOne({}, { phoneNumber: 1, _id: 0 }).lean();
+    if (!superAdmin) {
+      return res.json({ status: "OK", contact: null });
+    }
+    const phone = superAdmin.phoneNumber;
+    let formatted = phone;
+    if (phone && phone.length === 9 && !phone.startsWith("0")) {
+      formatted = "0" + phone;
+    }
+    return res.json({ status: "OK", contact: formatted });
+  } catch (err) {
+    return res.json({ status: "OK", contact: null });
+  }
+});
+
 module.exports = router;

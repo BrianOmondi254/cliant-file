@@ -640,6 +640,7 @@ const app = {
         constitutionKeys: <%- JSON.stringify(typeof constitutionKeys !== 'undefined' ? constitutionKeys : []) %>,
         groupMessages: <%- JSON.stringify(typeof groupMessages !== 'undefined' ? groupMessages : []) %>,
         pendingAdminPasskey: <%- JSON.stringify(typeof pendingAdminPasskey !== 'undefined' ? pendingAdminPasskey : null) %>,
+        pendingOfficerMessage: <%- JSON.stringify(typeof pendingOfficerMessage !== 'undefined' ? pendingOfficerMessage : null) %>,
         isAgent: <%- JSON.stringify(showAgent) %>,
         hasAgentPin: <%- JSON.stringify(hasAgentPin) %>,
         hasPersonalPin: <%- JSON.stringify(typeof hasPersonalPin !== 'undefined' ? hasPersonalPin : false) %>,
@@ -679,17 +680,31 @@ const app = {
         this.updateBadge();
         this.setupPhoneListeners();
         
-        // Check for pending admin passkey
-        const pending = this.data.pendingAdminPasskey;
-        if (pending && !pending.verified) {
-            setTimeout(() => {
-                this.showToast('You have a pending admin passkey. Open inbox to enter it.', 'success');
-                this.updateBadge();
-            }, 1500);
-        } else if (pending && pending.verified) {
-            setTimeout(() => {
-                this.showAdminPinModal();
-            }, 800);
+        // Check for pending regional officer message (server-side)
+        const serverOfficerMsg = this.data.pendingOfficerMessage;
+        if (serverOfficerMsg && serverOfficerMsg.phone) {
+            const now = Date.now();
+            if (now - (serverOfficerMsg.timestamp || 0) < 86400000) {
+                setTimeout(() => {
+                    this.showToast('📬 You have a Regional Officer appointment. Tap the bell icon to view.', 'info');
+                    this.updateBadge();
+                }, 1500);
+            }
+        }
+
+        // Check for regional officer appointment message in localStorage
+        const storedOfficerMsg = localStorage.getItem("regionalOfficerMessage");
+        if (storedOfficerMsg) {
+            try {
+                const msg = JSON.parse(storedOfficerMsg);
+                const now = Date.now();
+                if (now - msg.timestamp < 86400000) {
+                    setTimeout(() => {
+                        this.showToast('📬 You have a Regional Officer message. Tap the bell icon to view.', 'info');
+                        this.updateBadge();
+                    }, 1500);
+                }
+            } catch (e) {}
         }
     },
 
@@ -1137,7 +1152,17 @@ const app = {
         const badgeHeader = document.getElementById('msgBadgeHeader');
         const keyCount    = (this.data.constitutionKeys && Array.isArray(this.data.constitutionKeys)) ? this.data.constitutionKeys.length : 0;
         const inboxCount  = (this.data.user && this.data.user.inbox && Array.isArray(this.data.user.inbox)) ? this.data.user.inbox.filter(m => m.unread).length : 0;
-        const total       = (this.data.unread || 0) + keyCount + inboxCount;
+        let officerCount  = 0;
+        // Also count server-side pending officer message
+        if (this.data.pendingOfficerMessage) officerCount = 1;
+        try {
+            const stored = localStorage.getItem("regionalOfficerMessage");
+            if (stored) {
+                const msg = JSON.parse(stored);
+                if (Date.now() - msg.timestamp < 86400000) officerCount = Math.max(officerCount, 1);
+            }
+        } catch (e) {}
+        const total       = (this.data.unread || 0) + keyCount + inboxCount + officerCount;
         if (badge)       { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
     },
@@ -1150,6 +1175,74 @@ const app = {
         let html = '';
 
         let allMessages = [];
+
+        const serverMsg = this.data.pendingOfficerMessage;
+        const stored = localStorage.getItem("regionalOfficerMessage");
+        const pendingPhone = localStorage.getItem("pendingAdminPhone");
+
+        if (serverMsg) {
+            allMessages.push({
+                _source: 'regionalOfficerMessage',
+                title: 'Regional Officer Appointment',
+                contentHtml: `
+                    <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                        You have been appointed as <strong>Regional Officer</strong>.<br><br>
+                        Department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong><br>
+                        Please contact the Super Admin for your login details to create your PIN.
+                    </div>
+                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
+                `,
+                date: new Date(serverMsg.timestamp || Date.now()),
+                icon: 'fa-user-tie',
+                iconColor: '#1e4080',
+                bgColor: '#eff6ff',
+                borderColor: '#bfdbfe',
+                titleColor: '#1e40af'
+            });
+        } else if (stored) {
+            try {
+                const msg = JSON.parse(stored);
+                const now = Date.now();
+                if (now - msg.timestamp < 86400000) {
+                    allMessages.push({
+                        _source: 'regionalOfficerMessage',
+                        title: 'Regional Officer Appointment',
+                        contentHtml: `
+                            <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                                You have been appointed as <strong>Regional Officer</strong>.<br><br>
+                                Department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
+                                Please contact the Super Admin for your login details to create your PIN.
+                            </div>
+                            <button onclick="localStorage.removeItem('regionalOfficerMessage'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
+                        `,
+                        date: new Date(msg.timestamp),
+                        icon: 'fa-user-tie',
+                        iconColor: '#1e4080',
+                        bgColor: '#eff6ff',
+                        borderColor: '#bfdbfe',
+                        titleColor: '#1e40af'
+                    });
+                }
+            } catch (e) {}
+        } else if (pendingPhone) {
+            allMessages.push({
+                _source: 'regionalOfficerMessage',
+                title: 'Regional Officer Appointment',
+                contentHtml: `
+                    <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                        You have been appointed as <strong>Regional Officer</strong>.<br><br>
+                        Please contact the Super Admin for your login details to create your PIN.
+                    </div>
+                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue</button>
+                `,
+                date: new Date(),
+                icon: 'fa-user-tie',
+                iconColor: '#1e4080',
+                bgColor: '#eff6ff',
+                borderColor: '#bfdbfe',
+                titleColor: '#1e40af'
+            });
+        }
 
         groupMsgs.forEach((m, idx) => {
             allMessages.push({

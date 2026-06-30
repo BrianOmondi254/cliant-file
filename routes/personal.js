@@ -72,6 +72,18 @@ const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
 
+const pendingOfficerMessagesFile = path.join(__dirname, "../pending-officer-messages.json");
+
+const readPendingMessages = () => {
+  try {
+    if (fs.existsSync(pendingOfficerMessagesFile)) {
+      const raw = fs.readFileSync(pendingOfficerMessagesFile, "utf8").trim();
+      return raw ? JSON.parse(raw) : {};
+    }
+  } catch (e) {}
+  return {};
+};
+
 const norm = (p) => {
   if (!p) return "";
   let s = String(p).trim();
@@ -618,6 +630,20 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
       console.error("Error finding user in DB for PIN check:", e);
     }
 
+     // Check server-side Map first, then fallback to persisted file
+     let pendingOfficerMessage = null;
+     if (req.session.user && req.session.user.phoneNumber) {
+       const normalizedPhone = norm(req.session.user.phoneNumber);
+       if (req.app.locals.pendingOfficerMessages) {
+         pendingOfficerMessage = req.app.locals.pendingOfficerMessages.get(normalizedPhone) || null;
+       }
+       // Fallback to persisted file if not in memory
+       if (!pendingOfficerMessage) {
+         const allMessages = readPendingMessages();
+         pendingOfficerMessage = allMessages[normalizedPhone] || null;
+       }
+     }
+
     res.render('cliant', {
       user: req.session.user,
       showAgent,
@@ -635,7 +661,8 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
       constitutionKeys, // Pass keys to view
       groupMessages, // Pass user's group messages to inbox
       userGroups: activeUserGroups,
-      normalizedPhone
+      normalizedPhone,
+      pendingOfficerMessage
     });
   } catch (err) {
     console.error(err);

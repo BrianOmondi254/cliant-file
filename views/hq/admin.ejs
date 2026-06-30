@@ -426,17 +426,47 @@
         <div class="dept-body"><p class="dept-name">Human Resources</p></div>
       </div>
     </div>
-    <div id="phone-input-section" class="hidden" style="margin-top: 40px;">
-      <div class="page-header">
-        <p class="page-eyebrow">Create Admin Account</p>
-        <h1 class="page-heading">Enter Phone Number</h1>
-        <p class="page-sub">Provide a phone number for the department head</p>
+    <div id="phone-input-section" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="closeAdminPopup()"></div>
+      <div style="position:relative;background:white;border-radius:var(--radius-lg);padding:36px 32px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);">
+        <button onclick="closeAdminPopup()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
+        <div style="margin-bottom:24px;">
+          <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Create Admin Account</p>
+          <h2 style="font-size:20px;font-weight:600;color:var(--gray-900);margin-bottom:6px;">Enter Phone Number</h2>
+          <p style="font-size:14px;color:var(--gray-600);">Provide a phone number for the department head</p>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="font-size:12px;font-weight:500;color:var(--gray-700);display:block;margin-bottom:6px;">Phone number</label>
+          <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="admin-phone" style="font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 12px;width:100%;outline:none;">
+          <p id="phone-status" style="font-size:12px;margin-top:6px;min-height:16px;"></p>
+        </div>
+        <button class="btn btn-primary" id="create-admin-submit" style="width:100%;padding:10px;font-size:14px;" onclick="saveMessageAndGo()">Next: Create PIN</button>
+        <div id="message-note" class="hidden" style="margin-top:24px;padding:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);max-width:440px;margin-left:auto;margin-right:auto;text-align:center;">
+          <div style="width:44px;height:44px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;">✅</div>
+          <p style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;">Initiation Successful</p>
+          <p style="font-size:14px;color:#4b5563;line-height:1.6;margin-bottom:6px;">You have successfully initiated the creation process of <strong>Regional Officer</strong>.</p>
+          <p style="font-size:14px;color:#4b5563;line-height:1.6;margin-bottom:18px;">Message sent to <strong id="msg-phone" style="color:#1e4080;"></strong> <strong id="msg-name" style="color:#1e4080;"></strong> for him/her to create PIN.</p>
+          <button class="btn btn-primary" onclick="goToHq()" style="width:100%;max-width:200px;">Continue</button>
+        </div>
       </div>
-      <div class="field-group" style="max-width: 400px;">
-        <label style="font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:4px;">Phone number</label>
-        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="admin-phone" style="font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 12px;width:100%;outline:none;">
+    </div>
+
+    <div id="pin-input-section" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="closePinPopup()"></div>
+      <div style="position:relative;background:white;border-radius:var(--radius-lg);padding:36px 32px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);">
+        <button onclick="closePinPopup()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
+        <div style="margin-bottom:24px;">
+          <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Create Admin Account</p>
+          <h2 style="font-size:20px;font-weight:600;color:var(--gray-900);margin-bottom:6px;">Create PIN</h2>
+          <p id="pin-user-info" style="font-size:14px;color:var(--gray-600);"></p>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="font-size:12px;font-weight:500;color:var(--gray-700);display:block;margin-bottom:6px;">Admin PIN</label>
+          <input class="field-input" type="password" placeholder="Enter a 4-6 digit PIN" id="admin-pin" inputmode="numeric" maxlength="6" style="font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 12px;width:100%;outline:none;">
+        </div>
+        <button class="btn btn-primary" id="create-pin-submit" style="width:100%;padding:10px;font-size:14px;">Submit & Create Admin</button>
+        <p id="pin-status" style="font-size:12px;margin-top:10px;min-height:16px;text-align:center;"></p>
       </div>
-      <button class="btn btn-primary" id="create-admin-submit" style="margin-top: 16px;">Create Admin</button>
     </div>
   </div>
 
@@ -491,19 +521,19 @@
     }
   };
 
-document.getElementById("create-dept-btn").onclick = () => {
+  document.getElementById("create-dept-btn").onclick = () => {
     document.getElementById("create-dept-section").classList.remove("hidden");
     document.getElementById("list-dept-section").classList.add("hidden");
     document.getElementById("admin-options").classList.add("hidden");
-    document.getElementById("phone-input-section").classList.add("hidden");
+    closeAdminPopup();
   };
-  
+
   document.getElementById("list-dept-btn").onclick = async () => {
     document.getElementById("create-dept-section").classList.add("hidden");
     document.getElementById("list-dept-section").classList.remove("hidden");
     document.getElementById("admin-options").classList.add("hidden");
-    document.getElementById("phone-input-section").classList.add("hidden");
-    
+    closeAdminPopup();
+
     const listEl = document.getElementById("departments-list");
     listEl.innerHTML = '<p style="color: var(--gray-600);">Loading departments...</p>';
     try {
@@ -534,33 +564,176 @@ document.getElementById("create-dept-btn").onclick = () => {
   document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
     card.onclick = () => {
       selectedDept = card.getAttribute("data-dept");
-      document.getElementById("phone-input-section").classList.remove("hidden");
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      openAdminPopup();
     };
   });
 
-  document.getElementById("create-admin-submit").onclick = async () => {
+  function openAdminPopup() {
+    const popup = document.getElementById("phone-input-section");
+    popup.classList.remove("hidden");
+  }
+
+  function closeAdminPopup() {
+    const popup = document.getElementById("phone-input-section");
+    popup.classList.add("hidden");
+  }
+
+  let verifiedName = "";
+
+  async function saveMessageAndGo() {
     const phone = document.getElementById("admin-phone").value.trim();
-    if (!phone) return alert("Enter a phone number");
-    if (!selectedDept) return alert("Select a department first");
-    
-    const res = await fetch("/hq/admin/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ department: selectedDept, phone })
+    if (!phone) return;
+
+    const formattedPhone = phone.startsWith("0") ? phone : "0" + phone;
+
+    localStorage.setItem("regionalOfficerMessage", JSON.stringify({
+      phone: formattedPhone,
+      name: verifiedName || "",
+      dept: selectedDept || "",
+      timestamp: Date.now()
+    }));
+
+    if (phone) localStorage.setItem("pendingAdminPhone", phone);
+    if (verifiedName) localStorage.setItem("pendingAdminName", verifiedName);
+    if (selectedDept) localStorage.setItem("pendingAdminDept", selectedDept);
+
+    try {
+      await fetch("/hq/admin/send-officer-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: formattedPhone, name: verifiedName || "", dept: selectedDept || "" })
+      });
+    } catch (e) {}
+
+    document.getElementById("msg-phone").textContent = formattedPhone;
+    document.getElementById("msg-name").textContent = verifiedName || "";
+
+    document.getElementById("create-admin-submit").classList.add("hidden");
+    document.getElementById("message-note").classList.remove("hidden");
+  }
+
+  function goToHq() {
+    document.getElementById("message-note").classList.add("hidden");
+    document.getElementById("create-admin-submit").classList.remove("hidden");
+    document.getElementById("admin-phone").value = "";
+    document.getElementById("phone-status").innerHTML = "";
+    document.getElementById("create-pin-submit").disabled = false;
+    document.getElementById("create-pin-submit").innerHTML = "Submit & Create Admin";
+    document.getElementById("pin-status").innerHTML = "";
+    verifiedName = "";
+    selectedDept = null;
+    document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
+      card.style.borderColor = "";
+      card.style.background = "";
     });
-    const data = await res.json();
-    if (data.status === "SUCCESS") {
-      alert("Admin account created successfully");
-      document.getElementById("phone-input-section").classList.add("hidden");
-      document.getElementById("admin-phone").value = "";
-      document.getElementById("create-dept-section").classList.add("hidden");
-      document.getElementById("admin-options").classList.remove("hidden");
-      selectedDept = null;
-    } else {
-      alert(data.message || "Failed to create admin");
+  }
+
+  function closePinPopup() {
+    const pinPopup = document.getElementById("pin-input-section");
+    pinPopup.classList.add("hidden");
+  }
+
+  document.getElementById("create-pin-submit").onclick = async () => {
+    const phone = document.getElementById("admin-phone").value.trim();
+    const pin = document.getElementById("admin-pin").value.trim();
+    const statusEl = document.getElementById("pin-status");
+    const submitBtn = document.getElementById("create-pin-submit");
+
+    if (!pin || pin.length < 4) {
+      statusEl.innerHTML = "<span style='color:var(--red-500);'>PIN must be at least 4 digits.</span>";
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="spin"></span> Creating Admin...`;
+    statusEl.innerHTML = "";
+
+    try {
+      const res = await fetch("/hq/admin/create-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, pin, department: selectedDept })
+      });
+      const data = await res.json();
+      if (data.status === "SUCCESS") {
+        statusEl.innerHTML = "<span style='color:var(--green-500);'>Admin account created successfully!</span>";
+        setTimeout(() => {
+          closePinPopup();
+          document.getElementById("admin-phone").value = "";
+          document.getElementById("phone-status").innerHTML = "";
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = "Submit & Create Admin";
+          document.getElementById("create-dept-section").classList.add("hidden");
+          document.getElementById("admin-options").classList.remove("hidden");
+          selectedDept = null;
+          verifiedName = "";
+        }, 1500);
+      } else {
+        statusEl.innerHTML = `<span style='color:var(--red-500);'>${data.message || 'Failed to create admin'}</span>`;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "Submit & Create Admin";
+      }
+    } catch (err) {
+      statusEl.innerHTML = "<span style='color:var(--red-500);'>Network error</span>";
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = "Submit & Create Admin";
     }
   };
+
+  let phoneCheckTimer;
+  document.getElementById("admin-phone").addEventListener("input", async (e) => {
+    const phone = e.target.value.trim();
+    const statusEl = document.getElementById("phone-status");
+    const submitBtn = document.getElementById("create-admin-submit");
+
+    clearTimeout(phoneCheckTimer);
+
+    if (phone.length < 7) {
+      statusEl.innerHTML = "";
+      submitBtn.disabled = true;
+      verifiedName = "";
+      return;
+    }
+
+    statusEl.innerHTML = "<span style='color:var(--gray-400);'>Checking...</span>";
+
+    phoneCheckTimer = setTimeout(async () => {
+      try {
+        const res = await fetch("/hq/admin/check-phone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+
+        if (data.status === "ALREADY_SUPERADMIN") {
+          statusEl.innerHTML = `<span style='color:var(--red-500);'>❌ ${data.message}</span>`;
+          submitBtn.disabled = true;
+          verifiedName = "";
+        } else if (data.status === "ALREADY_ADMIN") {
+          statusEl.innerHTML = `<span style='color:var(--red-500);'>❌ ${data.message}</span>`;
+          submitBtn.disabled = true;
+          verifiedName = "";
+        } else if (data.status === "NOT_REGISTERED") {
+          statusEl.innerHTML = `<span style='color:var(--red-500);'>❌ ${data.message}</span>`;
+          submitBtn.disabled = true;
+          verifiedName = "";
+        } else if (data.status === "VERIFIED") {
+          statusEl.innerHTML = `<span style='color:var(--green-500);'>✅ Verified: ${data.name}</span>`;
+          submitBtn.disabled = false;
+          verifiedName = data.name;
+        } else {
+          statusEl.innerHTML = `<span style='color:var(--gray-400);'>${data.message || ''}</span>`;
+          submitBtn.disabled = true;
+          verifiedName = "";
+        }
+      } catch (err) {
+        statusEl.innerHTML = "<span style='color:var(--gray-400);'>Verification error</span>";
+        submitBtn.disabled = true;
+        verifiedName = "";
+      }
+    }, 500);
+  });
 </script>
 
 </body>

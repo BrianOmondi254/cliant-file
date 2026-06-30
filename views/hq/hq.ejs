@@ -729,6 +729,51 @@
   </div>
 </div>
 
+<!-- ─── PENDING ADMIN CREATE MODAL ─── -->
+<div class="modal-wrap" id="pending-admin-overlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+        </svg>
+      </div>
+      <div class="modal-header-text">
+        <p class="modal-title">Create Admin PIN</p>
+        <p class="modal-subtitle">Set a secure PIN for the new admin</p>
+      </div>
+      <button class="modal-close" id="pending-admin-close">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="register-name-row" id="pending-admin-info-row" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="pending-admin-info"></span>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Phone number</label>
+        <input class="field-input" type="tel" id="pending-admin-phone" readonly style="background:#f3f4f6;color:#4b5563;">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Department</label>
+        <input class="field-input" type="text" id="pending-admin-dept" readonly style="background:#f3f4f6;color:#4b5563;">
+      </div>
+      <div class="field-group">
+        <label class="field-label">PIN</label>
+        <input class="field-input" type="password" placeholder="Enter PIN" id="pending-admin-pin">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Confirm PIN</label>
+        <input class="field-input" type="password" placeholder="Re-enter PIN" id="pending-admin-pin-confirm">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-full" id="pending-admin-submit"><span>Submit & Create Admin</span> <span class="spin hidden" id="pending-admin-spinner"></span></button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── LOGIN MODAL ─── -->
 <div class="modal-wrap" id="login-overlay">
   <div class="modal">
@@ -1123,9 +1168,10 @@
     } catch (e) {}
   }
 
-  document.addEventListener("DOMContentLoaded", initAuthButtons);
-
-  /* ─── Department navigation ─── */
+  document.addEventListener("DOMContentLoaded", () => {
+    initAuthButtons();
+    checkPendingAdmin();
+  });
   const sections = ['finance','relations','it','operations','compliance','hr'];
   sections.forEach(id => {
     const el = document.getElementById(id);
@@ -1144,6 +1190,104 @@
       }
     });
   });
+
+  /* ─── Pending Admin PIN Creation ─── */
+  const pendingAdminOverlay = document.getElementById("pending-admin-overlay");
+  const pendingAdminPhone = document.getElementById("pending-admin-phone");
+  const pendingAdminDept = document.getElementById("pending-admin-dept");
+  const pendingAdminPin = document.getElementById("pending-admin-pin");
+  const pendingAdminPinConfirm = document.getElementById("pending-admin-pin-confirm");
+  const pendingAdminSubmit = document.getElementById("pending-admin-submit");
+  const pendingAdminSpinner = document.getElementById("pending-admin-spinner");
+  const pendingAdminInfoRow = document.getElementById("pending-admin-info-row");
+  const pendingAdminInfo = document.getElementById("pending-admin-info");
+
+  function setPendingBtnSpinning(spinning) {
+    const textSpan = pendingAdminSubmit.querySelector ? pendingAdminSubmit.querySelector(":scope > span:first-child") : null;
+    if (spinning) {
+      pendingAdminSubmit.disabled = true;
+      if (textSpan) textSpan.style.display = "none";
+      pendingAdminSpinner.classList.remove("hidden");
+    } else {
+      pendingAdminSubmit.disabled = false;
+      if (textSpan) textSpan.style.display = "";
+      pendingAdminSpinner.classList.add("hidden");
+    }
+  }
+
+  function checkPendingAdmin() {
+    const phone = localStorage.getItem("pendingAdminPhone");
+    const dept = localStorage.getItem("pendingAdminDept");
+    const name = localStorage.getItem("pendingAdminName");
+
+    if (!phone) return;
+
+    pendingAdminPhone.value = phone;
+    pendingAdminDept.value = dept || "";
+    if (name) {
+      pendingAdminInfoRow.style.display = "flex";
+      pendingAdminInfo.textContent = `Creating admin for ${name}`;
+    }
+
+    pendingAdminOverlay.classList.add("open");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initAuthButtons();
+  });
+
+  document.getElementById("pending-admin-close").onclick = () => {
+    pendingAdminOverlay.classList.remove("open");
+    localStorage.removeItem("pendingAdminPhone");
+    localStorage.removeItem("pendingAdminDept");
+    localStorage.removeItem("pendingAdminName");
+  };
+
+  pendingAdminOverlay.addEventListener('click', e => {
+    if (e.target === pendingAdminOverlay) {
+      pendingAdminOverlay.classList.remove("open");
+      localStorage.removeItem("pendingAdminPhone");
+      localStorage.removeItem("pendingAdminDept");
+      localStorage.removeItem("pendingAdminName");
+    }
+  });
+
+  pendingAdminSubmit.onclick = async () => {
+    const phone = pendingAdminPhone.value.trim();
+    const dept = pendingAdminDept.value.trim();
+    const pin = pendingAdminPin.value.trim();
+    const confirm = pendingAdminPinConfirm.value.trim();
+
+    if (!pin || pin.length < 4) return alert("Enter a valid PIN (at least 4 digits)");
+    if (pin !== confirm) return alert("PINs do not match");
+
+    setPendingBtnSpinning(true);
+
+    try {
+      const res = await fetch("/hq/admin/create-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, pin, department: dept })
+      });
+      const data = await res.json();
+      setPendingBtnSpinning(false);
+
+      if (data.status === "SUCCESS") {
+        alert("Admin account created successfully!");
+        pendingAdminOverlay.classList.remove("open");
+        localStorage.removeItem("pendingAdminPhone");
+        localStorage.removeItem("pendingAdminDept");
+        localStorage.removeItem("pendingAdminName");
+        pendingAdminPin.value = "";
+        pendingAdminPinConfirm.value = "";
+      } else {
+        alert(data.message || "Failed to create admin");
+      }
+    } catch (err) {
+      setPendingBtnSpinning(false);
+      alert("Network error. Please try again.");
+    }
+  };
 </script>
 
 </body>

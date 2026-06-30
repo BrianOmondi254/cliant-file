@@ -1,9 +1,26 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const fs = require("fs");
+const path = require("path");
 const { ensureMongoReady, findUserInCounties, Admin, SuperAdmin } = require("../mongoose");
 const { processMessage } = require("../notification/notification");
 
 const router = express.Router();
+const pendingOfficerMessagesFile = path.join(__dirname, "../pending-officer-messages.json");
+
+const readPendingMessages = () => {
+  try {
+    if (fs.existsSync(pendingOfficerMessagesFile)) {
+      const raw = fs.readFileSync(pendingOfficerMessagesFile, "utf8").trim();
+      return raw ? JSON.parse(raw) : {};
+    }
+  } catch (e) {}
+  return {};
+};
+
+const writePendingMessages = (messages) => {
+  fs.writeFileSync(pendingOfficerMessagesFile, JSON.stringify(messages, null, 2));
+};
 
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.hqUser) {
@@ -57,6 +74,50 @@ router.post("/verify-phone", async (req, res) => {
   return res.json({
     status: "FOUND",
     name: `${user.FirstName} ${user.MiddleName || ""} ${user.LastName || ""}`.trim().toUpperCase()
+  });
+});
+
+router.post("/check-phone", async (req, res) => {
+  let { phone } = req.body;
+  if (!phone) {
+    return res.json({ status: "ERROR", message: "Phone number required." });
+  }
+  phone = phone.trim();
+
+  const normalised = norm(phone);
+
+  const [superAdmin, existingAdmin, countiesUser] = await Promise.all([
+    SuperAdmin.findOne({ phoneNumber: normalised }).lean(),
+    Admin.findOne({ phoneNumber: normalised }).lean(),
+    findUserInCounties(phone)
+  ]);
+
+  if (superAdmin) {
+    return res.json({
+      status: "ALREADY_SUPERADMIN",
+      message: "This phone is already registered as Super Admin."
+    });
+  }
+
+  if (existingAdmin) {
+    return res.json({
+      status: "ALREADY_ADMIN",
+      message: `This phone is already registered as Admin in ${existingAdmin.department}.`
+    });
+  }
+
+  if (!countiesUser) {
+    return res.json({
+      status: "NOT_REGISTERED",
+      message: "Phone not registered in TBank system."
+    });
+  }
+
+  const fullName = `${countiesUser.FirstName} ${countiesUser.MiddleName || ""} ${countiesUser.LastName || ""}`.trim().toUpperCase();
+
+  return res.json({
+    status: "VERIFIED",
+    name: fullName
   });
 });
 
@@ -174,6 +235,7 @@ router.post("/create-pin", async (req, res) => {
     name: fullName,
     department,
     pin: hashedPin,
+    status: "active",
     createdAt: new Date()
   });
 
@@ -282,6 +344,37 @@ router.post("/create", async (req, res) => {
   });
 
   return res.json({ status: "SUCCESS", message: "Admin account created successfully." });
+});
+
+router.post("/send-officer-message", requireAuth, (req, res) => {
+  const { phone, name, dept } = req.body;
+  if (!phone) return res.json({ status: "ERROR", message: "Phone required." });
+
+  const normalizedPhone = norm(phone);
+
+  // Store in memory (for current session)
+  if (!req.app.locals.pendingOfficerMessages) {
+    req.app.locals.pendingOfficerMessages = new Map();
+  }
+
+  req.app.locals.pendingOfficerMessages.set(normalizedPhone, {
+    phone: normalizedPhone,
+    name: name || "",
+    dept: dept || "",
+    timestamp: Date.now()
+  });
+
+  // Also persist to file for server restarts
+  const allMessages = readPendingMessages();
+  allMessages[normalizedPhone] = {
+    phone: normalizedPhone,
+    name: name || "",
+    dept: dept || "",
+    timestamp: Date.now()
+  };
+  writePendingMessages(allMessages);
+
+  return res.json({ status: "SUCCESS" });
 });
 
 module.exports = router;
