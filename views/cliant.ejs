@@ -671,8 +671,7 @@ const app = {
     /* ─── INIT ─── */
     init() {
         if (window.location.protocol === 'file:') {
-            alert("Redirecting to http://localhost:3000/personal...");
-            window.location.href = "http://localhost:3000/personal";
+            window.location.href = "/personal";
             return;
         }
         this.fetchWalletData();

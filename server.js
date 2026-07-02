@@ -78,7 +78,7 @@ app.use((req, res, next) => {
 /* 🛡️ Session middleware (required for login-protected routes) */
 app.use(
   session({
-    secret: "generalAccountSecret",
+    secret: process.env.SESSION_SECRET || "generalAccountSecret",
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
