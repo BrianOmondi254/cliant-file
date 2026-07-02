@@ -280,23 +280,19 @@ const PendingOfficerMessageSchema = new mongoose.Schema({
 const PendingOfficerMessage = mongoose.models.PendingOfficerMessage || mongoose.model('PendingOfficerMessage', PendingOfficerMessageSchema, 'pendingOfficerMessages');
 
 const savePendingOfficerMessage = async ({ phone, name, dept, processorName, processorPhone, timestamp }) => {
-  if (mongoose.connection.readyState !== 1) return null;
-  try {
-    const msg = new PendingOfficerMessage({ 
-      phone: normalizePhone(phone), 
-      name, 
-      dept, 
-      processorName: processorName || "",
-      processorPhone: processorPhone || "",
-      timestamp: timestamp || Date.now() 
-    });
-    await msg.save();
-    return msg;
-  } catch (e) {
-    console.error('[messages] savePendingOfficerMessage error:', e.message);
-    return null;
-  }
-};
+    if (mongoose.connection.readyState !== 1) return null;
+    try {
+      const result = await PendingOfficerMessage.updateOne(
+        { phone: normalizePhone(phone) },
+        { $set: { name, dept, processorName: processorName || "", processorPhone: processorPhone || "", timestamp: timestamp || Date.now() } },
+        { upsert: true }
+      );
+      return { ...result, nModified: result.nModified || 1 };
+    } catch (e) {
+      console.error('[messages] savePendingOfficerMessage error:', e.message);
+      return null;
+    }
+  };
 
 const getPendingOfficerMessageByPhone = async (phone) => {
   if (mongoose.connection.readyState !== 1) return null;

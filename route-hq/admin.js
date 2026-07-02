@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const { ensureMongoReady, findUserInCounties, Admin, SuperAdmin, savePendingOfficerMessage } = require("../mongoose");
+const { ensureMongoReady, findUserInCounties, Admin, SuperAdmin, savePendingOfficerMessage, deletePendingOfficerMessage } = require("../mongoose");
 const { processMessage } = require("../notification/notification");
 
 const router = express.Router();
@@ -223,6 +223,8 @@ router.post("/create-pin", async (req, res) => {
   });
 
   await admin.save();
+
+  try { await deletePendingOfficerMessage(phone); } catch (e) { console.error("[admin] deletePendingOfficerMessage error:", e.message); }
 
   return res.json({
     status: "SUCCESS",

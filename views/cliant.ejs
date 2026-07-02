@@ -1190,7 +1190,7 @@ const app = {
                         Department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong><br>
                         Please contact the Super Admin for your login details to create your PIN.
                     </div>
-                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
+                            <button onclick="localStorage.removeItem('regionalOfficerMessage'); localStorage.removeItem('pendingAdminPhone'); localStorage.removeItem('pendingAdminName'); localStorage.removeItem('pendingAdminDept'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
                 `,
                 date: new Date(serverMsg.timestamp || Date.now()),
                 icon: 'fa-user-tie',
@@ -1213,7 +1213,7 @@ const app = {
                                 Department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
                                 Please contact the Super Admin for your login details to create your PIN.
                             </div>
-                            <button onclick="localStorage.removeItem('regionalOfficerMessage'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
+                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); localStorage.removeItem('pendingAdminPhone'); localStorage.removeItem('pendingAdminName'); localStorage.removeItem('pendingAdminDept'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
                         `,
                         date: new Date(msg.timestamp),
                         icon: 'fa-user-tie',
@@ -1233,7 +1233,7 @@ const app = {
                         You have been appointed as <strong>Regional Officer</strong>.<br><br>
                         Please contact the Super Admin for your login details to create your PIN.
                     </div>
-                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue</button>
+                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); localStorage.removeItem('pendingAdminPhone'); localStorage.removeItem('pendingAdminName'); localStorage.removeItem('pendingAdminDept'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue</button>
                 `,
                 date: new Date(),
                 icon: 'fa-user-tie',
