@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
-const FileStore = require("session-file-store")(session);
 const { connectDB } = require("./mongoose");
 
 /* ================= ROUTE IMPORTS ================= */
@@ -77,15 +76,12 @@ app.use((req, res, next) => {
 });
 
 /* 🛡️ Session middleware (required for login-protected routes) */
-const fs = require("fs");
-fs.mkdirSync("./sessions", { recursive: true });
 app.use(
   session({
-    store: new FileStore({ path: "./sessions", ttl: 86400 }),
     secret: "generalAccountSecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // Session expires after 24 hours
+    cookie: { maxAge: 24 * 60 * 60 * 1000 }
   })
 );
 

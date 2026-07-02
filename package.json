@@ -26,8 +26,7 @@
     "mongoose": "^9.6.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
-    "pdfkit": "^0.18.0",
-    "session-file-store": "^1.5.0"
+    "pdfkit": "^0.18.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0",
