@@ -268,6 +268,58 @@ const getMessagesForUser = async (phone) => {
   }
 };
 
+const PendingOfficerMessageSchema = new mongoose.Schema({
+  phone: { type: String, required: true, unique: true, index: true },
+  name: { type: String, default: "" },
+  dept: { type: String, default: "" },
+  processorName: { type: String, default: "" },
+  processorPhone: { type: String, default: "" },
+  timestamp: { type: Number, required: true }
+}, { timestamps: true });
+
+const PendingOfficerMessage = mongoose.models.PendingOfficerMessage || mongoose.model('PendingOfficerMessage', PendingOfficerMessageSchema, 'pendingOfficerMessages');
+
+const savePendingOfficerMessage = async ({ phone, name, dept, processorName, processorPhone, timestamp }) => {
+  if (mongoose.connection.readyState !== 1) return null;
+  try {
+    const msg = new PendingOfficerMessage({ 
+      phone: normalizePhone(phone), 
+      name, 
+      dept, 
+      processorName: processorName || "",
+      processorPhone: processorPhone || "",
+      timestamp: timestamp || Date.now() 
+    });
+    await msg.save();
+    return msg;
+  } catch (e) {
+    console.error('[messages] savePendingOfficerMessage error:', e.message);
+    return null;
+  }
+};
+
+const getPendingOfficerMessageByPhone = async (phone) => {
+  if (mongoose.connection.readyState !== 1) return null;
+  try {
+    const msg = await PendingOfficerMessage.findOne({ phone: normalizePhone(phone) }).lean();
+    return msg;
+  } catch (e) {
+    console.error('[messages] getPendingOfficerMessageByPhone error:', e.message);
+    return null;
+  }
+};
+
+const deletePendingOfficerMessage = async (phone) => {
+  if (mongoose.connection.readyState !== 1) return false;
+  try {
+    await PendingOfficerMessage.deleteOne({ phone: normalizePhone(phone) });
+    return true;
+  } catch (e) {
+    console.error('[messages] deletePendingOfficerMessage error:', e.message);
+    return false;
+  }
+};
+
 /**
  * Save tbank settings to MongoDB
  */
@@ -1475,6 +1527,10 @@ module.exports = {
   adminConn,
   saveMessageToMongo,
   getMessagesForUser,
+  PendingOfficerMessage,
+  savePendingOfficerMessage,
+  getPendingOfficerMessageByPhone,
+  deletePendingOfficerMessage,
   saveUserToMongoDB,
   findUserByPhone,
   findUserInCounties,

@@ -1,26 +1,9 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const fs = require("fs");
-const path = require("path");
-const { ensureMongoReady, findUserInCounties, Admin, SuperAdmin } = require("../mongoose");
+const { ensureMongoReady, findUserInCounties, Admin, SuperAdmin, savePendingOfficerMessage } = require("../mongoose");
 const { processMessage } = require("../notification/notification");
 
 const router = express.Router();
-const pendingOfficerMessagesFile = path.join(__dirname, "../pending-officer-messages.json");
-
-const readPendingMessages = () => {
-  try {
-    if (fs.existsSync(pendingOfficerMessagesFile)) {
-      const raw = fs.readFileSync(pendingOfficerMessagesFile, "utf8").trim();
-      return raw ? JSON.parse(raw) : {};
-    }
-  } catch (e) {}
-  return {};
-};
-
-const writePendingMessages = (messages) => {
-  fs.writeFileSync(pendingOfficerMessagesFile, JSON.stringify(messages, null, 2));
-};
 
 const requireAuth = (req, res, next) => {
   if (!req.session || !req.session.hqUser) {
@@ -30,7 +13,7 @@ const requireAuth = (req, res, next) => {
 };
 
 router.get("/", requireAuth, async (req, res) => {
-  res.render("hq/admin");
+  res.render("hq/admin", { hqUser: req.session.hqUser || null });
 });
 
 const norm = (p) => {
@@ -346,35 +329,31 @@ router.post("/create", async (req, res) => {
   return res.json({ status: "SUCCESS", message: "Admin account created successfully." });
 });
 
-router.post("/send-officer-message", requireAuth, (req, res) => {
+router.post("/send-officer-message", requireAuth, async (req, res) => {
   const { phone, name, dept } = req.body;
   if (!phone) return res.json({ status: "ERROR", message: "Phone required." });
 
-  const normalizedPhone = norm(phone);
+  const hqUser = req.session.hqUser || {};
+  const processorName = hqUser.name || "";
+  const processorPhone = hqUser.phoneNumber || "";
 
-  // Store in memory (for current session)
-  if (!req.app.locals.pendingOfficerMessages) {
-    req.app.locals.pendingOfficerMessages = new Map();
+  try {
+    const result = await savePendingOfficerMessage({
+      phone,
+      name: name || "",
+      dept: dept || "",
+      processorName,
+      processorPhone,
+      timestamp: Date.now()
+    });
+    if (!result) {
+      return res.json({ status: "ERROR", message: "Database unavailable. Please try again." });
+    }
+    return res.json({ status: "SUCCESS" });
+  } catch (e) {
+    console.error("[admin] savePendingOfficerMessage error:", e.message);
+    return res.json({ status: "ERROR", message: "Failed to save officer message." });
   }
-
-  req.app.locals.pendingOfficerMessages.set(normalizedPhone, {
-    phone: normalizedPhone,
-    name: name || "",
-    dept: dept || "",
-    timestamp: Date.now()
-  });
-
-  // Also persist to file for server restarts
-  const allMessages = readPendingMessages();
-  allMessages[normalizedPhone] = {
-    phone: normalizedPhone,
-    name: name || "",
-    dept: dept || "",
-    timestamp: Date.now()
-  };
-  writePendingMessages(allMessages);
-
-  return res.json({ status: "SUCCESS" });
 });
 
 module.exports = router;

@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady, getMessagesForUser } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady, getMessagesForUser, getPendingOfficerMessageByPhone } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -70,18 +70,6 @@ const readJSON = (file, fallback = []) => {
 
 const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
-};
-
-const pendingOfficerMessagesFile = path.join(__dirname, "../pending-officer-messages.json");
-
-const readPendingMessages = () => {
-  try {
-    if (fs.existsSync(pendingOfficerMessagesFile)) {
-      const raw = fs.readFileSync(pendingOfficerMessagesFile, "utf8").trim();
-      return raw ? JSON.parse(raw) : {};
-    }
-  } catch (e) {}
-  return {};
 };
 
 const norm = (p) => {
@@ -615,8 +603,6 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
 
     const generalExists = userGroups.length > 0;
 
-    const activeUserGroups = userGroups.filter(g => parseInt(g.phase || 0) === 3);
-
     let hasPersonalPin = false;
     try {
       const dbUser = await findUserByPhone(phone);
@@ -630,40 +616,31 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
       console.error("Error finding user in DB for PIN check:", e);
     }
 
-     // Check server-side Map first, then fallback to persisted file
-     let pendingOfficerMessage = null;
-     if (req.session.user && req.session.user.phoneNumber) {
-       const normalizedPhone = norm(req.session.user.phoneNumber);
-       if (req.app.locals.pendingOfficerMessages) {
-         pendingOfficerMessage = req.app.locals.pendingOfficerMessages.get(normalizedPhone) || null;
-       }
-       // Fallback to persisted file if not in memory
-       if (!pendingOfficerMessage) {
-         const allMessages = readPendingMessages();
-         pendingOfficerMessage = allMessages[normalizedPhone] || null;
-       }
-     }
+      let pendingOfficerMessage = null;
+      if (req.session.user && req.session.user.phoneNumber) {
+        pendingOfficerMessage = await getPendingOfficerMessageByPhone(req.session.user.phoneNumber);
+      }
 
-    res.render('cliant', {
-      user: req.session.user,
-      showAgent,
-      showDealer,
-      generalExists,
-      isTrustee, // Note: This might be true if ANY group has user as trustee
-      isOfficial,
-      isMember,
-      dealerIsVerified,
-      agentIsVerified,
-      personalIsVerified: req.session.personalVerified || false, // Pass verified status
-      hasAgentPin: true,
-      hasPersonalPin, // Pass hasPersonalPin to view
-      hasDealerPin: req.session.hasDealerPin || false,
-      constitutionKeys, // Pass keys to view
-      groupMessages, // Pass user's group messages to inbox
-      userGroups: activeUserGroups,
-      normalizedPhone,
-      pendingOfficerMessage
-    });
+res.render('cliant', {
+       user: req.session.user,
+       showAgent,
+       showDealer,
+       generalExists,
+       isTrustee, // Note: This might be true if ANY group has user as trustee
+       isOfficial,
+       isMember,
+       dealerIsVerified,
+       agentIsVerified,
+       personalIsVerified: req.session.personalVerified || false, // Pass verified status
+       hasAgentPin: true,
+       hasPersonalPin, // Pass hasPersonalPin to view
+       hasDealerPin: req.session.hasDealerPin || false,
+       constitutionKeys, // Pass keys to view
+       groupMessages, // Pass user's group messages to inbox
+       userGroups: userGroups,
+       normalizedPhone,
+       pendingOfficerMessage
+     });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error rendering the page");

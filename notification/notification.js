@@ -2,8 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const { saveMessageToMongo, ensureMongoReady } = require('../mongoose');
 
-const logFile = path.join(__dirname, 'sent-messages.json');
-
 /**
  * Normalizes phone numbers
  */
@@ -65,11 +63,9 @@ const getAllocatedOfficial = (ward, constituency) => {
 
 /**
  * Core function to process a message.
- * It logs it to a separate sent-messages.json file and MongoDB messages collection.
+ * Saves to MongoDB messages collection.
  */
 const processMessage = (groupName, message) => {
-  const allMessages = readJSON(logFile, []);
-  
   const msg = {
     groupName,
     to: message.to,
@@ -82,27 +78,13 @@ const processMessage = (groupName, message) => {
     createdAt: new Date().toISOString(),
   };
 
-  // Avoid identical duplicates in the logs
-  const isDup = allMessages.some(m => 
-    m.groupName === groupName &&
-    norm(m.to) === norm(msg.to) && 
-    m.content === msg.content
-  );
-
-  if (!isDup) {
-    allMessages.push(msg);
-    writeJSON(logFile, allMessages);
-  }
-
-  // Also save to MongoDB if available
   ensureMongoReady().then(ready => {
     if (ready) {
       saveMessageToMongo(msg).catch(e => console.error('[notification] MongoDB save error:', e.message));
     }
   }).catch(() => {});
-  
-  // Return message for potential immediate UI feedback
-  return msg;
+
+   return msg;
 };
 
 /**

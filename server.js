@@ -35,10 +35,6 @@ const complianceRoutes = require("./route-hq/compliance");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-if (!app.locals.pendingOfficerMessages) {
-  app.locals.pendingOfficerMessages = new Map();
-}
-
 /* ================= STATIC FILES FOR MOBILE ================= */
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
