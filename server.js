@@ -77,6 +77,8 @@ app.use((req, res, next) => {
 });
 
 /* 🛡️ Session middleware (required for login-protected routes) */
+const fs = require("fs");
+fs.mkdirSync("./sessions", { recursive: true });
 app.use(
   session({
     store: new FileStore({ path: "./sessions", ttl: 86400 }),
