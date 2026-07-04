@@ -1008,7 +1008,7 @@
             <div class="field">
               <label>M-Pesa Phone Number <span class="req">*</span></label>
               <div class="inp-wrap">
-                <input type="tel" id="stkPhone" placeholder="254XXXXXXXXX or 07XXXXXXXX" maxlength="12">
+                <input type="tel" id="stkPhone" placeholder="254XXXXXXXXX or 07XXXXXXXX" maxlength="12" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
               </div>
               <div class="field-hint">
                 <i class="fas fa-shield-halved"></i>
@@ -1467,8 +1467,8 @@
             <div class="inp-wrap">
               <input type="tel" id="t${idx}_phone"
                 ${isChair
-                  ? `value="${groupData.phone || groupData.chairpersonalphonenumber || ''}" readonly class="locked"`
-                  : `placeholder="07XXXXXXXX or 254XXXXXXXXX"`}
+                  ? `value="${groupData.phone || groupData.chairpersonalphonenumber || ''}" readonly class="locked" inputmode="numeric"`
+                  : `placeholder="07XXXXXXXX or 254XXXXXXXXX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"`}
                 maxlength="13">
               ${isChair ? '<i class="fas fa-lock lock-icon"></i>' : ''}
             </div>
@@ -1542,10 +1542,10 @@
         </div>
         <div class="pair">
           <div class="field" style="margin-bottom:0;">
-            <label>Phone <span class="opt">(optional)</span></label>
-            <div class="inp-wrap">
-              <input type="tel" id="${key}_phone" placeholder="07XXXXXXXX" maxlength="13">
-            </div>
+             <label>Phone <span class="opt">(optional)</span></label>
+             <div class="inp-wrap">
+               <input type="tel" id="${key}_phone" placeholder="07XXXXXXXX" maxlength="13" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+             </div>
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>National ID <span class="opt">(optional)</span></label>
@@ -1678,7 +1678,7 @@
               <div class="field" style="margin-bottom:0;">
                 <label>Phone <span class="req">*</span></label>
                 <div class="inp-wrap">
-                  <input type="tel" id="${key}_phone" placeholder="07XXXXXXXX">
+                  <input type="tel" id="${key}_phone" placeholder="07XXXXXXXX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 </div>
               </div>
               <div class="field" style="margin-bottom:0;">

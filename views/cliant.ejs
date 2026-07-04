@@ -1166,6 +1166,59 @@ const app = {
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
     },
 
+    submitOfficerPin(container) {
+        if (!container) return;
+        const pinInput = container.querySelector('.officer-pin-input');
+        const confirmInput = container.querySelector('.officer-pin-confirm');
+        const resultDiv = container.querySelector('.officer-pin-result');
+        const submitBtn = container.querySelector('.officer-pin-submit');
+        
+        if (!pinInput || !confirmInput || !resultDiv) return;
+        
+        const pin = pinInput.value.trim();
+        const confirm = confirmInput.value.trim();
+        
+        if (!pin || pin.length < 4) {
+            resultDiv.innerHTML = '<span style="color:#dc2626;font-size:11px;">PIN must be at least 4 digits.</span>';
+            return;
+        }
+        if (pin !== confirm) {
+            resultDiv.innerHTML = '<span style="color:#dc2626;font-size:11px;">PINs do not match.</span>';
+            return;
+        }
+        
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving...'; }
+        
+        fetch('/personal/set-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin })
+        })
+        .then(res => res.json().catch(() => ({})))
+        .then(data => {
+            if (data.success) {
+                resultDiv.innerHTML = '<span style="color:#16a34a;font-size:11px;">PIN created successfully! Redirecting...</span>';
+                localStorage.removeItem('regionalOfficerMessage');
+                localStorage.removeItem('pendingAdminPhone');
+                localStorage.removeItem('pendingAdminName');
+                localStorage.removeItem('pendingAdminDept');
+                this.data.pendingOfficerMessage = null;
+                this.updateBadge();
+                setTimeout(() => {
+                    this.closeModal();
+                    this.updateBadge();
+                }, 1500);
+            } else {
+                resultDiv.innerHTML = `<span style="color:#dc2626;font-size:11px;">${data.message || 'Failed to save PIN.'}</span>`;
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
+            }
+        })
+        .catch(() => {
+            resultDiv.innerHTML = '<span style="color:#dc2626;font-size:11px;">Network error.</span>';
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
+        });
+    },
+
     /* ─── INBOX ─── */
     openInbox() {
         const keys      = this.data.constitutionKeys || [];
@@ -1187,9 +1240,16 @@ const app = {
                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                         You have been appointed as <strong>Regional Officer</strong>.<br><br>
                         Department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong><br>
-                        Please contact the Super Admin for your login details to create your PIN.
+                        Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br>
+                        Please create your PIN below to proceed.
                     </div>
-                            <button onclick="localStorage.removeItem('regionalOfficerMessage'); localStorage.removeItem('pendingAdminPhone'); localStorage.removeItem('pendingAdminName'); localStorage.removeItem('pendingAdminDept'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
+<button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+<div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+    <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+    <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
+    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+</div>
                 `,
                 date: new Date(serverMsg.timestamp || Date.now()),
                 icon: 'fa-user-tie',
@@ -1207,14 +1267,21 @@ const app = {
                         _source: 'regionalOfficerMessage',
                         title: 'Regional Officer Appointment',
                         contentHtml: `
-                            <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                                You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                                Department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
-                                Please contact the Super Admin for your login details to create your PIN.
-                            </div>
-                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); localStorage.removeItem('pendingAdminPhone'); localStorage.removeItem('pendingAdminName'); localStorage.removeItem('pendingAdminDept'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue to HQ Login</button>
-                        `,
-                        date: new Date(msg.timestamp),
+<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                                 You have been appointed as <strong>Regional Officer</strong>.<br><br>
+                                 Department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
+                                 Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br>
+                                 Please create your PIN below to proceed.
+                             </div>
+                      <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+<div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+    <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+    <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
+    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+</div>
+                         `,
+                         date: new Date(msg.timestamp),
                         icon: 'fa-user-tie',
                         iconColor: '#1e4080',
                         bgColor: '#eff6ff',
@@ -1230,9 +1297,15 @@ const app = {
                 contentHtml: `
                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                         You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                        Please contact the Super Admin for your login details to create your PIN.
+                        Please create your PIN below to proceed.
                     </div>
-                    <button onclick="localStorage.removeItem('regionalOfficerMessage'); localStorage.removeItem('pendingAdminPhone'); localStorage.removeItem('pendingAdminName'); localStorage.removeItem('pendingAdminDept'); window.location.href='/hq';" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Continue</button>
+                     <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+<div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+    <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+    <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
+    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+</div>
                 `,
                 date: new Date(),
                 icon: 'fa-user-tie',
@@ -1359,6 +1432,16 @@ const app = {
 
                     if (src === 'inbox') {
                         window.deleteInboxMessage(id, idx);
+                    } else if (src === 'regionalOfficerMessage') {
+                        localStorage.removeItem('regionalOfficerMessage');
+                        localStorage.removeItem('pendingAdminPhone');
+                        localStorage.removeItem('pendingAdminName');
+                        localStorage.removeItem('pendingAdminDept');
+                        if (window.app && window.app.data) {
+                            window.app.data.pendingOfficerMessage = null;
+                            window.app.updateBadge();
+                        }
+                        setTimeout(() => { window.app.openInbox(); }, 300);
                     } else {
                         window.deleteLocalMessage(src, idx);
                     }
@@ -1531,7 +1614,7 @@ const app = {
                     <div class="m-field"><label>Group Name</label><input type="text" name="groupName" id="newGroupName" class="form-input" placeholder="e.g. Umoja Savings Group" required oninput="app.clearNewGroupNameError()"></div>
                     <small style="color:#dc2626;font-size:0.7rem;display:none;" id="newGroupNameError"></small>
                     <div class="m-section-label" style="margin-top:16px;">Chairperson Details</div>
-                    <div class="m-field"><label>Phone Number</label><input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="07XX XXX XXX" inputmode="numeric" required></div>
+                     <div class="m-field"><label>Phone Number</label><input type="tel" name="chairpersonalphonenumber" id="newChairPhone" class="form-input" placeholder="07XX XXX XXX" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
                     <div class="m-field">
                         <label>Full Name (3 names)</label>
                         <input type="text" id="newFullNameInput" class="form-input" placeholder="First Middle Last" required oninput="app.parseNewFullName()">
@@ -2466,7 +2549,7 @@ const app = {
         
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Member Phone Number</label>
-            <input type="tel" id="addMemberPhone" class="form-input" placeholder="e.g. 07XXXXXXXX">
+            <input type="tel" id="addMemberPhone" class="form-input" placeholder="e.g. 07XXXXXXXX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
@@ -2544,7 +2627,7 @@ const app = {
         
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>New Official Phone Number</label>
-            <input type="tel" id="replaceOfficialPhone" class="form-input" placeholder="e.g. 07XXXXXXXX">
+            <input type="tel" id="replaceOfficialPhone" class="form-input" placeholder="e.g. 07XXXXXXXX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
@@ -2737,6 +2820,86 @@ const app = {
             if (result.success) { this.showToast("PIN set successfully!", "success"); this.data.hasPersonalPin = true; this.render(); }
             else { this.showToast(result.message || "Failed to set PIN", "error"); }
         } catch(e) { this.showToast("Server error occurred", "error"); }
+    },
+
+    async submitOfficerPin(containerEl) {
+        const pinInput = containerEl.querySelector('.officer-pin-input');
+        const confirmInput = containerEl.querySelector('.officer-pin-confirm');
+        const resultEl = containerEl.querySelector('.officer-pin-result');
+        
+        if (!pinInput || !confirmInput) return;
+        
+        const pin = pinInput.value.trim();
+        const confirm = confirmInput.value.trim();
+        
+        if (!pin || pin.length < 4) {
+            resultEl.textContent = 'PIN must be 4 digits';
+            resultEl.style.color = '#dc2626';
+            return;
+        }
+        if (pin !== confirm) {
+            resultEl.textContent = 'PINs do not match';
+            resultEl.style.color = '#dc2626';
+            return;
+        }
+        
+        const submitBtn = containerEl.querySelector('.officer-pin-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+        resultEl.textContent = '';
+        
+        const stored = localStorage.getItem("regionalOfficerMessage");
+        const pendingPhone = localStorage.getItem("pendingAdminPhone");
+        const pendingDept = localStorage.getItem("pendingAdminDept");
+        
+        let phone = this.data.user && this.data.user.phoneNumber;
+        let dept = pendingDept || 'Regions';
+        
+        if (stored) {
+            try {
+                const msg = JSON.parse(stored);
+                phone = msg.phone || (this.data.user && this.data.user.phoneNumber) || pendingPhone;
+                dept = msg.dept || pendingDept || 'Regions';
+            } catch (e) {}
+        }
+        
+        if (!phone) {
+            resultEl.textContent = 'No phone number found';
+            resultEl.style.color = '#dc2626';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
+            return;
+        }
+        
+        try {
+            const res = await fetch('/hq/admin/create-pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, pin, department: dept })
+            });
+            const data = await res.json();
+            if (data.status === 'SUCCESS') {
+                resultEl.textContent = "You have successfully updated Admin account as Regional Officer";
+                resultEl.style.color = '#16a34a';
+                localStorage.removeItem('regionalOfficerMessage');
+                localStorage.removeItem('pendingAdminPhone');
+                localStorage.removeItem('pendingAdminName');
+                localStorage.removeItem('pendingAdminDept');
+                setTimeout(() => {
+                    window.location.href = '/hq';
+                }, 1500);
+            } else {
+                resultEl.textContent = data.message || 'Failed to create PIN';
+                resultEl.style.color = '#dc2626';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        } catch (e) {
+            resultEl.textContent = 'Network error';
+            resultEl.style.color = '#dc2626';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
+        }
     },
 
     showNewPinFormModal() {

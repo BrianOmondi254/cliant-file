@@ -344,7 +344,7 @@
     <!-- Step 1: Phone Check -->
     <form id="phone-check-form">
       <label>Phone Number</label>
-      <input type="text" id="phone-input" placeholder="e.g. 0711155510">
+      <input type="text" id="phone-input" placeholder="e.g. 0711155510" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       <button type="submit" class="btn btn-action">Verify</button>
     </form>
 

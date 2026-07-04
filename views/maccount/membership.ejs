@@ -700,7 +700,7 @@
         <div class="modal-body">
           <div class="field">
             <label>Phone Number</label>
-            <input type="tel" id="newMemberPhone" placeholder="Enter phone number">
+            <input type="tel" id="newMemberPhone" placeholder="Enter phone number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           </div>
            <div class="field">
              <label>Reason for Request</label>

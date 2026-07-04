@@ -575,7 +575,7 @@
         </div>
         <div style="margin-bottom:15px;">
           <label style="display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:5px;">Phone Number</label>
-          <input type="text" id="newGuarantorPhone" placeholder="Enter phone" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;">
+          <input type="text" id="newGuarantorPhone" placeholder="Enter phone" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;">
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <button onclick="closeAddGuarantor()" class="action-btn" style="margin-bottom: 0; background: linear-gradient(135deg, #64748b, #94a3b8);">Cancel</button>

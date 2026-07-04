@@ -136,7 +136,7 @@ body{
 
 .error {
     font-size:12px;
-    color:#dc2626;
+    color:#15803d;
     margin-top:5px;
     display:none;
 }
@@ -201,9 +201,9 @@ body{
 }
 
 .alert-box {
-    color: #dc2626;
-    background: #fef2f2;
-    border: 1px solid #fee2e2;
+    color: #15803d;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
     padding: 12px;
     border-radius: 12px;
     margin-bottom: 20px;
@@ -236,7 +236,7 @@ body{
                 <svg class="icon" viewBox="0 0 24 24">
                     <path d="M6 2h12v20H6zM8 4v2h8V4z"/>
                 </svg>
-                <input type="tel" id="phone" name="phoneNumber" placeholder="Phone Number" required>
+                <input type="tel" id="phone" name="phoneNumber" placeholder="Phone Number" inputmode="numeric" pattern="[0-9]*" required>
                 <div class="error" id="phoneError">Invalid phone format. Use +254, 254, or 07/01 format.</div>
             </div>
 
@@ -306,15 +306,14 @@ document.getElementById("loginForm").addEventListener("submit", function(e){
 const phoneInput = document.getElementById("phone");
 if(phoneInput) {
     phoneInput.addEventListener('input', function() {
-        let val = this.value.trim();
-        if (val.startsWith('+254')) {
-            this.maxLength = 13;
-        } else if (val.startsWith('254')) {
+        let val = this.value.replace(/[^0-9]/g, '').trim();
+        this.value = val;
+        if (val.startsWith('254')) {
             this.maxLength = 12;
         } else if (val.startsWith('07') || val.startsWith('01')) {
             this.maxLength = 10;
         } else {
-            this.maxLength = 13; // default
+            this.maxLength = 13;
         }
     });
 }

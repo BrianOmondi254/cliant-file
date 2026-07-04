@@ -485,7 +485,7 @@ function switchTab(tab) {
             <label style="margin-top:0;">Chairperson Phone</label>
             <div class="input-group">
               <i class="fas fa-phone"></i>
-              <input type="tel" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Phone Number" inputmode="numeric" required>
+              <input type="tel" name="chairpersonalphonenumber" id="confirmedPhone" placeholder="Phone Number" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
             </div>
  
             <label>Chairperson Full Name</label>

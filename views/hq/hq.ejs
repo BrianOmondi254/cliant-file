@@ -687,7 +687,7 @@
       </div>
       <div class="field-group" id="phone-field">
         <label class="field-label">Phone number</label>
-        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="register-phone">
+        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="register-phone" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         <p id="phone-error" style="color:var(--red-500,#dc2626);font-size:12px;margin-top:4px;display:none;"></p>
       </div>
       <div class="field-group" id="dept-field" style="display:none;">
@@ -794,7 +794,7 @@
     <div class="modal-body">
       <div class="field-group">
         <label class="field-label">Phone number</label>
-        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="login-phone">
+        <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="login-phone" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       </div>
       <div class="field-group">
         <label class="field-label">PIN</label>

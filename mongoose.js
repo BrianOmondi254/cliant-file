@@ -1034,7 +1034,10 @@ const adminSchema = new mongoose.Schema({
   phoneNumber: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   department: { type: String, required: true },
-  pin: { type: String, required: true },
+  processNumber: { type: String },
+  dateOfProcess: { type: Date, default: Date.now },
+  pin: { type: String, default: null },
+  pinCreatedAt: { type: Date, default: null },
   status: { type: String, default: "active" },
   createdAt: { type: Date, default: Date.now }
 });

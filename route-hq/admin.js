@@ -192,14 +192,13 @@ router.post("/register", async (req, res) => {
   });
 });
 
-router.post("/create-pin", async (req, res) => {
-  const { phone, pin, department } = req.body;
-  if (!phone || !pin || !department) {
-    return res.json({ status: "ERROR", message: "Phone, PIN and department are required." });
+router.post("/create-admin-record", requireAuth, async (req, res) => {
+  const { phone, department } = req.body;
+  if (!phone || !department) {
+    return res.json({ status: "ERROR", message: "Phone and department required." });
   }
 
   const normalised = norm(phone);
-
   const existing = await Admin.findOne({ phoneNumber: normalised }).lean();
   if (existing) {
     return res.json({ status: "ALREADY_REGISTERED", message: "Admin already exists." });
@@ -211,25 +210,66 @@ router.post("/create-pin", async (req, res) => {
   }
 
   const fullName = `${user.FirstName} ${user.MiddleName || ""} ${user.LastName || ""}`.trim().toUpperCase();
-  const hashedPin = await bcrypt.hash(pin, 10);
+  const processNumber = `PROC-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
   const admin = new Admin({
     phoneNumber: normalised,
     name: fullName,
     department,
-    pin: hashedPin,
-    status: "active",
-    createdAt: new Date()
+    processNumber,
+    dateOfProcess: new Date(),
+    pin: null,
+    pinCreatedAt: null,
+    status: "active"
   });
 
   await admin.save();
 
+  return res.json({ status: "SUCCESS", message: "Admin account created successfully.", processNumber });
+});
+
+router.post("/create-pin", async (req, res) => {
+  const { phone, pin, department } = req.body;
+  if (!phone || !pin || !department) {
+    return res.json({ status: "ERROR", message: "Phone, PIN and department are required." });
+  }
+
+  const normalised = norm(phone);
+  const hashedPin = await bcrypt.hash(pin, 10);
+
+  const existing = await Admin.findOne({ phoneNumber: normalised }).lean();
+  if (existing) {
+    await Admin.updateOne(
+      { phoneNumber: normalised },
+      { $set: { pin: hashedPin, pinCreatedAt: new Date(), department: existing.department || department } }
+    );
+    try { await deletePendingOfficerMessage(phone); } catch (e) { console.error("[admin] deletePendingOfficerMessage error:", e.message); }
+    return res.json({ status: "SUCCESS", message: "PIN created successfully." });
+  }
+
+  const user = await findUserInCounties(phone);
+  if (!user) {
+    return res.json({ status: "ERROR", message: "User not found in system." });
+  }
+
+  const fullName = `${user.FirstName} ${user.MiddleName || ""} ${user.LastName || ""}`.trim().toUpperCase();
+  const processNumber = `PROC-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+  const admin = new Admin({
+    phoneNumber: normalised,
+    name: fullName,
+    department,
+    processNumber,
+    dateOfProcess: new Date(),
+    pin: hashedPin,
+    pinCreatedAt: new Date(),
+    status: "active"
+  });
+
+  await admin.save();
   try { await deletePendingOfficerMessage(phone); } catch (e) { console.error("[admin] deletePendingOfficerMessage error:", e.message); }
 
-  return res.json({
-    status: "SUCCESS",
-    message: "Admin account created successfully."
-  });
+  return res.json({ status: "SUCCESS", message: "Admin account created successfully." });
 });
 
 router.post("/login", async (req, res) => {
@@ -243,6 +283,13 @@ router.post("/login", async (req, res) => {
     return res.json({
       status: "NOT_REGISTERED",
       message: "Admin account not found."
+    });
+  }
+
+  if (!admin.pin) {
+    return res.json({
+      status: "NO_PIN",
+      message: "PIN not created yet. Please create your PIN in your client app."
     });
   }
 

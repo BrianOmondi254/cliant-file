@@ -432,20 +432,11 @@
         <button onclick="closeAdminPopup()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
         <div style="margin-bottom:24px;">
           <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Create Admin Account</p>
-          <h2 style="font-size:20px;font-weight:600;color:var(--gray-900);margin-bottom:6px;">Enter Phone Number</h2>
-          <p style="font-size:14px;color:var(--gray-600);">Provide a phone number for the department head</p>
         </div>
-        <div style="margin-bottom:20px;">
-          <label style="font-size:12px;font-weight:500;color:var(--gray-700);display:block;margin-bottom:6px;">Phone number</label>
-          <input class="field-input" type="tel" placeholder="e.g. 0712 345 678" id="admin-phone" style="font-family:var(--font);font-size:14px;color:var(--gray-900);background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 12px;width:100%;outline:none;">
-          <p id="phone-status" style="font-size:12px;margin-top:6px;min-height:16px;"></p>
-        </div>
-        <button class="btn btn-primary" id="create-admin-submit" style="width:100%;padding:10px;font-size:14px;" onclick="saveMessageAndGo()">Send to Officer</button>
-        <div id="message-note" class="hidden" style="margin-top:24px;padding:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);max-width:440px;margin-left:auto;margin-right:auto;text-align:center;">
+        <div id="message-note" style="margin-top:24px;padding:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);max-width:440px;margin-left:auto;margin-right:auto;text-align:center;">
           <div style="width:44px;height:44px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;">✅</div>
-          <p style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;">Account Created Successfully</p>
-          <p id="message-user-info" style="font-size:14px;color:#4b5563;line-height:1.6;margin-bottom:18px;"></p>
-          <button class="btn btn-primary" onclick="goToHq()" style="width:100%;max-width:200px;">Continue</button>
+          <p id="message-user-info" style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;"></p>
+           <button class="btn btn-primary" onclick="continueAndSubmit()" style="width:100%;max-width:200px;">Continue</button>
         </div>
       </div>
     </div>
@@ -465,230 +456,106 @@
 </main>
 
 <script>
-  let selectedDept = null;
+   let selectedDept = null;
 
-  document.getElementById("create-dept-option").onclick = () => {
-    document.getElementById("admin-options").classList.add("hidden");
-    document.getElementById("create-dept-section").classList.remove("hidden");
-  };
+   document.getElementById("create-dept-option").onclick = () => {
+     document.getElementById("admin-options").classList.add("hidden");
+     document.getElementById("create-dept-section").classList.remove("hidden");
+   };
 
-  document.getElementById("list-dept-option").onclick = async () => {
-    document.getElementById("admin-options").classList.add("hidden");
-    document.getElementById("list-dept-section").classList.remove("hidden");
-    
-    const listEl = document.getElementById("departments-list");
-    try {
-      const res = await fetch("/hq/admin/departments");
-      const data = await res.json();
-      if (data.status === "OK" && data.departments) {
-        listEl.innerHTML = data.departments.map(dept => {
-          const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
-          return `
-            <div class="dept-card">
-              <div class="dept-icon ${icons[dept.name] || "blue"}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="2" y="7" width="20" height="14" rx="2"/>
-                </svg>
-              </div>
-              <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
-            </div>
-          `;
-        }).join("");
-      } else {
-        listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
-      }
-    } catch (err) {
-      listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
-    }
-  };
+   document.getElementById("list-dept-option").onclick = async () => {
+     document.getElementById("admin-options").classList.add("hidden");
+     document.getElementById("list-dept-section").classList.remove("hidden");
+     
+     const listEl = document.getElementById("departments-list");
+     try {
+       const res = await fetch("/hq/admin/departments");
+       const data = await res.json();
+       if (data.status === "OK" && data.departments) {
+         listEl.innerHTML = data.departments.map(dept => {
+           const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
+           return `
+             <div class="dept-card">
+               <div class="dept-icon ${icons[dept.name] || "blue"}">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                   <rect x="2" y="7" width="20" height="14" rx="2"/>
+                 </svg>
+               </div>
+               <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
+             </div>
+           `;
+         }).join("");
+       } else {
+         listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
+       }
+     } catch (err) {
+       listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
+     }
+   };
 
-  document.getElementById("create-dept-btn").onclick = () => {
-    document.getElementById("create-dept-section").classList.remove("hidden");
-    document.getElementById("list-dept-section").classList.add("hidden");
-    document.getElementById("admin-options").classList.add("hidden");
-    closeAdminPopup();
-  };
+   document.getElementById("create-dept-btn").onclick = () => {
+     document.getElementById("create-dept-section").classList.remove("hidden");
+     document.getElementById("list-dept-section").classList.add("hidden");
+     document.getElementById("admin-options").classList.add("hidden");
+     closeAdminPopup();
+   };
 
-  document.getElementById("list-dept-btn").onclick = async () => {
-    document.getElementById("create-dept-section").classList.add("hidden");
-    document.getElementById("list-dept-section").classList.remove("hidden");
-    document.getElementById("admin-options").classList.add("hidden");
-    closeAdminPopup();
+   document.getElementById("list-dept-btn").onclick = async () => {
+     document.getElementById("create-dept-section").classList.add("hidden");
+     document.getElementById("list-dept-section").classList.remove("hidden");
+     document.getElementById("admin-options").classList.add("hidden");
+     closeAdminPopup();
 
-    const listEl = document.getElementById("departments-list");
-    listEl.innerHTML = '<p style="color: var(--gray-600);">Loading departments...</p>';
-    try {
-      const res = await fetch("/hq/admin/departments");
-      const data = await res.json();
-      if (data.status === "OK" && data.departments) {
-        listEl.innerHTML = data.departments.map(dept => {
-          const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
-          return `
-            <div class="dept-card">
-              <div class="dept-icon ${icons[dept.name] || "blue"}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="2" y="7" width="20" height="14" rx="2"/>
-                </svg>
-              </div>
-              <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
-            </div>
-          `;
-        }).join("");
-      } else {
-        listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
-      }
-    } catch (err) {
-      listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
-    }
-  };
+     const listEl = document.getElementById("departments-list");
+     listEl.innerHTML = '<p style="color: var(--gray-600);">Loading departments...</p>';
+     try {
+       const res = await fetch("/hq/admin/departments");
+       const data = await res.json();
+       if (data.status === "OK" && data.departments) {
+         listEl.innerHTML = data.departments.map(dept => {
+           const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
+           return `
+             <div class="dept-card">
+               <div class="dept-icon ${icons[dept.name] || "blue"}">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                   <rect x="2" y="7" width="20" height="14" rx="2"/>
+                 </svg>
+               </div>
+               <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
+             </div>
+           `;
+         }).join("");
+       } else {
+         listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
+       }
+     } catch (err) {
+       listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
+     }
+   };
 
-  document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
-    card.onclick = () => {
-      selectedDept = card.getAttribute("data-dept");
-      openAdminPopup();
-    };
-  });
+   document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
+     card.onclick = () => {
+       selectedDept = card.getAttribute("data-dept");
+       openAdminPopup();
+     };
+   });
 
-  function openAdminPopup() {
-    const popup = document.getElementById("phone-input-section");
-    popup.classList.remove("hidden");
-  }
+   function openAdminPopup() {
+     const popup = document.getElementById("phone-input-section");
+     popup.classList.remove("hidden");
+     const messageUserInfo = document.getElementById("message-user-info");
+     messageUserInfo.innerHTML = `Account Created Successfully for <strong>${selectedDept || 'Department'}</strong>.<br>Please ask the officer to create their PIN through their main page.`;
+   }
 
-  function closeAdminPopup() {
-    const popup = document.getElementById("phone-input-section");
-    popup.classList.add("hidden");
-  }
+   function closeAdminPopup() {
+     const popup = document.getElementById("phone-input-section");
+     popup.classList.add("hidden");
+   }
 
-  let verifiedName = "";
-
-  async function saveMessageAndGo() {
-    const phone = document.getElementById("admin-phone").value.trim();
-    if (!phone) return;
-
-    const formattedPhone = phone.startsWith("0") ? phone : "0" + phone;
-    const submitBtn = document.getElementById("create-admin-submit");
-    const statusEl = document.getElementById("phone-status");
-
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span class="spin"></span> Sending...`;
-    statusEl.innerHTML = "";
-
-    const processorName = '<%= (typeof hqUser !== "undefined" && hqUser && hqUser.name) ? hqUser.name : "T-BANK HQ" %>';
-    const processorPhone = '<%= (typeof hqUser !== "undefined" && hqUser && hqUser.phoneNumber) ? hqUser.phoneNumber : "" %>';
-
-    localStorage.setItem("regionalOfficerMessage", JSON.stringify({
-      phone: formattedPhone,
-      name: verifiedName || "",
-      dept: selectedDept || "",
-      processorName: processorName,
-      processorPhone: processorPhone,
-      timestamp: Date.now()
-    }));
-
-    if (phone) localStorage.setItem("pendingAdminPhone", formattedPhone);
-    if (verifiedName) localStorage.setItem("pendingAdminName", verifiedName);
-    if (selectedDept) localStorage.setItem("pendingAdminDept", selectedDept);
-
-    try {
-      const res = await fetch("/hq/admin/send-officer-message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: formattedPhone, name: verifiedName || "", dept: selectedDept || "" })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (data.status !== "SUCCESS") {
-        statusEl.innerHTML = "<span style='color:var(--red-500);'>Failed to send officer message.</span>";
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = "Send to Officer";
-        return;
-      }
-    } catch (e) {
-      statusEl.innerHTML = "<span style='color:var(--red-500);'>Network error sending message.</span>";
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = "Send to Officer";
-      return;
-    }
-
-    const messageNote = document.getElementById("message-note");
-    const messageUserInfo = document.getElementById("message-user-info");
-
-    if (verifiedName || selectedDept) {
-      messageUserInfo.innerHTML = `Successfully created account for <strong>${verifiedName || 'User'}</strong> (Phone: <strong>${formattedPhone}</strong>) — <strong>${selectedDept || 'Department'}</strong>.<br>Please ask the officer to create their PIN by clicking the button in their client message.`;
-    } else {
-      messageUserInfo.textContent = "";
-    }
-
-    submitBtn.classList.add("hidden");
-    messageNote.classList.remove("hidden");
-  }
-
-  function goToHq() {
-    document.getElementById("message-note").classList.add("hidden");
-    document.getElementById("create-admin-submit").classList.remove("hidden");
-    document.getElementById("admin-phone").value = "";
-    document.getElementById("phone-status").innerHTML = "";
-    verifiedName = "";
-    selectedDept = null;
-    document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
-      card.style.borderColor = "";
-      card.style.background = "";
-    });
-  }
-
-  let phoneCheckTimer;
-  document.getElementById("admin-phone").addEventListener("input", async (e) => {
-    const phone = e.target.value.trim();
-    const statusEl = document.getElementById("phone-status");
-    const submitBtn = document.getElementById("create-admin-submit");
-
-    clearTimeout(phoneCheckTimer);
-
-    if (phone.length < 7) {
-      statusEl.innerHTML = "";
-      submitBtn.disabled = true;
-      verifiedName = "";
-      return;
-    }
-
-    statusEl.innerHTML = "<span style='color:var(--gray-400);'>Checking...</span>";
-
-    phoneCheckTimer = setTimeout(async () => {
-      try {
-        const res = await fetch("/hq/admin/check-phone", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone })
-        });
-        const data = await res.json();
-
-        if (data.status === "ALREADY_SUPERADMIN") {
-          statusEl.innerHTML = `<span style='color:var(--red-500);'>❌ ${data.message}</span>`;
-          submitBtn.disabled = true;
-          verifiedName = "";
-        } else if (data.status === "ALREADY_ADMIN") {
-          statusEl.innerHTML = `<span style='color:var(--red-500);'>❌ ${data.message}</span>`;
-          submitBtn.disabled = true;
-          verifiedName = "";
-        } else if (data.status === "NOT_REGISTERED") {
-          statusEl.innerHTML = `<span style='color:var(--red-500);'>❌ ${data.message}</span>`;
-          submitBtn.disabled = true;
-          verifiedName = "";
-        } else if (data.status === "VERIFIED") {
-          statusEl.innerHTML = `<span style='color:var(--green-500);'>✅ Verified: ${data.name}</span>`;
-          submitBtn.disabled = false;
-          verifiedName = data.name;
-        } else {
-          statusEl.innerHTML = `<span style='color:var(--gray-400);'>${data.message || ''}</span>`;
-          submitBtn.disabled = true;
-          verifiedName = "";
-        }
-      } catch (err) {
-        statusEl.innerHTML = "<span style='color:var(--gray-400);'>Verification error</span>";
-        submitBtn.disabled = true;
-        verifiedName = "";
-      }
-    }, 500);
-  });
+   function continueAndSubmit() {
+     selectedDept = null;
+     document.getElementById("phone-input-section").classList.add("hidden");
+   }
 </script>
 
 </body>

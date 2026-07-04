@@ -447,7 +447,7 @@
               <div class="form-group" style="margin-bottom: 15px;">
                 <div class="input-wrapper">
                   <i class="ri-phone-line"></i>
-                  <input type="tel" id="candidatePhone" placeholder="Candidate Phone" required>
+                  <input type="tel" id="candidatePhone" placeholder="Candidate Phone" required inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 </div>
               </div>
               <button class="btn btn-primary" id="btnLookupAgent" onclick="lookupAgent()">

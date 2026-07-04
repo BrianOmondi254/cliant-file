@@ -34,7 +34,7 @@
         <form action="/dealer/create-agent" method="POST">
             <div class="form-group">
                 <label for="phoneNumber">Phone Number</label>
-                <input type="text" id="phoneNumber" name="phoneNumber" required placeholder="Enter phone number">
+                <input type="text" id="phoneNumber" name="phoneNumber" required placeholder="Enter phone number" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
             </div>
             <button type="submit">Verify</button>
         </form>

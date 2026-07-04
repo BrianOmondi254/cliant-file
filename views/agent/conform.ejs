@@ -454,7 +454,7 @@
               <td style="text-align:center; font-weight:800; color:var(--slate-light)"><%= i+1 %></td>
               <td><input type="text" value="<%= m.name || '' %>"></td>
               <td><input type="text" value="<%= m.title || '' %>"></td>
-              <td><input type="text" value="<%= m.phone || '' %>"></td>
+              <td><input type="text" value="<%= m.phone || '' %>" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
               <td><input type="text" value=""></td>
               <td>
                 <span class="role-badge <%= m.type === 'trustee' ? 'role-trustee' : m.type === 'official' ? 'role-official' : 'role-member' %>">
