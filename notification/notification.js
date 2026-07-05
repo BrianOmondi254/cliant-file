@@ -75,6 +75,7 @@ const processMessage = (groupName, message) => {
     key: message.key || null,
     broadcast: message.broadcast || false,
     roles: message.roles || [],
+    meta: message.meta || null,
     createdAt: new Date().toISOString(),
   };
 

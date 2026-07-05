@@ -1337,7 +1337,11 @@ const app = {
             const isConstitutionKey = k.key && !k.content;
             
             let contentHtml = '';
-            if (isConstitutionKey) {
+            if (k.type === 'dealer_invitation') {
+                const metaPayload = JSON.stringify(k.meta || {}).replace(/"/g, '&quot;');
+                contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                contentHtml += `<button onclick="app.acceptDealerInvite('${k._id}', '${metaPayload}')" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Accept Appointment</button>`;
+            } else if (isConstitutionKey) {
                 contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
                 <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
             } else if (isLegacy) {
@@ -1448,6 +1452,36 @@ const app = {
                 });
             });
         }, 0);
+    },
+
+    /* ─── ACCEPT DEALER INVITATION ─── */
+    async acceptDealerInvite(msgId, metaPayloadStr) {
+        if (!msgId) {
+            this.showToast('Invalid invitation.', 'error');
+            return;
+        }
+        try {
+            const res = await fetch('/api/accept-dealer-invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ msgId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.showToast('Dealer appointment accepted successfully!', 'success');
+                // Remove the invitation from the local data and refresh inbox
+                if (this.data.constitutionKeys) {
+                    this.data.constitutionKeys = this.data.constitutionKeys.filter(k => String(k._id) !== String(msgId));
+                }
+                this.openInbox();
+                this.updateBadge();
+            } else {
+                this.showToast(data.message || 'Failed to accept invitation.', 'error');
+            }
+        } catch (e) {
+            console.error('acceptDealerInvite error:', e);
+            this.showToast('Network error. Please try again.', 'error');
+        }
     },
 
     /* ─── OPEN MODAL (action dispatcher) ─── */

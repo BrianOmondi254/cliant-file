@@ -1,7 +1,8 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const { findUserInCounties } = require('../mongoose');
+const { findUserInCounties, Dealer, Agent, Admin, SuperAdmin, normalizePhone } = require('../mongoose');
+const { processMessage } = require('../notification/notification');
 
 const router = express.Router();
 
@@ -92,18 +93,16 @@ router.get("/compliance", async (req, res) => {
   // This ensures properties like 'registration.newGroupFee' won't crash even if 'registration' is null/undefined
   const { registration = {}, membership = {}, periods = {} } = compliance;
 
-  // Read dealer counts
+  // Read dealer counts from MongoDB
   let dealerCounts = {};
-  if (fs.existsSync(DEALER_JSON)) {
-    try {
-      const raw = fs.readFileSync(DEALER_JSON, "utf8").trim();
-      if (raw) {
-        const dealers = JSON.parse(raw);
-        dealerCounts = dealers._dealerCounts || {};
-      }
-    } catch (e) {
-      console.error("Error reading dealer counts:", e);
-    }
+  try {
+     const allDealers = await Dealer.find({}).lean();
+     allDealers.forEach(d => {
+         const county = d.county || "Unknown";
+         dealerCounts[county] = (dealerCounts[county] || 0) + 1;
+     });
+  } catch(e) {
+     console.error("Error computing dealer counts:", e);
   }
 
   const hqUser = req.session.hqUser || null;
@@ -305,55 +304,26 @@ router.get("/compliance/data", (req, res) => {
 // ======================
 
 const AGENT_JSON = path.join(__dirname, "..", "agent.json");
-const DEALER_JSON = path.join(__dirname, "..", "dealer.json");
 const HQ_JSON = path.join(__dirname, "..", "hq.json");
 const OFFICIAL_JSON = path.join(__dirname, "..", "official.json");
 const BLOCKED_JSON = path.join(__dirname, "..", "blocked.json");
 
 // Helper: Cleanup Inactive Dealers (No PIN > 7 Days)
-function cleanupInactiveDealers() {
-  if (!fs.existsSync(DEALER_JSON)) return;
-  
+async function cleanupInactiveDealers() {
   try {
-    const rawDealers = fs.readFileSync(DEALER_JSON, "utf8");
-    let dealerData = rawDealers.trim() ? JSON.parse(rawDealers) : [];
-    if (!Array.isArray(dealerData)) return; // Don't crash if still old format
-
-    let officialUsers = [];
-    if (fs.existsSync(OFFICIAL_JSON)) {
-      try {
-        const rawOff = fs.readFileSync(OFFICIAL_JSON, "utf8").trim();
-        officialUsers = rawOff ? JSON.parse(rawOff) : [];
-      } catch (err) {
-        console.error("Error reading official users for cleanup:", err);
-      }
-    }
-    const now = new Date();
-    const initialCount = dealerData.length;
-
-    // Filter out inactive dealers
-    dealerData = dealerData.filter(val => {
-        if (!val.phoneNumber || !val.createdAt) return true; // Keep malformed?
-
-        const hasPin = officialUsers.find(u => u.phoneNumber === val.phoneNumber);
-        if (hasPin) return true; // Keep
-
-        const createdDate = new Date(val.createdAt);
-        const diffTime = Math.abs(now - createdDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays <= 7; // Keep if younger than 7 days
-    });
-
-    const deletedCount = initialCount - dealerData.length;
-
-    if (deletedCount > 0) {
-        fs.writeFileSync(DEALER_JSON, JSON.stringify(dealerData, null, 2));
-        console.log(`[CLEANUP] Deleted ${deletedCount} inactive dealer accounts.`);
-    }
-
+     const sevenDaysAgo = new Date();
+     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+     
+     const result = await Dealer.deleteMany({
+         createdAt: { $lt: sevenDaysAgo },
+         $or: [ { pin: null }, { pin: "" }, { pin: { $exists: false } } ]
+     });
+     
+     if (result.deletedCount > 0) {
+         console.log(`[CLEANUP] Deleted ${result.deletedCount} inactive dealer accounts.`);
+     }
   } catch (e) {
-    console.error("Error in cleanupInactiveDealers:", e);
+     console.error("Error in cleanupInactiveDealers:", e);
   }
 }
 
@@ -431,37 +401,14 @@ router.post("/compliance/save-agent", async (req, res) => {
     });
     fs.writeFileSync(AGENT_JSON, JSON.stringify(agents, null, 2));
 
-    // 3. Update dealer.json Hierarchically
-    if (fs.existsSync(DEALER_JSON)) {
-      const dealers = JSON.parse(fs.readFileSync(DEALER_JSON, "utf8") || "{}");
-      
-      // We need to find the dealer in the hierarchy: Region -> HQ -> Dealer
-      // Optimization: We know the county from the request.
-      const region = dealers[county] || {};
-      let dealerFound = false;
-
-      // Search through HQs in this region to find the dealer
-      for (const hqPh in region) {
-         if (region[hqPh][dealerPhone]) {
-             // Found the dealer! Update their stats.
-             const d = region[hqPh][dealerPhone];
-             if (!d.stats) d.stats = { agent_creation: 0, personal_account_creation: 0, dealer_creation: 0 };
-             d.stats.agent_creation++;
-             d.agents = d.agents || [];
-             d.agents.push({
-                 phone: agentPhone,
-                 createdAt: new Date().toISOString()
-             });
-             
-             dealerFound = true;
-             break;
-         }
-      }
-      
-      if (dealerFound) {
-          fs.writeFileSync(DEALER_JSON, JSON.stringify(dealers, null, 2));
-      }
-    }
+    // 3. Update dealer stats in MongoDB
+    const normDealerPhone = normalizePhone(dealerPhone);
+    await Dealer.updateOne(
+        { phoneNumber: normDealerPhone },
+        { 
+            $inc: { "stats.agent_creation": 1 }
+        }
+    );
 
     // 4. Update hq.json (Registry of plain events for backup/other uses?)
     // Actually user wants structure in dealer.json, maybe we don't need to bloat hq.json anymore?
@@ -521,25 +468,10 @@ router.post("/compliance/verify-dealer-relations", async (req, res) => {
       });
   }
 
-  if (fs.existsSync(DEALER_JSON)) {
-    const dealers = JSON.parse(fs.readFileSync(DEALER_JSON, "utf8") || "{}");
-    
-    // Check if user is already a registered Dealer in ANY region/HQ tree
-    // Structure: dealers[County][HQ][Dealer]
-    const findDealer = (obj) => {
-        for (const k in obj) {
-            if (typeof obj[k] === 'object' && obj[k] !== null) {
-                if (obj[k].phoneNumber === dealerPhone) return true; // Found leaf node with phone
-                if (findDealer(obj[k])) return true; // Recurse
-            }
-        }
-        return false;
-    };
-
-    if (dealers[dealer.county] && findDealer(dealers[dealer.county])) {
-       return res.status(400).json({ success: false, message: "User is already a registered Dealer." });
-    }
-    // Also do a global check just in case they moved counties? (Optional, stick to county for now)
+  const normDealerPhone = normalizePhone(dealerPhone);
+  const existingDealer = await Dealer.findOne({ phoneNumber: normDealerPhone });
+  if (existingDealer) {
+      return res.status(400).json({ success: false, message: "User is already a registered Dealer." });
   }
 
   // REMOVED: Agent check. Dealer verification now solely relies on counties MongoDB collection.
@@ -668,87 +600,53 @@ router.post("/compliance/save-dealer", async (req, res) => {
     // Default to 'Unknown' if no ward provided or found (since field deleted)
     const finalWard = dealerProfile.ward || ward || "Unknown";
 
-    // 4. Update dealer.json (FLATTENED STRUCTURE)
-    let dealers = [];
-    if (fs.existsSync(DEALER_JSON)) {
-      try {
-        const raw = fs.readFileSync(DEALER_JSON, "utf8").trim();
-        dealers = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(dealers)) dealers = []; // Reset if still an object
-      } catch (e) {
-        dealers = [];
+    // --- NEW MONGODB VALIDATIONS ---
+    const normDealerPhone = normalizePhone(dealerPhone);
+    const normHqPhone = normalizePhone(hqPhone);
+    
+    const existingDealer = await Dealer.findOne({ phoneNumber: normDealerPhone });
+    if (existingDealer) {
+       return res.status(400).json({ success: false, message: "User is already a registered Dealer." });
+    }
+    
+    const existingAgent = await Agent.findOne({ phoneNumber: normDealerPhone });
+    if (existingAgent) {
+       return res.status(400).json({ success: false, message: "Phone number is registered as an Agent." });
+    }
+    
+    const existingAdmin = await Admin.findOne({ phoneNumber: normDealerPhone });
+    const existingSuperAdmin = await SuperAdmin.findOne({ phoneNumber: normDealerPhone });
+    if (existingAdmin || existingSuperAdmin) {
+       return res.status(400).json({ success: false, message: "Phone number is registered as an Admin or SuperAdmin." });
+    }
+
+    // 4. Send Dealer Invitation (do NOT create dealer yet — user must accept)
+    const dealerPayload = {
+      phoneNumber: normDealerPhone,
+      hqPhone: normHqPhone,
+      county: finalCounty,
+      constituency: finalConstituency,
+      ward: finalWard,
+      name: dealerName,
+      isBlocked: false,
+      stats: {
+        agent_creation: 0,
+        personal_account_creation: 0,
+        dealer_creation: 0
       }
-    }
-
-    // Check if dealer already exists in flat array
-    const existingIndex = dealers.findIndex(d => d.phoneNumber === dealerPhone);
-    const dealerData = {
-        phoneNumber: dealerPhone,
-        hqPhone: hqPhone,
-        county: finalCounty,
-        constituency: finalConstituency,
-        ward: finalWard,
-        name: dealerName,
-        createdAt: new Date().toISOString(),
-        isBlocked: false,
-        stats: {
-           agent_creation: 0,
-           personal_account_creation: 0,
-           dealer_creation: 0
-        }
     };
 
-    if (existingIndex > -1) {
-        dealers[existingIndex] = dealerData; // Update
-    } else {
-        dealers.push(dealerData); // Add new
-    }
-
-    fs.writeFileSync(DEALER_JSON, JSON.stringify(dealers, null, 2));
-
-    // 5. Update hq.json (Log event for backup)
-    let hqData = [];
-    if (fs.existsSync(HQ_JSON)) {
-      const raw = fs.readFileSync(HQ_JSON, "utf8");
-      hqData = raw.trim() ? JSON.parse(raw) : [];
-    }
-    hqData.push({
-      dealerPhone,
-      hqPhone,
-      county,
-      constituency,
-      ward,
-      type: "dealer_creation",
-      createdAt: new Date().toISOString(),
+    processMessage("HQ Admin", {
+      to: dealerPhone.trim(),
+      type: "dealer_invitation",
+      title: "Dealer Appointment Invitation",
+      content: `You have been invited to become a dealer for ${finalCounty} county. Please accept to activate your dealer account.`,
+      meta: dealerPayload
     });
-    fs.writeFileSync(HQ_JSON, JSON.stringify(hqData, null, 2));
-
-    // 3. Update personal_stats.json
-    const PERSONAL_STATS_PATH = path.join(
-      __dirname,
-      "..",
-      "personal_stats.json"
-    );
-    let personalStats = {
-      totalRegistrations: 0,
-      mpesaPayments: 0,
-      passkeyPayments: 0,
-      totalDealerCreated: 0,
-    };
-    if (fs.existsSync(PERSONAL_STATS_PATH)) {
-      const raw = fs.readFileSync(PERSONAL_STATS_PATH, "utf8");
-      personalStats = raw.trim() ? JSON.parse(raw) : personalStats;
-    }
-    personalStats.totalDealerCreated =
-      (personalStats.totalDealerCreated || 0) + 1;
-    fs.writeFileSync(
-      PERSONAL_STATS_PATH,
-      JSON.stringify(personalStats, null, 2)
-    );
 
     res.json({
       success: true,
-      message: "Dealer account and HQ relation saved",
+      message: "Dealer invitation sent successfully. Awaiting user acceptance.",
     });
   } catch (err) {
     console.error("Save Dealer Error:", err);
@@ -760,40 +658,12 @@ router.post("/compliance/save-dealer", async (req, res) => {
 
 // GET EVENTS FROM DEALER.JSON (Flattened)
 // This allows the status (Active/Blocked) to be live.
-router.get("/compliance/get-events", (req, res) => {
+router.get("/compliance/get-events", async (req, res) => {
   try {
     // 0. Auto-Cleanup
     cleanupInactiveDealers();
 
-    if (!fs.existsSync(DEALER_JSON)) return res.json({ events: [], myDealerCount: 0, totalSystemDealers: 0 });
-    const dealers = JSON.parse(fs.readFileSync(DEALER_JSON, "utf8") || "{}");
-    
-    // Recursive flattener to find all dealer objects in any structure
-    let allDealers = [];
-    const extractDealers = (obj) => {
-        if (!obj || typeof obj !== 'object') return;
-        
-        // If it looks like a dealer object (has phoneNumber and not an array)
-        if (obj.phoneNumber && !Array.isArray(obj)) {
-            allDealers.push(obj);
-            return;
-        }
-
-        for (const key in obj) {
-            if (key === '_dealerCounts') continue; // Skip metadata
-            const val = obj[key];
-            if (Array.isArray(val)) {
-                // Handle old structure: [ { phoneNumber, ... }, ... ]
-                val.forEach(item => {
-                    if (item && item.phoneNumber) allDealers.push(item);
-                });
-            } else if (typeof val === 'object') {
-                extractDealers(val);
-            }
-        }
-    };
-
-    extractDealers(dealers);
+    const allDealers = await Dealer.find({}).lean();
 
     const hqUser = req.session.hqUser;
     
@@ -813,36 +683,26 @@ router.get("/compliance/get-events", (req, res) => {
     } 
 
     // 3. MERGE AGENT EVENTS
-    // Agent structure in new agent.json: [{ phoneNumber, dealerPhone, name, county, createdAt }]
-    // We need to link Agent -> Dealer -> HQ to filter correctly.
-    const AGENT_JSON_PATH = path.join(__dirname, "..", "agent.json");
-    if (fs.existsSync(AGENT_JSON_PATH)) {
-        const rawAgents = fs.readFileSync(AGENT_JSON_PATH, "utf8");
-        const agents = rawAgents.trim() ? JSON.parse(rawAgents) : [];
-        
-        // Helper map: DealerPhone -> HQPhone
-        const dealerToHqMap = {};
-        allDealers.forEach(d => {
-            dealerToHqMap[d.phoneNumber] = d.hqPhone;
-        });
+    const agents = await Agent.find({}).lean();
+    
+    // Helper map: DealerPhone -> HQPhone
+    const dealerToHqMap = {};
+    allDealers.forEach(d => {
+        dealerToHqMap[d.phoneNumber] = d.hqPhone;
+    });
 
-        agents.forEach(a => {
-            const parentHq = dealerToHqMap[a.dealerPhone];
-            if (parentHq) {
-                // If this agent belongs to a dealer created by THIS HQ (or if we want to show all?)
-                // Requirement: "display number of dealer account created by each logger account"
-                // Usually dashboard shows events related to the logged in user.
-                
-                if (hqUser && hqUser.phoneNumber && parentHq === hqUser.phoneNumber) {
-                    filteredEvents.push({
-                        ...a,
-                        type: 'agent_creation',
-                        hqPhone: parentHq // Add explicit HQ phone for consistency
-                    });
-                }
+    agents.forEach(a => {
+        const parentHq = dealerToHqMap[a.dealerPhone];
+        if (parentHq) {
+            if (hqUser && hqUser.phoneNumber && parentHq === hqUser.phoneNumber) {
+                filteredEvents.push({
+                    ...a,
+                    type: 'agent_creation',
+                    hqPhone: parentHq // Add explicit HQ phone for consistency
+                });
             }
-        });
-    }
+        }
+    });
 
     // Return last 20 created (Combined), reversed
     const events = filteredEvents
@@ -866,57 +726,28 @@ router.get("/compliance/get-events", (req, res) => {
 });
 
 // BLOCK Dealer Endpoint
-router.post("/compliance/block-dealer", (req, res) => {
+router.post("/compliance/block-dealer", async (req, res) => {
     const { dealerPhone, reason } = req.body;
     
-    if (!fs.existsSync(DEALER_JSON)) return res.status(500).json({ success: false, message: "Database error" });
-    const dealers = JSON.parse(fs.readFileSync(DEALER_JSON, "utf8") || "{}");
+    try {
+        const target = await Dealer.findOne({ phoneNumber: dealerPhone });
+        if (!target) return res.status(404).json({ success: false, message: "Dealer not found" });
 
-    // Deep recursive search to find dealer in ANY structure (object or array)
-    let target = null;
-    const findAndUpdate = (obj) => {
-        if (target) return;
-        for (const key in obj) {
-            const val = obj[key];
-            if (val && typeof val === 'object') {
-                // If it's a dealer object (has phoneNumber field)
-                if (val.phoneNumber === dealerPhone) {
-                    target = val;
-                    return;
-                }
-                // If it's an array of dealers (old structure)
-                if (Array.isArray(val)) {
-                    const match = val.find(d => d.phoneNumber === dealerPhone);
-                    if (match) { 
-                        target = match; 
-                        return; 
-                    }
-                } else {
-                    // Recurse into sub-objects (Regions, HQs, Wards, etc.)
-                    findAndUpdate(val);
-                }
-            }
-            if (target) return;
-        }
-    };
+        target.isBlocked = !target.isBlocked;
+        // Optionally store the reason if the schema is updated later
+        // target.blockReason = target.isBlocked ? (reason || "Compliance Block") : null;
 
-    findAndUpdate(dealers);
+        await target.save();
 
-    if (!target) return res.status(404).json({ success: false, message: "Dealer not found" });
-
-    // Toggle Block Status
-    target.isBlocked = !target.isBlocked;
-    if (target.isBlocked) target.blockReason = reason || "Compliance Block";
-    else target.blockReason = null;
-
-    // Save
-    fs.writeFileSync(DEALER_JSON, JSON.stringify(dealers, null, 2));
-
-    res.json({
-        success: true,
-        message: target.isBlocked ? "Account Blocked" : "Account Unblocked",
-        isBlocked: target.isBlocked
-    });
+        res.json({
+            success: true,
+            message: target.isBlocked ? "Account Blocked" : "Account Unblocked",
+            isBlocked: target.isBlocked
+        });
+    } catch(e) {
+        console.error("Block Dealer Error", e);
+        res.status(500).json({ success: false, message: "Database error" });
+    }
 });
 
 router.post("/compliance/block-number", (req, res) => {
@@ -948,22 +779,12 @@ router.post("/compliance/block-number", (req, res) => {
 
 
 // Render a list of all dealers for impersonation
-router.get("/compliance/dealers", protectHq, (req, res) => {
+router.get("/compliance/dealers", protectHq, async (req, res) => {
     let dealers = [];
     try {
-        if (fs.existsSync(DEALER_JSON)) {
-            const raw = fs.readFileSync(DEALER_JSON, "utf8").trim();
-            if(raw) {
-                const parsedDealers = JSON.parse(raw);
-                // Ensure it's an array, as the structure might have been an object previously
-                if (Array.isArray(parsedDealers)) {
-                    dealers = parsedDealers;
-                }
-            }
-        }
+        dealers = await Dealer.find({}).lean();
     } catch(e) {
-        console.error("Error reading or parsing dealer.json:", e);
-        // On error, proceed with an empty dealers array
+        console.error("Error reading dealers from MongoDB:", e);
     }
     res.render("hq/dealers", { dealers, hqUser: req.session.hqUser });
 });

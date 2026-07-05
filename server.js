@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
-const { connectDB } = require("./mongoose");
+const { connectDB, Dealer, Agent, Admin, SuperAdmin, Message, normalizePhone } = require("./mongoose");
 
 /* ================= ROUTE IMPORTS ================= */
 const authRoutes = require("./routes/auth");
@@ -114,6 +114,100 @@ app.post("/api/inbox/delete", (req, res) => {
   if (!req.session.user.inbox) return res.json({ success: true });
   req.session.user.inbox = req.session.user.inbox.filter(m => m.id !== id);
   res.json({ success: true });
+});
+
+// Accept Dealer Invitation
+app.post("/api/accept-dealer-invite", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ success: false, message: "Not authenticated." });
+    }
+
+    const { msgId } = req.body;
+    if (!msgId) {
+      return res.status(400).json({ success: false, message: "Message ID is required." });
+    }
+
+    // Lookup the message by ID
+    const msg = await Message.findById(msgId);
+    if (!msg) {
+      return res.status(404).json({ success: false, message: "Invitation not found." });
+    }
+
+    // Verify the message belongs to the current user
+    const userPhone = req.session.user.phoneNumber;
+    if (normalizePhone(msg.to) !== normalizePhone(userPhone)) {
+      return res.status(403).json({ success: false, message: "Access denied." });
+    }
+
+    // Verify it's a dealer invitation
+    if (msg.type !== "dealer_invitation") {
+      return res.status(400).json({ success: false, message: "Invalid invitation type." });
+    }
+
+    if (!msg.meta) {
+      return res.status(400).json({ success: false, message: "Invitation payload missing." });
+    }
+
+    const payload = msg.meta;
+    const normDealerPhone = normalizePhone(payload.phoneNumber);
+
+    // Additional safety: ensure not already registered as agent/admin/superadmin
+    const existingAgent = await Agent.findOne({ phoneNumber: normDealerPhone });
+    if (existingAgent) {
+      return res.status(400).json({ success: false, message: "Phone number is registered as an Agent." });
+    }
+    const existingAdmin = await Admin.findOne({ phoneNumber: normDealerPhone });
+    const existingSuperAdmin = await SuperAdmin.findOne({ phoneNumber: normDealerPhone });
+    if (existingAdmin || existingSuperAdmin) {
+      return res.status(400).json({ success: false, message: "Phone number is registered as an Admin or SuperAdmin." });
+    }
+
+    // Upsert the dealer
+    const existingDealer = await Dealer.findOne({ phoneNumber: normDealerPhone });
+    if (existingDealer) {
+      // Update existing
+      await Dealer.updateOne(
+        { phoneNumber: normDealerPhone },
+        {
+          $set: {
+            hqPhone: payload.hqPhone,
+            county: payload.county,
+            constituency: payload.constituency,
+            ward: payload.ward,
+            name: payload.name,
+            isBlocked: payload.isBlocked || false,
+            updatedAt: new Date()
+          }
+        }
+      );
+    } else {
+      // Create new
+      await Dealer.create({
+        phoneNumber: normDealerPhone,
+        hqPhone: payload.hqPhone,
+        county: payload.county,
+        constituency: payload.constituency,
+        ward: payload.ward,
+        name: payload.name,
+        createdAt: new Date(),
+        isBlocked: payload.isBlocked || false,
+        stats: payload.stats || {
+          agent_creation: 0,
+          personal_account_creation: 0,
+          dealer_creation: 0
+        }
+      });
+    }
+
+    // Delete the invitation message so it can't be accepted again
+    await Message.findByIdAndDelete(msgId);
+
+    res.json({ success: true, message: "Dealer appointment accepted successfully." });
+  } catch (err) {
+    console.error("Accept Dealer Invite Error:", err);
+    res.status(500).json({ success: false, message: "Server error processing invitation." });
+  }
 });
 
 // 3️⃣ Protected routes (require login)

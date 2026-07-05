@@ -555,9 +555,11 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
           });
         } else if (msg.to && norm(msg.to) === norm(phone)) {
           constitutionKeys.push({
+            _id: msg._id,
             groupName: msg.title || 'Notification',
             type: msg.type,
             content: msg.content,
+            meta: msg.meta,
             isNew: true
           });
         }

@@ -235,6 +235,7 @@ const messageSchema = new mongoose.Schema({
   key: { type: String },
   broadcast: { type: Boolean, default: false },
   roles: [{ type: String }],
+  meta: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: String, default: () => new Date().toISOString() }
 }, { timestamps: true });
 
