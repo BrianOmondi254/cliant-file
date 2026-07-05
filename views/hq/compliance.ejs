@@ -2937,25 +2937,26 @@ body.dark-mode .toast {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           });
-          const result = await res.json();
+const result = await res.json();
 
-          if (result.success) {
-            showToast('Dealer Account Successfully Created');
-            closeDealerPanel('panel-create-dealer');
-            form.reset();
-            statusDiv.innerHTML = '';
-            document.getElementById('dealerLocationSection').style.opacity = '0.5';
-            document.getElementById('dealerLocationSection').style.pointerEvents = 'none';
-            btn.disabled = true;
-            verifiedDealerData = null; // Reset verification
-            // Unlock fields after save
-            const c = document.getElementById('dealerCounty');
-            const co = document.getElementById('dealerConstituency');
-            if(c) { c.style.pointerEvents = 'auto'; c.style.backgroundColor = ''; c.style.color = ''; }
-            if(co) { co.style.pointerEvents = 'auto'; co.style.backgroundColor = ''; co.style.color = ''; }
-          } else {
-            showError(result.message || 'Save failed');
-          }
+           if (result.success) {
+             const instructionMsg = result.instructions || 'The dealer will receive an invitation. They must accept it to activate their account.';
+             showToast(`Dealer Account Successfully Created. ${instructionMsg}`, false);
+             closeDealerPanel('panel-create-dealer');
+             form.reset();
+             statusDiv.innerHTML = '';
+             document.getElementById('dealerLocationSection').style.opacity = '0.5';
+             document.getElementById('dealerLocationSection').style.pointerEvents = 'none';
+             btn.disabled = true;
+             verifiedDealerData = null; // Reset verification
+             // Unlock fields after save
+             const c = document.getElementById('dealerCounty');
+             const co = document.getElementById('dealerConstituency');
+             if(c) { c.style.pointerEvents = 'auto'; c.style.backgroundColor = ''; c.style.color = ''; }
+             if(co) { co.style.pointerEvents = 'auto'; co.style.backgroundColor = ''; co.style.color = ''; }
+           } else {
+             showError(result.message || 'Save failed');
+           }
         } catch (err) {
           showError('Network error');
         } finally {

@@ -1,7 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const { findUserInCounties, Dealer, Agent, Admin, SuperAdmin, normalizePhone } = require('../mongoose');
+const { findUserInCounties, Dealer, Agent, Admin, SuperAdmin, normalizePhone, Message } = require('../mongoose');
 const { processMessage } = require('../notification/notification');
 
 const router = express.Router();
@@ -620,34 +620,48 @@ router.post("/compliance/save-dealer", async (req, res) => {
        return res.status(400).json({ success: false, message: "Phone number is registered as an Admin or SuperAdmin." });
     }
 
-    // 4. Send Dealer Invitation (do NOT create dealer yet — user must accept)
-    const dealerPayload = {
-      phoneNumber: normDealerPhone,
-      hqPhone: normHqPhone,
-      county: finalCounty,
-      constituency: finalConstituency,
-      ward: finalWard,
-      name: dealerName,
-      isBlocked: false,
-      stats: {
-        agent_creation: 0,
-        personal_account_creation: 0,
-        dealer_creation: 0
-      }
-    };
+// Check for existing pending dealer invitation
+     const existingPending = await Message.findOne({ 
+       to: normDealerPhone, 
+       type: "dealer_invitation", 
+       status: { $in: ["pending", null] } 
+     });
+     if (existingPending) {
+       return res.status(400).json({ 
+         success: false, 
+         message: "A pending dealer invitation already exists for this number. Please wait for acceptance or cancel the existing invitation." 
+       });
+     }
 
-    processMessage("HQ Admin", {
-      to: dealerPhone.trim(),
-      type: "dealer_invitation",
-      title: "Dealer Appointment Invitation",
-      content: `You have been invited to become a dealer for ${finalCounty} county. Please accept to activate your dealer account.`,
-      meta: dealerPayload
-    });
+     // 4. Send Dealer Invitation (do NOT create dealer yet — user must accept)
+     const dealerPayload = {
+       phoneNumber: normDealerPhone,
+       hqPhone: normHqPhone,
+       county: finalCounty,
+       constituency: finalConstituency,
+       ward: finalWard,
+       name: dealerName,
+       isBlocked: false,
+       stats: {
+         agent_creation: 0,
+         personal_account_creation: 0,
+         dealer_creation: 0
+       }
+     };
 
-    res.json({
-      success: true,
-      message: "Dealer invitation sent successfully. Awaiting user acceptance.",
-    });
+     processMessage("HQ Admin", {
+       to: dealerPhone.trim(),
+       type: "dealer_invitation",
+       title: "Dealer Appointment Invitation",
+       content: `You have been invited to become a dealer for ${finalCounty} county. Please accept to activate your dealer account.`,
+       meta: dealerPayload
+     });
+
+     res.json({
+       success: true,
+       message: "Dealer invitation sent successfully. Awaiting user acceptance.",
+       instructions: "The dealer will receive an invitation on their phone. They must accept the invitation to activate their dealer account. You can track pending invitations in the Messages section."
+     });
   } catch (err) {
     console.error("Save Dealer Error:", err);
     res
