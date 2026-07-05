@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const { findUserInCounties } = require('../mongoose');
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ function checkCompletion(compliance) {
 // ======================
 
 // Render compliance dashboard with current data
-router.get("/compliance", (req, res) => {
+router.get("/compliance", async (req, res) => {
   const db = readDB();
   const compliance = db.compliance || getDefaultStructure().compliance;
 
@@ -110,17 +111,13 @@ router.get("/compliance", (req, res) => {
   let userConstituency = null;
   if (hqUser && hqUser.phoneNumber) {
     try {
-      const raw = fs.readFileSync(path.join(__dirname, "..", "data.json"), "utf8").trim();
-      if (raw) {
-        const data = JSON.parse(raw);
-        const user = data.find((u) => u.phoneNumber === hqUser.phoneNumber);
-        if (user) {
-          userCounty = user.county;
-          userConstituency = user.constituency;
-        }
+      const user = await findUserInCounties(hqUser.phoneNumber);
+      if (user) {
+        userCounty = user.county;
+        userConstituency = user.constituency;
       }
     } catch (e) {
-      console.error("Error reading data.json:", e);
+      console.error("Error finding user in counties:", e);
     }
   }
 
@@ -133,6 +130,24 @@ router.get("/compliance", (req, res) => {
     userCounty: userCounty,
     userConstituency: userConstituency,
   });
+});
+
+// Regional Officer specific page
+router.get("/compliance/regions", protectHq, async (req, res) => {
+  const county = req.query.county || "";
+  const hqUser = req.session.hqUser || null;
+  
+  if (hqUser) {
+    const initials = (hqUser.name || "HQ").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+    res.render("hq/regions", {
+      county: county,
+      name: hqUser.name,
+      initials: initials,
+      hqUser: hqUser
+    });
+  } else {
+    res.redirect("/hq");
+  }
 });
 
 // Save Registration Standards
@@ -289,7 +304,6 @@ router.get("/compliance/data", (req, res) => {
 // AGENT MANAGEMENT
 // ======================
 
-const DATA_JSON = path.join(__dirname, "..", "data.json");
 const AGENT_JSON = path.join(__dirname, "..", "agent.json");
 const DEALER_JSON = path.join(__dirname, "..", "dealer.json");
 const HQ_JSON = path.join(__dirname, "..", "hq.json");
@@ -344,19 +358,11 @@ function cleanupInactiveDealers() {
 }
 
 // Verify relations between Agent and Dealer
-router.post("/compliance/verify-relations", (req, res) => {
+router.post("/compliance/verify-relations", async (req, res) => {
   const { agentPhone, dealerPhone } = req.body;
 
-  if (!fs.existsSync(DATA_JSON)) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Database not found" });
-  }
-
-  const rawD = fs.readFileSync(DATA_JSON, "utf8").trim();
-  const users = rawD ? JSON.parse(rawD) : [];
-  const agent = users.find((u) => u.phoneNumber === agentPhone);
-  const dealer = users.find((u) => u.phoneNumber === dealerPhone);
+  const agent = await findUserInCounties(agentPhone);
+  const dealer = await findUserInCounties(dealerPhone);
 
   if (!agent) {
     return res
@@ -398,7 +404,7 @@ router.post("/compliance/verify-relations", (req, res) => {
 });
 
 // Save Agent Account and update registries
-router.post("/compliance/save-agent", (req, res) => {
+router.post("/compliance/save-agent", async (req, res) => {
   const { agentPhone, dealerPhone, county, constituency, ward } = req.body;
 
   try {
@@ -409,10 +415,7 @@ router.post("/compliance/save-agent", (req, res) => {
       agents = raw.trim() ? JSON.parse(raw) : [];
     }
 
-    // Get agent name from data.json
-    const rawData = fs.readFileSync(DATA_JSON, "utf8").trim();
-    const users = rawData ? JSON.parse(rawData) : [];
-    const agentProfile = users.find((u) => u.phoneNumber === agentPhone);
+    const agentProfile = await findUserInCounties(agentPhone);
     const agentName = agentProfile
       ? `${agentProfile.FirstName} ${agentProfile.MiddleName} ${agentProfile.LastName}`.trim()
       : "Unknown Agent";
@@ -504,26 +507,17 @@ router.post("/compliance/save-agent", (req, res) => {
 });
 
 // Dealer Management Endpoints
-router.post("/compliance/verify-dealer-relations", (req, res) => {
+router.post("/compliance/verify-dealer-relations", async (req, res) => {
   const { dealerPhone, hqPhone } = req.body;
 
-  if (!fs.existsSync(DATA_JSON)) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Database not found" });
-  }
-
-  const rawData = fs.readFileSync(DATA_JSON, "utf8").trim();
-  const users = rawData ? JSON.parse(rawData) : [];
-
-  const dealer = users.find((u) => u.phoneNumber === dealerPhone);
+  const dealer = await findUserInCounties(dealerPhone);
 
   if (!dealer) {
     return res
       .status(444)
       .json({
         success: false,
-        message: "Dealer phone number not registered in data.json",
+        message: "Dealer phone number not registered in TBank system",
       });
   }
 
@@ -548,7 +542,7 @@ router.post("/compliance/verify-dealer-relations", (req, res) => {
     // Also do a global check just in case they moved counties? (Optional, stick to county for now)
   }
 
-  // REMOVED: Agent check. Dealer verification now solely relies on data.json existence.
+  // REMOVED: Agent check. Dealer verification now solely relies on counties MongoDB collection.
   /*
   if (!fs.existsSync(AGENT_JSON)) {
     return res.status(500).json({ success: false, message: "Agent database not found" });
@@ -562,7 +556,7 @@ router.post("/compliance/verify-dealer-relations", (req, res) => {
   }
   */
 
-  const hq = users.find((u) => u.phoneNumber === hqPhone);
+  const hq = await findUserInCounties(hqPhone);
 
   if (!hq) {
     return res
@@ -592,15 +586,12 @@ router.post("/compliance/verify-dealer-relations", (req, res) => {
   });
 });
 
-router.post("/compliance/save-dealer", (req, res) => {
+router.post("/compliance/save-dealer", async (req, res) => {
   const { dealerPhone, hqPhone, county, constituency, ward } = req.body;
 
   try {
-    // 1. Update dealer.json
-    const rawData = fs.readFileSync(DATA_JSON, "utf8").trim();
-    const users = rawData ? JSON.parse(rawData) : [];
-    const dealerProfile = users.find((u) => u.phoneNumber === dealerPhone);
-    const hqProfile = users.find((u) => u.phoneNumber === hqPhone);
+    const dealerProfile = await findUserInCounties(dealerPhone);
+    const hqProfile = await findUserInCounties(hqPhone);
 
     if (!hqProfile) {
       return res
@@ -626,7 +617,7 @@ router.post("/compliance/save-dealer", (req, res) => {
         .status(400)
         .json({
           success: false,
-          message: "Dealer phone number not verified in registry (data.json).",
+          message: "Dealer phone number not verified in TBank system.",
         });
     }
 
@@ -671,7 +662,7 @@ router.post("/compliance/save-dealer", (req, res) => {
     // const formWard = normalize(ward);
     // if (regWard && regWard !== formWard) { ... }
 
-    // Ensure regional data matches data.json structure (Prioritize profile data for consistency)
+    // Ensure regional data matches counties MongoDB collection (Prioritize profile data for consistency)
     const finalCounty = dealerProfile.county || county;
     const finalConstituency = dealerProfile.constituency || constituency;
     // Default to 'Unknown' if no ward provided or found (since field deleted)

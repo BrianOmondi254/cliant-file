@@ -2,9 +2,35 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserInCounties } = require("../mongoose");
+const { findUserInCounties, Admin, normalizePhone } = require("../mongoose");
 
 const router = express.Router();
+
+const protectDepartment = async (req, res, next) => {
+  if (!req.session || !req.session.hqUser) {
+    return res.redirect("/hq");
+  }
+
+  const section = req.params.section.toLowerCase();
+  const deptMap = {
+    finance: "Finance",
+    relations: "Relations",
+    it: "IT Department",
+    operations: "Operations",
+    hr: "Human Resources",
+    compliance: "Compliance",
+    regions: "Regions"
+  };
+
+  const requiredDept = deptMap[section];
+  if (requiredDept) {
+    const admin = await Admin.findOne({ phoneNumber: normalizePhone(req.session.hqUser.phoneNumber) }).lean();
+    if (!admin || admin.department !== requiredDept) {
+      return res.status(403).send("Forbidden. You do not have access to this department.");
+    }
+  }
+  next();
+};
 
 /* ================= FILE PATHS ================= */
 const officialFile = path.join(__dirname, "../official.json");
@@ -33,15 +59,40 @@ router.get("/", (req, res) => {
 });
 
 // Dynamic section route
-router.get("/:section", (req, res) => {
-  const section = req.params.section.toLowerCase();
+router.get("/:section", protectDepartment, async (req, res) => {
+  let section = req.params.section.toLowerCase();
 
-  // Allowed sections
-  const allowedSections = ['finance', 'relations', 'it', 'operations', 'compliance', 'hr'];
+  // Map dashed URLs to view names
+  const sectionMap = {
+    'it-department': 'it',
+    'human-resources': 'hr'
+  };
+  
+  if (sectionMap[section]) {
+    section = sectionMap[section];
+  }
+
+  // Allowed sections (mapped keys)
+  const allowedSections = ['finance', 'relations', 'it', 'operations', 'compliance', 'hr', 'regions'];
   if (!allowedSections.includes(section)) return res.status(404).send('Not found');
 
-  // Render the corresponding EJS view
-  res.render(`hq/${section}`, { sectionName: section.charAt(0).toUpperCase() + section.slice(1) });
+  // Render the corresponding EJS view - regions needs county info
+  if (section === 'regions') {
+    const admin = await Admin.findOne({ phoneNumber: normalizePhone(req.session.hqUser.phoneNumber) }).lean();
+    const county = admin?.county || "";
+    const initials = (req.session.hqUser.name || "HQ").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+    return res.render("hq/regions", {
+      county: county,
+      name: req.session.hqUser.name,
+      initials: initials,
+      hqUser: req.session.hqUser
+    });
+  }
+
+  // For hr, show the hr view; for others just show section name
+  const viewMap = { hr: 'Human Resources' };
+  const sectionName = viewMap[section] || section.charAt(0).toUpperCase() + section.slice(1);
+  res.render(`hq/${section}`, { sectionName });
 });
 
 

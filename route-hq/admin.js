@@ -278,6 +278,14 @@ router.post("/login", async (req, res) => {
     return res.json({ status: "ERROR", message: "Phone and PIN required." });
   }
 
+  const user = await findUserInCounties(phone);
+  if (!user) {
+    return res.json({
+      status: "NOT_REGISTERED",
+      message: "Phone not registered in TBank system."
+    });
+  }
+
   const admin = await Admin.findOne({ phoneNumber: norm(phone) }).lean();
   if (!admin) {
     return res.json({
@@ -312,6 +320,101 @@ router.post("/login", async (req, res) => {
     name: admin.name,
     department: admin.department
   });
+});
+
+router.post("/login-with-department", async (req, res) => {
+  const { phone, pin, department } = req.body;
+  if (!phone || !pin) {
+    return res.json({ status: "ERROR", message: "Phone and PIN are required." });
+  }
+
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) {
+      return res.json({ status: "ERROR", message: "Database not available" });
+    }
+
+    // 1. Verify phone exists in counties collection
+    const countyUser = await findUserInCounties(phone);
+    if (!countyUser) {
+      return res.json({
+        status: "NOT_REGISTERED",
+        message: "Phone not registered in TBank system."
+      });
+    }
+
+    const normalised = norm(phone);
+
+    // 2. Check SuperAdmin first (super admins can access any department)
+    const superAdmin = await SuperAdmin.findOne({ phoneNumber: normalised }).lean();
+    if (superAdmin) {
+      const pinMatch = await bcrypt.compare(pin, superAdmin.pin);
+      if (!pinMatch) {
+        return res.json({ status: "WRONG_PIN", message: "Wrong PIN." });
+      }
+
+      req.session.hqUser = {
+        phoneNumber: superAdmin.phoneNumber,
+        name: superAdmin.name,
+        role: "superadmin"
+      };
+
+      return res.json({
+        status: "SUCCESS",
+        name: superAdmin.name,
+        role: "superadmin",
+        department: null,
+        redirect: "/hq/admin"
+      });
+    }
+
+    // 3. Check Admin in tbank-admin admins collection
+    const admin = await Admin.findOne({ phoneNumber: normalised }).lean();
+    if (!admin) {
+      return res.json({
+        status: "NOT_ADMIN",
+        message: "Phone not registered as HQ admin."
+      });
+    }
+
+    if (!admin.pin) {
+      return res.json({
+        status: "NO_PIN",
+        message: "PIN not created yet. Please create your PIN."
+      });
+    }
+
+    const pinMatch = await bcrypt.compare(pin, admin.pin);
+    if (!pinMatch) {
+      return res.json({ status: "WRONG_PIN", message: "Wrong PIN." });
+    }
+
+    // 4. Verify department matches selected department (only if department was provided)
+    if (department && admin.department !== department) {
+      return res.json({
+        status: "WRONG_DEPARTMENT",
+        message: `You are registered under "${admin.department}", not "${department}".`,
+        actualDepartment: admin.department
+      });
+    }
+
+    // 5. Set session and return success
+    req.session.hqUser = {
+      phoneNumber: admin.phoneNumber,
+      name: admin.name,
+      department: admin.department
+    };
+
+    return res.json({
+      status: "SUCCESS",
+      name: admin.name,
+      department: admin.department,
+      role: "admin"
+    });
+  } catch (err) {
+    console.error("Error in login-with-department:", err);
+    return res.json({ status: "ERROR", message: err.message });
+  }
 });
 
 router.get("/departments", async (req, res) => {
@@ -402,6 +505,44 @@ router.post("/send-officer-message", requireAuth, async (req, res) => {
   } catch (e) {
     console.error("[admin] savePendingOfficerMessage error:", e.message);
     return res.json({ status: "ERROR", message: "Failed to save officer message." });
+  }
+});
+
+router.get("/verify-department", async (req, res) => {
+  if (!req.session || !req.session.hqUser) {
+    return res.json({ status: "UNAUTHENTICATED" });
+  }
+
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) {
+      return res.json({ status: "ERROR", message: "Database not available" });
+    }
+
+    const admin = await Admin.findOne({ phoneNumber: norm(req.session.hqUser.phoneNumber) }).lean();
+    if (admin) {
+      return res.json({
+        status: "OK",
+        department: admin.department,
+        isSuperAdmin: false,
+        county: admin.county || null,
+        constituency: admin.constituency || null,
+        ward: admin.ward || null
+      });
+    }
+
+    const superAdmin = await SuperAdmin.findOne({ phoneNumber: norm(req.session.hqUser.phoneNumber) }).lean();
+    if (superAdmin) {
+      return res.json({
+        status: "OK",
+        department: null,
+        isSuperAdmin: true
+      });
+    }
+
+    return res.json({ status: "ERROR", message: "User not found in system" });
+  } catch (err) {
+    return res.json({ status: "ERROR", message: err.message });
   }
 });
 

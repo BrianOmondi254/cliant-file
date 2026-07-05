@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regional Officer Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    :root {
+      --blue-900: #0a1628;
+      --blue-800: #102040;
+      --blue-700: #1a3060;
+      --blue-600: #1e4080;
+      --blue-500: #1f5cbf;
+      --blue-400: #2e72d2;
+      --blue-300: #5a96e8;
+      --teal-500: #0e7c6e;
+      --teal-400: #15977c;
+      --teal-100: #d5f0eb;
+      --gold-500: #b07d1a;
+      --gold-100: #fdf0cc;
+      --gray-900: #111827;
+      --gray-700: #374151;
+      --gray-600: #4b5563;
+      --gray-400: #9ca3af;
+      --gray-200: #e5e7eb;
+      --gray-100: #f3f4f6;
+      --gray-50: #f9fafb;
+      --green-500: #16a34a;
+      --red-500: #dc2626;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
+      --transition: 0.18s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--gray-50);
+      color: var(--gray-900);
+      min-height: 100vh;
+    }
+    header {
+      background: var(--blue-900);
+      border-bottom: 1px solid var(--blue-800);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+    .topbar {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 28px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      background: var(--blue-400);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-logo svg { width: 18px; height: 18px; fill: white; }
+    .brand-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      letter-spacing: 0.02em;
+    }
+    .brand-name span { color: var(--blue-300); font-weight: 400; }
+    .topbar-divider { width: 1px; height: 28px; background: var(--blue-700); flex-shrink: 0; }
+    .topbar-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--blue-300);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      flex: 1;
+    }
+    .topbar-title .county-badge {
+      background: var(--teal-100);
+      color: var(--teal-500);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 12px;
+    }
+    .topbar-auth {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--blue-600);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--blue-100);
+    }
+    .user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-200);
+    }
+    .btn {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--transition);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--blue-500);
+      color: white;
+      border-color: var(--blue-400);
+    }
+    .btn-primary:hover { background: var(--blue-400); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray-400);
+      border-color: var(--blue-700);
+    }
+    .btn-danger {
+      background: transparent;
+      color: #f87171;
+      border-color: rgba(220, 38, 38, 0.3);
+    }
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 40px 28px 60px;
+    }
+    .page-header { margin-bottom: 36px; }
+    .page-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--blue-500);
+      margin-bottom: 6px;
+    }
+    .page-heading {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 6px;
+    }
+    .page-sub { font-size: 14px; color: var(--gray-600); }
+    .page-divider { border: none; border-top: 1px solid var(--gray-200); margin: 28px 0; }
+    .region-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .region-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+    .region-card:hover {
+      border-color: var(--blue-300);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .region-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .region-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: var(--teal-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .region-icon i {
+      font-size: 22px;
+      color: var(--teal-500);
+    }
+    .region-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin: 0;
+    }
+    .region-desc {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .region-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .region-actions .btn {
+      flex: 1;
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+.back-btn {
+       margin-bottom: 20px;
+     }
+
+     /* ─── TOAST NOTIFICATIONS ─── */
+     #toast-container {
+       position: fixed;
+       bottom: 20px;
+       left: 50%;
+       transform: translateX(-50%);
+       z-index: 10002;
+       display: flex;
+       flex-direction: column;
+       gap: 8px;
+     }
+     .toast {
+       background: #1e293b;
+       color: white;
+       padding: 12px 20px;
+       border-radius: 8px;
+       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+       font-size: 13px;
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       min-width: 200px;
+       max-width: 320px;
+       animation: toastSlideUp 0.3s ease forwards;
+     }
+     .toast.success { background: #10b981; }
+     .toast.error   { background: #ef4444; }
+     .toast.info    { background: #1f5cbf; }
+     .toast.warning { background: #f59e0b; }
+     @keyframes toastSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+   </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="topbar-brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <span class="brand-name">T-Bank <span>Investment</span></span>
+      </div>
+      <div class="topbar-divider"></div>
+      <span class="topbar-title">Regional Officer <span class="county-badge"><%- county %></span></span>
+      <div class="topbar-auth">
+        <div class="user-badge">
+          <div class="avatar"><%= initials %></div>
+          <span class="user-name"><%= name %></span>
+        </div>
+        <button class="btn btn-danger" onclick="window.location.href='/logout'">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <button class="btn btn-ghost back-btn" onclick="window.location.href='/hq/admin'">
+      <i class="fa-solid fa-arrow-left"></i> Back to Admin Dashboard
+    </button>
+
+    <div class="page-header">
+      <p class="page-eyebrow">Regions Department</p>
+      <h1 class="page-heading">Regional Management - <%- county %></h1>
+      <p class="page-sub">Access county, constituency, and ward operations for your assigned region.</p>
+    </div>
+    <hr class="page-divider">
+
+    <div class="region-grid">
+      <div class="region-card">
+        <div class="region-card-header">
+          <div class="region-icon">
+            <i class="fa-solid fa-globe-africa"></i>
+          </div>
+          <h3 class="region-title">County Overview</h3>
+        </div>
+        <p class="region-desc">View all constituencies and groups within your county. Monitor regional statistics and performance.</p>
+        <div class="region-actions">
+          <button class="btn btn-primary" onclick="viewCountyData()">
+            <i class="fa-solid fa-eye"></i> View
+          </button>
+          <button class="btn btn-ghost" onclick="manageCounty()">
+            <i class="fa-solid fa-gear"></i> Manage
+          </button>
+        </div>
+      </div>
+
+      <div class="region-card">
+        <div class="region-card-header">
+          <div class="region-icon" style="background: var(--gold-100);">
+            <i class="fa-solid fa-map-pin" style="color: var(--gold-500);"></i>
+          </div>
+          <h3 class="region-title">Constituency Management</h3>
+        </div>
+        <p class="region-desc">Review constituency details, verify agents, and manage dealer accounts within your region.</p>
+        <div class="region-actions">
+          <button class="btn btn-primary" onclick="viewConstituencies()">
+            <i class="fa-solid fa-eye"></i> View
+          </button>
+          <button class="btn btn-ghost" onclick="manageConstituencies()">
+            <i class="fa-solid fa-gear"></i> Manage
+          </button>
+        </div>
+      </div>
+
+      <div class="region-card">
+        <div class="region-card-header">
+          <div class="region-icon" style="background: var(--blue-100);">
+            <i class="fa-solid fa-users" style="color: var(--blue-500);"></i>
+          </div>
+          <h3 class="region-title">Ward Operations</h3>
+        </div>
+        <p class="region-desc">Access ward-level data, verify groups, and manage local operations.</p>
+        <div class="region-actions">
+          <button class="btn btn-primary" onclick="viewWards()">
+            <i class="fa-solid fa-eye"></i> View
+          </button>
+          <button class="btn btn-ghost" onclick="manageWards()">
+            <i class="fa-solid fa-gear"></i> Manage
+          </button>
+        </div>
+      </div>
+
+      <div class="region-card">
+        <div class="region-card-header">
+          <div class="region-icon" style="background: var(--green-500);">
+            <i class="fa-solid fa-chart-line" style="color: white;"></i>
+          </div>
+          <h3 class="region-title">Regional Reports</h3>
+        </div>
+        <p class="region-desc">Generate and view performance reports for your county and constituencies.</p>
+        <div class="region-actions">
+          <button class="btn btn-primary" onclick="generateReports()">
+            <i class="fa-solid fa-file-lines"></i> Reports
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+     const county = "<%- county %>";
+     const constituency = "<%- constituency %>";
+     function viewCountyData() { showToast(`County: ${county}`, "info"); }
+     function manageCounty() { showToast(`Manage County: ${county}`, "info"); }
+     function viewConstituencies() { window.location.href = "/hq/compliance?tab=constituencies&county=" + encodeURIComponent(county); }
+     function manageConstituencies() { window.location.href = "/hq/compliance?tab=constituencies&county=" + encodeURIComponent(county); }
+     function viewWards() { window.location.href = "/hq/compliance?tab=wards&county=" + encodeURIComponent(county); }
+     function manageWards() { window.location.href = "/hq/compliance?tab=wards&county=" + encodeURIComponent(county); }
+     function generateReports() { window.location.href = "/hq/compliance?tab=reports&county=" + encodeURIComponent(county); }
+     
+     function showToast(msg, type = 'info', duration = 3000) {
+       const toast = document.createElement('div');
+       toast.className = 'toast ' + type;
+       toast.style.cssText = `
+         background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#1f5cbf'};
+         color: white;
+         padding: 12px 20px;
+         border-radius: 8px;
+         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+         font-size: 13px;
+         display: flex;
+         align-items: center;
+         gap: 8px;
+         min-width: 200px;
+         max-width: 320px;
+         animation: toastSlideUp 0.3s ease forwards;
+       `;
+       toast.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'triangle-exclamation' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i> <span>${msg}</span>`;
+       document.getElementById('toast-container').appendChild(toast);
+       setTimeout(() => toast.remove(), duration);
+     }
+</script>
+    
+   <div id="toast-container"></div>
+
+  </body>
+  </html>

@@ -1039,7 +1039,10 @@ const adminSchema = new mongoose.Schema({
   pin: { type: String, default: null },
   pinCreatedAt: { type: Date, default: null },
   status: { type: String, default: "active" },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  county: { type: String },
+  constituency: { type: String },
+  ward: { type: String }
 });
 
 const adminConn = mongoose.createConnection(MONGODB_URI);

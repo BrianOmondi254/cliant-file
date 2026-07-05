@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>T-Bank HQ Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -279,19 +280,50 @@
       to { transform: rotate(360deg); }
     }
 
-    .spin {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-left: 6px;
-    }
+.spin {
+       display: inline-block;
+       width: 14px;
+       height: 14px;
+       border: 2px solid rgba(255,255,255,0.3);
+       border-top-color: white;
+       border-radius: 50%;
+       animation: spin 0.7s linear infinite;
+       vertical-align: middle;
+       margin-left: 6px;
+     }
 
-    .field-input {
+     /* ─── TOAST NOTIFICATIONS ─── */
+     #toast-container {
+       position: fixed;
+       bottom: 20px;
+       left: 50%;
+       transform: translateX(-50%);
+       z-index: 10002;
+       display: flex;
+       flex-direction: column;
+       gap: 8px;
+     }
+     .toast {
+       background: #1e293b;
+       color: white;
+       padding: 12px 20px;
+       border-radius: 8px;
+       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+       font-size: 13px;
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       min-width: 200px;
+       max-width: 320px;
+       animation: toastSlideUp 0.3s ease forwards;
+     }
+     .toast.success { background: #10b981; }
+     .toast.error   { background: #ef4444; }
+     .toast.info    { background: #1f5cbf; }
+     .toast.warning { background: #f59e0b; }
+     @keyframes toastSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+     .field-input {
       font-family: var(--font);
       font-size: 14px;
       color: var(--gray-900);
@@ -304,12 +336,35 @@
       transition: border-color var(--transition), box-shadow var(--transition);
     }
 
-    .field-input:focus {
-      border-color: var(--blue-400);
-      background: white;
-      box-shadow: 0 0 0 3px rgba(46, 114, 210, 0.12);
-    }
-  </style>
+.field-input:focus {
+       border-color: var(--blue-400);
+       background: white;
+       box-shadow: 0 0 0 3px rgba(46, 114, 210, 0.12);
+     }
+     
+     .m-info-banner {
+       border-radius: 8px;
+       padding: 10px 12px;
+       margin-bottom: 14px;
+       display: flex;
+       gap: 10px;
+       align-items: flex-start;
+       font-size: 12px;
+       background: #eff6ff;
+       border: 1px solid #bfdbfe;
+       color: #1e4080;
+     }
+     .m-info-banner.red { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+     .m-field label {
+       display: block;
+       font-size: 11px;
+       font-weight: 600;
+       color: var(--gray-600);
+       text-transform: uppercase;
+       letter-spacing: 0.5px;
+       margin-bottom: 6px;
+     }
+   </style>
 </head>
 <body>
 
@@ -426,20 +481,40 @@
         <div class="dept-body"><p class="dept-name">Human Resources</p></div>
       </div>
     </div>
-    <div id="phone-input-section" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;">
-      <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="closeAdminPopup()"></div>
-      <div style="position:relative;background:white;border-radius:var(--radius-lg);padding:36px 32px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);">
-        <button onclick="closeAdminPopup()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
-        <div style="margin-bottom:24px;">
-          <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Create Admin Account</p>
-        </div>
-        <div id="message-note" style="margin-top:24px;padding:24px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);max-width:440px;margin-left:auto;margin-right:auto;text-align:center;">
-          <div style="width:44px;height:44px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;">✅</div>
-          <p id="message-user-info" style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;"></p>
-           <button class="btn btn-primary" onclick="continueAndSubmit()" style="width:100%;max-width:200px;">Continue</button>
-        </div>
-      </div>
-    </div>
+<div id="phone-input-section" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;">
+       <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="closeAdminPopup()"></div>
+       <div style="position:relative;background:white;border-radius:var(--radius-lg);padding:36px 32px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);">
+         <button onclick="closeAdminPopup()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
+         
+         <div id="dept-signin-step">
+           <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Sign In - <span id="selected-dept-name"></span></p>
+           <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-circle-info"></i><span>Enter your phone to access this department.</span></div>
+           <div class="m-field">
+             <label>Phone Number</label>
+             <input type="tel" id="admin-signin-phone" class="field-input" placeholder="07XX XXX XXX" inputmode="numeric" style="width:100%;">
+           </div>
+           <div id="signin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
+           <button class="btn btn-primary" onclick="verifyAdminPhone()" style="width:100%;">Verify Phone</button>
+         </div>
+         
+         <div id="pin-input-step" class="hidden">
+           <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Enter PIN</p>
+           <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-lock"></i><span>Welcome, <span id="verified-admin-name" style="font-weight:700;"></span>. Enter your 4-digit PIN.</span></div>
+           <div class="m-field">
+             <label>PIN</label>
+             <input type="password" id="admin-pin-input" class="field-input" placeholder="••••" inputmode="numeric" maxlength="4" style="width:100%;letter-spacing:4px;font-size:18px;text-align:center;">
+           </div>
+           <div id="pin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
+           <button class="btn btn-primary" onclick="verifyAdminPinAndDept()" style="width:100%;">Verify PIN & Department</button>
+         </div>
+         
+         <div id="message-note" class="hidden">
+           <div style="width:44px;height:44px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;">✅</div>
+           <p id="message-user-info" style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;"></p>
+            <button class="btn btn-primary" onclick="continueAndSubmit()" style="width:100%;max-width:200px;">Continue</button>
+         </div>
+       </div>
+     </div>
 
     <div id="list-dept-section" class="hidden">
       <div class="page-header">
@@ -456,107 +531,223 @@
 </main>
 
 <script>
-   let selectedDept = null;
+    let selectedDept = null;
+    let verifiedAdminName = "";
+    let verifiedPhone = "";
 
-   document.getElementById("create-dept-option").onclick = () => {
-     document.getElementById("admin-options").classList.add("hidden");
-     document.getElementById("create-dept-section").classList.remove("hidden");
-   };
+    document.getElementById("create-dept-option").onclick = () => {
+      document.getElementById("admin-options").classList.add("hidden");
+      document.getElementById("create-dept-section").classList.remove("hidden");
+    };
 
-   document.getElementById("list-dept-option").onclick = async () => {
-     document.getElementById("admin-options").classList.add("hidden");
-     document.getElementById("list-dept-section").classList.remove("hidden");
-     
-     const listEl = document.getElementById("departments-list");
-     try {
-       const res = await fetch("/hq/admin/departments");
-       const data = await res.json();
-       if (data.status === "OK" && data.departments) {
-         listEl.innerHTML = data.departments.map(dept => {
-           const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
-           return `
-             <div class="dept-card">
-               <div class="dept-icon ${icons[dept.name] || "blue"}">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-                   <rect x="2" y="7" width="20" height="14" rx="2"/>
-                 </svg>
-               </div>
-               <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
-             </div>
-           `;
-         }).join("");
-       } else {
-         listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
-       }
-     } catch (err) {
-       listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
-     }
-   };
+    document.getElementById("list-dept-option").onclick = async () => {
+      document.getElementById("admin-options").classList.add("hidden");
+      document.getElementById("list-dept-section").classList.remove("hidden");
+      
+      const listEl = document.getElementById("departments-list");
+      try {
+        const res = await fetch("/hq/admin/departments");
+        const data = await res.json();
+        if (data.status === "OK" && data.departments) {
+          listEl.innerHTML = data.departments.map(dept => {
+            const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
+            return `
+              <div class="dept-card">
+                <div class="dept-icon ${icons[dept.name] || "blue"}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                  </svg>
+                </div>
+                <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
+              </div>
+            `;
+          }).join("");
+        } else {
+          listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
+        }
+      } catch (err) {
+        listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
+      }
+    };
 
-   document.getElementById("create-dept-btn").onclick = () => {
-     document.getElementById("create-dept-section").classList.remove("hidden");
-     document.getElementById("list-dept-section").classList.add("hidden");
-     document.getElementById("admin-options").classList.add("hidden");
-     closeAdminPopup();
-   };
+    document.getElementById("create-dept-btn").onclick = () => {
+      document.getElementById("create-dept-section").classList.remove("hidden");
+      document.getElementById("list-dept-section").classList.add("hidden");
+      document.getElementById("admin-options").classList.add("hidden");
+      closeAdminPopup();
+    };
 
-   document.getElementById("list-dept-btn").onclick = async () => {
-     document.getElementById("create-dept-section").classList.add("hidden");
-     document.getElementById("list-dept-section").classList.remove("hidden");
-     document.getElementById("admin-options").classList.add("hidden");
-     closeAdminPopup();
+    document.getElementById("list-dept-btn").onclick = async () => {
+      document.getElementById("create-dept-section").classList.add("hidden");
+      document.getElementById("list-dept-section").classList.remove("hidden");
+      document.getElementById("admin-options").classList.add("hidden");
+      closeAdminPopup();
 
-     const listEl = document.getElementById("departments-list");
-     listEl.innerHTML = '<p style="color: var(--gray-600);">Loading departments...</p>';
-     try {
-       const res = await fetch("/hq/admin/departments");
-       const data = await res.json();
-       if (data.status === "OK" && data.departments) {
-         listEl.innerHTML = data.departments.map(dept => {
-           const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
-           return `
-             <div class="dept-card">
-               <div class="dept-icon ${icons[dept.name] || "blue"}">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
-                   <rect x="2" y="7" width="20" height="14" rx="2"/>
-                 </svg>
-               </div>
-               <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
-             </div>
-           `;
-         }).join("");
-       } else {
-         listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
-       }
-     } catch (err) {
-       listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
-     }
-   };
+      const listEl = document.getElementById("departments-list");
+      listEl.innerHTML = '<p style="color: var(--gray-600);">Loading departments...</p>';
+      try {
+        const res = await fetch("/hq/admin/departments");
+        const data = await res.json();
+        if (data.status === "OK" && data.departments) {
+          listEl.innerHTML = data.departments.map(dept => {
+            const icons = { Finance: "blue", Relations: "teal", "IT Department": "purple", Operations: "gold", Regions: "slate", "Human Resources": "rose" };
+            return `
+              <div class="dept-card">
+                <div class="dept-icon ${icons[dept.name] || "blue"}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/>
+                  </svg>
+                </div>
+                <div class="dept-body"><p class="dept-name">${dept.name} (${dept.count})</p></div>
+              </div>
+            `;
+          }).join("");
+        } else {
+          listEl.innerHTML = "<p style='color: var(--red-500);'>Failed to load departments</p>";
+        }
+      } catch (err) {
+        listEl.innerHTML = "<p style='color: var(--red-500);'>Network error</p>";
+      }
+    };
 
-   document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
-     card.onclick = () => {
-       selectedDept = card.getAttribute("data-dept");
-       openAdminPopup();
-     };
-   });
+    document.querySelectorAll("#create-dept-section .dept-card[data-dept]").forEach(card => {
+      card.onclick = () => {
+        selectedDept = card.getAttribute("data-dept");
+        openAdminPopup();
+      };
+    });
 
-   function openAdminPopup() {
-     const popup = document.getElementById("phone-input-section");
-     popup.classList.remove("hidden");
-     const messageUserInfo = document.getElementById("message-user-info");
-     messageUserInfo.innerHTML = `Account Created Successfully for <strong>${selectedDept || 'Department'}</strong>.<br>Please ask the officer to create their PIN through their main page.`;
-   }
+    function openAdminPopup() {
+      const popup = document.getElementById("phone-input-section");
+      popup.classList.remove("hidden");
+      document.getElementById("dept-signin-step").classList.remove("hidden");
+      document.getElementById("pin-input-step").classList.add("hidden");
+      document.getElementById("message-note").classList.add("hidden");
+      document.getElementById("selected-dept-name").textContent = selectedDept || 'Department';
+      document.getElementById("admin-signin-phone").value = "";
+      document.getElementById("admin-pin-input").value = "";
+      document.getElementById("signin-error").classList.add("hidden");
+      document.getElementById("pin-error").classList.add("hidden");
+    }
 
-   function closeAdminPopup() {
-     const popup = document.getElementById("phone-input-section");
-     popup.classList.add("hidden");
-   }
+    function closeAdminPopup() {
+      const popup = document.getElementById("phone-input-section");
+      popup.classList.add("hidden");
+    }
 
-   function continueAndSubmit() {
-     selectedDept = null;
-     document.getElementById("phone-input-section").classList.add("hidden");
-   }
+    function continueAndSubmit() {
+      selectedDept = null;
+      verifiedAdminName = "";
+      verifiedPhone = "";
+      document.getElementById("phone-input-section").classList.add("hidden");
+    }
+
+    async function verifyAdminPhone() {
+      const phone = document.getElementById("admin-signin-phone").value.trim();
+      const errDiv = document.getElementById("signin-error");
+      
+      if (!phone) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Phone number required.</span>';
+        return;
+      }
+
+      try {
+        const res = await fetch("/hq/admin/verify-phone", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+        
+        if (data.status === "FOUND") {
+          verifiedPhone = phone;
+          document.getElementById("dept-signin-step").classList.add("hidden");
+          document.getElementById("pin-input-step").classList.remove("hidden");
+          document.getElementById("verified-admin-name").textContent = data.name || "Admin";
+          verifiedAdminName = data.name || "Admin";
+          document.getElementById("admin-pin-input").focus();
+        } else if (data.status === "NOT_REGISTERED") {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Phone not registered in TBank system.</span>';
+        } else if (data.status === "ALREADY_SUPERADMIN" || data.status === "ALREADY_ADMIN") {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>' + data.message + '</span>';
+        } else {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>' + (data.message || 'Verification failed.') + '</span>';
+        }
+      } catch (err) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Network error. Please try again.</span>';
+      }
+    }
+
+    async function verifyAdminPinAndDept() {
+      const pin = document.getElementById("admin-pin-input").value.trim();
+      const errDiv = document.getElementById("pin-error");
+      
+      if (!pin || pin.length < 4) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Please enter a valid 4-digit PIN.</span>';
+        return;
+      }
+
+      try {
+        const res = await fetch("/hq/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: verifiedPhone, pin })
+        });
+        const data = await res.json();
+        
+        if (data.status === "SUCCESS") {
+          if (data.department === selectedDept) {
+            window.location.href = "/hq/" + selectedDept.toLowerCase().replace(/\s+/g, '-');
+          } else {
+            errDiv.classList.remove("hidden");
+            errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Wrong department. You are registered in ' + data.department + '.</span>';
+          }
+        } else if (data.status === "NO_PIN") {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>PIN not created. Please create your PIN in the client app.</span>';
+        } else if (data.status === "WRONG_PIN") {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Incorrect PIN.</span>';
+        } else {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>' + (data.message || 'Login failed.') + '</span>';
+        }
+      } catch (err) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Network error. Please try again.</span>';
+      }
+    }
+
+    function showToast(msg, type = 'info', duration = 3000) {
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.style.cssText = `
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#1f5cbf'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 200px;
+        max-width: 320px;
+        animation: toastSlideUp 0.3s ease forwards;
+      `;
+      toast.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'triangle-exclamation' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i> <span>${msg}</span>`;
+      document.getElementById('toast-container').appendChild(toast);
+      setTimeout(() => toast.remove(), duration);
+    }
 </script>
 
-</body>
+ <div id="toast-container"></div>
+
+ </body>
 </html>

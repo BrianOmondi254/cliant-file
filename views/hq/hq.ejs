@@ -219,12 +219,43 @@
       vertical-align: middle;
       margin-left: 6px;
     }
-    .spin-dark {
-      border-color: rgba(0,0,0,0.15);
-      border-top-color: var(--blue-500);
-    }
+.spin-dark {
+       border-color: rgba(0,0,0,0.15);
+       border-top-color: var(--blue-500);
+     }
 
-    /* ─── PAGE BODY ─── */
+     /* ─── TOAST NOTIFICATIONS ─── */
+     #toast-container {
+       position: fixed;
+       bottom: 20px;
+       left: 50%;
+       transform: translateX(-50%);
+       z-index: 10002;
+       display: flex;
+       flex-direction: column;
+       gap: 8px;
+     }
+     .toast {
+       background: #1e293b;
+       color: white;
+       padding: 12px 20px;
+       border-radius: 8px;
+       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+       font-size: 13px;
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       min-width: 200px;
+       max-width: 320px;
+       animation: toastSlideUp 0.3s ease forwards;
+     }
+     .toast.success { background: #10b981; }
+     .toast.error   { background: #ef4444; }
+     .toast.info    { background: #1f5cbf; }
+     .toast.warning { background: #f59e0b; }
+     @keyframes toastSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+     /* ─── PAGE BODY ─── */
     .page {
       max-width: 1280px;
       margin: 0 auto;
@@ -800,15 +831,28 @@
         <label class="field-label">PIN</label>
         <input class="field-input" type="password" placeholder="Enter PIN" id="login-pin">
       </div>
+      <p id="login-error" style="color:var(--red-500,#dc2626);font-size:12px;margin-top:4px;display:none;"></p>
+      <div id="login-dept-context" style="display:none;background:var(--blue-50);border:1px solid var(--blue-100);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;color:var(--blue-800);margin-top:4px;">
+        <span>Signing in to <strong id="login-dept-name"></strong></span>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-full" id="login-submit">Sign in</button>
+      <button class="btn-full" id="login-submit"><span>Sign in</span> <span class="spin hidden" id="login-spinner"></span></button>
     </div>
   </div>
 </div>
 
 <script>
   let isLoggedIn = false;
+  let selectedDepartment = null;
+  const deptIdToName = {
+    finance: "Finance",
+    relations: "Relations",
+    it: "IT Department",
+    operations: "Operations",
+    compliance: "Regions",
+    hr: "Human Resources"
+  };
   let step = "PHONE";
   let currentPhone = "";
   let superAdminExists = false;
@@ -1024,7 +1068,7 @@
 
         clearOtpTimer();
         otpExpiryTimer = setTimeout(() => {
-          alert("Passkey expired. Please try again.");
+          showToast("Passkey expired. Please try again.", "warning");
           resetRegister();
           registerOverlay.classList.remove("open");
         }, 180000);
@@ -1062,20 +1106,20 @@
       }
     } else if (step === "PASSKEY") {
       const passkey = registerPasskey.value.trim();
-      if (!passkey) return alert("Enter the passkey");
+      if (!passkey) return showToast("Enter the passkey", "warning");
 
       setSpinning(registerSubmit, true);
       const res = await fetch("/hq/superadmin/create-pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentPhone, pin: "", passkey }) });
       const data = await res.json();
       setSpinning(registerSubmit, false);
-      if (data.status === "WRONG_PASSKEY") return alert(data.message);
+      if (data.status === "WRONG_PASSKEY") return showToast(data.message, "error");
       if (data.status === "EXPIRED") {
-        alert(data.message);
+        showToast(data.message, "warning");
         resetRegister();
         registerOverlay.classList.remove("open");
         return;
       }
-      if (data.status !== "SUCCESS") return alert(data.message || "Passkey verification failed.");
+      if (data.status !== "SUCCESS") return showToast(data.message || "Passkey verification failed.", "error");
 
       clearOtpTimer();
       verifiedBanner.style.display = "none";
@@ -1090,32 +1134,32 @@
     } else if (step === "SUPERADMIN_PIN") {
       const pin = registerPin.value.trim();
       const confirm = registerPinConfirm.value.trim();
-      if (!pin || !confirm) return alert("Enter your PIN");
-      if (pin !== confirm) return alert("PINs do not match");
+      if (!pin || !confirm) return showToast("Enter your PIN", "warning");
+      if (pin !== confirm) return showToast("PINs do not match", "error");
       setSpinning(registerSubmit, true);
       const res = await fetch("/hq/superadmin/create-pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentPhone, pin }) });
       const data = await res.json();
       setSpinning(registerSubmit, false);
       if (data.status === "SUCCESS") {
-        alert("Super Admin account created successfully");
+        showToast("Super Admin account created successfully", "success");
         registerOverlay.classList.remove("open");
         resetRegister();
       } else {
-        alert(data.message || "Something went wrong");
+        showToast(data.message || "Something went wrong", "error");
       }
     } else if (step === "DEPT_PIN") {
       const department = registerDepartment.value;
       const pin = registerPin.value.trim();
       const confirm = registerPinConfirm.value.trim();
-      if (!department) return alert("Select a department");
-      if (!pin || !confirm) return alert("Enter your PIN");
-      if (pin !== confirm) return alert("PINs do not match");
+      if (!department) return showToast("Select a department", "warning");
+      if (!pin || !confirm) return showToast("Enter your PIN", "warning");
+      if (pin !== confirm) return showToast("PINs do not match", "error");
       setSpinning(registerSubmit, true);
       const res = await fetch("/hq/admin/create-pin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentPhone, pin, department }) });
       const data = await res.json();
       setSpinning(registerSubmit, false);
-      if (data.status === "SUCCESS") { alert("Admin account created successfully"); registerOverlay.classList.remove("open"); resetRegister(); }
-      else alert(data.message || "Something went wrong");
+      if (data.status === "SUCCESS") { showToast("Admin account created successfully", "success"); registerOverlay.classList.remove("open"); resetRegister(); }
+      else showToast(data.message || "Something went wrong", "error");
     }
   };
 
@@ -1125,23 +1169,65 @@
   const loginOverlay = document.getElementById("login-overlay");
   const loginPhone   = document.getElementById("login-phone");
   const loginPin     = document.getElementById("login-pin");
+  const loginError   = document.getElementById("login-error");
+  const loginDeptContext = document.getElementById("login-dept-context");
+  const loginDeptName = document.getElementById("login-dept-name");
+  const loginSpinner = document.getElementById("login-spinner");
+  const loginSubmitBtn = document.getElementById("login-submit");
 
-  document.getElementById("login-btn").onclick  = () => loginOverlay.classList.add("open");
+  document.getElementById("login-btn").onclick  = () => {
+    selectedDepartment = null;
+    loginError.style.display = "none";
+    if (loginDeptContext) loginDeptContext.style.display = "none";
+    loginOverlay.classList.add("open");
+  };
   document.getElementById("login-close").onclick = () => loginOverlay.classList.remove("open");
 
   document.getElementById("login-submit").onclick = async () => {
     const phone = loginPhone.value.trim();
     const pin   = loginPin.value.trim();
-    if (!phone || !pin) return alert("Enter your credentials");
-    const res  = await fetch("/hq/superadmin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, pin }) });
+    if (!phone || !pin) {
+      loginError.style.display = "block";
+      loginError.textContent = "Enter your credentials";
+      return;
+    }
+    loginError.style.display = "none";
+
+    // Show spinner
+    loginSubmitBtn.disabled = true;
+    const loginTextSpan = loginSubmitBtn.querySelector ? loginSubmitBtn.querySelector(":scope > span:first-child") : null;
+    if (loginTextSpan) loginTextSpan.style.display = "none";
+    if (loginSpinner) loginSpinner.classList.remove("hidden");
+
+    const department = selectedDepartment;
+    const res  = await fetch("/hq/admin/login-with-department", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, pin, department })
+    });
     const data = await res.json();
+
+    // Hide spinner
+    loginSubmitBtn.disabled = false;
+    if (loginTextSpan) loginTextSpan.style.display = "";
+    if (loginSpinner) loginSpinner.classList.add("hidden");
+
     if (data.status === "SUCCESS") {
       loginOverlay.classList.remove("open");
+      loginError.style.display = "none";
       isLoggedIn = true;
-      showLoggedIn(data.name, data.department);
-      window.location.href = "/hq/admin";
+      showLoggedIn(data.name, data.department || "Super Admin");
+      if (data.role === "superadmin") {
+        window.location.href = data.redirect || "/hq/admin";
+      } else {
+        // Find the dept ID from name for navigation
+        const deptEntry = Object.entries(deptIdToName).find(([k, v]) => v === data.department);
+        const deptId = deptEntry ? deptEntry[0] : "admin";
+        window.location.href = `/hq/${deptId}`;
+      }
     } else {
-      alert(data.message);
+      loginError.style.display = "block";
+      loginError.textContent = data.message || "Login failed.";
     }
   };
 
@@ -1168,15 +1254,37 @@
     } catch (e) {}
   }
 
+  async function checkSession() {
+    try {
+      const res = await fetch("/hq/admin/verify-department");
+      const data = await res.json();
+      if (data.status === "OK") {
+        isLoggedIn = true;
+      }
+    } catch (e) {}
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     initAuthButtons();
     checkPendingAdmin();
+    checkSession();
   });
   const sections = ['finance','relations','it','operations','compliance','hr'];
   sections.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', () => {
-      if (!isLoggedIn) { loginOverlay.classList.add("open"); return; }
+      selectedDepartment = deptIdToName[id] || null;
+      if (!isLoggedIn) {
+        loginPhone.value = "";
+        loginPin.value = "";
+        loginError.style.display = "none";
+        if (loginDeptContext && selectedDepartment) {
+          loginDeptContext.style.display = "block";
+          loginDeptName.textContent = selectedDepartment;
+        }
+        loginOverlay.classList.add("open");
+        return;
+      }
       window.location.href = `/hq/${id}`;
     });
   });
@@ -1252,44 +1360,54 @@
     }
   });
 
-  pendingAdminSubmit.onclick = async () => {
+pendingAdminSubmit.onclick = async () => {
     const phone = pendingAdminPhone.value.trim();
     const dept = pendingAdminDept.value.trim();
     const pin = pendingAdminPin.value.trim();
     const confirm = pendingAdminPinConfirm.value.trim();
 
-    if (!pin || pin.length < 4) return alert("Enter a valid PIN (at least 4 digits)");
-    if (pin !== confirm) return alert("PINs do not match");
+    if (!pin || pin.length < 4) return showToast("Enter a valid PIN (at least 4 digits)", "warning");
+    if (pin !== confirm) return showToast("PINs do not match", "error");
 
     setPendingBtnSpinning(true);
 
-    try {
-      const res = await fetch("/hq/admin/create-pin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, pin, department: dept })
-      });
-      const data = await res.json();
-      setPendingBtnSpinning(false);
+     try {
+       const res = await fetch("/hq/admin/create-pin", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ phone, pin, department: dept })
+       });
+       const data = await res.json();
+       setPendingBtnSpinning(false);
 
-      if (data.status === "SUCCESS") {
-        alert("Admin account created successfully!");
-        pendingAdminOverlay.classList.remove("open");
-        localStorage.removeItem("pendingAdminPhone");
-        localStorage.removeItem("pendingAdminDept");
-        localStorage.removeItem("pendingAdminName");
-        localStorage.removeItem("regionalOfficerMessage");
-        pendingAdminPin.value = "";
-        pendingAdminPinConfirm.value = "";
-      } else {
-        alert(data.message || "Failed to create admin");
-      }
-    } catch (err) {
-      setPendingBtnSpinning(false);
-      alert("Network error. Please try again.");
-    }
-  };
+       if (data.status === "SUCCESS") {
+         showToast("Admin account created successfully!", "success");
+         pendingAdminOverlay.classList.remove("open");
+         localStorage.removeItem("pendingAdminPhone");
+         localStorage.removeItem("pendingAdminDept");
+         localStorage.removeItem("pendingAdminName");
+         localStorage.removeItem("regionalOfficerMessage");
+         pendingAdminPin.value = "";
+         pendingAdminPinConfirm.value = "";
+       } else {
+         showToast(data.message || "Failed to create admin", "error");
+       }
+     } catch (err) {
+       setPendingBtnSpinning(false);
+       showToast("Network error. Please try again.", "error");
+     }
+};
+
+  function showToast(msg, type = 'info', duration = 3000) {
+    const toast = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check-circle' : 'triangle-exclamation'}"></i> <span>${msg}</span>`;
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+  }
 </script>
+
+<div id="toast-container"></div>
 
 </body>
 </html>
