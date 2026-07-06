@@ -109,11 +109,21 @@ app.use("/api/mpesa", mpesaRoutes);
 
 // Inbox message delete
 app.post("/api/inbox/delete", (req, res) => {
-  const { id } = req.body;
+  const { id, index } = req.body;
   if (!req.session.user) return res.json({ success: false });
   if (!req.session.user.inbox) return res.json({ success: true });
-  req.session.user.inbox = req.session.user.inbox.filter(m => m.id !== id);
-  res.json({ success: true });
+  if (id) {
+    req.session.user.inbox = req.session.user.inbox.filter(m => m.id !== id);
+  } else if (typeof index === 'number' && index >= 0 && index < req.session.user.inbox.length) {
+    req.session.user.inbox.splice(index, 1);
+  }
+  req.session.save((err) => {
+    if (err) {
+      console.error("Session save error on inbox delete:", err);
+      return res.json({ success: false });
+    }
+    res.json({ success: true });
+  });
 });
 
 // Accept Dealer Invitation
@@ -158,7 +168,7 @@ app.post("/api/accept-dealer-invite", async (req, res) => {
       return res.status(400).json({ success: false, message: "Phone number is registered as an Agent." });
     }
     const existingAdmin = await Admin.findOne({ phoneNumber: normDealerPhone });
-    const existingSuperAdmin = await SuperAdmin.findOne({ phoneNumber: normDealerPhone });
+    const existingSuperAdmin = await SuperAdmin.findOne({ $or: [{ phoneNumber: payload.phoneNumber }, { phoneNumber: normDealerPhone }] });
     if (existingAdmin || existingSuperAdmin) {
       return res.status(400).json({ success: false, message: "Phone number is registered as an Admin or SuperAdmin." });
     }
@@ -200,10 +210,10 @@ app.post("/api/accept-dealer-invite", async (req, res) => {
       });
     }
 
-    // Delete the invitation message so it can't be accepted again
-    await Message.findByIdAndDelete(msgId);
+// Update the message status to accepted
+     await Message.findByIdAndUpdate(msgId, { status: "accepted" });
 
-    res.json({ success: true, message: "Dealer appointment accepted successfully." });
+     res.json({ success: true, message: "Dealer appointment accepted successfully." });
   } catch (err) {
     console.error("Accept Dealer Invite Error:", err);
     res.status(500).json({ success: false, message: "Server error processing invitation." });

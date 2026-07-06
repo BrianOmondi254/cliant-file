@@ -675,6 +675,7 @@ const app = {
             return;
         }
         this.fetchWalletData();
+        this.fetchInboxData();
         this.render();
         this.updateBadge();
         this.setupPhoneListeners();
@@ -705,6 +706,10 @@ const app = {
                 }
             } catch (e) {}
         }
+
+        this._inboxPollInterval = setInterval(() => {
+            this.fetchInboxData();
+        }, 30000);
     },
 
     refreshPersonalDashboardIfVisible() {
@@ -714,6 +719,34 @@ const app = {
         const currentHTML = container.innerHTML || '';
         if (currentHTML.includes('My Wallet') && currentHTML.includes('My Groups')) {
             this.renderPersonalView(container);
+        }
+    },
+
+    async fetchInboxData() {
+        try {
+            const res = await fetch('/personal/inbox-status');
+            const json = await res.json();
+            if (json.success && json.data) {
+                const d = json.data;
+                const changed = 
+                    JSON.stringify(this.data.constitutionKeys || []) !== JSON.stringify(d.constitutionKeys || []) ||
+                    JSON.stringify(this.data.groupMessages || []) !== JSON.stringify(d.groupMessages || []) ||
+                    JSON.stringify((this.data.user && this.data.user.inbox) || []) !== JSON.stringify((d.user && d.user.inbox) || []) ||
+                    JSON.stringify(this.data.pendingOfficerMessage || null) !== JSON.stringify(d.pendingOfficerMessage || null);
+                this.data.constitutionKeys = d.constitutionKeys || [];
+                this.data.groupMessages = d.groupMessages || [];
+                if (d.user) this.data.user = Object.assign({}, this.data.user || {}, d.user);
+                this.data.pendingOfficerMessage = d.pendingOfficerMessage || null;
+                this.updateBadge();
+                if (changed) {
+                    const modalTitle = document.getElementById('modalTitle');
+                    if (modalTitle && modalTitle.textContent === 'Inbox') {
+                        this.openInbox();
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching inbox data:', e);
         }
     },
 
@@ -1149,19 +1182,44 @@ const app = {
     updateBadge() {
         const badge       = document.getElementById('msgBadge');
         const badgeHeader = document.getElementById('msgBadgeHeader');
-        const keyCount    = (this.data.constitutionKeys && Array.isArray(this.data.constitutionKeys)) ? this.data.constitutionKeys.length : 0;
-        const inboxCount  = (this.data.user && this.data.user.inbox && Array.isArray(this.data.user.inbox)) ? this.data.user.inbox.filter(m => m.unread).length : 0;
-        let officerCount  = 0;
-        // Also count server-side pending officer message
-        if (this.data.pendingOfficerMessage) officerCount = 1;
-        try {
-            const stored = localStorage.getItem("regionalOfficerMessage");
-            if (stored) {
-                const msg = JSON.parse(stored);
-                if (Date.now() - msg.timestamp < 86400000) officerCount = Math.max(officerCount, 1);
+
+        const dismissed = JSON.parse(localStorage.getItem('dismissedMessages') || '[]');
+        const isDismissed = (source, item) => {
+            let id = '';
+            if (source === 'inbox') {
+                id = item.id || '';
+            } else if (source === 'groupMessages') {
+                id = (item.title || '') + '|' + (item.content || '') + '|' + (item.createdAt || '');
+            } else if (source === 'constitutionKeys') {
+                id = (item.groupName || '') + '|' + (item.key || item.content || '') + '|' + (item.date || '');
             }
-        } catch (e) {}
-        const total       = (this.data.unread || 0) + keyCount + inboxCount + officerCount;
+            return dismissed.includes(source + '|' + id);
+        };
+
+        const constitutionKeys = this.data.constitutionKeys || [];
+        const groupMessages = this.data.groupMessages || [];
+        const inbox = (this.data.user && this.data.user.inbox) || [];
+
+        const visibleKeys = constitutionKeys.filter(k => !isDismissed('constitutionKeys', k)).length;
+        const visibleGroupMsgs = groupMessages.filter(m => !isDismissed('groupMessages', m)).length;
+        const visibleInbox = inbox.filter(m => m.unread && !isDismissed('inbox', m)).length;
+
+        let officerCount = 0;
+        if (this.data.pendingOfficerMessage) {
+            if (!dismissed.includes('regionalOfficerMessage')) officerCount = 1;
+        } else {
+            try {
+                const stored = localStorage.getItem("regionalOfficerMessage");
+                if (stored) {
+                    const msg = JSON.parse(stored);
+                    if (Date.now() - msg.timestamp < 86400000) {
+                        if (!dismissed.includes('regionalOfficerMessage')) officerCount = 1;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        const total = (this.data.unread || 0) + visibleKeys + visibleGroupMsgs + visibleInbox + officerCount;
         if (badge)       { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
     },
@@ -1226,12 +1284,27 @@ const app = {
         const groupMsgs = this.data.groupMessages || [];
         let html = '';
 
+        const dismissed = JSON.parse(localStorage.getItem('dismissedMessages') || '[]');
+
+        const isDismissed = (source, item) => {
+            let id = '';
+            if (source === 'inbox') {
+                id = item.id || '';
+            } else if (source === 'groupMessages') {
+                id = (item.title || '') + '|' + (item.content || '') + '|' + (item.createdAt || '');
+            } else if (source === 'constitutionKeys') {
+                id = (item.groupName || '') + '|' + (item.key || item.content || '') + '|' + (item.date || '');
+            }
+            return dismissed.includes(source + '|' + id);
+        };
+
         let allMessages = [];
 
         const serverMsg = this.data.pendingOfficerMessage;
         const stored = localStorage.getItem("regionalOfficerMessage");
         const pendingPhone = localStorage.getItem("pendingAdminPhone");
 
+        try {
         if (serverMsg) {
             allMessages.push({
                 _source: 'regionalOfficerMessage',
@@ -1239,7 +1312,7 @@ const app = {
                 contentHtml: `
                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                         You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                        Department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong><br>
+                        Department name: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong><br>
                         Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br>
                         Please create your PIN below to proceed.
                     </div>
@@ -1269,7 +1342,7 @@ const app = {
                         contentHtml: `
 <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                                  You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                                 Department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
+                                 Department name: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
                                  Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br>
                                  Please create your PIN below to proceed.
                              </div>
@@ -1289,7 +1362,9 @@ const app = {
                         titleColor: '#1e40af'
                     });
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('Skipping malformed stored officer message:', e);
+            }
         } else if (pendingPhone) {
             allMessages.push({
                 _source: 'regionalOfficerMessage',
@@ -1315,75 +1390,93 @@ const app = {
                 titleColor: '#1e40af'
             });
         }
+        } catch (e) {
+            console.error('Skipping malformed regional officer message:', e);
+        }
 
         groupMsgs.forEach((m, idx) => {
-            allMessages.push({
-                _source: 'groupMessages',
-                _origIndex: idx,
-                title: m.title || 'Group Update',
-                content: m.content,
-                date: new Date(m.createdAt || Date.now()),
-                icon: 'fa-users',
-                iconColor: '#10b981',
-                bgColor: '#f0fdf4',
-                borderColor: '#dcfce7',
-                titleColor: '#065f46'
-            });
+            try {
+                if (isDismissed('groupMessages', m)) return;
+                allMessages.push({
+                    _source: 'groupMessages',
+                    _origIndex: idx,
+                    title: m.title || 'Group Update',
+                    content: m.content,
+                    date: new Date(m.createdAt || Date.now()),
+                    icon: 'fa-users',
+                    iconColor: '#10b981',
+                    bgColor: '#f0fdf4',
+                    borderColor: '#dcfce7',
+                    titleColor: '#065f46'
+                });
+            } catch (e) {
+                console.error('Skipping malformed group message:', e, m);
+            }
         });
 
         keys.forEach((k, idx) => {
-            const isAlert  = k.type === 'security_alert';
-            const isLegacy = k.type === 'legacy';
-            const isConstitutionKey = k.key && !k.content;
-            
-            let contentHtml = '';
-            if (k.type === 'dealer_invitation') {
-                const metaPayload = JSON.stringify(k.meta || {}).replace(/"/g, '&quot;');
-                contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
-                contentHtml += `<button onclick="app.acceptDealerInvite('${k._id}', '${metaPayload}')" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Accept Appointment</button>`;
-            } else if (isConstitutionKey) {
-                contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
-                <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
-            } else if (isLegacy) {
-                contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
-                <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
-            } else {
-                contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
-            }
-            if (k.redirect) {
-                 contentHtml += `<button onclick="window.location.href='${k.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
-            }
+            try {
+                if (isDismissed('constitutionKeys', k)) return;
+                const isAlert  = k.type === 'security_alert';
+                const isLegacy = k.type === 'legacy';
+                const isConstitutionKey = k.key && !k.content;
 
-            allMessages.push({
-                _source: 'constitutionKeys',
-                _origIndex: idx,
-                title: k.groupName,
-                contentHtml: contentHtml,
-                date: new Date(k.date || Date.now()),
-                icon: isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved',
-                iconColor: isAlert ? '#f59e0b' : '#0c8f44',
-                bgColor: '#f8fafc',
-                borderColor: '#e2e8f0',
-                titleColor: '#1e293b'
-            });
+                let contentHtml = '';
+                if (k.type === 'dealer_invitation') {
+                    const metaPayload = JSON.stringify(k.meta || {}).replace(/"/g, '&quot;');
+                    contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                    contentHtml += `<button onclick="app.acceptDealerInvite('${k._id}', '${metaPayload}')" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Accept Appointment</button>`;
+                } else if (isConstitutionKey) {
+                    contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
+                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+                } else if (isLegacy) {
+                    contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
+                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+                } else {
+                    contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                }
+                if (k.redirect) {
+                     contentHtml += `<button onclick="window.location.href='${k.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
+                }
+
+                allMessages.push({
+                    _source: 'constitutionKeys',
+                    _origIndex: idx,
+                    title: k.groupName,
+                    contentHtml: contentHtml,
+                    date: new Date(k.date || Date.now()),
+                    icon: isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved',
+                    iconColor: isAlert ? '#f59e0b' : '#0c8f44',
+                    bgColor: '#f8fafc',
+                    borderColor: '#e2e8f0',
+                    titleColor: '#1e293b'
+                });
+            } catch (e) {
+                console.error('Skipping malformed constitution key message:', e, k);
+            }
         });
 
         [...inbox].forEach((msg, loopIndex) => {
-            const isSecurity = msg.type === 'security_alert';
-            allMessages.push({
-                _source: 'inbox',
-                _id: msg.id || null,
-                _origIndex: loopIndex,
-                title: msg.title || 'Message',
-                content: msg.content,
-                redirect: msg.redirect,
-                date: new Date(msg.date || Date.now()),
-                icon: isSecurity ? 'fa-triangle-exclamation' : 'fa-envelope',
-                iconColor: isSecurity ? '#f59e0b' : '#10b981',
-                bgColor: isSecurity ? '#fef3c7' : '#f0fdf4',
-                borderColor: isSecurity ? '#f59e0b' : '#bbf7d0',
-                titleColor: isSecurity ? '#92400e' : '#065f46'
-            });
+            try {
+                if (isDismissed('inbox', msg)) return;
+                const isSecurity = msg.type === 'security_alert';
+                allMessages.push({
+                    _source: 'inbox',
+                    _id: msg.id || null,
+                    _origIndex: loopIndex,
+                    title: msg.title || 'Message',
+                    content: msg.content,
+                    redirect: msg.redirect,
+                    date: new Date(msg.date || Date.now()),
+                    icon: isSecurity ? 'fa-triangle-exclamation' : 'fa-envelope',
+                    iconColor: isSecurity ? '#f59e0b' : '#10b981',
+                    bgColor: isSecurity ? '#fef3c7' : '#f0fdf4',
+                    borderColor: isSecurity ? '#f59e0b' : '#bbf7d0',
+                    titleColor: isSecurity ? '#92400e' : '#065f46'
+                });
+            } catch (e) {
+                console.error('Skipping malformed inbox message:', e, msg);
+            }
         });
 
         allMessages.sort((a, b) => b.date - a.date);
@@ -3892,6 +3985,19 @@ window.deleteInboxMessage = async function(id, index) {
                 window.app.data.user.inbox = arr;
             }
             window.app.openInbox();
+        } else if (window.app.data && window.app.data.user && window.app.data.user.inbox) {
+            const dismissed = JSON.parse(localStorage.getItem('dismissedMessages') || '[]');
+            const item = id ? window.app.data.user.inbox.find(m => m.id === id) : window.app.data.user.inbox[index];
+            if (item) {
+                dismissed.push('inbox|' + (item.id || ''));
+                localStorage.setItem('dismissedMessages', JSON.stringify(dismissed));
+                if (id) {
+                    window.app.data.user.inbox = window.app.data.user.inbox.filter(m => m.id !== id);
+                } else if (index !== undefined) {
+                    window.app.data.user.inbox.splice(index, 1);
+                }
+                window.app.openInbox();
+            }
         }
     } catch (err) {
         console.error('Failed to delete message:', err);
@@ -3900,6 +4006,18 @@ window.deleteInboxMessage = async function(id, index) {
 
 window.deleteLocalMessage = function(arrayName, index) {
     if (!window.app || !window.app.data || !window.app.data[arrayName]) return;
+    const item = window.app.data[arrayName][index];
+    if (item) {
+        const dismissed = JSON.parse(localStorage.getItem('dismissedMessages') || '[]');
+        let id = '';
+        if (arrayName === 'groupMessages') {
+            id = (item.title || '') + '|' + (item.content || '') + '|' + (item.createdAt || '');
+        } else if (arrayName === 'constitutionKeys') {
+            id = (item.groupName || '') + '|' + (item.key || item.content || '') + '|' + (item.date || '');
+        }
+        dismissed.push(arrayName + '|' + id);
+        localStorage.setItem('dismissedMessages', JSON.stringify(dismissed));
+    }
     setTimeout(() => {
         window.app.data[arrayName].splice(index, 1);
         window.app.openInbox();

@@ -3,7 +3,7 @@ const router = express.Router();
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { Dealer } = require("../mongoose");
+const { Dealer, Agent, normalizePhone } = require("../mongoose");
 const usersFile = path.join(__dirname, "../data.json");
 const agentFile = path.join(__dirname, "../agent.json");
 const dealerFile = path.join(__dirname, "../dealer.json"); 
@@ -41,7 +41,7 @@ router.get("/", async (req, res) => {
     return res.redirect("/login");
   }
 
-  const phoneNumber = req.session.user.phoneNumber;
+  const phoneNumber = normalizePhone(req.session.user.phoneNumber || "");
 
   let dealer = null;
   try {
@@ -113,23 +113,23 @@ router.get("/", async (req, res) => {
 });
 
 // POST preview agent
-router.post("/preview", async (req, res) => {
-  const { phoneNumber } = req.body;
-  
-  // Reload Dashboard Data
-  const sessionPhone = req.session.user.phoneNumber;
-  let dealer = null;
-  try {
-    dealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
-  }
-  let dealerAgents = [];
-  try {
-    dealerAgents = await Agent.find({ dealerPhone: sessionPhone }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
-  }
+ router.post("/preview", async (req, res) => {
+   const { phoneNumber } = req.body;
+   
+   // Reload Dashboard Data
+   const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
+   let dealer = null;
+   try {
+     dealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
+   }
+   let dealerAgents = [];
+   try {
+     dealerAgents = await Agent.find({ dealerPhone: sessionPhone }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
+   }
 
   if (!fs.existsSync(usersFile)) {
     return res.render("dealer/dealer", {
@@ -169,17 +169,17 @@ router.post("/preview", async (req, res) => {
 });
 
 // JSON ENDPOINT: Fetch candidate details for agent creation
-router.post("/create-agent", async (req, res) => {
-  const { phoneNumber } = req.body;
-  if (!phoneNumber) return res.status(400).json({ success: false, error: "Phone number is required" });
+ router.post("/create-agent", async (req, res) => {
+   const { phoneNumber } = req.body;
+   if (!phoneNumber) return res.status(400).json({ success: false, error: "Phone number is required" });
 
-  const sessionPhone = req.session.user.phoneNumber;
-  let currentDealer = null;
-  try {
-    currentDealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
-  }
+   const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
+   let currentDealer = null;
+   try {
+     currentDealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
+   }
 
   if (!currentDealer) {
     return res.status(403).json({ success: false, error: "Unauthorized: Dealer profile not found." });
@@ -236,20 +236,20 @@ router.post("/create-agent", async (req, res) => {
 });
 
 // JSON ENDPOINT: Finalize agent account creation
-router.post("/approve-agent", async (req, res) => {
-  const { phoneNumber, ward, idNumber } = req.body;
-  
-  if (!phoneNumber || !idNumber) {
-    return res.status(400).json({ success: false, error: "Phone number and ID number are required" });
-  }
+ router.post("/approve-agent", async (req, res) => {
+   const { phoneNumber, ward, idNumber } = req.body;
+   
+   if (!phoneNumber || !idNumber) {
+     return res.status(400).json({ success: false, error: "Phone number and ID number are required" });
+   }
 
-  const sessionPhone = req.session.user.phoneNumber;
-  let currentDealer = null;
-  try {
-    currentDealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
-  }
+   const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
+   let currentDealer = null;
+   try {
+     currentDealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
+   }
 
   if (!currentDealer) {
     return res.status(403).json({ success: false, error: "Dealer not found" });
@@ -313,17 +313,17 @@ router.post("/approve-agent", async (req, res) => {
 });
 
 // POST create agent
-router.post("/", async (req, res) => {
-  const { phoneNumber } = req.body;
-  
-  // Reload Dashboard Data
-  const sessionPhone = req.session.user.phoneNumber;
-  let dealer = null;
-  try {
-    dealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
-  }
+ router.post("/", async (req, res) => {
+   const { phoneNumber } = req.body;
+   
+   // Reload Dashboard Data
+   const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
+   let dealer = null;
+   try {
+     dealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
+   }
   
 
   if (!fs.existsSync(usersFile)) {
@@ -397,14 +397,13 @@ router.post("/create-pin", async (req, res) => {
   console.log("[dealer-create-pin] Received request body:", req.body);
   console.log("[dealer-create-pin] Session user:", req.session.user);
 
-  // Ensure session is valid
   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     console.log("[dealer-create-pin] Session invalid or user not logged in");
     return res.status(401).json({ success: false, error: "Session expired. Please log in again." });
   }
 
   const { pin } = req.body;
-  const targetPhoneNumber = req.session.user.phoneNumber;
+  const targetPhoneNumber = normalizePhone(req.session.user.phoneNumber || "");
 
   console.log(`[dealer-create-pin] Extracted - targetPhoneNumber: ${targetPhoneNumber}`);
 
@@ -417,39 +416,17 @@ router.post("/create-pin", async (req, res) => {
   }
 
   try {
-    console.log("[dealer-create-pin] Dealer file path:", dealerFile);
-    const dealers = readJSON(dealerFile, []);
-    console.log("[dealer-create-pin] Dealers loaded:", dealers.length, "entries");
+    let currentDealer = await Dealer.findOne({ phoneNumber: targetPhoneNumber }).lean();
 
-    if (!Array.isArray(dealers)) {
-      console.log("[dealer-create-pin] dealer.json is not an array, resetting to []");
-      dealers = [];
-    }
-
-    const dealerIndex = dealers.findIndex((d) => {
-      if (!d || !d.phoneNumber) return false;
-      const dNorm = norm(d.phoneNumber);
-      const pNorm = norm(targetPhoneNumber);
-      console.log(`[dealer-create-pin] Comparing dealer phone: ${dNorm} with session phone: ${pNorm}`);
-      return dNorm === pNorm;
-    });
-
-    if (dealerIndex === -1) {
-      console.log(`[dealer-create-pin] Dealer not found for phone: ${targetPhoneNumber}, adding from data.json`);
-      // Add the dealer from data.json if not in dealer.json
-      const users = readJSON(usersFile, []);
-      const user = users.find((u) => norm(u.phoneNumber) === norm(targetPhoneNumber));
-      if (!user) {
-        console.log(`[dealer-create-pin] User not found in data.json for phone: ${targetPhoneNumber}`);
-        return res.status(404).json({ success: false, error: "User trying to create PIN not found in main user registry." });
-      }
+    if (!currentDealer) {
+      console.log(`[dealer-create-pin] Dealer not found in MongoDB, creating new entry`);
       const newDealer = {
-        phoneNumber: user.phoneNumber,
-        hqPhone: user.phoneNumber, // Assuming self for now
-        county: user.county || "",
-        constituency: user.constituency || "",
-        ward: user.ward || "",
-        name: `${user.FirstName} ${user.MiddleName} ${user.LastName}`.trim(),
+        phoneNumber: targetPhoneNumber,
+        hqPhone: targetPhoneNumber,
+        county: "",
+        constituency: "",
+        ward: "",
+        name: `${req.session.user.firstName || ''} ${req.session.user.lastName || ''}`.trim() || "Unknown Dealer",
         createdAt: new Date().toISOString(),
         isBlocked: false,
         stats: {
@@ -458,59 +435,38 @@ router.post("/create-pin", async (req, res) => {
           dealer_creation: 0
         }
       };
-      dealers.push(newDealer);
-      writeJSON(dealerFile, dealers);
-      console.log(`[dealer-create-pin] Added new dealer:`, newDealer);
-      
-      // Log Performance
+
+      const users = readJSON(usersFile, []);
+      const user = users.find(u => norm(u.phoneNumber) === norm(targetPhoneNumber));
+      if (user) {
+        newDealer.county = user.county || "";
+        newDealer.constituency = user.constituency || "";
+        newDealer.ward = user.ward || "";
+        newDealer.name = `${user.FirstName || ''} ${user.MiddleName || ''} ${user.LastName || ''}`.trim() || newDealer.name;
+      }
+
+      currentDealer = await Dealer.create(newDealer);
+
       try {
           regPerfLogger.logRegistration(newDealer.county, newDealer.constituency, newDealer.ward, 'dealers');
       } catch (e) {
           console.error("Dealer registration performance log error:", e);
       }
-
-      dealerIndex = dealers.length - 1; // Set to the new index
     }
 
-    console.log(`[dealer-create-pin] Dealer found at index ${dealerIndex}. Before PIN set:`, dealers[dealerIndex]);
+    const hashedPin = await bcrypt.hash(pin, 10);
+    const passkey = Math.floor(1000 + Math.random() * 9000).toString();
 
-    // Verify dealer structure has required fields, add defaults if missing
-    const dealer = dealers[dealerIndex];
-    if (!dealer.phoneNumber) dealer.phoneNumber = targetPhoneNumber;
-    if (!dealer.name) dealer.name = "Unknown Dealer";
+    await Dealer.updateOne(
+      { phoneNumber: targetPhoneNumber },
+      { $set: { pin: hashedPin, passkey: passkey } }
+    );
 
-    console.log(`[dealer-create-pin] Dealer structure verified:`, dealer);
+    console.log(`[dealer-create-pin] PIN and passkey set successfully for ${targetPhoneNumber}`);
 
-    // Hash the PIN
-    let hashedPin;
-    try {
-      hashedPin = await bcrypt.hash(pin, 10);
-    } catch (hashError) {
-      console.error("Error hashing PIN:", hashError);
-      return res.status(500).json({ success: false, error: `Error processing PIN: ${hashError.message}` });
-    }
+    req.session.hasDealerPin = true;
+    req.session.dealerVerified = true;
 
-    dealers[dealerIndex].pin = hashedPin;
-    // Generate and set a random 4-digit passkey
-    dealers[dealerIndex].passkey = Math.floor(1000 + Math.random() * 9000).toString();
-
-    console.log(`[dealer-create-pin] Dealer after PIN and passkey set:`, dealers[dealerIndex]);
-
-    // Write to file
-    try {
-      writeJSON(dealerFile, dealers);
-      console.log(`[dealer-create-pin] dealer.json written successfully`);
-    } catch (writeError) {
-      console.error("Error writing to dealer.json:", writeError);
-      return res.status(500).json({ success: false, error: `Error saving PIN: ${writeError.message}` });
-    }
-
-    console.log(`[dealer-create-pin] dealer.json content after write:`, readJSON(dealerFile));
-
-    // After creating the PIN, mark the dealer as verified
-    req.session.hasDealerPin = true; // Update session flag
-    req.session.dealerVerified = true; // Allow immediate access to dashboard
-    
     if (req.headers.accept && req.headers.accept.includes('application/json')) {
       return res.json({ success: true });
     }
@@ -523,40 +479,40 @@ router.post("/create-pin", async (req, res) => {
 
 
 // POST login for dealer (PIN verification)
-router.post("/login", async (req, res) => {
-  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
-    if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      return res.status(401).json({ success: false, error: "Session expired" });
-    }
-    return res.redirect("/login");
-  }
+ router.post("/login", async (req, res) => {
+   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+     if (req.headers.accept && req.headers.accept.includes('application/json')) {
+       return res.status(401).json({ success: false, error: "Session expired" });
+     }
+     return res.redirect("/login");
+   }
 
-  const { pin } = req.body;
-  const phoneNumber = req.session.user.phoneNumber;
-  const isApi = req.headers.accept && req.headers.accept.includes('application/json');
+   const { pin } = req.body;
+   const phoneNumber = normalizePhone(req.session.user.phoneNumber || "");
+   const isApi = req.headers.accept && req.headers.accept.includes('application/json');
 
-  if (!pin) {
-    if (isApi) return res.json({ success: false, error: "PIN is required" });
-    return res.render("dealer/dealer", {
-      step: "enter-pin",
-      user: req.session.user,
-      dealer: { name: "Dealer" },
-      message: { type: "error", text: "PIN is required." },
-      preview: null, error: null, success: null
-    });
-  }
+   if (!pin) {
+     if (isApi) return res.json({ success: false, error: "PIN is required" });
+     return res.render("dealer/dealer", {
+       step: "enter-pin",
+       user: req.session.user,
+       dealer: { name: "Dealer" },
+       message: { type: "error", text: "PIN is required." },
+       preview: null, error: null, success: null
+     });
+   }
 
-  let dealer = null;
-  try {
-    dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
-  }
+   let dealer = null;
+   try {
+     dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
+   }
 
-  if (!dealer) {
-    const dealers = readJSON(dealerFile, []);
-    dealer = dealers.find((d) => norm(d.phoneNumber) === norm(phoneNumber));
-  }
+   if (!dealer) {
+     const dealers = readJSON(dealerFile, []);
+     dealer = dealers.find((d) => norm(d.phoneNumber) === phoneNumber);
+   }
 
   if (!dealer || !dealer.pin) {
     if (isApi) return res.json({ success: false, error: "Dealer account not found or PIN not set" });
@@ -595,30 +551,30 @@ router.post("/login", async (req, res) => {
 });
 
 // GET dealer dashboard data
-router.get("/dashboard-data", async (req, res) => {
-  const phoneNumber = req.session.user.phoneNumber;
+ router.get("/dashboard-data", async (req, res) => {
+   const phoneNumber = normalizePhone(req.session.user.phoneNumber || "");
 
-  if (!phoneNumber) {
-    return res.status(401).json({ success: false, error: "Unauthorized" });
-  }
+   if (!phoneNumber) {
+     return res.status(401).json({ success: false, error: "Unauthorized" });
+   }
 
-  let dealer = null;
-  try {
-    dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
-  }
+   let dealer = null;
+   try {
+     dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
+   }
 
-  if (!dealer) {
-    return res.status(404).json({ success: false, error: "Dealer not found" });
-  }
+   if (!dealer) {
+     return res.status(404).json({ success: false, error: "Dealer not found" });
+   }
 
-  let dealerAgents = [];
-  try {
-    dealerAgents = await Agent.find({ dealerPhone: phoneNumber }).lean();
-  } catch (dbErr) {
-    console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
-  }
+   let dealerAgents = [];
+   try {
+     dealerAgents = await Agent.find({ dealerPhone: phoneNumber }).lean();
+   } catch (dbErr) {
+     console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
+   }
 
   res.json({
     success: true,

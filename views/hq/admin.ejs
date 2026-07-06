@@ -499,10 +499,10 @@
          
          <div id="pin-input-step" class="hidden">
            <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Enter PIN</p>
-           <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-lock"></i><span>Welcome, <span id="verified-admin-name" style="font-weight:700;"></span>. Enter your 4-digit PIN.</span></div>
-           <div class="m-field">
-             <label>PIN</label>
-             <input type="password" id="admin-pin-input" class="field-input" placeholder="••••" inputmode="numeric" maxlength="4" style="width:100%;letter-spacing:4px;font-size:18px;text-align:center;">
+<div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-lock"></i><span>Welcome, <span id="verified-admin-name" style="font-weight:700;"></span>. Enter your PIN.</span></div>
+            <div class="m-field">
+              <label>PIN</label>
+              <input type="password" id="admin-pin-input" class="field-input" placeholder="Enter PIN" inputmode="numeric" style="width:100%;font-size:18px;text-align:center;">
            </div>
            <div id="pin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
            <button class="btn btn-primary" onclick="verifyAdminPinAndDept()" style="width:100%;">Verify PIN & Department</button>
@@ -683,15 +683,15 @@
       }
     }
 
-    async function verifyAdminPinAndDept() {
-      const pin = document.getElementById("admin-pin-input").value.trim();
-      const errDiv = document.getElementById("pin-error");
-      
-      if (!pin || pin.length < 4) {
-        errDiv.classList.remove("hidden");
-        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Please enter a valid 4-digit PIN.</span>';
-        return;
-      }
+async function verifyAdminPinAndDept() {
+       const pin = document.getElementById("admin-pin-input").value.trim();
+       const errDiv = document.getElementById("pin-error");
+       
+       if (!pin) {
+         errDiv.classList.remove("hidden");
+         errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Please enter your PIN.</span>';
+         return;
+       }
 
       try {
         const res = await fetch("/hq/admin/login", {

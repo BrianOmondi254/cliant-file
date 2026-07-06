@@ -83,13 +83,13 @@ const buildUserDetailMap = (users) => {
 };
 
 const getAgentFromMongo = async (phone) => {
-  try {
-    return await Agent.findOne({ phoneNumber: phone }).lean();
-  } catch (err) {
-    console.error("[AGENT] MongoDB lookup error:", err.message);
-    return null;
-  }
-};
+   try {
+     return await Agent.findOne({ phoneNumber: normPhone(phone) }).lean();
+   } catch (err) {
+     console.error("[AGENT] MongoDB lookup error:", err.message);
+     return null;
+   }
+ };
 
 const flattenData = (data) => {
   if (Array.isArray(data)) return data;
@@ -280,11 +280,11 @@ router.get("/", async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
   // 1. Enforce Login: If no session exists, redirect to login immediately.
-  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     return res.redirect("/login");
   }
 
-  const currentPhoneNumber = req.session.user.phoneNumber;
+  const currentPhoneNumber = normPhone(req.session.user.phoneNumber || "");
   const users = await getUsersFromMongo();
 
   let agent = null;
@@ -491,7 +491,7 @@ router.get("/new-group", async (req, res) => {
 
   const { groupName } = req.query;
 
-  const currentPhoneNumber = req.session.user.phoneNumber;
+  const currentPhoneNumber = normPhone(req.session.user.phoneNumber || "");
   const agent = await getAgentFromMongo(currentPhoneNumber);
 
   if (!agent) {
@@ -692,9 +692,9 @@ router.post("/activate-group", async (req, res) => {
     return res.json({ success: false, message: "Invalid data - no trustees" });
   }
 
-  const agentPhone = req.session.user.phoneNumber;
+  const agentPhone = normPhone(req.session.user.phoneNumber || "");
   const agent = req.session.agent || await getAgentFromMongo(agentPhone);
-  
+
   if (!agent) {
     return res.json({ success: false, message: "Agent not found" });
   }
@@ -839,8 +839,8 @@ router.get("/group-form/:groupName", async (req, res) => {
   const decodedGroupName = decodeURIComponent(groupName);
   const general = await getGeneralGroupsFromMongo().catch(() => []);
 
-  const currentPhoneNumber = req.session.user.phoneNumber;
-  const agent = await getAgentFromMongo(currentPhoneNumber);
+const currentPhoneNumber = normPhone(req.session.user.phoneNumber || "");
+   const agent = await getAgentFromMongo(currentPhoneNumber);
 
   if (!agent) {
     return res.status(403).json({ error: "Agent not found" });
@@ -902,8 +902,8 @@ router.get("/group-registration-pdf/:groupName", async (req, res) => {
     const general = await getGeneralGroupsFromMongo().catch(() => []);
     const users = await getUsersFromMongo();
 
-    const currentPhoneNumber = req.session.user.phoneNumber;
-    const agent = await getAgentFromMongo(currentPhoneNumber);
+const currentPhoneNumber = normPhone(req.session.user.phoneNumber || "");
+       const agent = await getAgentFromMongo(currentPhoneNumber);
 
     if (!agent) {
       return res.status(403).json({ error: "Agent not found" });
@@ -1215,7 +1215,7 @@ router.get("/con-group", async (req, res) => {
   const general = await getGeneralGroupsFromMongo().catch(() => []);
   const users = await getUsersFromMongo();
 
-  const currentPhoneNumber = req.session.user.phoneNumber;
+  const currentPhoneNumber = normPhone(req.session.user.phoneNumber || "");
   const agent = await getAgentFromMongo(currentPhoneNumber);
 
   if (!agent) {
@@ -1296,31 +1296,31 @@ router.get("/conform", async (req, res) => {
    });
  });
 
-  // GET /agent/group-performance - Display group performance dashboard
-  router.get("/group-performance", async (req, res) => {
-    if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
-      return res.redirect("/login");
-    }
+// GET /agent/group-performance - Display group performance dashboard
+router.get("/group-performance", async (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.redirect("/login");
+  }
 
-     const { groupName } = req.query;
-     if (!groupName) {
-       return res.redirect("/agent");
-     }
+  const { groupName } = req.query;
+  if (!groupName) {
+    return res.redirect("/agent");
+  }
 
-const generalData = await getGeneralGroupsFromMongo().catch(() => []);
-      const flatGroups = flattenData(generalData);
-      const group = flatGroups.find(g => g.groupName === groupName);
+  const generalData = await getGeneralGroupsFromMongo().catch(() => []);
+  const flatGroups = flattenData(generalData);
+  const group = flatGroups.find(g => g.groupName === groupName);
 
-      if (!group) {
-        return res.status(404).send("Group not found");
-      }
+  if (!group) {
+    return res.status(404).send("Group not found");
+  }
 
-      const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
-      const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
-      const users = await getUsersFromMongo();
+  const membersData = loadJSON(path.join(__dirname, "../tran_account/member.json"), {});
+  const groupAccountsData = loadJSON(path.join(__dirname, "../tran_account/group.json"), {});
+  const users = await getUsersFromMongo();
 
-      const currentPhoneNumber = req.session.user.phoneNumber;
-      const agent = await getAgentFromMongo(currentPhoneNumber);
+  const currentPhoneNumber = normPhone(req.session.user.phoneNumber || "");
+  const agent = await getAgentFromMongo(currentPhoneNumber);
 
       if (!agent) {
         return res.redirect("/agent");

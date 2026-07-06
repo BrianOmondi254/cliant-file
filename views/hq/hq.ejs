@@ -6,6 +6,7 @@
   <title>T-Bank HQ Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -712,7 +713,7 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="register-name-row" id="register-name-row" style="display:none;">
+      <div class="register-name-row" id="register-name-row" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#065f46;">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span id="register-name"></span>
       </div>
@@ -733,10 +734,6 @@
           <option value="Human Resources">Human Resources</option>
         </select>
       </div>
-      <div class="register-name-row" id="otp-message-row" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46;">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span id="otp-message"></span>
-      </div>
       <div class="register-name-row" id="verified-banner" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;cursor:pointer;" onclick="app.showPinFields()">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <span>Passkey verified for <strong id="verified-phone"></strong> — click to create your PIN</span>
@@ -754,7 +751,8 @@
         <input class="field-input" type="password" placeholder="Re-enter PIN" id="register-pin-confirm">
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="display:flex;gap:8px;">
+      <button class="btn-full" id="register-edit-btn" style="display:none;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">Edit number</button>
       <button class="btn-full" id="register-submit"><span>Continue</span> <span class="spin hidden"></span></button>
     </div>
   </div>
@@ -858,11 +856,14 @@
   let superAdminExists = false;
   let otpExpiryTimer = null;
   let otpSentAt = 0;
+  let pendingVerifyName = "";
+  let pendingVerifyPhone = "";
   const OTP_COOLDOWN_MS = 180000;
 
   /* ─── Register ─── */
   const registerOverlay = document.getElementById("register-overlay");
   const registerSubmit  = document.getElementById("register-submit");
+  const registerEditBtn = document.getElementById("register-edit-btn");
   const registerName    = document.getElementById("register-name");
   const registerNameRow = document.getElementById("register-name-row");
   const registerSubtitle= document.getElementById("register-subtitle");
@@ -871,8 +872,6 @@
   const registerPinConfirm = document.getElementById("register-pin-confirm");
   const registerDepartment = document.getElementById("register-department");
   const registerPasskey = document.getElementById("register-passkey");
-  const otpMessageRow = document.getElementById("otp-message-row");
-  const otpMessage = document.getElementById("otp-message");
   const verifiedBanner = document.getElementById("verified-banner");
   const verifiedPhone = document.getElementById("verified-phone");
   const phoneField      = document.getElementById("phone-field");
@@ -911,6 +910,8 @@
     currentPhone = "";
     superAdminExists = false;
     otpSentAt = 0;
+    pendingVerifyName = "";
+    pendingVerifyPhone = "";
     clearOtpTimer();
     registerPhone.value = "";
     registerPhone.readOnly = false;
@@ -920,7 +921,7 @@
     registerDepartment.value = "";
     registerNameRow.style.display = "none";
     verifiedBanner.style.display = "none";
-    otpMessageRow.style.display = "none";
+    registerEditBtn.style.display = "none";
     phoneError.style.display = "none";
     phoneField.style.display = "block";
     deptField.style.display = "none";
@@ -962,7 +963,6 @@
     if (data.status === "OK" && !data.exists) {
       resetRegister();
       registerNameRow.style.display = "none";
-      otpMessageRow.style.display = "none";
       phoneError.style.display = "none";
       phoneField.style.display = "block";
       deptField.style.display = "none";
@@ -1005,6 +1005,20 @@
     loginOverlay.classList.add("open");
   };
 
+  registerEditBtn.onclick = () => {
+    step = "PHONE";
+    pendingVerifyName = "";
+    pendingVerifyPhone = "";
+    registerEditBtn.style.display = "none";
+    registerNameRow.style.display = "none";
+    registerPhone.readOnly = false;
+    phoneField.style.display = "block";
+    phoneError.style.display = "none";
+    registerSubtitle.textContent = "Enter your registered phone number";
+    setRegisterBtnText("Continue");
+    registerPhone.focus();
+  };
+
   registerSubmit.onclick = async () => {
     if (step === "PHONE") {
       const phone = registerPhone.value.trim();
@@ -1040,38 +1054,20 @@
         }
         phoneError.style.display = "none";
 
-        setSpinning(registerSubmit, true);
-        const otpRes = await fetch("/hq/admin/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
-        const otpData = await otpRes.json();
-        setSpinning(registerSubmit, false);
-        if (otpData.status !== "SENT") {
-          phoneError.style.display = "block";
-          phoneError.textContent = otpData.message || "Failed to send passkey.";
-          return;
-        }
-
-        otpSentAt = Date.now();
-        currentPhone = phone;
-        registerName.textContent = verifyData.name;
+        pendingVerifyName = verifyData.name;
+        pendingVerifyPhone = phone;
+        registerName.textContent = pendingVerifyName + " — " + phone;
         registerNameRow.style.display = "flex";
-        otpMessageRow.style.display = "flex";
-        otpMessage.textContent = "Passkey sent to " + phone + ". Expires in 3 minutes.";
         registerPhone.readOnly = true;
-        phoneField.style.display = "block";
+        phoneField.style.display = "none";
         deptField.style.display = "none";
-        passkeyField.style.display = "block";
+        passkeyField.style.display = "none";
         pinField.style.display = "none";
         pinConfirmField.style.display = "none";
-        registerSubtitle.textContent = "Enter the passkey sent to your device";
-        setRegisterBtnText("Verify Passkey");
-        step = "PASSKEY";
-
-        clearOtpTimer();
-        otpExpiryTimer = setTimeout(() => {
-          showToast("Passkey expired. Please try again.", "warning");
-          resetRegister();
-          registerOverlay.classList.remove("open");
-        }, 180000);
+        registerSubtitle.textContent = "Is this you? Confirm to receive your passkey.";
+        setRegisterBtnText("Confirm");
+        registerEditBtn.style.display = "inline-block";
+        step = "CONFIRM";
 
         return;
       }
@@ -1104,6 +1100,44 @@
         setRegisterBtnText("Create account");
         step = "DEPT_PIN";
       }
+    } else if (step === "CONFIRM") {
+      const phone = pendingVerifyPhone;
+      const now = Date.now();
+      if (otpSentAt && (now - otpSentAt) < OTP_COOLDOWN_MS) {
+        const remaining = Math.ceil((OTP_COOLDOWN_MS - (now - otpSentAt)) / 1000);
+        showToast(`Please wait ${remaining} seconds before requesting another passkey.`, "warning");
+        return;
+      }
+
+      setSpinning(registerSubmit, true);
+      const otpRes = await fetch("/hq/admin/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone }) });
+      const otpData = await otpRes.json();
+      setSpinning(registerSubmit, false);
+      if (otpData.status !== "SENT") {
+        showToast(otpData.message || "Failed to send passkey.", "error");
+        return;
+      }
+
+      otpSentAt = Date.now();
+      currentPhone = phone;
+      registerName.textContent = "Passkey sent to " + phone + ", " + pendingVerifyName + ". Expires in 3 minutes.";
+      registerNameRow.style.display = "flex";
+      registerEditBtn.style.display = "none";
+      phoneField.style.display = "none";
+      deptField.style.display = "none";
+      passkeyField.style.display = "block";
+      pinField.style.display = "none";
+      pinConfirmField.style.display = "none";
+      registerSubtitle.textContent = "Enter the passkey sent to your device";
+      setRegisterBtnText("Verify Passkey");
+      step = "PASSKEY";
+
+      clearOtpTimer();
+      otpExpiryTimer = setTimeout(() => {
+        showToast("Passkey expired. Please try again.", "warning");
+        resetRegister();
+        registerOverlay.classList.remove("open");
+      }, 180000);
     } else if (step === "PASSKEY") {
       const passkey = registerPasskey.value.trim();
       if (!passkey) return showToast("Enter the passkey", "warning");

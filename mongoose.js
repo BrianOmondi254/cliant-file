@@ -236,6 +236,7 @@ const messageSchema = new mongoose.Schema({
   broadcast: { type: Boolean, default: false },
   roles: [{ type: String }],
   meta: { type: mongoose.Schema.Types.Mixed },
+  status: { type: String, default: "pending" },
   createdAt: { type: String, default: () => new Date().toISOString() }
 }, { timestamps: true });
 
@@ -1055,6 +1056,7 @@ const Admin = adminDb.model('Admin', adminSchema, 'admins');
  */
 const superAdminSchema = new mongoose.Schema({
   phoneNumber: { type: String, required: true, unique: true },
+  rawPhone: { type: String },
   name: { type: String, required: true },
   pin: { type: String, required: true },
   permissions: [{ type: String }],

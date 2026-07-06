@@ -12,6 +12,7 @@ const {
   PersonalAccount,
   Agent,
   Dealer,
+  normalizePhone,
 } = require("../mongoose");
 
 const router = express.Router();
@@ -447,13 +448,17 @@ router.post("/login", async (req, res) => {
   req.session.loginSeason = currentSeason;
 
   // Determine if user is agent or dealer and save to session (MongoDB only)
+  // IMPORTANT: always normalize phone for lookups because dealer/agent phoneNumbers
+  // may be stored in normalized form (e.g. leading 0 removed).
+  const normalizedUserPhone = normalizePhone(user.phoneNumber || loginPhone || "");
+
   let mongoAgent = null;
   let mongoDealer = null;
   try {
     const dbReady = await ensureMongoReady();
     if (dbReady) {
-      mongoAgent = await Agent.findOne({ phoneNumber: user.phoneNumber }).lean();
-      mongoDealer = await Dealer.findOne({ phoneNumber: user.phoneNumber }).lean();
+      mongoAgent = await Agent.findOne({ phoneNumber: normalizedUserPhone }).lean();
+      mongoDealer = await Dealer.findOne({ phoneNumber: normalizedUserPhone }).lean();
     }
   } catch (dbErr) {
     console.error("MongoDB agent/dealer lookup error during login:", dbErr.message);

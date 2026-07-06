@@ -20,7 +20,12 @@ router.post("/register", async (req, res) => {
   }
   phone = phone.trim();
 
-  const existing = await SuperAdmin.findOne({ phoneNumber: norm(phone) }).lean();
+  const existing = await SuperAdmin.findOne({
+    $or: [
+      { phoneNumber: phone },
+      { phoneNumber: norm(phone) }
+    ]
+  }).lean();
   if (existing) {
     return res.json({
       status: "ALREADY_REGISTERED",
@@ -51,7 +56,12 @@ router.post("/create-pin", async (req, res) => {
   }
 
   const normalised = norm(phone);
-  const existing = await SuperAdmin.findOne({ phoneNumber: normalised }).lean();
+  const existing = await SuperAdmin.findOne({
+    $or: [
+      { phoneNumber: phone },
+      { phoneNumber: normalised }
+    ]
+  }).lean();
   if (existing) {
     return res.json({ status: "ALREADY_REGISTERED", message: "Super Admin already exists." });
   }
@@ -80,7 +90,8 @@ router.post("/create-pin", async (req, res) => {
   const hashedPin = await bcrypt.hash(pin, 10);
 
   const superAdmin = new SuperAdmin({
-    phoneNumber: normalised,
+    phoneNumber: phone,
+    rawPhone: phone,
     name: fullName,
     pin: hashedPin,
     createdAt: new Date()
@@ -101,7 +112,12 @@ router.post("/login", async (req, res) => {
     return res.json({ status: "ERROR", message: "Phone and PIN required." });
   }
 
-  const superAdmin = await SuperAdmin.findOne({ phoneNumber: norm(phone) }).lean();
+  const superAdmin = await SuperAdmin.findOne({
+    $or: [
+      { phoneNumber: phone },
+      { phoneNumber: norm(phone) }
+    ]
+  }).lean();
   if (!superAdmin) {
     return res.json({
       status: "NOT_REGISTERED",
@@ -135,11 +151,11 @@ router.get("/contact", async (req, res) => {
     if (!ready) {
       return res.json({ status: "OK", contact: null });
     }
-    const superAdmin = await SuperAdmin.findOne({}, { phoneNumber: 1, _id: 0 }).lean();
+    const superAdmin = await SuperAdmin.findOne({}, { phoneNumber: 1, rawPhone: 1, _id: 0 }).lean();
     if (!superAdmin) {
       return res.json({ status: "OK", contact: null });
     }
-    const phone = superAdmin.phoneNumber;
+    const phone = superAdmin.phoneNumber || superAdmin.rawPhone;
     let formatted = phone;
     if (phone && phone.length === 9 && !phone.startsWith("0")) {
       formatted = "0" + phone;

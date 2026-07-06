@@ -615,16 +615,15 @@ router.post("/compliance/save-dealer", async (req, res) => {
     }
     
     const existingAdmin = await Admin.findOne({ phoneNumber: normDealerPhone });
-    const existingSuperAdmin = await SuperAdmin.findOne({ phoneNumber: normDealerPhone });
+    const existingSuperAdmin = await SuperAdmin.findOne({ $or: [{ phoneNumber: dealerPhone }, { phoneNumber: normDealerPhone }] });
     if (existingAdmin || existingSuperAdmin) {
        return res.status(400).json({ success: false, message: "Phone number is registered as an Admin or SuperAdmin." });
     }
 
-// Check for existing pending dealer invitation
+// Check for existing pending dealer invitation (any invitation message to this number)
      const existingPending = await Message.findOne({ 
        to: normDealerPhone, 
-       type: "dealer_invitation", 
-       status: { $in: ["pending", null] } 
+       type: "dealer_invitation"
      });
      if (existingPending) {
        return res.status(400).json({ 

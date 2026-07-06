@@ -70,7 +70,7 @@ router.post("/check-phone", async (req, res) => {
   const normalised = norm(phone);
 
   const [superAdmin, existingAdmin, countiesUser] = await Promise.all([
-    SuperAdmin.findOne({ phoneNumber: normalised }).lean(),
+    SuperAdmin.findOne({ $or: [{ phoneNumber: phone }, { phoneNumber: normalised }] }).lean(),
     Admin.findOne({ phoneNumber: normalised }).lean(),
     findUserInCounties(phone)
   ]);
@@ -346,7 +346,7 @@ router.post("/login-with-department", async (req, res) => {
     const normalised = norm(phone);
 
     // 2. Check SuperAdmin first (super admins can access any department)
-    const superAdmin = await SuperAdmin.findOne({ phoneNumber: normalised }).lean();
+    const superAdmin = await SuperAdmin.findOne({ $or: [{ phoneNumber: phone }, { phoneNumber: normalised }] }).lean();
     if (superAdmin) {
       const pinMatch = await bcrypt.compare(pin, superAdmin.pin);
       if (!pinMatch) {
@@ -531,7 +531,13 @@ router.get("/verify-department", async (req, res) => {
       });
     }
 
-    const superAdmin = await SuperAdmin.findOne({ phoneNumber: norm(req.session.hqUser.phoneNumber) }).lean();
+    const sessionNorm = norm(req.session.hqUser.phoneNumber);
+    const superAdmin = await SuperAdmin.findOne({
+      $or: [
+        { phoneNumber: req.session.hqUser.phoneNumber },
+        { phoneNumber: sessionNorm }
+      ]
+    }).lean();
     if (superAdmin) {
       return res.json({
         status: "OK",

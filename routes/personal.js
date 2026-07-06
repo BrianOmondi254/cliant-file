@@ -224,6 +224,8 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 ward: doc.ward || '',
                 myBalance: doc.myBalance || 0,
                 totalMembers: Object.keys(members).length,
+                messages: Array.isArray(doc.messages) ? doc.messages : [],
+                constitutionStartKey: doc.constitutionStartKey,
                 source: 'groups'
             });
             continue;
@@ -255,6 +257,8 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 ward: doc.ward || '',
                 myBalance: doc.myBalance || 0,
                 totalMembers: doc.members.length,
+                messages: Array.isArray(doc.messages) ? doc.messages : [],
+                constitutionStartKey: doc.constitutionStartKey,
                 source: 'groups'
             });
             continue;
@@ -287,6 +291,8 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 ward: doc.ward || '',
                 myBalance: doc.myBalance || 0,
                 totalMembers: Object.keys(doc).filter(k => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')).length,
+                messages: Array.isArray(doc.messages) ? doc.messages : [],
+                constitutionStartKey: doc.constitutionStartKey,
                 source: 'groups'
             });
             continue;
@@ -1323,6 +1329,118 @@ router.post("/send-money/complete", (req, res) => {
   res.render("send-money", { 
     user: req.session.user, step: "success", amount: formattedAmount, groupName 
   });
+});
+
+router.get("/inbox-status", async (req, res) => {
+  try {
+    if (!req.session.user) return res.json({ success: true, data: null });
+    const phone = req.session.user.phoneNumber;
+    const userGroups = [];
+    try {
+      const groupsFromCollection = await getGroupsForMemberFromGroupsCollection(phone);
+      userGroups.push(...groupsFromCollection);
+    } catch (e) {
+      console.error("[inbox-status] groups collection lookup error:", e.message);
+    }
+    const constitutionKeys = [];
+    const groupMessages = [];
+    userGroups.forEach(group => {
+      const role = String(group.role || '').toLowerCase();
+      const userIsTrusteeInThisGroup = role === 'trustee';
+
+      if (group.messages && Array.isArray(group.messages)) {
+        group.messages.forEach(msg => {
+          if (msg.to && norm(msg.to) === norm(phone)) {
+            groupMessages.push({
+              groupName: group.groupName,
+              title: msg.title,
+              content: msg.content,
+              type: msg.type,
+              createdAt: msg.createdAt,
+              isNew: msg.isNew !== false
+            });
+          }
+        });
+      }
+
+      if (group.messages && Array.isArray(group.messages)) {
+        group.messages.forEach(msg => {
+          if (msg.to && norm(msg.to) === norm(phone)) {
+            if (msg.type === 'security_alert' && msg.title === 'Constitution Key') {
+              constitutionKeys.push({
+                groupName: msg.title || group.groupName,
+                key: msg.content,
+                type: 'security_alert'
+              });
+            } else {
+              constitutionKeys.push({
+                groupName: msg.title || group.groupName,
+                type: msg.type,
+                content: msg.content,
+                isNew: true
+              });
+            }
+          } else if (msg.broadcast && msg.roles && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
+            constitutionKeys.push({
+              groupName: msg.title || group.groupName,
+              type: msg.type,
+              content: msg.content,
+              isNew: true
+            });
+          }
+        });
+      }
+
+      if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
+        constitutionKeys.push({
+          groupName: group.groupName,
+          key: group.constitutionStartKey,
+          type: 'legacy'
+        });
+      }
+    });
+
+    // Fetch messages from MongoDB messages collection (mirrors main dashboard route)
+    try {
+      const mongoMessages = await getMessagesForUser(phone);
+      mongoMessages.forEach(msg => {
+        if (msg.type === 'security_alert' && msg.title === 'Constitution Key' && msg.key) {
+          constitutionKeys.push({
+            groupName: msg.groupName,
+            key: msg.key,
+            type: 'security_alert'
+          });
+        } else if (msg.to && norm(msg.to) === norm(phone)) {
+          constitutionKeys.push({
+            _id: msg._id,
+            groupName: msg.title || 'Notification',
+            type: msg.type,
+            content: msg.content,
+            meta: msg.meta,
+            isNew: true
+          });
+        }
+      });
+    } catch (e) {
+      console.error("[inbox-status] Error fetching messages from MongoDB:", e.message);
+    }
+
+    let pendingOfficerMessage = null;
+    if (req.session.user && req.session.user.phoneNumber) {
+      pendingOfficerMessage = await getPendingOfficerMessageByPhone(req.session.user.phoneNumber);
+    }
+    res.json({
+      success: true,
+      data: {
+        constitutionKeys,
+        groupMessages,
+        user: req.session.user,
+        pendingOfficerMessage
+      }
+    });
+  } catch (err) {
+    res.json({ success: true, data: null });
+  }
 });
 
 module.exports = router;
