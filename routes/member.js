@@ -10,7 +10,8 @@ const {
   saveMemberDataToMongo,
   findOrCreateMemberGroup,
   MemberGroup,
-  ensureMongoReady
+  ensureMongoReady,
+  deletePendingOfficerMessage
 } = require('../mongoose');
 
 const router = express.Router();

@@ -341,7 +341,7 @@
        background: white;
        box-shadow: 0 0 0 3px rgba(46, 114, 210, 0.12);
      }
-     
+
      .m-info-banner {
        border-radius: 8px;
        padding: 10px 12px;
@@ -485,7 +485,7 @@
        <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="closeAdminPopup()"></div>
        <div style="position:relative;background:white;border-radius:var(--radius-lg);padding:36px 32px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);">
          <button onclick="closeAdminPopup()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
-         
+
          <div id="dept-signin-step">
            <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Sign In - <span id="selected-dept-name"></span></p>
            <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-circle-info"></i><span>Enter your phone to access this department.</span></div>
@@ -494,9 +494,24 @@
              <input type="tel" id="admin-signin-phone" class="field-input" placeholder="07XX XXX XXX" inputmode="numeric" style="width:100%;">
            </div>
            <div id="signin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
-           <button class="btn btn-primary" onclick="verifyAdminPhone()" style="width:100%;">Verify Phone</button>
+           <button id="verify-phone-btn" class="btn btn-primary" onclick="verifyAdminPhone()" style="width:100%;">Verify Phone</button>
          </div>
-         
+
+         <div id="dept-confirm-step" class="hidden">
+           <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Confirm Department Assignment</p>
+           <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-circle-info"></i><span>Please confirm the details below.</span></div>
+           <div style="background:var(--blue-50); padding:16px; border-radius:8px; margin-bottom:16px; text-align: left;">
+             <p style="font-size:11px; color:var(--gray-600); margin-bottom:4px; text-transform:uppercase; font-weight:600;">Full Name</p>
+             <p id="confirm-admin-name" style="font-size:15px; font-weight:700; color:var(--blue-900); margin-bottom:12px;"></p>
+             <p style="font-size:11px; color:var(--gray-600); margin-bottom:4px; text-transform:uppercase; font-weight:600;">Department</p>
+             <p id="confirm-admin-dept" style="font-size:15px; font-weight:700; color:var(--blue-900);"></p>
+           </div>
+           <div style="display:flex; gap:10px;">
+             <button id="edit-confirm-btn" class="btn btn-ghost" onclick="editConfirmDetails()" style="flex:1; border:1px solid #cbd5e1; padding: 12px; font-weight: 600; font-size: 13px;">Edit</button>
+             <button id="accept-confirm-btn" class="btn btn-primary" onclick="acceptConfirmDetails()" style="flex:1; padding: 12px; font-weight: 600; font-size: 13px;">Accept</button>
+           </div>
+         </div>
+
          <div id="pin-input-step" class="hidden">
            <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Enter PIN</p>
 <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-lock"></i><span>Welcome, <span id="verified-admin-name" style="font-weight:700;"></span>. Enter your PIN.</span></div>
@@ -505,9 +520,9 @@
               <input type="password" id="admin-pin-input" class="field-input" placeholder="Enter PIN" inputmode="numeric" style="width:100%;font-size:18px;text-align:center;">
            </div>
            <div id="pin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
-           <button class="btn btn-primary" onclick="verifyAdminPinAndDept()" style="width:100%;">Verify PIN & Department</button>
+           <button id="verify-pin-btn" class="btn btn-primary" onclick="verifyAdminPinAndDept()" style="width:100%;">Verify PIN & Department</button>
          </div>
-         
+
          <div id="message-note" class="hidden">
            <div style="width:44px;height:44px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;">✅</div>
            <p id="message-user-info" style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;"></p>
@@ -543,7 +558,7 @@
     document.getElementById("list-dept-option").onclick = async () => {
       document.getElementById("admin-options").classList.add("hidden");
       document.getElementById("list-dept-section").classList.remove("hidden");
-      
+
       const listEl = document.getElementById("departments-list");
       try {
         const res = await fetch("/hq/admin/departments");
@@ -621,6 +636,7 @@
       const popup = document.getElementById("phone-input-section");
       popup.classList.remove("hidden");
       document.getElementById("dept-signin-step").classList.remove("hidden");
+      document.getElementById("dept-confirm-step").classList.add("hidden");
       document.getElementById("pin-input-step").classList.add("hidden");
       document.getElementById("message-note").classList.add("hidden");
       document.getElementById("selected-dept-name").textContent = selectedDept || 'Department';
@@ -642,35 +658,65 @@
       document.getElementById("phone-input-section").classList.add("hidden");
     }
 
+    function editConfirmDetails() {
+      document.getElementById("dept-confirm-step").classList.add("hidden");
+      document.getElementById("dept-signin-step").classList.remove("hidden");
+    }
+
+    async function acceptConfirmDetails() {
+      const acceptBtn = document.getElementById("accept-confirm-btn");
+      await createPendingDepartmentAdmin(verifiedPhone, verifiedAdminName, acceptBtn);
+    }
+
     async function verifyAdminPhone() {
-      const phone = document.getElementById("admin-signin-phone").value.trim();
+      const phoneInput = document.getElementById("admin-signin-phone");
+      const phone = phoneInput.value.trim();
       const errDiv = document.getElementById("signin-error");
-      
+      const verifyBtn = document.getElementById("verify-phone-btn");
+
       if (!phone) {
         errDiv.classList.remove("hidden");
         errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Phone number required.</span>';
         return;
       }
 
+      errDiv.classList.add("hidden");
+
+      // Set loading state
+      const originalBtnHTML = verifyBtn.innerHTML;
+      verifyBtn.disabled = true;
+      verifyBtn.innerHTML = 'Verifying... <span class="spin"></span>';
+
       try {
-        const res = await fetch("/hq/admin/verify-phone", {
+        const res = await fetch("/hq/admin/check-phone", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone })
         });
         const data = await res.json();
-        
-        if (data.status === "FOUND") {
+
+        if (data.status === "ALREADY_ADMIN") {
+          // Phone is already registered in Admin collection - proceed to PIN sign-in.
           verifiedPhone = phone;
           document.getElementById("dept-signin-step").classList.add("hidden");
           document.getElementById("pin-input-step").classList.remove("hidden");
           document.getElementById("verified-admin-name").textContent = data.name || "Admin";
           verifiedAdminName = data.name || "Admin";
           document.getElementById("admin-pin-input").focus();
+        } else if (data.status === "VERIFIED") {
+          // Phone belongs to a registered TBank user, but is not yet in Admin collection.
+          // Store details and proceed to confirmation screen
+          verifiedPhone = phone;
+          verifiedAdminName = data.name || "Admin";
+          document.getElementById("confirm-admin-name").textContent = verifiedAdminName;
+          document.getElementById("confirm-admin-dept").textContent = selectedDept;
+
+          document.getElementById("dept-signin-step").classList.add("hidden");
+          document.getElementById("dept-confirm-step").classList.remove("hidden");
         } else if (data.status === "NOT_REGISTERED") {
           errDiv.classList.remove("hidden");
           errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Phone not registered in TBank system.</span>';
-        } else if (data.status === "ALREADY_SUPERADMIN" || data.status === "ALREADY_ADMIN") {
+        } else if (data.status === "ALREADY_SUPERADMIN") {
           errDiv.classList.remove("hidden");
           errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>' + data.message + '</span>';
         } else {
@@ -680,18 +726,102 @@
       } catch (err) {
         errDiv.classList.remove("hidden");
         errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Network error. Please try again.</span>';
+      } finally {
+        // Reset loading state
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = originalBtnHTML;
       }
     }
 
-async function verifyAdminPinAndDept() {
-       const pin = document.getElementById("admin-pin-input").value.trim();
-       const errDiv = document.getElementById("pin-error");
-       
-       if (!pin) {
-         errDiv.classList.remove("hidden");
-         errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Please enter your PIN.</span>';
-         return;
-       }
+    async function createPendingDepartmentAdmin(phone, name, actionBtn) {
+      const errDiv = document.getElementById("signin-error");
+
+      // Update loading feedback
+      const originalBtnHTML = actionBtn.innerHTML;
+      actionBtn.disabled = true;
+      actionBtn.innerHTML = 'Creating Account... <span class="spin"></span>';
+
+      try {
+        // 1. Create Pending Admin Record
+        const createRes = await fetch("/hq/admin/create-admin-record", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, department: selectedDept })
+        });
+        const createData = await createRes.json();
+
+        if (createData.status !== "SUCCESS") {
+          actionBtn.disabled = false;
+          actionBtn.innerHTML = originalBtnHTML;
+          alert(createData.message || 'Failed to create department admin.');
+          return;
+        }
+
+        // 2. Generate and Send 24-hour OTP (Passkey)
+        const otpRes = await fetch("/hq/admin/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone })
+        });
+        const otpData = await otpRes.json();
+
+        if (otpData.status !== "SENT") {
+          actionBtn.disabled = false;
+          actionBtn.innerHTML = originalBtnHTML;
+          alert(otpData.message || 'Failed to generate passkey.');
+          return;
+        }
+
+        const passkeyNumber = otpData.passkey || '';
+
+        // 3. Send appointment notification/message to the client's inbox
+        await fetch("/hq/admin/send-officer-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, name, dept: selectedDept, passkey: passkeyNumber })
+        });
+
+        // Hide inputs and display the final success message / pending instruction popup
+        document.getElementById("dept-signin-step").classList.add("hidden");
+        document.getElementById("dept-confirm-step").classList.add("hidden");
+        document.getElementById("pin-input-step").classList.add("hidden");
+
+        document.getElementById("message-user-info").innerHTML =
+          '<div style="text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--gray-700);">' +
+          'Successfully created pending <strong>' + selectedDept + '</strong> account for <strong>' + name + '</strong>.<br><br>' +
+          'They can now log into the client app to create their PIN and activate their account.<br><br>' +
+          '<div style="background: var(--blue-50); padding: 12px; border-radius: 6px; border: 1px solid var(--blue-100); text-align: center; margin-top: 8px;">' +
+            '<span style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--blue-600); display: block; margin-bottom: 4px;">Passkey Number</span>' +
+            '<strong style="font-size: 22px; letter-spacing: 4px; color: var(--blue-900);">' + passkeyNumber + '</strong>' +
+            '<span style="font-size: 10.5px; display: block; margin-top: 4px; color: var(--gray-600);">Expires in 24 hours</span>' +
+          '</div>' +
+          '</div>';
+
+        document.getElementById("message-note").classList.remove("hidden");
+      } catch (err) {
+        actionBtn.disabled = false;
+        actionBtn.innerHTML = originalBtnHTML;
+        alert('Network error. Please try again.');
+      }
+    }
+
+    async function verifyAdminPinAndDept() {
+      const pin = document.getElementById("admin-pin-input").value.trim();
+      const errDiv = document.getElementById("pin-error");
+      const pinBtn = document.getElementById("verify-pin-btn");
+
+      if (!pin) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Please enter your PIN.</span>';
+        return;
+      }
+
+      errDiv.classList.add("hidden");
+
+      // Set loading state
+      const originalBtnHTML = pinBtn.innerHTML;
+      pinBtn.disabled = true;
+      pinBtn.innerHTML = 'Verifying... <span class="spin"></span>';
 
       try {
         const res = await fetch("/hq/admin/login", {
@@ -700,7 +830,7 @@ async function verifyAdminPinAndDept() {
           body: JSON.stringify({ phone: verifiedPhone, pin })
         });
         const data = await res.json();
-        
+
         if (data.status === "SUCCESS") {
           if (data.department === selectedDept) {
             window.location.href = "/hq/" + selectedDept.toLowerCase().replace(/\s+/g, '-');
@@ -721,6 +851,10 @@ async function verifyAdminPinAndDept() {
       } catch (err) {
         errDiv.classList.remove("hidden");
         errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Network error. Please try again.</span>';
+      } finally {
+        // Reset loading state
+        pinBtn.disabled = false;
+        pinBtn.innerHTML = originalBtnHTML;
       }
     }
 

@@ -112,14 +112,14 @@
             flex-wrap: wrap;
             gap: 8px;
         }
-        
+
         /* Responsive fixes for small screens */
         @media (max-width: 480px) {
             .app-header {
                 justify-content: center;
                 padding: 12px 10px;
             }
-            
+
             .app-header h2 {
                 font-size: 18px;
                 letter-spacing: -0.3px;
@@ -128,25 +128,25 @@
                 width: 100%;
                 text-align: center;
             }
-            
+
             .app-header .header-right {
                 position: static;
                 margin-top: 8px;
                 flex-wrap: wrap;
                 gap: 6px;
             }
-            
+
             .header-bell {
                 font-size: 16px;
             }
-            
+
             .logout-btn {
                 width: 28px;
                 height: 28px;
                 padding: 6px;
                 font-size: 0.7rem;
             }
-            
+
             /* Reduce decorative circle size on small screens */
             .app-header::after {
                 width: 120px;
@@ -679,7 +679,7 @@ const app = {
         this.render();
         this.updateBadge();
         this.setupPhoneListeners();
-        
+
         // Check for pending regional officer message (server-side)
         const serverOfficerMsg = this.data.pendingOfficerMessage;
         if (serverOfficerMsg && serverOfficerMsg.phone) {
@@ -728,7 +728,7 @@ const app = {
             const json = await res.json();
             if (json.success && json.data) {
                 const d = json.data;
-                const changed = 
+                const changed =
                     JSON.stringify(this.data.constitutionKeys || []) !== JSON.stringify(d.constitutionKeys || []) ||
                     JSON.stringify(this.data.groupMessages || []) !== JSON.stringify(d.groupMessages || []) ||
                     JSON.stringify((this.data.user && this.data.user.inbox) || []) !== JSON.stringify((d.user && d.user.inbox) || []) ||
@@ -771,29 +771,29 @@ const app = {
     showBalanceDirectly() {
         const balanceAmount = Number(this.data.balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         const originalTxns = this.data.transactions || [];
-        
+
         // Clone and sort chronologically (oldest first) to calculate real-time running balances
         const txns = [...originalTxns].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-        
+
         // Calculate historical running balances going backwards from current balance
         let runningVal = Number(this.data.balance);
         const ledgerItems = [];
-        
+
         for (let i = txns.length - 1; i >= 0; i--) {
             const tx = txns[i];
             const amt = Number(tx.amt || 0);
             const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'credit';
-            
+
             const closing = runningVal;
             const opening = isCredit ? (runningVal - amt) : (runningVal + amt);
-            
+
             ledgerItems[i] = {
                 ...tx,
                 opening: opening,
                 closing: closing,
                 isCredit: isCredit
             };
-            
+
             runningVal = opening; // Update the running value for the next oldest transaction
         }
 
@@ -803,15 +803,15 @@ const app = {
             for (let i = ledgerItems.length - 1; i >= 0; i--) {
                 const tx = ledgerItems[i];
                 const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, {
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
                     minute: '2-digit'
                 }) : 'Today';
                 const amtColor = tx.isCredit ? '#16a34a' : '#dc2626';
                 const amtPrefix = tx.isCredit ? '+' : '-';
                 const bgLight = tx.isCredit ? '#f0fdf4' : '#fef2f2';
-                
+
                 // Generate realistic codes & account numbers deterministically based on amount and index
                 const txCode = tx.code || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
                 const txAccNo = tx.accountNumber || (tx.type === 'deposit' ? '07' + String(10 + (i * 7) % 89) + ' *** ' + String(100 + (i * 23) % 900) : 'Acc: 4040' + String(100 + (i * 19) % 900));
@@ -832,15 +832,15 @@ const app = {
                         <!-- Ref Code and Processed To Row (Directly below Card Header) -->
                         <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 10px; color: #64748b;">
                             <div>
-                                <span style="font-weight: 700; color: #475569;">Ref Code:</span> 
+                                <span style="font-weight: 700; color: #475569;">Ref Code:</span>
                                 <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txCode}</span>
                             </div>
                             <div>
-                                <span style="font-weight: 700; color: #475569;">Processed To:</span> 
+                                <span style="font-weight: 700; color: #475569;">Processed To:</span>
                                 <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txAccNo}</span>
                             </div>
                         </div>
-                        
+
                         <!-- Ledger Accounting Balance Flow (Opening -> Amount -> Closing) -->
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px dashed #f1f5f9;">
                             <!-- Opening Balance Column -->
@@ -850,7 +850,7 @@ const app = {
                                     KSh ${tx.opening.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
-                            
+
                             <!-- Amount Flow Column -->
                             <div style="flex: 1.2; text-align: center; background: ${bgLight}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${tx.isCredit ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
                                 <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
@@ -858,7 +858,7 @@ const app = {
                                     ${amtPrefix} KSh ${Number(tx.amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
-                            
+
                             <!-- Closing Balance Column -->
                             <div style="flex: 1; text-align: right;">
                                 <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
@@ -911,7 +911,7 @@ const app = {
                 </div>
             </div>
         `;
-        
+
         const container = document.getElementById('mainContainer');
         container.innerHTML = balanceHTML;
         window.scrollTo(0, 0);
@@ -939,11 +939,11 @@ const app = {
         const amt = parseFloat(document.getElementById('withdrawMpesaAmount').value);
         const errDiv = document.getElementById('withdrawMpesaError');
         const errTxt = document.getElementById('withdrawMpesaErrorText');
-        
+
         if (!phone) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a phone number.'; return; }
         if (isNaN(amt) || amt <= 0) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid amount.'; return; }
         if (amt > parseFloat(this.data.balance)) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Insufficient funds in your wallet balance.'; return; }
-        
+
         // Show PIN modal
         const html = `
         <div class="m-info-banner blue"><i class="fa-solid fa-lock"></i><span>Enter your 4-digit PIN to authorize KSh ${amt.toLocaleString()} M-Pesa withdrawal.</span></div>
@@ -960,9 +960,9 @@ const app = {
         const pin = document.getElementById('authWithdrawPin').value;
         const errDiv = document.getElementById('authWithdrawError');
         const errTxt = document.getElementById('authWithdrawErrorText');
-        
+
         if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a 4-digit PIN.'; return; }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -981,10 +981,10 @@ const app = {
             errTxt.textContent = 'Server communication error.';
             return;
         }
-        
+
         // Successfully processed!
         this.data.balance = parseFloat(this.data.balance) - amt;
-        
+
         let userName = '';
         try {
             const nameRes = await fetch(`/personal/get-name?phone=${encodeURIComponent(phone)}`);
@@ -1008,7 +1008,7 @@ const app = {
             accountNumber: phone + (userName ? ' (' + userName + ')' : ''),
             processedBy: 'M-PESA Paybill'
         });
-        
+
         const html = `
         <div style="text-align:center;padding:36px 20px;">
             <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
@@ -1042,11 +1042,11 @@ const app = {
         const amt = parseFloat(document.getElementById('withdrawAgentAmount').value);
         const errDiv = document.getElementById('withdrawAgentError');
         const errTxt = document.getElementById('withdrawAgentErrorText');
-        
+
         if (!agentNum) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter an Agent number.'; return; }
         if (isNaN(amt) || amt <= 0) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid amount.'; return; }
         if (amt > parseFloat(this.data.balance)) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Insufficient funds in your wallet balance.'; return; }
-        
+
         // Show PIN modal
         const html = `
         <div class="m-info-banner blue"><i class="fa-solid fa-lock"></i><span>Enter your 4-digit PIN to authorize KSh ${amt.toLocaleString()} Withdrawal at Agent ${agentNum}.</span></div>
@@ -1063,9 +1063,9 @@ const app = {
         const pin = document.getElementById('authWithdrawAgentPin').value;
         const errDiv = document.getElementById('authWithdrawAgentError');
         const errTxt = document.getElementById('authWithdrawAgentErrorText');
-        
+
         if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a 4-digit PIN.'; return; }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -1084,10 +1084,10 @@ const app = {
             errTxt.textContent = 'Server communication error.';
             return;
         }
-        
+
         // Successfully processed!
         this.data.balance = parseFloat(this.data.balance) - amt;
-        
+
         // Push a deterministic ledger transaction
         if (!this.data.transactions) this.data.transactions = [];
         this.data.transactions.push({
@@ -1100,7 +1100,7 @@ const app = {
             accountNumber: 'Agent: ' + agentNum,
             processedBy: 'T-BANK Agent Core'
         });
-        
+
         const html = `
         <div style="text-align:center;padding:36px 20px;">
             <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
@@ -1117,12 +1117,12 @@ const app = {
         const pin = document.getElementById('checkPin').value;
         const errDiv = document.getElementById('checkPinError');
         const errTxt = document.getElementById('checkPinErrorText');
-        
+
         if (!pin || pin.length < 4) {
             if (errDiv) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a 4-digit PIN.'; }
             return;
         }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -1146,7 +1146,7 @@ const app = {
         const valSpan = document.getElementById('headerBalanceValue');
         const eyeIcon = document.getElementById('headerBalanceEye');
         if (!valSpan || !eyeIcon) return;
-        
+
         const isHidden = valSpan.style.display === 'none' || valSpan.textContent === '';
         if (isHidden) {
             valSpan.style.display = 'inline';
@@ -1224,61 +1224,17 @@ const app = {
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
     },
 
-    submitOfficerPin(container) {
-        if (!container) return;
-        const pinInput = container.querySelector('.officer-pin-input');
-        const confirmInput = container.querySelector('.officer-pin-confirm');
-        const resultDiv = container.querySelector('.officer-pin-result');
-        const submitBtn = container.querySelector('.officer-pin-submit');
-        
-        if (!pinInput || !confirmInput || !resultDiv) return;
-        
-        const pin = pinInput.value.trim();
-        const confirm = confirmInput.value.trim();
-        
-        if (!pin || pin.length < 4) {
-            resultDiv.innerHTML = '<span style="color:#dc2626;font-size:11px;">PIN must be at least 4 digits.</span>';
-            return;
-        }
-        if (pin !== confirm) {
-            resultDiv.innerHTML = '<span style="color:#dc2626;font-size:11px;">PINs do not match.</span>';
-            return;
-        }
-        
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving...'; }
-        
-        fetch('/personal/set-pin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin })
-        })
-        .then(res => res.json().catch(() => ({})))
-        .then(data => {
-            if (data.success) {
-                resultDiv.innerHTML = '<span style="color:#16a34a;font-size:11px;">PIN created successfully! Redirecting...</span>';
-                localStorage.removeItem('regionalOfficerMessage');
-                localStorage.removeItem('pendingAdminPhone');
-                localStorage.removeItem('pendingAdminName');
-                localStorage.removeItem('pendingAdminDept');
-                this.data.pendingOfficerMessage = null;
-                this.updateBadge();
-                setTimeout(() => {
-                    this.closeModal();
-                    this.updateBadge();
-                }, 1500);
-            } else {
-                resultDiv.innerHTML = `<span style="color:#dc2626;font-size:11px;">${data.message || 'Failed to save PIN.'}</span>`;
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
-            }
-        })
-        .catch(() => {
-            resultDiv.innerHTML = '<span style="color:#dc2626;font-size:11px;">Network error.</span>';
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit'; }
-        });
-    },
-
     /* ─── INBOX ─── */
     openInbox() {
+        const norm = (p) => {
+            if (!p) return "";
+            let s = String(p).trim();
+            if (s.startsWith("0")) s = s.substring(1);
+            if (s.startsWith("+254")) s = s.substring(4);
+            if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+            return s;
+        };
+
         const keys      = this.data.constitutionKeys || [];
         const inbox     = (this.data.user && this.data.user.inbox) || [];
         const groupMsgs = this.data.groupMessages || [];
@@ -1306,23 +1262,38 @@ const app = {
 
         try {
         if (serverMsg) {
+            const isProcessor = this.data.user && norm(this.data.user.phoneNumber) === norm(serverMsg.processorPhone);
             allMessages.push({
                 _source: 'regionalOfficerMessage',
-                title: 'Regional Officer Appointment',
-                contentHtml: `
+                title: isProcessor ? 'Pending Account Processed' : 'TBank Department Assignment',
+                contentHtml: isProcessor ? `
                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                        You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                        Department name: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong><br>
-                        Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br>
-                        Please create your PIN below to proceed.
+                        You have successfully processed creation of pending account of <strong>${serverMsg.name || ''}</strong> (${serverMsg.phone || ''}) with passkey: <strong style="color:#1e4080;">${serverMsg.passkey || ''}</strong>.<br><br>
+                        Department: <strong>${serverMsg.dept || 'Regions'}</strong>
                     </div>
-<button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
-<div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-    <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-    <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
-    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
-</div>
+                ` : `
+                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                        You have been assigned to TBank department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong>.<br><br>
+                        Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br><br>
+                        Please enter your secure Passkey and create your PIN below to proceed.
+                    </div>
+                    <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+                    <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+                        <div style="margin-bottom:10px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
+                            <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">New PIN</label>
+                            <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
+                            <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
+                        <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+                    </div>
                 `,
                 date: new Date(serverMsg.timestamp || Date.now()),
                 icon: 'fa-user-tie',
@@ -1336,23 +1307,38 @@ const app = {
                 const msg = JSON.parse(stored);
                 const now = Date.now();
                 if (now - msg.timestamp < 86400000) {
+                    const isProcessor = this.data.user && norm(this.data.user.phoneNumber) === norm(msg.processorPhone);
                     allMessages.push({
                         _source: 'regionalOfficerMessage',
-                        title: 'Regional Officer Appointment',
-                        contentHtml: `
-<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                                 You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                                 Department name: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong><br>
-                                 Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br>
-                                 Please create your PIN below to proceed.
+                        title: isProcessor ? 'Pending Account Processed' : 'TBank Department Assignment',
+                        contentHtml: isProcessor ? `
+                            <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                                 You have successfully processed creation of pending account of <strong>${msg.name || ''}</strong> (${msg.phone || ''}) with passkey: <strong style="color:#1e4080;">${msg.passkey || ''}</strong>.<br><br>
+                                 Department: <strong>${msg.dept || 'Regions'}</strong>
                              </div>
+                        ` : `
+                              <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
+                                  You have been assigned to TBank department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong>.<br><br>
+                                  Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br><br>
+                                  Please enter your secure Passkey and create your PIN below to proceed.
+                              </div>
                       <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
-<div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-    <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-    <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
-    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
-</div>
+                      <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+                        <div style="margin-bottom:10px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
+                            <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">New PIN</label>
+                            <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
+                            <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
+                        <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+                      </div>
                          `,
                          date: new Date(msg.timestamp),
                         icon: 'fa-user-tie',
@@ -1368,19 +1354,29 @@ const app = {
         } else if (pendingPhone) {
             allMessages.push({
                 _source: 'regionalOfficerMessage',
-                title: 'Regional Officer Appointment',
+                title: 'TBank Department Assignment',
                 contentHtml: `
                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                        You have been appointed as <strong>Regional Officer</strong>.<br><br>
-                        Please create your PIN below to proceed.
+                        You have been assigned to TBank department: <strong style="color:#1e4080;">Regions</strong>.<br><br>
+                        Please enter your secure Passkey and create your PIN below to proceed.
                     </div>
                      <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
-<div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-    <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-    <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;margin-bottom:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
-    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
-</div>
+                    <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
+                        <div style="margin-bottom:10px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
+                            <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">New PIN</label>
+                            <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
+                            <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        </div>
+                        <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
+                        <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+                    </div>
                 `,
                 date: new Date(),
                 icon: 'fa-user-tie',
@@ -1480,7 +1476,7 @@ const app = {
         });
 
         allMessages.sort((a, b) => b.date - a.date);
-        
+
         if (allMessages.length === 0) {
             html += `<div class="m-empty-state"><i class="fa-solid fa-envelope-open"></i><p>Your inbox is empty.</p></div>`;
         } else {
@@ -1498,7 +1494,7 @@ const app = {
                             <button class="inbox-del-btn" ${dataId}${dataIdx}${dataSrc} style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px 6px;font-size:18px;line-height:1;" title="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                     </div>`;
-                
+
                 if (m.contentHtml) {
                     html += m.contentHtml;
                 } else {
@@ -1518,7 +1514,7 @@ const app = {
         // Attach delete handlers after DOM is ready
         setTimeout(() => {
             document.querySelectorAll('.inbox-del-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', async function() {
                     const src   = this.dataset.source;
                     const idx   = parseInt(this.dataset.index, 10);
                     const id    = this.dataset.id || null;
@@ -1530,15 +1526,26 @@ const app = {
                     if (src === 'inbox') {
                         window.deleteInboxMessage(id, idx);
                     } else if (src === 'regionalOfficerMessage') {
-                        localStorage.removeItem('regionalOfficerMessage');
-                        localStorage.removeItem('pendingAdminPhone');
-                        localStorage.removeItem('pendingAdminName');
-                        localStorage.removeItem('pendingAdminDept');
-                        if (window.app && window.app.data) {
-                            window.app.data.pendingOfficerMessage = null;
-                            window.app.updateBadge();
+                        try {
+                            const res = await fetch('/api/officer-message/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                localStorage.removeItem('regionalOfficerMessage');
+                                localStorage.removeItem('pendingAdminPhone');
+                                localStorage.removeItem('pendingAdminName');
+                                localStorage.removeItem('pendingAdminDept');
+                                if (window.app && window.app.data) {
+                                    window.app.data.pendingOfficerMessage = null;
+                                    window.app.updateBadge();
+                                }
+                                setTimeout(() => { window.app.openInbox(); }, 300);
+                            }
+                        } catch (err) {
+                            console.error('Failed to delete officer message:', err);
                         }
-                        setTimeout(() => { window.app.openInbox(); }, 300);
                     } else {
                         window.deleteLocalMessage(src, idx);
                     }
@@ -2472,7 +2479,7 @@ const app = {
     openGroupLoanBalanceModal(groupName) {
         document.getElementById('modalOverlay').classList.add('open');
         this.updateModalContent('Loading Loan Details...', '<div style="text-align:center;padding:20px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i></div>', null, 'fa-sack-dollar');
-        
+
         fetch('/member/group-by-name', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2481,13 +2488,13 @@ const app = {
         .then(res => res.json())
         .then(group => {
             let closingBalance = 3500; // Premium fallback
-            
+
             const normalize = (p) => {
                 let s = String(p).trim().replace(/\D/g, '');
                 if (s.startsWith('254')) s = '0' + s.substring(3);
                 return s;
             };
-            
+
             const loggedPhone = normalize(this.data.user.phoneNumber);
             if (group && group.members) {
                 for (const phoneKey in group.members) {
@@ -2507,10 +2514,10 @@ const app = {
                     }
                 }
             }
-            
+
             let html = `
             <div class="m-info-banner blue" style="margin-bottom:14px;"><i class="fa-solid fa-circle-info"></i><span>Outstanding loan details for <b>${groupName}</b></span></div>
-            
+
             <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom:12px; text-align:left;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <span style="font-size:12.5px; color:#64748b;">Loan Account Status:</span>
@@ -2529,17 +2536,17 @@ const app = {
                     <span style="font-weight:800; font-size:15px; color:#dc2626;">KSh ${(closingBalance * 1.05).toLocaleString()}</span>
                 </div>
             </div>
-            
+
             <div style="background:#f8fafc; border-radius:8px; padding:10px 12px; font-size:11px; color:#64748b; text-align:left; border:1px solid #e2e8f0; margin-bottom:16px;">
                 <i class="fa-solid fa-circle-exclamation" style="color:#3b82f6; margin-right:4px;"></i> Repayments are auto-deducted at the end of each round cycle if not settled manually.
             </div>
-            
+
             <div style="display:flex; gap:10px;">
                 <button class="m-submit-btn" style="flex:1; margin-top:0; background:var(--primary);" onclick="app.closeModal()">Close</button>
                 <button class="m-submit-btn" style="flex:1; margin-top:0; background:#1e293b;" onclick="app.openGroupPayLoanModal('${encodeURIComponent(groupName)}')">Repay Loan</button>
             </div>
             `;
-            
+
             this.updateModalContent('Loan Balance', html, null, 'fa-sack-dollar', 'linear-gradient(135deg, #1565c0, #1e3a8a)');
         })
         .catch(err => {
@@ -2555,10 +2562,10 @@ const app = {
     openGroupPayLoanModal(groupName) {
         document.getElementById('modalOverlay').classList.add('open');
         const balance = parseFloat(this.data.balance || 0);
-        
+
         const html = `
         <div class="m-info-banner green" style="margin-bottom:14px;"><i class="fa-solid fa-mobile"></i><span>Repay your active group loan from your Personal Wallet.</span></div>
-        
+
         <div style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; text-align:left;">
             <div>
                 <small style="display:block; font-size:10px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Wallet Balance</small>
@@ -2566,25 +2573,25 @@ const app = {
             </div>
             <span style="font-size:16px; background:#e8f5e9; color:#2e7d32; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-wallet"></i></span>
         </div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Repayment Amount (KSh)</label>
             <input type="number" id="payLoanAmount" class="form-input" placeholder="Enter amount to pay" inputmode="numeric">
         </div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
             <label>Personal PIN</label>
             <input type="password" id="payLoanPin" class="form-input" placeholder="••••" maxlength="4" inputmode="numeric" style="letter-spacing:4px; font-weight:700; text-align:center;">
         </div>
-        
+
         <div id="payLoanError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="payLoanErrorText"></span></div>
-        
+
         <div style="display:flex; gap:10px;">
             <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.openGroupLoanBalanceModal('${encodeURIComponent(groupName)}')">Back</button>
             <button class="m-submit-btn" style="flex:2; margin-top:0;" onclick="app.processGroupPayLoan('${encodeURIComponent(groupName)}')"><i class="fa-solid fa-circle-check"></i> Submit Repayment</button>
         </div>
         `;
-        
+
         this.updateModalContent('Pay Group Loan', html, null, 'fa-wallet', 'linear-gradient(135deg, #10b981, #059669)');
     },
 
@@ -2593,13 +2600,13 @@ const app = {
         const pin = document.getElementById('payLoanPin').value;
         const errDiv = document.getElementById('payLoanError');
         const errTxt = document.getElementById('payLoanErrorText');
-        
+
         if (!amtInput) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter repayment amount.'; return; }
         const amt = parseFloat(amtInput);
         if (isNaN(amt) || amt <= 0) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid positive amount.'; return; }
         if (amt > parseFloat(this.data.balance)) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Insufficient wallet balance.'; return; }
         if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -2618,13 +2625,13 @@ const app = {
             errTxt.textContent = 'Server communication error.';
             return;
         }
-        
+
         // PIN & Balance verified successfully! Let's process repayment.
         this.data.balance = parseFloat(this.data.balance) - amt;
-        
+
         const userName = `${this.data.user.FirstName} ${this.data.user.LastName}`;
         const phone = this.data.user.phoneNumber;
-        
+
         // Add transaction entry
         this.data.transactions.unshift({
             date: new Date().toISOString().split('T')[0],
@@ -2633,7 +2640,7 @@ const app = {
             amt: amt,
             desc: `Repaid KSh ${amt.toLocaleString()} to ${groupName}`
         });
-        
+
         const html = `
         <div style="text-align:center;padding:20px 10px;">
             <div style="width:56px;height:56px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow: 0 4px 10px rgba(16,185,129,0.2);">
@@ -2641,7 +2648,7 @@ const app = {
             </div>
             <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Repayment Successful</h3>
             <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">KSh ${amt.toLocaleString()} has been paid to <b>${groupName}</b> from the wallet of <b>${userName}</b> (${phone}).</p>
-            
+
             <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;padding:12px 14px;margin-bottom:20px;text-align:left;">
                 <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;">
                     <span style="color:#64748b;">Transaction Type:</span>
@@ -2656,10 +2663,10 @@ const app = {
                     <span style="font-weight:800;color:#10b981;">KSh ${this.data.balance.toLocaleString()}</span>
                 </div>
             </div>
-            
+
             <button class="m-submit-btn" onclick="app.closeModal()">Finish</button>
         </div>`;
-        
+
         this.updateModalContent('Transaction Status', html, null, 'fa-circle-check', 'linear-gradient(135deg, #10b981, #059669)');
         this.render();
     },
@@ -2668,30 +2675,30 @@ const app = {
         document.getElementById('modalOverlay').classList.add('open');
         const html = `
         <div class="m-info-banner green" style="margin-bottom:14px;"><i class="fa-solid fa-user-plus"></i><span>Onboard and add a new active member to <b>${groupName}</b>.</span></div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Member Full Name</label>
             <input type="text" id="addMemberName" class="form-input" placeholder="e.g. John Doe">
         </div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Member Phone Number</label>
             <input type="tel" id="addMemberPhone" class="form-input" placeholder="e.g. 07XXXXXXXX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
             <label>Personal PIN (Authorize)</label>
             <input type="password" id="addMemberPin" class="form-input" placeholder="••••" maxlength="4" inputmode="numeric" style="letter-spacing:4px; font-weight:700; text-align:center;">
         </div>
-        
+
         <div id="addMemberError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="addMemberErrorText"></span></div>
-        
+
         <div style="display:flex; gap:10px;">
             <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.closeModal()">Cancel</button>
             <button class="m-submit-btn" style="flex:2; margin-top:0;" onclick="app.processGroupAddMember('${encodeURIComponent(groupName)}')"><i class="fa-solid fa-circle-check"></i> Add Member</button>
         </div>
         `;
-        
+
         this.updateModalContent('Add Member', html, null, 'fa-user-plus', 'linear-gradient(135deg, #8e2de2, #4a00e0)');
     },
 
@@ -2701,11 +2708,11 @@ const app = {
         const pin = document.getElementById('addMemberPin').value;
         const errDiv = document.getElementById('addMemberError');
         const errTxt = document.getElementById('addMemberErrorText');
-        
+
         if (!name) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter member full name.'; return; }
         if (!phone || phone.length < 10) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid phone number.'; return; }
         if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -2724,7 +2731,7 @@ const app = {
             errTxt.textContent = 'Server communication error.';
             return;
         }
-        
+
         const html = `
         <div style="text-align:center;padding:20px 10px;">
             <div style="width:56px;height:56px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow: 0 4px 10px rgba(16,185,129,0.2);">
@@ -2732,7 +2739,7 @@ const app = {
             </div>
             <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Member Onboarding Success</h3>
             <p style="color:#6b7280;font-size:13px;margin-bottom:20px;"><b>${name}</b> (${phone}) has been registered as an active member under <b>${groupName}</b>.</p>
-            
+
             <button class="m-submit-btn" onclick="app.closeModal()">Done</button>
         </div>`;
         this.updateModalContent('Status Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #10b981, #059669)');
@@ -2742,7 +2749,7 @@ const app = {
         document.getElementById('modalOverlay').classList.add('open');
         const html = `
         <div class="m-info-banner blue" style="margin-bottom:14px;"><i class="fa-solid fa-user-gear"></i><span>Replace a group official with a new candidate official.</span></div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Official Role</label>
             <select id="replaceOfficialRole" class="form-input" style="background:white;">
@@ -2751,25 +2758,25 @@ const app = {
                 <option value="Treasurer">Treasurer</option>
             </select>
         </div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>New Official Phone Number</label>
             <input type="tel" id="replaceOfficialPhone" class="form-input" placeholder="e.g. 07XXXXXXXX" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
             <label>Personal PIN (Authorize)</label>
             <input type="password" id="replaceOfficialPin" class="form-input" placeholder="••••" maxlength="4" inputmode="numeric" style="letter-spacing:4px; font-weight:700; text-align:center;">
         </div>
-        
+
         <div id="replaceOfficialError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="replaceOfficialErrorText"></span></div>
-        
+
         <div style="display:flex; gap:10px;">
             <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.closeModal()">Cancel</button>
             <button class="m-submit-btn" style="flex:2; margin-top:0;" onclick="app.processGroupReplaceOfficial('${encodeURIComponent(groupName)}')"><i class="fa-solid fa-circle-check"></i> Save Replacement</button>
         </div>
         `;
-        
+
         this.updateModalContent('Replace Official', html, null, 'fa-user-gear', 'linear-gradient(135deg, #2b5876, #4e4376)');
     },
 
@@ -2779,10 +2786,10 @@ const app = {
         const pin = document.getElementById('replaceOfficialPin').value;
         const errDiv = document.getElementById('replaceOfficialError');
         const errTxt = document.getElementById('replaceOfficialErrorText');
-        
+
         if (!phone || phone.length < 10) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid phone number.'; return; }
         if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -2801,7 +2808,7 @@ const app = {
             errTxt.textContent = 'Server communication error.';
             return;
         }
-        
+
         const html = `
         <div style="text-align:center;padding:20px 10px;">
             <div style="width:56px;height:56px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow: 0 4px 10px rgba(16,185,129,0.2);">
@@ -2809,7 +2816,7 @@ const app = {
             </div>
             <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Official Role Updated</h3>
             <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">The official role of <b>${role}</b> in group <b>${groupName}</b> has been securely assigned to phone <b>${phone}</b>.</p>
-            
+
             <button class="m-submit-btn" onclick="app.closeModal()">Finish</button>
         </div>`;
         this.updateModalContent('Status Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #10b981, #059669)');
@@ -2836,24 +2843,24 @@ const app = {
         document.getElementById('modalOverlay').classList.add('open');
         const html = `
         <div class="m-info-banner red" style="margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation"></i><span><b>Resignation Warning:</b> You are about to terminate your membership in <b>${groupName}</b>.</span></div>
-        
+
         <p style="font-size:12.5px; color:#475569; text-align:left; margin-bottom:16px; line-height:1.5;">
             By continuing, you agree to settle all pending dues. All outstanding principal loans and accrued interest must be cleared. Your remaining savings will be credited back to your wallet.
         </p>
-        
+
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
             <label>Personal PIN (Confirm Resignation)</label>
             <input type="password" id="terminatePin" class="form-input" placeholder="••••" maxlength="4" inputmode="numeric" style="letter-spacing:4px; font-weight:700; text-align:center;">
         </div>
-        
+
         <div id="terminateError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="terminateErrorText"></span></div>
-        
+
         <div style="display:flex; gap:10px;">
             <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.closeModal()">Cancel</button>
             <button class="m-submit-btn" style="flex:2; margin-top:0; background:#dc2626;" onclick="app.processGroupTerminate('${encodeURIComponent(groupName)}')"><i class="fa-solid fa-user-minus"></i> Confirm Terminate</button>
         </div>
         `;
-        
+
         this.updateModalContent('Terminate Membership', html, null, 'fa-user-minus', 'linear-gradient(135deg, #f857a6, #ff5858)');
     },
 
@@ -2861,9 +2868,9 @@ const app = {
         const pin = document.getElementById('terminatePin').value;
         const errDiv = document.getElementById('terminateError');
         const errTxt = document.getElementById('terminateErrorText');
-        
+
         if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
-        
+
         try {
             const res = await fetch('/personal/verify-pin', {
                 method: 'POST',
@@ -2882,7 +2889,7 @@ const app = {
             errTxt.textContent = 'Server communication error.';
             return;
         }
-        
+
         const html = `
         <div style="text-align:center;padding:20px 10px;">
             <div style="width:56px;height:56px;background:#ffebee;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow: 0 4px 10px rgba(220,38,38,0.15);">
@@ -2890,7 +2897,7 @@ const app = {
             </div>
             <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Resignation Submitted</h3>
             <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Your request to terminate membership in <b>${groupName}</b> has been queued for official board review.</p>
-            
+
             <button class="m-submit-btn" onclick="app.closeModal()">Finish</button>
         </div>`;
         this.updateModalContent('Status Pending', html, null, 'fa-user-minus', 'linear-gradient(135deg, #f857a6, #ff5858)');
@@ -2950,15 +2957,22 @@ const app = {
     },
 
     async submitOfficerPin(containerEl) {
+        const passkeyInput = containerEl.querySelector('.officer-passkey-input');
         const pinInput = containerEl.querySelector('.officer-pin-input');
         const confirmInput = containerEl.querySelector('.officer-pin-confirm');
         const resultEl = containerEl.querySelector('.officer-pin-result');
-        
-        if (!pinInput || !confirmInput) return;
-        
+
+        if (!passkeyInput || !pinInput || !confirmInput) return;
+
+        const passkey = passkeyInput.value.trim();
         const pin = pinInput.value.trim();
         const confirm = confirmInput.value.trim();
-        
+
+        if (!passkey || passkey.length < 6) {
+            resultEl.textContent = 'Please enter your 6-digit secure Passkey';
+            resultEl.style.color = '#dc2626';
+            return;
+        }
         if (!pin || pin.length < 4) {
             resultEl.textContent = 'PIN must be 4 digits';
             resultEl.style.color = '#dc2626';
@@ -2969,19 +2983,19 @@ const app = {
             resultEl.style.color = '#dc2626';
             return;
         }
-        
+
         const submitBtn = containerEl.querySelector('.officer-pin-submit');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Creating...';
         resultEl.textContent = '';
-        
+
         const stored = localStorage.getItem("regionalOfficerMessage");
         const pendingPhone = localStorage.getItem("pendingAdminPhone");
         const pendingDept = localStorage.getItem("pendingAdminDept");
-        
+
         let phone = this.data.user && this.data.user.phoneNumber;
         let dept = pendingDept || 'Regions';
-        
+
         if (stored) {
             try {
                 const msg = JSON.parse(stored);
@@ -2989,7 +3003,7 @@ const app = {
                 dept = msg.dept || pendingDept || 'Regions';
             } catch (e) {}
         }
-        
+
         if (!phone) {
             resultEl.textContent = 'No phone number found';
             resultEl.style.color = '#dc2626';
@@ -2997,24 +3011,39 @@ const app = {
             submitBtn.textContent = 'Submit';
             return;
         }
-        
+
         try {
             const res = await fetch('/hq/admin/create-pin', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, pin, department: dept })
+                body: JSON.stringify({ phone, pin, passkey, department: dept })
             });
             const data = await res.json();
             if (data.status === 'SUCCESS') {
-                resultEl.textContent = "You have successfully updated Admin account as Regional Officer";
-                resultEl.style.color = '#16a34a';
+                // Hide inputs
+                if (passkeyInput) passkeyInput.style.display = 'none';
+                if (pinInput) pinInput.style.display = 'none';
+                if (confirmInput) confirmInput.style.display = 'none';
+                if (submitBtn) submitBtn.style.display = 'none';
+
+                // Show the beautiful success message and Admin button
+                resultEl.innerHTML = `
+                    <div style="margin-top:10px; text-align:center;">
+                        <span style="color:#16a34a;font-size:13px;font-weight:600;display:block;margin-bottom:12px;">You have successfully created your PIN.</span>
+                        <button onclick="window.location.href='/hq'" style="padding:10px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;box-sizing:border-box;display:block;box-shadow:0 2px 4px rgba(0,0,0,0.1);">Admin</button>
+                    </div>
+                `;
+
                 localStorage.removeItem('regionalOfficerMessage');
                 localStorage.removeItem('pendingAdminPhone');
                 localStorage.removeItem('pendingAdminName');
                 localStorage.removeItem('pendingAdminDept');
+                this.updateBadge();
+
+                // Automatically redirect to /hq after 2.5 seconds
                 setTimeout(() => {
                     window.location.href = '/hq';
-                }, 1500);
+                }, 2500);
             } else {
                 resultEl.textContent = data.message || 'Failed to create PIN';
                 resultEl.style.color = '#dc2626';
@@ -3384,7 +3413,7 @@ const app = {
     },
     async handleCreateGroupSubmit(event) {
         event.preventDefault();
-        
+
         this.parseNewFullName();
 
         const wardSelect = document.getElementById('newWardSelect');
