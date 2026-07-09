@@ -11,6 +11,7 @@ const {
   PendingOfficerMessage,
   savePendingOfficerMessage,
   deletePendingOfficerMessage,
+  getMessagesForUser,
 } = require("../mongoose");
 const { processMessage } = require("../notification/notification");
 
@@ -25,6 +26,19 @@ const requireAuth = (req, res, next) => {
 
 router.get("/", requireAuth, async (req, res) => {
   res.render("hq/admin", { hqUser: req.session.hqUser || null });
+});
+
+// Returns the HQ admin's own stored notifications (messages addressed to them),
+// so they appear in the admin dashboard inbox rather than only the client app.
+router.get("/messages", requireAuth, async (req, res) => {
+  try {
+    const phone = (req.session.hqUser && req.session.hqUser.phoneNumber) || "";
+    const messages = phone ? await getMessagesForUser(phone) : [];
+    res.json({ status: "OK", messages });
+  } catch (e) {
+    console.error("[admin] Error loading admin messages:", e.message);
+    res.json({ status: "ERROR", messages: [] });
+  }
 });
 
 const norm = (p) => {
@@ -172,14 +186,6 @@ router.post("/send-otp", async (req, res) => {
     });
   }
 
-  processMessage("HQ Admin", {
-    to: phone.trim(),
-    type: "security_alert",
-    title: "Admin Passkey",
-    content: `Your one-time admin passkey is: ${passkey}\nThis passkey expires in 24 hours.`,
-    key: passkey,
-  });
-
   if (!req.session.user) {
     req.session.user = { phoneNumber: phone.trim() };
   }
@@ -190,11 +196,27 @@ router.post("/send-otp", async (req, res) => {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
     type: "security_alert",
     title: "Admin Passkey",
-    content: `Your one-time admin passkey is: ${passkey}\nThis passkey expires in 24 hours.`,
+    content: `Your one-time admin passkey is: ${passkey}\nThis passkey expires in 24 hours.\n\nDate & Time: ${new Date().toLocaleString()}`,
     date: new Date().toISOString(),
     unread: true,
     redirect: "/hq",
   });
+
+  // Persist a SINGLE combined notification for the processor (HQ admin) in MongoDB
+  // so it shows as one message: the "Admin Account Created" confirmation + passkey.
+  const processorPhone = (req.session && req.session.hqUser && req.session.hqUser.phoneNumber) || "";
+  if (processorPhone && norm(processorPhone) !== norm(phone)) {
+    const adminRec = await Admin.findOne({ phoneNumber: norm(phone) }).lean().catch(() => null);
+    const adminName = (adminRec && adminRec.name) || userName || phone;
+    const adminDept = (adminRec && adminRec.department) || "";
+    processMessage("HQ Admin", {
+      to: processorPhone,
+      type: "security_alert",
+      title: "Admin Account Created",
+      content: `You have successfully created a pending admin account for ${adminName} (${phone}) under ${adminDept}. account activation passkey is ${passkey}\n\nDate & Time: ${new Date().toLocaleString()}`,
+      key: passkey,
+    });
+  }
 
   return res.json({
     status: "SENT",
@@ -253,6 +275,7 @@ router.post("/create-admin-record", requireAuth, async (req, res) => {
 
   const normalised = norm(phone);
   const existing = await Admin.findOne({ phoneNumber: normalised }).lean();
+
   if (existing) {
     // An admin doc may already exist as a pending (pin:null) record created by a
     // previous attempt. Treat that as success so the PIN-creation flow (OTP +
@@ -288,6 +311,22 @@ router.post("/create-admin-record", requireAuth, async (req, res) => {
   });
 
   await admin.save();
+
+  // Persist + display notifications in MongoDB so each party sees them in their
+  // client inbox (the "processed input workflow").
+  // NOTE: the processing HQ admin's combined "Admin Account Created" + passkey
+  // notification is sent from /send-otp (which generates the passkey), arriving
+  // as a single message.
+
+  // Processed person — department notice only (the passkey is delivered
+  //    separately and securely via send-officer-message for PIN creation; they
+  //    are told to ask the processing admin for it rather than showing it here).
+  processMessage("HQ Admin", {
+    to: phone.trim(),
+    type: "security_alert",
+    title: "Admin Account Created",
+    content: `Welcome! You have been assigned to TBank department: ${department}. Your pending admin account has been created. Please ask the processing admin for your secure Passkey, then log in to the client app to create your PIN and activate your account.\n\nDate & Time: ${new Date().toLocaleString()}`,
+  });
 
   return res.json({
     status: "SUCCESS",
@@ -661,6 +700,18 @@ router.post("/create", async (req, res) => {
     title: "Admin Account Created",
     content: `Your admin account for ${department} has been created. Temporary PIN: ${tempPin}`,
   });
+
+  // Also store + display the assignment for the processor (HQ admin),
+  // persisted in MongoDB so it shows in their client inbox like the processed input.
+  const processorPhone = (req.session && req.session.hqUser && req.session.hqUser.phoneNumber) || "";
+  if (processorPhone && norm(processorPhone) !== norm(phone)) {
+    processMessage("HQ Admin", {
+      to: processorPhone,
+      type: "security_alert",
+      title: "Admin Account Created",
+      content: `You created an admin account for ${fullName} (${phone}) under ${department}. Temporary PIN: ${tempPin}`,
+    });
+  }
 
   return res.json({
     status: "SUCCESS",

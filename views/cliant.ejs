@@ -1275,7 +1275,7 @@ const app = {
                      <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                         You have been assigned to TBank department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong>.<br><br>
                         Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br><br>
-                        Please enter your secure Passkey and create your PIN below to proceed.
+                        Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
                     </div>
                     <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
                     <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
@@ -1320,7 +1320,7 @@ const app = {
                               <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                                   You have been assigned to TBank department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong>.<br><br>
                                   Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br><br>
-                                  Please enter your secure Passkey and create your PIN below to proceed.
+                                  Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
                               </div>
                       <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
                       <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
@@ -1358,7 +1358,7 @@ const app = {
                 contentHtml: `
                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
                         You have been assigned to TBank department: <strong style="color:#1e4080;">Regions</strong>.<br><br>
-                        Please enter your secure Passkey and create your PIN below to proceed.
+                        Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
                     </div>
                      <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
                     <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">

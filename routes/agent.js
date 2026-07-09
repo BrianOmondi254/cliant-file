@@ -36,6 +36,27 @@ const normPhone = (p) => {
 
 const normStr = (s) => (s ? String(s).trim().toLowerCase() : "");
 
+const phoneCandidates = (p) => {
+  const n = normPhone(p);
+  if (!n) return [];
+  return Array.from(new Set([
+    n,
+    "0" + n,
+    "254" + n,
+    "+254" + n,
+    p && String(p).trim()
+  ].filter(Boolean)));
+};
+
+const findAgentByPhone = async (phone) => {
+  try {
+    return await Agent.findOne({ phoneNumber: { $in: phoneCandidates(phone) } }).lean();
+  } catch (e) {
+    console.error("[AGENT] findAgentByPhone error:", e.message);
+    return null;
+  }
+};
+
 const getUsersFromMongo = async () => {
   try {
     return await getAllUsersFlattened();
@@ -84,7 +105,7 @@ const buildUserDetailMap = (users) => {
 
 const getAgentFromMongo = async (phone) => {
    try {
-     return await Agent.findOne({ phoneNumber: normPhone(phone) }).lean();
+      return await Agent.findOne({ phoneNumber: { $in: phoneCandidates(phone) } }).lean();
    } catch (err) {
      console.error("[AGENT] MongoDB lookup error:", err.message);
      return null;
@@ -289,7 +310,7 @@ if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
 
   let agent = null;
   try {
-    agent = await Agent.findOne({ phoneNumber: currentPhoneNumber }).lean();
+    agent = await findAgentByPhone(currentPhoneNumber);
   } catch (dbErr) {
     console.error("[AGENT] MongoDB agent lookup error:", dbErr.message);
   }
@@ -311,7 +332,10 @@ if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
       },
       groups: [],
       regionalGroups: {},
-      dealer: null
+      dealer: null,
+      businessFloat: 0,
+      businessShare: 0,
+      businessTotal: 0
     });
   }
 

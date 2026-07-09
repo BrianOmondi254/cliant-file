@@ -282,7 +282,7 @@ router.get("/", async (req, res) => {
 
   const newAgent = {
     name: `${user.FirstName || ''} ${user.MiddleName || ''} ${user.LastName || ''}`.replace(/\s+/g, ' ').trim(),
-    phoneNumber: user.phoneNumber,
+    phoneNumber: norm(user.phoneNumber),
     county: user.county || "",
     constituency: user.constituency || "",
     ward: ward || user.ward || "",

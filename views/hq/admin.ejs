@@ -537,7 +537,10 @@
         <h1 class="page-heading">List of Departments</h1>
         <p class="page-sub">All departments in the system</p>
       </div>
-      <hr class="page-divider">
+  <hr class="page-divider">
+
+  <section id="admin-notifications" class="admin-notifications" style="margin: 4px 0 18px;" aria-live="polite"></section>
+
       <div class="dept-grid" id="departments-list">
         <p style="color: var(--gray-600);">Loading departments...</p>
       </div>
@@ -798,6 +801,10 @@
           '</div>';
 
         document.getElementById("message-note").classList.remove("hidden");
+
+        // Refresh the notifications panel so the new "Admin Account Created"
+        // confirmation appears immediately without a manual page reload.
+        if (typeof loadAdminNotifications === "function") loadAdminNotifications();
       } catch (err) {
         actionBtn.disabled = false;
         actionBtn.innerHTML = originalBtnHTML;
@@ -879,6 +886,35 @@
       document.getElementById('toast-container').appendChild(toast);
       setTimeout(() => toast.remove(), duration);
     }
+
+    const escapeHtml = (s) => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+
+    async function loadAdminNotifications() {
+      const el = document.getElementById('admin-notifications');
+      if (!el) return;
+      try {
+        const res = await fetch('/hq/admin/messages');
+        const data = await res.json();
+        const messages = (data && data.messages) || [];
+        if (!messages.length) { el.innerHTML = ''; return; }
+        el.innerHTML = `
+          <h2 style="font-size:14px;font-weight:700;color:var(--gray-800);margin:0 0 10px;">Your Notifications</h2>
+          ${messages.slice(0, 20).map(m => `
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <strong style="color:#1e40af;font-size:13px;"><i class="fa-solid fa-bell" style="margin-right:6px;"></i>${escapeHtml(m.title || 'Notification')}</strong>
+                <span style="font-size:10px;color:#059669;font-weight:600;">${m.createdAt ? new Date(m.createdAt).toLocaleDateString() : ''}</span>
+              </div>
+              <div style="font-size:12.5px;color:#1e293b;line-height:1.5;white-space:pre-wrap;">${escapeHtml(m.content)}</div>
+            </div>
+          `).join('')}
+        `;
+      } catch (e) {
+        el.innerHTML = '';
+      }
+    }
+
+    loadAdminNotifications();
 </script>
 
  <div id="toast-container"></div>
