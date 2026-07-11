@@ -247,6 +247,20 @@ const tbankSettingsSchema = new mongoose.Schema(
       },
     },
     updatedAt: { type: String, default: () => new Date().toISOString() },
+    lastSelectedAuthOption: {
+      option: { type: String },
+      processedBy: { type: String },
+      replacedAt: { type: String },
+      date: { type: String },
+    },
+    lastSelectedAuthOptionHistory: [
+      {
+        option: { type: String },
+        processedBy: { type: String },
+        replacedAt: { type: String },
+        date: { type: String },
+      },
+    ],
   },
   { _id: false },
 );

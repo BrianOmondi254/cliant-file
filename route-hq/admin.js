@@ -12,6 +12,8 @@ const {
   savePendingOfficerMessage,
   deletePendingOfficerMessage,
   getMessagesForUser,
+  saveTbankSettings,
+  getTbankSettings,
 } = require("../mongoose");
 const { processMessage } = require("../notification/notification");
 
@@ -462,7 +464,7 @@ router.post("/create-pin", async (req, res) => {
 });
 
 router.post("/login", async (req, res) => {
-  const { phone, pin } = req.body;
+  const { phone, pin, selectedOption } = req.body;
   if (!phone || !pin) {
     return res.json({ status: "ERROR", message: "Phone and PIN required." });
   }
@@ -475,7 +477,55 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  const admin = await Admin.findOne({ phoneNumber: norm(phone) }).lean();
+  const normalised = norm(phone);
+
+  const superAdmin = await SuperAdmin.findOne({
+    $or: [{ phoneNumber: phone }, { phoneNumber: normalised }],
+  }).lean();
+  if (superAdmin) {
+    const pinMatch = await bcrypt.compare(pin, superAdmin.pin);
+    if (!pinMatch) {
+      return res.json({ status: "WRONG_PIN", message: "Wrong PIN." });
+    }
+
+    req.session.hqUser = {
+      phoneNumber: superAdmin.phoneNumber,
+      name: superAdmin.name,
+      role: "superadmin",
+    };
+
+    if (selectedOption) {
+      try {
+        const existing = await getTbankSettings();
+        const existingOption = existing && existing.lastSelectedAuthOption && existing.lastSelectedAuthOption.option ? existing.lastSelectedAuthOption.option : null;
+        if (selectedOption !== existingOption) {
+          const historyEntry = existing && existing.lastSelectedAuthOption ? { ...existing.lastSelectedAuthOption } : null;
+          const updatePayload = {
+            lastSelectedAuthOption: {
+              option: selectedOption,
+              processedBy: existing && existing.lastSelectedAuthOption ? existing.lastSelectedAuthOption.processedBy : superAdmin.phoneNumber,
+              replacedAt: new Date().toISOString(),
+              date: existing && existing.lastSelectedAuthOption ? existing.lastSelectedAuthOption.date : new Date().toISOString(),
+            },
+          };
+          if (historyEntry) {
+            updatePayload.lastSelectedAuthOptionHistory = [historyEntry];
+          }
+          await saveTbankSettings(updatePayload);
+        }
+      } catch (e) {
+        console.error("[admin] Failed to update tbank settings:", e.message);
+      }
+    }
+
+    return res.json({
+      status: "SUCCESS",
+      name: superAdmin.name,
+      department: null,
+    });
+  }
+
+  const admin = await Admin.findOne({ phoneNumber: normalised }).lean();
   if (!admin) {
     return res.json({
       status: "NOT_REGISTERED",
@@ -504,6 +554,30 @@ router.post("/login", async (req, res) => {
     name: admin.name,
     department: admin.department,
   };
+
+  if (selectedOption) {
+    try {
+      const existing = await getTbankSettings();
+      const existingOption = existing && existing.lastSelectedAuthOption && existing.lastSelectedAuthOption.option ? existing.lastSelectedAuthOption.option : null;
+      if (selectedOption !== existingOption) {
+        const historyEntry = existing && existing.lastSelectedAuthOption ? { ...existing.lastSelectedAuthOption } : null;
+        const updatePayload = {
+          lastSelectedAuthOption: {
+            option: selectedOption,
+            processedBy: existing && existing.lastSelectedAuthOption ? existing.lastSelectedAuthOption.processedBy : admin.phoneNumber,
+            replacedAt: new Date().toISOString(),
+            date: existing && existing.lastSelectedAuthOption ? existing.lastSelectedAuthOption.date : new Date().toISOString(),
+          },
+        };
+        if (historyEntry) {
+          updatePayload.lastSelectedAuthOptionHistory = [historyEntry];
+        }
+        await saveTbankSettings(updatePayload);
+      }
+    } catch (e) {
+      console.error("[admin] Failed to update tbank settings:", e.message);
+    }
+  }
 
   return res.json({
     status: "SUCCESS",

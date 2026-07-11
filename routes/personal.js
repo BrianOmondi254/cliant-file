@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady, getMessagesForUser, getPendingOfficerMessageByPhone } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady, getMessagesForUser, getPendingOfficerMessageByPhone, getTbankSettings } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -629,6 +629,13 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
         pendingOfficerMessage = await getPendingOfficerMessageByPhone(req.session.user.phoneNumber);
       }
 
+      let tbankSettings = null;
+      try {
+        tbankSettings = await getTbankSettings();
+      } catch (e) {
+        console.error("Error fetching tbank settings:", e.message);
+      }
+
 res.render('cliant', {
        user: req.session.user,
        showAgent,
@@ -647,8 +654,10 @@ res.render('cliant', {
        groupMessages, // Pass user's group messages to inbox
        userGroups: userGroups,
        normalizedPhone,
-       pendingOfficerMessage
-     });
+       pendingOfficerMessage,
+       lastSelectedAuthOption: (tbankSettings && tbankSettings.lastSelectedAuthOption) || null,
+       lastSelectedAuthOptionHistory: (tbankSettings && tbankSettings.lastSelectedAuthOptionHistory) || null
+      });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error rendering the page");

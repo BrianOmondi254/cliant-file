@@ -597,6 +597,13 @@
     </div>
     <div id="auth-pin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
     <button id="approve-login-btn" class="btn btn-primary" onclick="approveLoginWithPin()" style="width:100%;">Approve Login</button>
+
+    <div id="pin-auth-success" class="hidden" style="text-align:center; padding-top:10px;">
+      <div style="width:44px;height:44px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;">✅</div>
+      <p style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;">Successfully Authenticated</p>
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">Your login has been approved. Redirecting...</p>
+      <button class="btn btn-primary" onclick="continueAndSubmit()" style="width:100%;max-width:200px;">Continue</button>
+    </div>
   </div>
 </div>
 
@@ -604,6 +611,9 @@
     let selectedDept = null;
     let verifiedAdminName = "";
     let verifiedPhone = "";
+    let selectedAuthOption = "";
+    let pinAuthRedirectUrl = "";
+    const adminPhone = "<%= hqUser && hqUser.phoneNumber ? hqUser.phoneNumber : '' %>";
 
     document.getElementById("create-dept-option").onclick = () => {
       document.getElementById("admin-options").classList.add("hidden");
@@ -707,6 +717,12 @@
     }
 
     function continueAndSubmit() {
+      if (pinAuthRedirectUrl) {
+        const url = pinAuthRedirectUrl;
+        pinAuthRedirectUrl = "";
+        window.location.href = url;
+        return;
+      }
       selectedDept = null;
       verifiedAdminName = "";
       verifiedPhone = "";
@@ -982,18 +998,22 @@
     });
 
     document.getElementById("auth-email").onclick = function() {
+      selectedAuthOption = "Email";
       openPinAuthModal();
     };
 
     document.getElementById("auth-otp").onclick = function() {
+      selectedAuthOption = "OTP";
       openPinAuthModal();
     };
 
     document.getElementById("auth-call").onclick = function() {
+      selectedAuthOption = "Call";
       openPinAuthModal();
     };
 
     document.getElementById("login-option").onclick = function() {
+      selectedAuthOption = "login";
       openPinAuthModal();
     };
 
@@ -1033,13 +1053,17 @@
         const res = await fetch("/hq/admin/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pin })
+          body: JSON.stringify({ phone: adminPhone, pin, selectedOption: selectedAuthOption })
         });
         const data = await res.json();
 
         if (data.status === "SUCCESS") {
-          closePinAuthModal();
-          window.location.href = "/hq/" + (data.department || "").toLowerCase().replace(/\s+/g, '-');
+          pinAuthRedirectUrl = "/hq/" + (data.department || "").toLowerCase().replace(/\s+/g, '-');
+          document.querySelector("#pin-auth-modal .m-info-banner").classList.add("hidden");
+          document.querySelector("#pin-auth-modal .m-field").classList.add("hidden");
+          document.getElementById("approve-login-btn").classList.add("hidden");
+          document.getElementById("auth-pin-error").classList.add("hidden");
+          document.getElementById("pin-auth-success").classList.remove("hidden");
         } else if (data.status === "NO_PIN") {
           errDiv.classList.remove("hidden");
           errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>PIN not created. Please create your PIN in the client app.</span>';
