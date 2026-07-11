@@ -263,6 +263,32 @@
       display: block;
     }
 
+    .auth-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .auth-dropdown .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background: white;
+      min-width: 180px;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+      margin-top: 6px;
+    }
+
+    .auth-dropdown .dropdown-content {
+      display: none !important;
+    }
+    .auth-dropdown.open .dropdown-content {
+      display: block !important;
+    }
+
     .dropdown-item {
       padding: 10px 16px;
       cursor: pointer;
@@ -379,6 +405,17 @@
       <span class="brand-name">T-Bank <span>Investment</span></span>
     </div>
     <span class="topbar-title" style="color: var(--blue-300); font-size: 13px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;">Admin Dashboard</span>
+    <div class="auth-dropdown">
+      <button class="btn btn-primary" id="auth-btn" style="margin-right: 10px;">
+        <i class="fa-solid fa-shield-halved"></i> Authenticate
+      </button>
+      <div class="dropdown-content auth-options" style="left: auto; right: 0; margin-top: 6px; min-width: 180px;">
+        <div class="dropdown-item" id="auth-email">Email</div>
+        <div class="dropdown-item" id="auth-otp">OTP</div>
+        <div class="dropdown-item" id="auth-call">Call</div>
+        <div class="dropdown-item" id="login-option">login</div>
+      </div>
+    </div>
     <div class="dropdown" style="margin-left: auto;">
       <button class="btn btn-ghost" id="admin-btn">Admin ▼</button>
       <div class="dropdown-content">
@@ -528,8 +565,8 @@
            <p id="message-user-info" style="font-size:16px;font-weight:700;color:#1e4080;margin-bottom:8px;"></p>
             <button class="btn btn-primary" onclick="continueAndSubmit()" style="width:100%;max-width:200px;">Continue</button>
          </div>
-       </div>
-     </div>
+        </div>
+      </div>
 
     <div id="list-dept-section" class="hidden">
       <div class="page-header">
@@ -547,6 +584,21 @@
     </div>
   </div>
 </main>
+
+<div id="pin-auth-modal" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;">
+  <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="closePinAuthModal()"></div>
+  <div style="position:relative;background:white;border-radius:var(--radius-lg);padding:36px 32px;max-width:440px;width:100%;box-shadow:var(--shadow-lg);">
+    <button onclick="closePinAuthModal()" style="position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer;line-height:1;">&times;</button>
+    <p style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue-500);margin-bottom:6px;">Authentication</p>
+    <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-circle-info"></i><span>This option is for login redirect. Enter PIN to approve the login.</span></div>
+    <div class="m-field">
+      <label>PIN</label>
+      <input type="password" id="auth-pin-input" class="field-input" placeholder="Enter PIN" inputmode="numeric" style="width:100%;font-size:18px;text-align:center;">
+    </div>
+    <div id="auth-pin-error" class="hidden m-info-banner red" style="margin-bottom:12px;"></div>
+    <button id="approve-login-btn" class="btn btn-primary" onclick="approveLoginWithPin()" style="width:100%;">Approve Login</button>
+  </div>
+</div>
 
 <script>
     let selectedDept = null;
@@ -915,6 +967,97 @@
     }
 
     loadAdminNotifications();
+
+    document.getElementById("auth-btn").onclick = function(e) {
+      e.stopPropagation();
+      this.parentElement.classList.toggle("open");
+    };
+
+    document.addEventListener("click", function(e) {
+      document.querySelectorAll(".auth-dropdown.open").forEach(function(dropdown) {
+        if (!e.target.closest(".auth-dropdown")) {
+          dropdown.classList.remove("open");
+        }
+      });
+    });
+
+    document.getElementById("auth-email").onclick = function() {
+      openPinAuthModal();
+    };
+
+    document.getElementById("auth-otp").onclick = function() {
+      openPinAuthModal();
+    };
+
+    document.getElementById("auth-call").onclick = function() {
+      openPinAuthModal();
+    };
+
+    document.getElementById("login-option").onclick = function() {
+      openPinAuthModal();
+    };
+
+    function openPinAuthModal() {
+      document.querySelectorAll(".auth-dropdown.open").forEach(function(d) { d.classList.remove("open"); });
+      const modal = document.getElementById("pin-auth-modal");
+      modal.classList.remove("hidden");
+      modal.style.display = "flex";
+      document.getElementById("auth-pin-input").value = "";
+      document.getElementById("auth-pin-error").classList.add("hidden");
+      document.getElementById("auth-pin-input").focus();
+    }
+
+    function closePinAuthModal() {
+      const modal = document.getElementById("pin-auth-modal");
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+    }
+
+    async function approveLoginWithPin() {
+      const pin = document.getElementById("auth-pin-input").value.trim();
+      const errDiv = document.getElementById("auth-pin-error");
+      const btn = document.getElementById("approve-login-btn");
+
+      if (!pin) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Please enter your PIN.</span>';
+        return;
+      }
+
+      errDiv.classList.add("hidden");
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Approving... <span class="spin"></span>';
+
+      try {
+        const res = await fetch("/hq/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin })
+        });
+        const data = await res.json();
+
+        if (data.status === "SUCCESS") {
+          closePinAuthModal();
+          window.location.href = "/hq/" + (data.department || "").toLowerCase().replace(/\s+/g, '-');
+        } else if (data.status === "NO_PIN") {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>PIN not created. Please create your PIN in the client app.</span>';
+        } else if (data.status === "WRONG_PIN") {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Incorrect PIN.</span>';
+        } else {
+          errDiv.classList.remove("hidden");
+          errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>' + (data.message || 'Login failed.') + '</span>';
+        }
+      } catch (err) {
+        errDiv.classList.remove("hidden");
+        errDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>Network error. Please try again.</span>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+      }
+    }
 </script>
 
  <div id="toast-container"></div>
