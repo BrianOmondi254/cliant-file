@@ -7,7 +7,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
-const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, findGeneralGroupsByMemberPhone } = require("../mongoose");
+const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, findGeneralGroupsByMemberPhone, Agent, Dealer, normalizePhone } = require("../mongoose");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -280,7 +280,7 @@ router.use((req, res, next) => {
 });
 
 /* 📋 General Form (GET) */
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   let raw = readJSON(generalFile, {});
   const phone = req.session.user && req.session.user.phoneNumber;
   
@@ -351,10 +351,8 @@ router.get("/", (req, res) => {
   
   // Pass flat list to frontend for dropdowns etc.
   // Determine if user is agent or dealer for navigation
-  const agentFile = path.join(__dirname, "../agent.json");
-  const dealerFile = path.join(__dirname, "../dealer.json");
-  const agents = readJSON(agentFile, []);
-  const dealers = readJSON(dealerFile, []);
+  const agents = await Agent.find({}).lean();
+  const dealers = await Dealer.find({}).lean();
 
   const checkItem = (item, phone) => {
     if (!item) return false;
@@ -892,7 +890,7 @@ router.get("/locations/wards", (req, res) => {
 });
 
 /* 📝 Update Group Members (Agent Submission) */
-router.post("/update-members", (req, res) => {
+router.post("/update-members", async (req, res) => {
   const {
     groupName,
     chairpersonalphonenumber,
@@ -970,12 +968,8 @@ router.post("/update-members", (req, res) => {
   const agentPhone = req.session?.user?.phoneNumber || "Unknown";
   let agentName = "System Agent";
   try {
-    const agentFile = path.join(__dirname, "../agent.json");
-    if (fs.existsSync(agentFile)) {
-      const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
-      const foundAgent = agents.find(a => notification.norm(a.phoneNumber) === notification.norm(agentPhone));
-      if (foundAgent) agentName = foundAgent.name;
-    }
+    const foundAgent = await Agent.findOne({ phoneNumber: normalizePhone(agentPhone) }).lean();
+    if (foundAgent) agentName = foundAgent.name;
   } catch (e) {
     console.error("Error looking up agent name:", e);
   }
@@ -1204,20 +1198,11 @@ router.get("/my-groups", async (req, res) => {
     }
 
     const userGroups = [];
-    let agents = readJSON(agentFile, []);
-    
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const db = mongoose.connection.db;
-        if (db) {
-          const mongoAgents = await db.collection('agents').find({}).toArray();
-          if (mongoAgents && mongoAgents.length > 0) {
-            agents = mongoAgents;
-          }
-        }
-      } catch (agentErr) {
-        console.error('[general/my-groups] MongoDB agents fetch error:', agentErr.message);
-      }
+    let agents = [];
+    try {
+      agents = await Agent.find({}).lean();
+    } catch (agentErr) {
+      console.error('[general/my-groups] MongoDB agents fetch error:', agentErr.message);
     }
 
     for (const group of flat) {
@@ -1377,18 +1362,10 @@ router.get("/agent-for-group", async (req, res) => {
     return res.status(404).json({ success: false, message: "Group not found" });
   }
 
-  let agents = readJSON(agentFile, []);
-  if (mongoose.connection.readyState === 1) {
-    try {
-      const db = mongoose.connection.db;
-      if (db) {
-        const mongoAgents = await db.collection('agents').find({}).toArray();
-        if (mongoAgents && mongoAgents.length > 0) {
-          agents = mongoAgents;
-        }
-      }
-    } catch (e) {}
-  }
+  let agents = [];
+  try {
+    agents = await Agent.find({}).lean();
+  } catch (e) {}
 
   // Find agent matching group's county+constituency+ward
   const agent = agents.find(a =>
@@ -1763,7 +1740,7 @@ router.post("/generate-key", async (req, res) => {
 });
 
 // GET /general/user-role-type
-router.get("/user-role-type", (req, res) => {
+router.get("/user-role-type", async (req, res) => {
   const userPhone = req.session?.user?.phoneNumber;
 
   if (!userPhone) {
@@ -1776,7 +1753,14 @@ router.get("/user-role-type", (req, res) => {
   }
 
   const allGroups = flattenData(accounts);
-  
+
+  let agents = [];
+  try {
+    agents = await Agent.find({}).lean();
+  } catch (e) {
+    console.error('[general/user-role-type] MongoDB agents fetch error:', e.message);
+  }
+
   let isTrustee = false;
   let isOfficial = false;
   let isMember = false;
@@ -1814,8 +1798,6 @@ router.get("/user-role-type", (req, res) => {
 
     if (userRoleInGroup) {
       // Find assigned agent for this group's location
-      const agentFile = path.join(__dirname, "../agent.json");
-      const agents = readJSON(agentFile, []);
       const matchedAgent = agents.find(a => 
          String(a.county || '').trim().toLowerCase() === String(group.county || '').trim().toLowerCase() &&
          String(a.constituency || '').trim().toLowerCase() === String(group.constituency || '').trim().toLowerCase() &&
@@ -1893,7 +1875,7 @@ router.post("/user-role", (req, res) => {
 
 
 // GET /general/group/:groupName -> renders group-details.ejs for an active group
-router.get("/group/:groupName", (req, res) => {
+router.get("/group/:groupName", async (req, res) => {
   const userPhone = req.session?.user?.phoneNumber;
 
   if (!userPhone) {
@@ -1981,10 +1963,8 @@ router.get("/group/:groupName", (req, res) => {
   group.pinIsSet = !!group.constitutionStartKey;
 
   // Determine role-based navigation flags
-  const agentFile = path.join(__dirname, "../agent.json");
-  const dealerFile = path.join(__dirname, "../dealer.json");
-  const agents = readJSON(agentFile, []);
-  const dealers = readJSON(dealerFile, []);
+  const agents = await Agent.find({}).lean();
+  const dealers = await Dealer.find({}).lean();
 
   const checkItem = (item, phone) => {
     if (!item) return false;

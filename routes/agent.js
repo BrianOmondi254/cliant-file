@@ -5,10 +5,8 @@ const path = require("path");
 const bcrypt = require("bcrypt");
 const PDFDocument = require("pdfkit");
 
-const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings, saveMessageToMongo, Agent, Dealer } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, getGeneralGroupsFromMongo, saveGeneralGroupToMongo, getTbankSettings, saveMessageToMongo, Agent, Dealer, normalizePhone } = require("../mongoose");
 
-const agentFile = path.join(__dirname, "../agent.json");
-const dealerFile = path.join(__dirname, "../dealer.json");
 const businessFile = path.join(__dirname, "../p_account/business.json");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
@@ -171,7 +169,7 @@ const resolveAgentProfile = (agent, mongoUser, managedGroupsForInfer = []) => {
   if (mongoUser && !profile.name) {
     profile.name = formatUserName(mongoUser);
   }
-  // Agent territory comes from agent.json only (not personal MongoDB registration).
+  // Agent territory comes from the agents collection (not personal MongoDB registration).
   if (!profile.county && managedGroupsForInfer.length > 0) {
     const g = managedGroupsForInfer[0];
     profile.county = g.county || profile.county;

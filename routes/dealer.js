@@ -3,10 +3,7 @@ const router = express.Router();
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { Dealer, Agent, normalizePhone } = require("../mongoose");
-const usersFile = path.join(__dirname, "../data.json");
-const agentFile = path.join(__dirname, "../agent.json");
-const dealerFile = path.join(__dirname, "../dealer.json"); 
+const { Dealer, Agent, normalizePhone, findUserByPhone, saveMessageToMongo } = require("../mongoose");
 const regPerfLogger = require("../performance/registration-performance");
 
 // Helper functions
@@ -21,10 +18,6 @@ const readJSON = (file, fallback = []) => {
   }
 };
 
-const writeJSON = (file, data) => {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-};
-
 const norm = (p) => {
   if (!p) return "";
   let s = String(p).trim();
@@ -32,6 +25,17 @@ const norm = (p) => {
   if (s.startsWith("+254")) s = s.substring(4);
   if (s.startsWith("254") && s.length > 9) s = s.substring(3);
   return s;
+};
+
+// Resolve a registered member from the MongoDB counties collection.
+// Returns null if not found or if MongoDB is unavailable.
+const lookupUser = async (phoneNumber) => {
+  try {
+    return await findUserByPhone(phoneNumber);
+  } catch (dbErr) {
+    console.error("[DEALER] MongoDB user lookup error:", dbErr.message);
+    return null;
+  }
 };
 
 // GET /dealer - Main Entry Point (Flow Control)
@@ -82,7 +86,7 @@ router.get("/", async (req, res) => {
   }
 
   // Step 4: Dashboard (Authorized)
-  const agents = readJSON(agentFile, []);
+  const agents = await Agent.find({ dealerPhone: phoneNumber }).lean();
   const dealerAgents = agents.filter((a) => norm(a.dealerPhone) === norm(phoneNumber));
 
   const locationsFile = path.join(__dirname, "../locations.json");
@@ -131,18 +135,16 @@ router.get("/", async (req, res) => {
      console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
    }
 
-  if (!fs.existsSync(usersFile)) {
+  const user = await lookupUser(phoneNumber);
+
+  if (!user) {
     return res.render("dealer/dealer", {
       step: "dashboard", user: req.session.user, dealer, agents: dealerAgents, message: null,
       preview: null,
-      error: "System Error: User database missing.",
+      error: "User not found in the system.",
       success: null,
     });
   }
-
-  const users = JSON.parse(fs.readFileSync(usersFile, "utf8") || "[]");
-
-  const user = users.find((u) => u.phoneNumber === phoneNumber);
 
 
   // Construct full name from available fields
@@ -185,8 +187,7 @@ router.get("/", async (req, res) => {
     return res.status(403).json({ success: false, error: "Unauthorized: Dealer profile not found." });
   }
 
-  const users = readJSON(usersFile, []);
-  const user = users.find(u => norm(u.phoneNumber) === norm(phoneNumber));
+  const user = await lookupUser(phoneNumber);
 
   // 1. Verify if registered in TBank system
   if (!user) {
@@ -196,7 +197,7 @@ router.get("/", async (req, res) => {
   // 2. Verify if already an agent or dealer
   let existingAgent = null;
   try {
-    existingAgent = await Agent.findOne({ phoneNumber: phoneNumber }).lean();
+    existingAgent = await Agent.findOne({ phoneNumber: normalizePhone(phoneNumber) }).lean();
   } catch (dbErr) {
     console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
   }
@@ -205,7 +206,7 @@ router.get("/", async (req, res) => {
   }
   let existingDealer = null;
   try {
-    existingDealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
+    existingDealer = await Dealer.findOne({ phoneNumber: normalizePhone(phoneNumber) }).lean();
   } catch (dbErr) {
     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
   }
@@ -255,8 +256,7 @@ router.get("/", async (req, res) => {
     return res.status(403).json({ success: false, error: "Dealer not found" });
   }
 
-  const users = readJSON(usersFile, []);
-  const user = users.find(u => norm(u.phoneNumber) === norm(phoneNumber));
+  const user = await lookupUser(phoneNumber);
 
   if (!user) return res.status(404).json({ success: false, error: "User not found" });
 
@@ -272,7 +272,7 @@ router.get("/", async (req, res) => {
 
   let existingAgent = null;
   try {
-    existingAgent = await Agent.findOne({ phoneNumber: phoneNumber }).lean();
+    existingAgent = await Agent.findOne({ phoneNumber: normalizePhone(phoneNumber) }).lean();
   } catch (dbErr) {
     console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
   }
@@ -287,6 +287,7 @@ router.get("/", async (req, res) => {
     constituency: user.constituency || "",
     ward: ward || user.ward || "",
     dealerPhone: sessionPhone,
+    accepted: false,
     createdAt: new Date().toISOString()
   };
 
@@ -295,12 +296,35 @@ router.get("/", async (req, res) => {
   } catch (dbErr) {
     console.error("[DEALER] Failed to save agent to MongoDB:", dbErr.message);
   }
-  let agents = [];
-  if (fs.existsSync(agentFile)) {
-    agents = JSON.parse(fs.readFileSync(agentFile, "utf8") || "[]");
+
+  // Notify both the processor (dealer) and the processed (candidate)
+  try {
+    const candidateName = newAgent.name || "Agent";
+    const candidatePhone = user.phoneNumber || "";
+    const dealerName = currentDealer.name || "Dealer";
+    const dealerPhone = currentDealer.phoneNumber || sessionPhone;
+
+    // Processor message
+    await saveMessageToMongo({
+      to: req.session.user.phoneNumber || sessionPhone,
+      type: "agent_processed",
+      title: "Agent Account Processed",
+      content: `You have processed agent account of ${candidateName} (${candidatePhone}). Ask him/her to click approve request to be tbank agent.`,
+      createdAt: new Date().toISOString()
+    });
+
+    // Processed (candidate) message — carries the in-app Accept/Approve request button
+    await saveMessageToMongo({
+      to: candidatePhone,
+      type: "agent_invitation",
+      title: "Agent Appointment",
+      content: `You have been processed to be agent by ${dealerName} (${dealerPhone}). Click approve request to be tbank agent.`,
+      meta: { agentPhone: candidatePhone },
+      createdAt: new Date().toISOString()
+    });
+  } catch (msgErr) {
+    console.error("[DEALER] Failed to send agent messages:", msgErr.message);
   }
-  agents.push(newAgent);
-  fs.writeFileSync(agentFile, JSON.stringify(agents, null, 2));
 
   // Log Performance
   try {
@@ -326,17 +350,7 @@ router.get("/", async (req, res) => {
    }
   
 
-  if (!fs.existsSync(usersFile)) {
-    return res.render("dealer/dealer", {
-      step: "dashboard", user: req.session.user, dealer, agents: [], message: null,
-      preview: null,
-      error: "System Error: User database missing.",
-      success: null,
-    });
-  }
-
-  const users = JSON.parse(fs.readFileSync(usersFile, "utf8") || "[]");
-  const user = users.find((u) => u.phoneNumber === phoneNumber);
+  const user = await lookupUser(phoneNumber);
 
   if (!user) {
     return res.render("dealer/dealer", {
@@ -355,33 +369,32 @@ router.get("/", async (req, res) => {
 
   const fullName = nameParts.join(" ") || "Name not provided";
 
-  // Reload agents for the list
-  let agents = [];
-  if (fs.existsSync(agentFile)) {
-    agents = JSON.parse(fs.readFileSync(agentFile, "utf8") || "[]");
-  }
+   // Create agent in MongoDB
+   const newAgentDoc = {
+     name: fullName,
+     phoneNumber: normalizePhone(phoneNumber),
+     county: user.county || "",
+     constituency: user.constituency || "",
+     ward: user.ward || "",
+     dealerPhone: normalizePhone(sessionPhone), // Link agent to the dealer who created them
+     createdAt: new Date().toISOString(),
+   };
 
-  agents.push({
-    name: fullName,
-    county: user.county || "",
-    constituency: user.constituency || "",
-    ward: user.ward || "",
-    phoneNumber,
-    dealerPhone: sessionPhone, // Link agent to the dealer who created them
-    createdAt: new Date().toISOString(),
-  });
+   try {
+     await Agent.create(newAgentDoc);
+   } catch (dbErr) {
+     console.error("[DEALER] Failed to save agent to MongoDB:", dbErr.message);
+   }
 
-  fs.writeFileSync(agentFile, JSON.stringify(agents, null, 2));
+   // Log Performance
+   try {
+       regPerfLogger.logRegistration(user.county, user.constituency, user.ward, 'agents');
+   } catch (e) {
+       console.error("Agent registration performance log error:", e);
+   }
 
-  // Log Performance
-  try {
-      regPerfLogger.logRegistration(user.county, user.constituency, user.ward, 'agents');
-  } catch (e) {
-      console.error("Agent registration performance log error:", e);
-  }
-
-  // Filter agents again for the view
-  const dealerAgents = agents.filter((a) => norm(a.dealerPhone) === norm(sessionPhone));
+   // Reload agents for the view
+   const dealerAgents = await Agent.find({ dealerPhone: sessionPhone }).lean();
 
   res.render("dealer/dealer", {
     step: "dashboard", user: req.session.user, dealer, agents: dealerAgents, message: null,
@@ -436,8 +449,7 @@ router.post("/create-pin", async (req, res) => {
         }
       };
 
-      const users = readJSON(usersFile, []);
-      const user = users.find(u => norm(u.phoneNumber) === norm(targetPhoneNumber));
+      const user = await lookupUser(targetPhoneNumber);
       if (user) {
         newDealer.county = user.county || "";
         newDealer.constituency = user.constituency || "";
@@ -509,12 +521,7 @@ router.post("/create-pin", async (req, res) => {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
 
-   if (!dealer) {
-     const dealers = readJSON(dealerFile, []);
-     dealer = dealers.find((d) => norm(d.phoneNumber) === phoneNumber);
-   }
-
-  if (!dealer || !dealer.pin) {
+   if (!dealer || !dealer.pin) {
     if (isApi) return res.json({ success: false, error: "Dealer account not found or PIN not set" });
     return res.redirect("/dealer");
   }

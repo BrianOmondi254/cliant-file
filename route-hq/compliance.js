@@ -303,7 +303,6 @@ router.get("/compliance/data", (req, res) => {
 // AGENT MANAGEMENT
 // ======================
 
-const AGENT_JSON = path.join(__dirname, "..", "agent.json");
 const HQ_JSON = path.join(__dirname, "..", "hq.json");
 const OFFICIAL_JSON = path.join(__dirname, "..", "official.json");
 const BLOCKED_JSON = path.join(__dirname, "..", "blocked.json");
@@ -378,28 +377,28 @@ router.post("/compliance/save-agent", async (req, res) => {
   const { agentPhone, dealerPhone, county, constituency, ward } = req.body;
 
   try {
-    // 1. Update agent.json
-    let agents = [];
-    if (fs.existsSync(AGENT_JSON)) {
-      const raw = fs.readFileSync(AGENT_JSON, "utf8");
-      agents = raw.trim() ? JSON.parse(raw) : [];
-    }
-
+    // 1. Save agent to MongoDB
+    const normAgentPhone = normalizePhone(agentPhone);
     const agentProfile = await findUserInCounties(agentPhone);
     const agentName = agentProfile
       ? `${agentProfile.FirstName} ${agentProfile.MiddleName} ${agentProfile.LastName}`.trim()
       : "Unknown Agent";
 
-    agents.push({
-      phoneNumber: agentPhone,
-      dealerPhone: dealerPhone,
-      name: agentName,
-      county,
-      constituency,
-      ward,
-      createdAt: new Date().toISOString(),
-    });
-    fs.writeFileSync(AGENT_JSON, JSON.stringify(agents, null, 2));
+    await Agent.updateOne(
+      { phoneNumber: normAgentPhone },
+      {
+        $set: {
+          phoneNumber: normAgentPhone,
+          dealerPhone: normalizePhone(dealerPhone),
+          name: agentName,
+          county,
+          constituency,
+          ward,
+          createdAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
 
     // 3. Update dealer stats in MongoDB
     const normDealerPhone = normalizePhone(dealerPhone);
@@ -411,7 +410,7 @@ router.post("/compliance/save-agent", async (req, res) => {
     );
 
     // 4. Update hq.json (Registry of plain events for backup/other uses?)
-    // Actually user wants structure in dealer.json, maybe we don't need to bloat hq.json anymore?
+     // Agent records are now stored in the MongoDB Agent collection instead of agent.json.
     // We will keep hq.json as a simple log for now to be safe.
     let hqData = [];
     if (fs.existsSync(HQ_JSON)) {
@@ -475,18 +474,7 @@ router.post("/compliance/verify-dealer-relations", async (req, res) => {
   }
 
   // REMOVED: Agent check. Dealer verification now solely relies on counties MongoDB collection.
-  /*
-  if (!fs.existsSync(AGENT_JSON)) {
-    return res.status(500).json({ success: false, message: "Agent database not found" });
-  }
 
-  const agents = JSON.parse(fs.readFileSync(AGENT_JSON, "utf8"));
-  const agentAsDealer = agents.find(a => a.phoneNumber === dealerPhone);
-
-  if (!agentAsDealer) {
-    return res.status(444).json({ success: false, message: "The number is not a registered agent" });
-  }
-  */
 
   const hq = await findUserInCounties(hqPhone);
 

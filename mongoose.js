@@ -1187,12 +1187,13 @@ const PersonalAccount =
   mongoose.model("PersonalAccount", personalAccountSchema);
 
 /**
- * Agent Schema - Mirrors agent.json structure
+ * Agent Schema - backed by the `agents` MongoDB collection
  */
 const agentSchema = new mongoose.Schema({
   name: { type: String },
   phoneNumber: { type: String, required: true, unique: true },
   dealerPhone: { type: String },
+  accepted: { type: Boolean, default: true },
   county: { type: String },
   constituency: { type: String },
   ward: { type: String },
@@ -1209,7 +1210,7 @@ const Agent =
   mongoose.models.Agent || mongoose.model("Agent", agentSchema, "agents");
 
 /**
- * Dealer Schema - Mirrors dealer.json structure
+ * Dealer Schema - backed by the `dealers` MongoDB collection
  */
 const dealerSchema = new mongoose.Schema({
   phoneNumber: { type: String, required: true, unique: true },

@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady, getMessagesForUser, getPendingOfficerMessageByPhone, getTbankSettings } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady,   getMessagesForUser, getPendingOfficerMessageByPhone, getTbankSettings, Agent, Dealer, Message, normalizePhone } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -452,14 +452,9 @@ router.get("/", async (req, res) => {
     }
 
     // Use session flags for showDealer, showAgent, agent, and hasAgentPin
-    // To be robust, re-check against files if flags are missing or stale
-    const dealerFile = path.join(__dirname, "../dealer.json");
-    const agentFile = path.join(__dirname, "../agent.json");
-    const dealers = readJSON(dealerFile, []);
-    const agents = readJSON(agentFile, []);
-
-    const isDealerInFile = search(dealers);
-    const isAgentInFile = search(agents);
+    // To be robust, re-check against MongoDB collections if flags are missing or stale
+    const isDealerInFile = !!(await Dealer.findOne({ phoneNumber: normalizePhone(phone) }).lean());
+    const isAgentInFile = !!(await Agent.findOne({ phoneNumber: normalizePhone(phone) }).lean());
 
     const showDealer = !!(req.session.isDealer || isDealerInFile);
     const showAgent = !!(req.session.isAgent || isAgentInFile);
@@ -949,7 +944,7 @@ router.get("/wallet", (req, res) => {
 });
 
 /* 🏠 Group Details */
-router.get("/group/:groupName", (req, res) => {
+router.get("/group/:groupName", async (req, res) => {
   try {
     const groupName = decodeURIComponent(req.params.groupName);
     const groupsRaw = readJSON(groupsFile, {});
@@ -1122,13 +1117,8 @@ router.get("/group/:groupName", (req, res) => {
           remainRounds
       };
       
-      const agentFile = path.join(__dirname, "../agent.json");
-      const dealerFile = path.join(__dirname, "../dealer.json");
-      const agents = readJSON(agentFile, []);
-      const dealers = readJSON(dealerFile, []);
-      
-      const showAgent = !!(req.session.isAgent || search(agents));
-      const showDealer = !!(req.session.isDealer || search(dealers));
+      const showAgent = !!(req.session.isAgent || await Agent.findOne({ phoneNumber: normalizePhone(req.session.user.phoneNumber) }).lean());
+      const showDealer = !!(req.session.isDealer || await Dealer.findOne({ phoneNumber: normalizePhone(req.session.user.phoneNumber) }).lean());
 
       res.render("group-details", {
         user: req.session.user,
@@ -1449,6 +1439,25 @@ router.get("/inbox-status", async (req, res) => {
     });
   } catch (err) {
     res.json({ success: true, data: null });
+  }
+});
+
+// POST /accept-agent-invite - candidate accepts the agent appointment
+router.post("/accept-agent-invite", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+      return res.json({ success: false, message: "Session expired. Please log in again." });
+    }
+    const phone = normalizePhone(req.session.user.phoneNumber);
+    await Agent.findOneAndUpdate({ phoneNumber: phone }, { $set: { accepted: true } });
+    const { msgId } = req.body || {};
+    if (msgId) {
+      await Message.deleteOne({ _id: msgId });
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error("[accept-agent-invite] error:", e.message);
+    res.json({ success: false, message: e.message });
   }
 });
 

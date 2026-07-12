@@ -11,7 +11,10 @@ const {
   findOrCreateMemberGroup,
   MemberGroup,
   ensureMongoReady,
-  deletePendingOfficerMessage
+  deletePendingOfficerMessage,
+  Agent,
+  Dealer,
+  normalizePhone
 } = require('../mongoose');
 
 const router = express.Router();
@@ -2315,7 +2318,7 @@ router.post("/request-add-member", (req, res) => {
 });
 
 // GET /member-requests - Get pending requests for a group
-router.get("/member-requests", (req, res) => {
+router.get("/member-requests", async (req, res) => {
   const { groupName } = req.query;
 
   if (!groupName) {
@@ -2338,9 +2341,10 @@ router.get("/member-requests", (req, res) => {
   const requests = targetGroup.requests || {};
 
    // Enrich addMember requests with requester's details from group membership
-   const enrichedAddMemberRequests = (requests.addMember || [])
-     .filter(r => r.status === 'pending')
-     .map(request => {
+   const enrichedAddMemberRequests = await Promise.all(
+     (requests.addMember || [])
+       .filter(r => r.status === 'pending')
+       .map(async (request) => {
        const requesterPhone = request.requesterPhone;
        
        // Look up requester in group members (trustee_*, official_*, member_*)
@@ -2380,30 +2384,27 @@ router.get("/member-requests", (req, res) => {
            }
          }
          
-         // 3. If still not found, try agent.json
-         if (!requesterName) {
-           const agentFilePath = path.join(__dirname, "../agent.json");
-           try {
-             if (fs.existsSync(agentFilePath)) {
-               const agents = JSON.parse(fs.readFileSync(agentFilePath, "utf8"));
-               const agent = agents.find(a => normalizeKenyanPhone(a.phoneNumber) === normalizeKenyanPhone(requesterPhone));
-               if (agent) {
-                 requesterName = agent.name;
-               }
-             }
-           } catch (e) {
-             console.error("Error looking up requester in agent.json:", e);
-           }
-         }
+          // 3. If still not found, try Agent collection
+          if (!requesterName) {
+            try {
+              const agent = await Agent.findOne({ phoneNumber: normalizePhone(requesterPhone) }).lean();
+              if (agent) {
+                requesterName = agent.name;
+              }
+            } catch (e) {
+              console.error("Error looking up requester in Agent collection:", e);
+            }
+          }
        }
        
-       return {
-         ...request,
-         requesterName,
-         requesterMemberIndex,
-         requesterMemberNumber
-       };
-     });
+        return {
+          ...request,
+          requesterName,
+          requesterMemberIndex,
+          requesterMemberNumber
+        };
+      })
+   );
 
   res.json({
     success: true,
@@ -2416,7 +2417,7 @@ router.get("/member-requests", (req, res) => {
 });
 
 // POST /approve-member-request - Approve or reject member request
-router.post("/approve-member-request", (req, res) => {
+router.post("/approve-member-request", async (req, res) => {
   const { groupName, requestId, action } = req.body;
 
   if (!groupName || !requestId) {
@@ -2639,30 +2640,24 @@ const memberFile = path.join(__dirname, "../tran_account/member.json");
       }
       
       if (approverName === "System User") {
-        const agentFile = path.join(__dirname, "../agent.json");
-        if (fs.existsSync(agentFile)) {
-          try {
-            const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
-            const foundAgent = agents.find(a => 
-              normalizeKenyanPhone(a.phoneNumber) === normalizeKenyanPhone(approverPhone)
-            );
-            if (foundAgent) approverName = foundAgent.name;
-          } catch (e) {
-            console.error("Error looking up agent in agent.json:", e);
-          }
+        try {
+          const foundAgent = await Agent.findOne({ phoneNumber: normalizePhone(approverPhone) }).lean();
+          if (foundAgent) approverName = foundAgent.name;
+        } catch (e) {
+          console.error("Error looking up agent in Agent collection:", e);
         }
       }
-      
-       request.approverPhone = approverPhone;
-       request.approverName = approverName;
-       request.status = 'approved';
-       request.approvedAt = new Date().toISOString();
 
-       // Update totalProposedMembers in the group (increment by 1)
-       const memberCount = Object.keys(targetGroup).filter(k =>
-         k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-       ).length;
-       targetGroup.totalProposedMembers = memberCount;
+       request.approverPhone = approverPhone;
+        request.approverName = approverName;
+        request.status = 'approved';
+        request.approvedAt = new Date().toISOString();
+
+        // Update totalProposedMembers in the group (increment by 1)
+        const memberCount = Object.keys(targetGroup).filter(k =>
+          k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+        ).length;
+        targetGroup.totalProposedMembers = memberCount;
      } else if (action === 'reject') {
       // === RECORD WHO REJECTED ===
       const approverPhone = req.session?.user?.phoneNumber || "Unknown";
@@ -2686,17 +2681,11 @@ const memberFile = path.join(__dirname, "../tran_account/member.json");
       }
       
       if (approverName === "System User") {
-        const agentFile = path.join(__dirname, "../agent.json");
-        if (fs.existsSync(agentFile)) {
-          try {
-            const agents = JSON.parse(fs.readFileSync(agentFile, "utf8"));
-            const foundAgent = agents.find(a => 
-              normalizeKenyanPhone(a.phoneNumber) === normalizeKenyanPhone(approverPhone)
-            );
-            if (foundAgent) approverName = foundAgent.name;
-          } catch (e) {
-            console.error("Error looking up agent in agent.json:", e);
-          }
+        try {
+          const foundAgent = await Agent.findOne({ phoneNumber: normalizePhone(approverPhone) }).lean();
+          if (foundAgent) approverName = foundAgent.name;
+        } catch (e) {
+          console.error("Error looking up agent in Agent collection:", e);
         }
       }
       

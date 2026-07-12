@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { saveMessageToMongo, ensureMongoReady } = require('../mongoose');
+const { saveMessageToMongo, ensureMongoReady, Agent, Dealer, normalizePhone } = require('../mongoose');
 
 /**
  * Normalizes phone numbers
@@ -35,15 +35,13 @@ const writeJSON = (file, data) => {
 /**
  * Finds the correct official (Agent/Dealer/Regional Office) for a location
  */
-const getAllocatedOfficial = (ward, constituency) => {
+const getAllocatedOfficial = async (ward, constituency) => {
   if (!ward || !constituency) return null;
 
-  const agentFile = path.join(__dirname, "../agent.json");
-  const dealerFile = path.join(__dirname, "../dealer.json");
   const hqFile = path.join(__dirname, "../hq.json");
 
-  const agents = readJSON(agentFile, []);
-  const dealers = readJSON(dealerFile, []);
+  const agents = await Agent.find({}).lean();
+  const dealers = await Dealer.find({}).lean();
   const hqs = readJSON(hqFile, []);
 
   const wardLower = ward.toLowerCase();
@@ -91,9 +89,9 @@ const processMessage = (groupName, message) => {
 /**
  * Logic for initial group creation alerts
  */
-const sendGroupCreationAlerts = (group, processorPhone) => {
+const sendGroupCreationAlerts = async (group, processorPhone) => {
   const { groupName, ward, constituency, county, phone: chairPhone } = group;
-  const official = getAllocatedOfficial(ward, constituency);
+  const official = await getAllocatedOfficial(ward, constituency);
   
   let notificationContent = "";
   let officialPhone = null;
