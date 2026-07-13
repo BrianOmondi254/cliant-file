@@ -589,6 +589,7 @@
 const app = {
     data: {
         user: <%- JSON.stringify(user) %>,
+        firebaseConfig: <%- JSON.stringify(typeof firebaseConfig !== 'undefined' ? firebaseConfig : null) %>,
         navLinks: <%- JSON.stringify(navLinks.map(l => l.name)) %>,
         userGroups: <%- JSON.stringify(typeof userGroups !== 'undefined' ? userGroups : []) %>,
         constitutionKeys: <%- JSON.stringify(typeof constitutionKeys !== 'undefined' ? constitutionKeys : []) %>,
@@ -627,9 +628,18 @@ const app = {
             window.location.href = "/personal";
             return;
         }
-        this.fetchWalletData();
-        this.fetchInboxData();
-        this.render();
+        // Expose Firebase config to the (optional) Firebase bootstrap so it
+        // can never crash this page or prevent the dashboard from rendering.
+        try {
+            if (this.data.firebaseConfig) window.__FIREBASE_CONFIG__ = this.data.firebaseConfig;
+            if (typeof window.initFirebase === 'function') window.initFirebase();
+        } catch (e) {
+            console.warn('Firebase init skipped:', e);
+        }
+        // These are fire-and-forget; a failure must never block rendering.
+        try { this.fetchWalletData(); } catch (e) { console.error('wallet fetch failed', e); }
+        try { this.fetchInboxData(); } catch (e) { console.error('inbox fetch failed', e); }
+        try { this.render(); } catch (e) { console.error('render failed', e); }
         this.updateBadge();
         this.setupPhoneListeners();
         // Check for pending regional officer message (server-side)

@@ -2,7 +2,13 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady,   getMessagesForUser, getPendingOfficerMessageByPhone, getTbankSettings, Agent, Dealer, Message, normalizePhone } = require("../mongoose");
+const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameByPhone, County, ensureMongoReady,   getMessagesForUser, getPendingOfficerMessageByPhone,   getTbankSettings,
+  Agent,
+  Dealer,
+  Message,
+  normalizePhone,
+  findAgentByPhone,
+  findDealerByPhone } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -453,8 +459,8 @@ router.get("/", async (req, res) => {
 
     // Use session flags for showDealer, showAgent, agent, and hasAgentPin
     // To be robust, re-check against MongoDB collections if flags are missing or stale
-    const isDealerInFile = !!(await Dealer.findOne({ phoneNumber: normalizePhone(phone) }).lean());
-    const isAgentInFile = !!(await Agent.findOne({ phoneNumber: normalizePhone(phone) }).lean());
+    const isDealerInFile = !!(await findDealerByPhone(phone));
+    const isAgentInFile = !!(await findAgentByPhone(phone));
 
     const showDealer = !!(req.session.isDealer || isDealerInFile);
     const showAgent = !!(req.session.isAgent || isAgentInFile);
@@ -631,10 +637,19 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
         console.error("Error fetching tbank settings:", e.message);
       }
 
-res.render('cliant', {
-       user: req.session.user,
-       showAgent,
-       showDealer,
+ res.render('cliant', {
+        user: req.session.user,
+        showAgent,
+        showDealer,
+        firebaseConfig: {
+          apiKey: process.env.FIREBASE_API_KEY,
+          authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.FIREBASE_APP_ID,
+          measurementId: process.env.FIREBASE_MEASUREMENT_ID
+        },
        generalExists,
        isTrustee, // Note: This might be true if ANY group has user as trustee
        isOfficial,
@@ -1117,8 +1132,8 @@ router.get("/group/:groupName", async (req, res) => {
           remainRounds
       };
       
-      const showAgent = !!(req.session.isAgent || await Agent.findOne({ phoneNumber: normalizePhone(req.session.user.phoneNumber) }).lean());
-      const showDealer = !!(req.session.isDealer || await Dealer.findOne({ phoneNumber: normalizePhone(req.session.user.phoneNumber) }).lean());
+      const showAgent = !!(req.session.isAgent || await findAgentByPhone(req.session.user.phoneNumber));
+      const showDealer = !!(req.session.isDealer || await findDealerByPhone(req.session.user.phoneNumber));
 
       res.render("group-details", {
         user: req.session.user,

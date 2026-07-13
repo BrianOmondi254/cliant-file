@@ -1808,6 +1808,43 @@ const migratePinsFromJSON = async () => {
   return { migrated, skipped, errors };
 };
 
+/**
+ * Build phone-number variants for tolerant matching against stored
+ * agent/dealer phone numbers, which may be saved with or without a leading
+ * "0", a "+254"/"254" prefix, etc.
+ */
+const phoneVariants = (p) => {
+  if (!p) return [];
+  const n = normalizePhone(p);
+  return Array.from(new Set([
+    n,
+    "0" + n,
+    "254" + n,
+    "+254" + n,
+    String(p).trim()
+  ].filter(Boolean)));
+};
+
+const findAgentByPhone = async (phone) => {
+  try {
+    if (!phone) return null;
+    return await Agent.findOne({ phoneNumber: { $in: phoneVariants(phone) } }).lean();
+  } catch (e) {
+    console.error("findAgentByPhone error:", e.message);
+    return null;
+  }
+};
+
+const findDealerByPhone = async (phone) => {
+  try {
+    if (!phone) return null;
+    return await Dealer.findOne({ phoneNumber: { $in: phoneVariants(phone) } }).lean();
+  } catch (e) {
+    console.error("findDealerByPhone error:", e.message);
+    return null;
+  }
+};
+
 module.exports = {
   connectDB,
   ensureMongoReady,
@@ -1822,6 +1859,8 @@ module.exports = {
   Message,
   Agent,
   Dealer,
+  findAgentByPhone,
+  findDealerByPhone,
   Admin,
   SuperAdmin,
   adminConn,

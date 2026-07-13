@@ -13,6 +13,9 @@ const {
   Agent,
   Dealer,
   normalizePhone,
+  getTbankSettings,
+  findAgentByPhone,
+  findDealerByPhone,
 } = require("../mongoose");
 
 const router = express.Router();
@@ -367,12 +370,103 @@ router.post("/complete-registration", async (req, res) => {
 });
 
 /* 🔑 Login (GET form) */
-router.get("/login", (req, res) => {
+router.get("/login", async (req, res) => {
   // If already logged in, redirect to dashboard to 'hide' the login URL
   if (req.session && req.session.user) {
     return res.redirect("/personal");
   }
-  res.render("login", { alert: null });
+
+  // Reflect the HQ-selected auth option (Email / OTP / login)
+  let authOption = "login";
+  try {
+    if (await ensureMongoReady()) {
+      const settings = await getTbankSettings();
+      const opt =
+        settings && settings.lastSelectedAuthOption && settings.lastSelectedAuthOption.option
+          ? String(settings.lastSelectedAuthOption.option).toLowerCase()
+          : "";
+      if (opt === "email" || opt === "otp") {
+        authOption = opt;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading auth option:", e.message);
+  }
+
+  res.render("login", { 
+    alert: null, 
+    authOption,
+    firebaseConfig: {
+      apiKey: process.env.FIREBASE_API_KEY,
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.FIREBASE_APP_ID,
+      measurementId: process.env.FIREBASE_MEASUREMENT_ID
+    }
+  });
+});
+
+/* 🔑 Firebase Login Success Callback */
+router.post("/firebase-login", async (req, res) => {
+  let loginPhone = (req.body.phoneNumber || "").trim();
+
+  const dbReady = await ensureMongoReady();
+  if (!dbReady) {
+    return res.render("login", { alert: getMongoConfigHint() });
+  }
+
+  try {
+    let user = await findUserByPhone(loginPhone);
+    if (!user) {
+      return res.render("register", {
+        message: "Phone number not registered. Please create an account.",
+        form: { phoneNumber: loginPhone },
+      });
+    }
+
+    // Update last login
+    await updateLastLogin(loginPhone);
+
+    // Save session user
+    req.session.user = { 
+      phoneNumber: user.phoneNumber,
+      firstName: user.FirstName,
+      lastName: user.LastName,
+      idNumber: user.idNumber
+    };
+
+    const tbankData = readJSON(tbankFile, {});
+    req.session.loginSeason = tbankData.compliance?.periods?.season || "Annual";
+
+    const normalizedUserPhone = normalizePhone(user.phoneNumber || loginPhone || "");
+    const rawPhone = user.phoneNumber || loginPhone || "";
+    const phoneVariants = [...new Set([
+      rawPhone,
+      normalizedUserPhone,
+      "0" + normalizedUserPhone,
+      "254" + normalizedUserPhone,
+      "+254" + normalizedUserPhone
+    ])];
+    let mongoAgent = await Agent.findOne({ phoneNumber: { $in: phoneVariants } }).lean();
+    let mongoDealer = await Dealer.findOne({ phoneNumber: { $in: phoneVariants } }).lean();
+
+    req.session.isAgent = !!mongoAgent;
+    req.session.isDealer = !!mongoDealer;
+    req.session.agent = mongoAgent ? mongoAgent : (req.session.isAgent ? { phoneNumber: user.phoneNumber } : null);
+    req.session.hasAgentPin = req.session.agent ? !!req.session.agent.pin : false;
+    
+    req.session.dealer = mongoDealer ? mongoDealer : (req.session.isDealer ? { phoneNumber: user.phoneNumber } : null);
+    req.session.hasDealerPin = req.session.dealer ? !!req.session.dealer.pin : false;
+
+    req.session.save((err) => {
+      res.redirect("/personal");
+    });
+  } catch (err) {
+    console.error("Firebase Login DB Error:", err);
+    return res.render("login", { alert: "Database error during login." });
+  }
 });
 
 /* 🔑 Login (POST submission) */
@@ -447,18 +541,15 @@ router.post("/login", async (req, res) => {
   const currentSeason = tbankData.compliance?.periods?.season || "Annual";
   req.session.loginSeason = currentSeason;
 
-  // Determine if user is agent or dealer and save to session (MongoDB only)
-  // IMPORTANT: always normalize phone for lookups because dealer/agent phoneNumbers
-  // may be stored in normalized form (e.g. leading 0 removed).
-  const normalizedUserPhone = normalizePhone(user.phoneNumber || loginPhone || "");
-
+  // Determine if user is agent or dealer and save to session (MongoDB only).
+  // findAgentByPhone / findDealerByPhone tolerate any stored phone format.
   let mongoAgent = null;
   let mongoDealer = null;
   try {
     const dbReady = await ensureMongoReady();
     if (dbReady) {
-      mongoAgent = await Agent.findOne({ phoneNumber: normalizedUserPhone }).lean();
-      mongoDealer = await Dealer.findOne({ phoneNumber: normalizedUserPhone }).lean();
+      mongoAgent = await findAgentByPhone(loginPhone);
+      mongoDealer = await findDealerByPhone(loginPhone);
     }
   } catch (dbErr) {
     console.error("MongoDB agent/dealer lookup error during login:", dbErr.message);
@@ -490,6 +581,33 @@ router.post("/login", async (req, res) => {
     }
     res.redirect("/personal");
   });
+});
+
+/* 🔑 Forgot PIN (POST /forgot-pin) */
+router.post("/forgot-pin", async (req, res) => {
+  const phoneNumber = (req.body.phoneNumber || "").trim();
+
+  if (!phoneNumber) {
+    return res.json({ success: false, message: "Phone number is required" });
+  }
+
+  const dbReady = await ensureMongoReady();
+  if (!dbReady) {
+    return res.json({ success: false, message: "Database not available. Please try again later." });
+  }
+
+  try {
+    const user = await findUserByPhone(phoneNumber);
+    if (!user) {
+      return res.json({ success: false, message: "Phone number not registered." });
+    }
+
+    // TODO: Implement start key generation and SMS dispatch
+    return res.json({ success: true, message: "Start key request received. Please contact support for assistance." });
+  } catch (err) {
+    console.error("Forgot PIN error:", err);
+    return res.json({ success: false, message: "Server error. Please try again." });
+  }
 });
 
 /* 🛠️ Admin: Reset a user's password (POST /admin/reset-password) */

@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -31,7 +31,7 @@ body{
 /* Card */
 .card{
     background:#ffffff;
-    border-radius:22px;
+    border-radius:22px 22px 5px 5px;
     padding:35px 25px;
     box-shadow:0 25px 60px rgba(0,0,0,0.35);
 }
@@ -121,17 +121,31 @@ body{
 
 /* Footer Links */
 .footer{
-    text-align:center;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:0;
     margin-top:25px;
+    flex-wrap:wrap;
 }
 
 .footer a{
-    display:block;
-    margin-top:8px;
     text-decoration:none;
     font-size:13px;
     color:#0f9d58;
     font-weight:500;
+    padding:6px 12px;
+    transition:color 0.2s;
+}
+
+.footer a:hover{
+    color:#059642;
+}
+
+.footer-divider{
+    color:#cbd5e1;
+    font-size:13px;
+    user-select:none;
 }
 
 .error {
@@ -217,7 +231,8 @@ body{
 <div class="container">
     <div class="card">
 
-        <div class="header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 35px 20px; color: white; margin: -35px -25px 30px -25px; text-align: center; position: relative; overflow: hidden; border-radius: 22px 22px 0 0;">
+        <div class="header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 35px 20px; color: white; margin: -35px -25px 30px -25px; text-align: center; position: relative; overflow: hidden; border-radius: 5px 5px 0 0;">
+            <a href="#" id="adminBtn" style="position:absolute; top:12px; right:15px; font-size:11px; color:rgba(255,255,255,0.85); text-decoration:none; background:rgba(255,255,255,0.15); padding:4px 10px; border-radius:20px; font-weight:600; letter-spacing:0.5px; backdrop-filter:blur(4px); transition:background 0.2s; z-index:10;">Admin</a>
             <h1 style="font-size: 26px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
             <p style="font-size: 10px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-top: 4px;">Secure Digital Wealth</p>
             
@@ -231,7 +246,6 @@ body{
         <% } %>
 
         <form id="loginForm" action="/login" method="POST">
-
             <div class="field">
                 <svg class="icon" viewBox="0 0 24 24">
                     <path d="M6 2h12v20H6zM8 4v2h8V4z"/>
@@ -239,23 +253,22 @@ body{
                 <input type="tel" id="phone" name="phoneNumber" placeholder="Phone Number" inputmode="numeric" pattern="[0-9]*" required>
                 <div class="error" id="phoneError">Invalid phone format. Use +254, 254, or 07/01 format.</div>
             </div>
-
             <div class="field">
                 <svg class="icon" viewBox="0 0 24 24">
                     <path d="M12 17a2 2 0 100-4 2 2 0 000 4zm6-6h-1V9a5 5 0 00-10 0v2H6v10h12V11z"/>
                 </svg>
                 <input type="password" id="password" name="password" placeholder="Password" required>
-                <span class="toggle" onclick="togglePassword()">Show</span>
+                <div class="error" id="passwordError" style="display:none;"></div>
             </div>
-
             <button type="submit" class="btn" id="loginBtn">Login</button>
-
         </form>
 
         <div class="footer">
             <a href="/register">Create Account</a>
-            <a href="#" id="adminBtn">Admin Panel</a>
+            <span class="footer-divider" id="forgotDivider" style="display:none;">|</span>
+            <a href="#" id="forgotPinBtn" style="display:none;">Forgot PIN?</a>
         </div>
+
 
     </div>
 </div>
@@ -270,82 +283,139 @@ body{
     </div>
 </div>
 
+<!-- Forgot PIN Modal -->
+<div id="forgotPinModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Forgot PIN?</h2>
+        <p style="font-size:13px;color:#64748b;text-align:center;margin-bottom:15px;">Enter your phone number to request a start key via SMS.</p>
+        <input type="tel" id="forgotPinPhone" placeholder="Phone Number" inputmode="numeric">
+        <button id="submitForgotPin">Request Start Key</button>
+        <p id="forgotPinMessage" style="font-size:13px;text-align:center;margin-top:10px;"></p>
+    </div>
+</div>
+
 <script>
-function togglePassword(){
-    const pass = document.getElementById("password");
-    const toggle = document.querySelector(".toggle");
+  const loginForm = document.getElementById("loginForm");
+  const loginBtn = document.getElementById("loginBtn");
+  const phoneError = document.getElementById("phoneError");
+  const passwordError = document.getElementById("passwordError");
 
-    if(pass.type === "password"){
-        pass.type = "text";
-        toggle.innerText = "Hide";
-    }else{
-        pass.type = "password";
-        toggle.innerText = "Show";
-    }
-}
-
-document.getElementById("loginForm").addEventListener("submit", function(e){
-    const phone = document.getElementById("phone").value.trim();
-    const error = document.getElementById("phoneError");
-    const btn = document.getElementById("loginBtn");
-    const isValidP = (p) => /^\+?254[0-9]{9}$/.test(p) || /^0[17][0-9]{8}$/.test(p);
-
-    if(!isValidP(phone)){
-        e.preventDefault();
-        error.style.display = "block";
-        return;
-    }else{
-        error.style.display = "none";
-    }
-
-    btn.classList.add("loading");
-    btn.innerText = "Authenticating...";
-});
-
-// Dynamic Phone Maxlength
-const phoneInput = document.getElementById("phone");
-if(phoneInput) {
-    phoneInput.addEventListener('input', function() {
-        let val = this.value.replace(/[^0-9]/g, '').trim();
-        this.value = val;
-        if (val.startsWith('254')) {
-            this.maxLength = 12;
-        } else if (val.startsWith('07') || val.startsWith('01')) {
-            this.maxLength = 10;
-        } else {
-            this.maxLength = 13;
-        }
-    });
-}
-
-// Admin Modal Script
-const modal = document.getElementById("adminModal");
-const btn = document.getElementById("adminBtn");
-const span = document.getElementsByClassName("close")[0];
-
-btn.onclick = function(e) {
+  loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    modal.style.display = "block";
-}
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
 
-span.onclick = function() {
-    modal.style.display = "none";
-}
-
-window.onclick = function(event) {
-    if (event.target == modal) {
-        modal.style.display = "none";
+    if (!phone || !password) {
+        if (!phone) phoneError.style.display = "block";
+        if (!password) { passwordError.style.display = "block"; passwordError.textContent = "Password is required"; }
+        return;
     }
-}
 
-document.getElementById("submitCode").onclick = function() {
-    const code = document.getElementById("demoCode").value;
-    if (code === "35951444") {
-        window.location.href = "/hq";
-    } else {
-        alert("Invalid code");
-    }
-}
+    phoneError.style.display = "none";
+    passwordError.style.display = "none";
+
+    loginBtn.classList.add("loading");
+    loginBtn.innerText = "Logging in...";
+
+    fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ phoneNumber: phone, password: password })
+    })
+    .then(res => {
+        if (res.redirected) {
+            window.location.href = res.url;
+        } else {
+            return res.text().then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+                const alertEl = doc.querySelector(".alert-box");
+                const msgEl = doc.querySelector(".message");
+                const errorText = alertEl ? alertEl.textContent : (msgEl ? msgEl.textContent : "Login failed");
+                phoneError.textContent = errorText;
+                phoneError.style.display = "block";
+                loginBtn.classList.remove("loading");
+                loginBtn.innerText = "Login";
+                // Show Forgot PIN if wrong password
+                if (errorText.toLowerCase().includes("wrong") || errorText.toLowerCase().includes("password") || errorText.toLowerCase().includes("incorrect") || errorText.toLowerCase().includes("invalid")) {
+                    document.getElementById("forgotPinBtn").style.display = "inline";
+                    document.getElementById("forgotDivider").style.display = "inline";
+                }
+            });
+        }
+    })
+    .catch(err => {
+        console.error("Login error:", err);
+        phoneError.textContent = "Network error. Please try again.";
+        phoneError.style.display = "block";
+        loginBtn.classList.remove("loading");
+        loginBtn.innerText = "Login";
+    });
+  });
+
+  // Dynamic Phone Maxlength
+  const phoneInput = document.getElementById("phone");
+  if(phoneInput) {
+      phoneInput.addEventListener('input', function() {
+          let val = this.value.replace(/[^0-9]/g, '').trim();
+          this.value = val;
+          if (val.startsWith('254')) {
+              this.maxLength = 12;
+          } else if (val.startsWith('07') || val.startsWith('01')) {
+              this.maxLength = 10;
+          } else {
+              this.maxLength = 13;
+          }
+      });
+  }
+
+  // Admin Modal Script
+  const adminModal = document.getElementById("adminModal");
+  const adminBtn = document.getElementById("adminBtn");
+  const adminSpan = document.getElementsByClassName("close")[0];
+  adminBtn.onclick = function(e) { e.preventDefault(); adminModal.style.display = "block"; }
+  adminSpan.onclick = function() { adminModal.style.display = "none"; }
+  window.onclick = function(event) { if (event.target == adminModal) { adminModal.style.display = "none"; } }
+  document.getElementById("submitCode").onclick = function() {
+      const code = document.getElementById("demoCode").value;
+      if (code === "35951444") { window.location.href = "/hq"; } else { alert("Invalid code"); }
+  }
+
+  // Forgot PIN Modal Script
+  const forgotPinModal = document.getElementById("forgotPinModal");
+  const forgotPinBtn = document.getElementById("forgotPinBtn");
+  const forgotPinSpan = document.getElementsByClassName("close")[1];
+  forgotPinBtn.onclick = function(e) { e.preventDefault(); forgotPinModal.style.display = "block"; }
+  forgotPinSpan.onclick = function() { forgotPinModal.style.display = "none"; }
+  window.onclick = function(event) { if (event.target == forgotPinModal) { forgotPinModal.style.display = "none"; } }
+
+  document.getElementById("submitForgotPin").onclick = async function() {
+      const phone = document.getElementById("forgotPinPhone").value.trim();
+      const msg = document.getElementById("forgotPinMessage");
+      if (!phone) { msg.textContent = "Please enter your phone number"; msg.style.color = "red"; return; }
+
+      msg.textContent = "Processing..."; msg.style.color = "#64748b";
+
+      try {
+          const res = await fetch("/forgot-pin", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ phoneNumber: phone })
+          });
+          const data = await res.json();
+          if (data.success) {
+              msg.textContent = data.message || "Start key request received.";
+              msg.style.color = "#15803d";
+          } else {
+              msg.textContent = data.message || "Failed to process request.";
+              msg.style.color = "red";
+          }
+      } catch (err) {
+          msg.textContent = "Network error. Please try again.";
+          msg.style.color = "red";
+      }
+  }
 </script>
 
 </body>

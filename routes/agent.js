@@ -851,6 +851,73 @@ router.post("/verify-user", async (req, res) => {
   return res.json({ success: false, message: "User not found in registry." });
 });
 
+// POST /agent/deposit-group - Agent deposits money into a group member account
+router.post("/deposit-group", async (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.status(401).json({ success: false, message: "Session expired. Please log in again." });
+  }
+
+  const { groupName, memberPhone, amount, pin } = req.body || {};
+  const amt = parseFloat(amount);
+  if (!groupName || !memberPhone || !amt || amt <= 0 || !pin) {
+    return res.status(400).json({ success: false, message: "Invalid deposit details." });
+  }
+
+  try {
+    let found = null;
+    let foundGroup = null;
+    const general = await getGeneralGroupsFromMongo().catch(() => []);
+    for (const g of general) {
+      const members = g.membersList || g.members || [];
+      const m = members.find(x => x && x.phone && String(x.phone) === String(memberPhone));
+      if (m) { found = m; foundGroup = g; break; }
+    }
+    if (!found || !foundGroup) {
+      for (const g of general) {
+        for (const key in g) {
+          if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+            const mm = g[key];
+            if (mm && typeof mm === "object" && mm.phone && String(mm.phone) === String(memberPhone)) {
+              found = mm; foundGroup = g; break;
+            }
+          }
+        }
+        if (found) break;
+      }
+    }
+    if (!found || !foundGroup) {
+      return res.status(404).json({ success: false, message: "Member not found in that group." });
+    }
+
+    const updated = await updateGroupInMongo(foundGroup.groupName, (group) => {
+      for (const key in group) {
+        if (key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_")) {
+          const mm = group[key];
+          if (mm && typeof mm === "object" && mm.phone && String(mm.phone) === String(memberPhone)) {
+            mm.transactions = Array.isArray(mm.transactions) ? mm.transactions : [];
+            mm.transactions.push({
+              type: "deposit",
+              amount: amt,
+              by: req.session.user.phoneNumber,
+              at: new Date().toISOString()
+            });
+            mm.balance = (parseFloat(mm.balance) || 0) + amt;
+          }
+        }
+      }
+      return group;
+    });
+
+    if (!updated) {
+      return res.status(500).json({ success: false, message: "Could not save deposit." });
+    }
+    return res.json({ success: true, message: "Deposit of KSh " + amt.toFixed(2) + " successful." });
+  } catch (e) {
+    console.error("[AGENT] deposit-group error:", e.message);
+    return res.status(500).json({ success: false, message: "Server error during deposit." });
+  }
+});
+
 // GET /agent/group-form/:groupName - Display group registration form
 router.get("/group-form/:groupName", async (req, res) => {
   if (!req.session || !req.session.user || !req.session.user.phoneNumber) {

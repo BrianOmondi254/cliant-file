@@ -3,7 +3,7 @@ const router = express.Router();
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { Dealer, Agent, normalizePhone, findUserByPhone, saveMessageToMongo } = require("../mongoose");
+const { Dealer, Agent, normalizePhone, findUserByPhone, saveMessageToMongo, findAgentByPhone, findDealerByPhone } = require("../mongoose");
 const regPerfLogger = require("../performance/registration-performance");
 
 // Helper functions
@@ -49,7 +49,7 @@ router.get("/", async (req, res) => {
 
   let dealer = null;
   try {
-    dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
+    dealer = await findDealerByPhone(req.session.user.phoneNumber);
   } catch (dbErr) {
     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
   }
@@ -124,7 +124,7 @@ router.get("/", async (req, res) => {
    const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
    let dealer = null;
    try {
-     dealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+     dealer = await findDealerByPhone(req.session.user.phoneNumber);
    } catch (dbErr) {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
@@ -178,7 +178,7 @@ router.get("/", async (req, res) => {
    const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
    let currentDealer = null;
    try {
-     currentDealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+     currentDealer = await findDealerByPhone(req.session.user.phoneNumber);
    } catch (dbErr) {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
@@ -197,7 +197,7 @@ router.get("/", async (req, res) => {
   // 2. Verify if already an agent or dealer
   let existingAgent = null;
   try {
-    existingAgent = await Agent.findOne({ phoneNumber: normalizePhone(phoneNumber) }).lean();
+    existingAgent = await findAgentByPhone(phoneNumber);
   } catch (dbErr) {
     console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
   }
@@ -206,7 +206,7 @@ router.get("/", async (req, res) => {
   }
   let existingDealer = null;
   try {
-    existingDealer = await Dealer.findOne({ phoneNumber: normalizePhone(phoneNumber) }).lean();
+    existingDealer = await findDealerByPhone(phoneNumber);
   } catch (dbErr) {
     console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
   }
@@ -247,7 +247,7 @@ router.get("/", async (req, res) => {
    const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
    let currentDealer = null;
    try {
-     currentDealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+     currentDealer = await findDealerByPhone(req.session.user.phoneNumber);
    } catch (dbErr) {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
@@ -272,7 +272,7 @@ router.get("/", async (req, res) => {
 
   let existingAgent = null;
   try {
-    existingAgent = await Agent.findOne({ phoneNumber: normalizePhone(phoneNumber) }).lean();
+    existingAgent = await findAgentByPhone(phoneNumber);
   } catch (dbErr) {
     console.error("[DEALER] MongoDB agent lookup error:", dbErr.message);
   }
@@ -344,7 +344,7 @@ router.get("/", async (req, res) => {
    const sessionPhone = normalizePhone(req.session.user.phoneNumber || "");
    let dealer = null;
    try {
-     dealer = await Dealer.findOne({ phoneNumber: sessionPhone }).lean();
+     dealer = await findDealerByPhone(req.session.user.phoneNumber);
    } catch (dbErr) {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
@@ -429,7 +429,7 @@ router.post("/create-pin", async (req, res) => {
   }
 
   try {
-    let currentDealer = await Dealer.findOne({ phoneNumber: targetPhoneNumber }).lean();
+    let currentDealer = await findDealerByPhone(req.session.user.phoneNumber);
 
     if (!currentDealer) {
       console.log(`[dealer-create-pin] Dealer not found in MongoDB, creating new entry`);
@@ -516,7 +516,7 @@ router.post("/create-pin", async (req, res) => {
 
    let dealer = null;
    try {
-     dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
+     dealer = await findDealerByPhone(req.session.user.phoneNumber);
    } catch (dbErr) {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
@@ -567,7 +567,7 @@ router.post("/create-pin", async (req, res) => {
 
    let dealer = null;
    try {
-     dealer = await Dealer.findOne({ phoneNumber: phoneNumber }).lean();
+     dealer = await findDealerByPhone(req.session.user.phoneNumber);
    } catch (dbErr) {
      console.error("[DEALER] MongoDB dealer lookup error:", dbErr.message);
    }
