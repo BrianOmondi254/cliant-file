@@ -1893,6 +1893,8 @@ module.exports = {
   deleteGeneralGroupFromMongo,
   getGeneralGroupsFromMongo,
   findGeneralGroupsByMemberPhone,
+  findGroupNameInMongoGroupsCollection,
+  findGroupNameInGroupsMembersCollection,
   cleanupStaleGroupKeys,
   fixGroupKeyIndex,
   saveTbankSettings,

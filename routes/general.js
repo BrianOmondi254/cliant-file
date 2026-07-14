@@ -7,7 +7,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
-const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, findGeneralGroupsByMemberPhone, Agent, Dealer, normalizePhone } = require("../mongoose");
+const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, findGeneralGroupsByMemberPhone, findGroupNameInMongoGroupsCollection, findGroupNameInGroupsMembersCollection, Agent, Dealer, normalizePhone } = require("../mongoose");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -1884,14 +1884,27 @@ router.get("/group/:groupName", async (req, res) => {
 
   const groupName = decodeURIComponent(req.params.groupName);
 
-  let accounts = readJSON(generalFile, {});
-  if (Array.isArray(accounts)) {
-    accounts = restructureData(accounts);
-    writeJSON(generalFile, accounts);
+  // Look up the group in MongoDB first (same source as the groups list in general_new.ejs)
+  let group = null;
+  try {
+    const mongoHit =
+      (await findGroupNameInMongoGroupsCollection(groupName)) ||
+      (await findGroupNameInGroupsMembersCollection(groupName));
+    if (mongoHit && mongoHit.group) group = mongoHit.group;
+  } catch (mongoErr) {
+    console.error("[general/group] MongoDB lookup error:", mongoErr.message);
   }
 
-  const allGroups = flattenData(accounts);
-  const group = allGroups.find(g => g.groupName === groupName);
+  // Fallback to the legacy JSON general file
+  if (!group) {
+    let accounts = readJSON(generalFile, {});
+    if (Array.isArray(accounts)) {
+      accounts = restructureData(accounts);
+      writeJSON(generalFile, accounts);
+    }
+    const allGroups = flattenData(accounts);
+    group = allGroups.find(g => g.groupName === groupName);
+  }
 
   if (!group) {
     return res.redirect("/general");

@@ -9,6 +9,8 @@ const {
   getMemberGroupFromMongo,
   saveMemberDataToMongo,
   findOrCreateMemberGroup,
+  findGroupNameInMongoGroupsCollection,
+  findGroupNameInGroupsMembersCollection,
   MemberGroup,
   ensureMongoReady,
   deletePendingOfficerMessage,
@@ -54,6 +56,48 @@ const getRegionTransaction = async () => {
   // Fallback to JSON file
   const memberData = readJSON(memberRegionsFile, {});
   return memberData.regions?.regionTransaction || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
+};
+
+// Normalize a MongoDB group doc into the member.json shape the views expect.
+// Handles both the regional groups-members format (already has a `members` map
+// keyed by phone) and the flattened `groups` collection format (trustee_/official_/member_ keys).
+const normalizeMongoGroupForMember = (mongoGroup) => {
+  const group = { ...mongoGroup };
+  const hasMembersMap = group.members && typeof group.members === 'object' && !Array.isArray(group.members);
+  if (!hasMembersMap) {
+    const members = {};
+    for (const key of Object.keys(group)) {
+      if (/^(trustee_|official_|member_)/.test(key)) {
+        const item = group[key];
+        if (item && (item.phone || item.memberId)) {
+          const phone = String(item.phone || item.memberId);
+          members[phone] = item;
+        }
+      }
+    }
+    group.members = members;
+  }
+  return group;
+};
+
+// Resolve a group for the contribution/loan/membership routes from MongoDB only.
+// (Legacy member.json fallback removed for security — those groups are deleted.)
+const findGroupForMemberRoutes = async (groupName) => {
+  try {
+    const hit =
+      (await findGroupNameInGroupsMembersCollection(groupName)) ||
+      (await findGroupNameInMongoGroupsCollection(groupName));
+    if (hit && hit.group) {
+      const g = normalizeMongoGroupForMember(hit.group);
+      return {
+        foundGroup: g,
+        foundKey: g.accountNumber || g.groupId || g.groupName || ''
+      };
+    }
+  } catch (e) {
+    console.error('[member] MongoDB group lookup error:', e.message);
+  }
+  return { foundGroup: null, foundKey: null };
 };
 
 const writeJSON = (file, data) => {
@@ -1699,34 +1743,23 @@ router.post("/process-deduction", (req, res) => {
   res.json({ success: true, message: `Processed ${transactionCount} deductions`, processed: transactionCount });
 });
 
-router.get("/contribution", (req, res) => {
+router.get("/contribution", async (req, res) => {
   const { groupName, memberPhone: queryPhone } = req.query;
-  
+
   if (!groupName) {
     return res.redirect("/");
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.groups || Object.keys(data.groups).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
-  }
-  
-  // Find group by groupName
+
   let foundGroup = null;
   let foundKey = null;
-  for (const key in data.groups) {
-    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
-      foundGroup = data.groups[key];
-      foundKey = key;
-      break;
-    }
-  }
-  
+  const mongoResult = await findGroupForMemberRoutes(groupName);
+  foundGroup = mongoResult.foundGroup;
+  foundKey = mongoResult.foundKey;
+
   if (!foundGroup) {
     return res.status(404).send("Group not found");
   }
-  
+
   // Get constitution creation date for round calculation
   const constitutionCreated = foundGroup.constitutionKeyGeneratedAt || foundGroup.constitutionKeySetByAgentAt || foundGroup.createdAt || new Date().toISOString();
   const now = new Date();
@@ -1799,29 +1832,19 @@ router.get("/contribution", (req, res) => {
   });
 });
 
-router.get("/loan", (req, res) => {
+router.get("/loan", async (req, res) => {
   const { groupName, memberPhone: queryPhone } = req.query;
-  
+
   if (!groupName) {
     return res.redirect("/");
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.groups || Object.keys(data.groups).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
-  }
-  
+
   let foundGroup = null;
   let foundKey = null;
-  for (const key in data.groups) {
-    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
-      foundGroup = data.groups[key];
-      foundKey = key;
-      break;
-    }
-  }
-  
+  const mongoResult = await findGroupForMemberRoutes(groupName);
+  foundGroup = mongoResult.foundGroup;
+  foundKey = mongoResult.foundKey;
+
   if (!foundGroup) {
     return res.status(404).send("Group not found");
   }
@@ -1860,29 +1883,19 @@ router.get("/loan", (req, res) => {
   });
 });
 
-router.get("/membership", (req, res) => {
+router.get("/membership", async (req, res) => {
   const { groupName, memberPhone: queryPhone } = req.query;
-  
+
   if (!groupName) {
     return res.redirect("/");
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.groups || Object.keys(data.groups).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
-  }
-  
+
   let foundGroup = null;
   let foundKey = null;
-  for (const key in data.groups) {
-    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
-      foundGroup = data.groups[key];
-      foundKey = key;
-      break;
-    }
-  }
-  
+  const mongoResult = await findGroupForMemberRoutes(groupName);
+  foundGroup = mongoResult.foundGroup;
+  foundKey = mongoResult.foundKey;
+
   if (!foundGroup) {
     return res.status(404).send("Group not found");
   }
@@ -2098,27 +2111,17 @@ router.get("/gloan", (req, res) => {
   });
 });
 
-router.get("/gcon", (req, res) => {
+router.get("/gcon", async (req, res) => {
   const { groupName } = req.query;
-  
+
   if (!groupName) {
     return res.redirect("/");
   }
-  
-  let data = readJSON(memberFile, defaultMemberStructure());
-  if (!data.groups || Object.keys(data.groups).length === 0) {
-    syncFromGeneral();
-    data = readJSON(memberFile, defaultMemberStructure());
-  }
-  
+
   let foundGroup = null;
-  for (const key in data.groups) {
-    if (data.groups[key].groupName && data.groups[key].groupName.trim() === groupName.trim()) {
-      foundGroup = data.groups[key];
-      break;
-    }
-  }
-  
+  const mongoResult = await findGroupForMemberRoutes(groupName);
+  foundGroup = mongoResult.foundGroup;
+
   if (!foundGroup) {
     return res.status(404).send("Group not found");
   }
