@@ -1519,7 +1519,7 @@ const app = {
                 groups.forEach(g => {
                     const phase     = parseInt(g.phase);
                     const isActive  = phase === 3;
-                    const phaseLabel = isActive ? 'Active' : `Phase ${g.phase || 'N/A'}`;
+                    const phaseLabel = phase === 1 ? 'New' : (phase === 2 ? 'Pending' : (isActive ? 'Active' : `Phase ${g.phase || 'N/A'}`));
                     const phaseColor = isActive ? '#16a34a' : '#64748b';
                     const phaseBg   = isActive ? '#dcfce7' : '#f1f5f9';
                     const hasBalance = g.myBalance !== undefined && g.myBalance !== null && g.myBalance !== '';
@@ -1770,7 +1770,7 @@ const app = {
         if (groups.length > 0) {
             groups.forEach(g => {
                 const phase = parseInt(g.phase);
-                const phaseLabel = phase === 3 ? 'Active' : `Phase ${g.phase || 'N/A'}`;
+                const phaseLabel = phase === 1 ? 'New' : (phase === 2 ? 'Pending' : (phase === 3 ? 'Active' : `Phase ${g.phase || 'N/A'}`));
                 const phaseColor = phase === 3 ? '#16a34a' : '#64748b';
                 const phaseBg = phase === 3 ? '#dcfce7' : '#f1f5f9';
                 const hasBalance = g.myBalance !== undefined && g.myBalance !== null && g.myBalance !== '';
@@ -1823,8 +1823,57 @@ const app = {
         const groups = this.data.userGroups || [];
         const g = groups.find(item => item.groupName === groupName);
         if (!g) return;
-        const u = this.data.user;
         const container = document.getElementById('mainContainer');
+        const phase = parseInt(g.phase);
+        if (phase === 1 || phase === 2) {
+            const agentName  = g.assignedAgentName  || 'System Agent';
+            const agentPhone = g.assignedAgentPhone || 'N/A';
+            if (phase === 1) {
+                container.innerHTML = `
+                <div style="padding:14px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <button onclick="app.renderPersonalView(document.getElementById('mainContainer'))" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div>
+                            <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;">${g.groupName}</h3>
+                            <small style="color:#64748b;font-size:11px;">Phase ${g.phase || 'N/A'} • New Request</small>
+                        </div>
+                    </div>
+                    <div style="background:#eff6ff;border:1px solid #dbeafe;border-radius:16px;padding:25px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.05);">
+                        <i class="fas fa-plus-circle" style="font-size:48px;color:#3b82f6;margin-bottom:18px;"></i>
+                        <h4 style="color:#1e40af;margin:0 0 12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:15px;">New Request Application</h4>
+                        <p style="color:#1e40af;font-size:13px;line-height:1.6;margin:0;">
+                            This group is still in active request phase. Please wait for agent
+                            <strong>${agentName}</strong> (${agentPhone}) to update the group members.
+                        </p>
+                    </div>
+                </div>`;
+            } else {
+                container.innerHTML = `
+                <div style="padding:14px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                        <button onclick="app.renderPersonalView(document.getElementById('mainContainer'))" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div>
+                            <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;">${g.groupName}</h3>
+                            <small style="color:#64748b;font-size:11px;">Phase ${g.phase || 'N/A'} • Pending</small>
+                        </div>
+                    </div>
+                    <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:16px;padding:25px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.05);">
+                        <i class="fas fa-hourglass-half" style="font-size:48px;color:#f59e0b;margin-bottom:18px;"></i>
+                        <h4 style="color:#92400e;margin:0 0 12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:15px;">Account Processing</h4>
+                        <p style="color:#92400e;font-size:13px;line-height:1.6;margin:0;">
+                            This group account is pending and awaits group constitution setup by agent
+                            <strong>${agentName}</strong> (${agentPhone}).
+                        </p>
+                    </div>
+                </div>`;
+            }
+            return;
+        }
+        const u = this.data.user;
         let html = `
         <div style="padding:14px;">
             <!-- BACK BUTTON & TITLE -->

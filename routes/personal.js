@@ -198,6 +198,30 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
     const db = require('mongoose').connection.db;
     if (!db) return [];
 
+    let agentList = [];
+    try {
+      agentList = await db.collection('agents').find({}).toArray();
+    } catch (agentErr) {
+      console.error('[getGroupsForMemberFromGroupsCollection] agents fetch error:', agentErr.message);
+    }
+
+    const resolveAssignedAgent = (county, constituency) => {
+      let name = "";
+      let phone = "";
+      const matched = agentList.find(a =>
+        String(a.county || '').trim().toLowerCase() === String(county || '').trim().toLowerCase() &&
+        String(a.constituency || '').trim().toLowerCase() === String(constituency || '').trim().toLowerCase()
+      );
+      if (matched) {
+        name = matched.name || "To be assigned";
+        phone = matched.phoneNumber || "N/A";
+      }
+      return {
+        assignedAgentName: name || "To be assigned",
+        assignedAgentPhone: phone || "N/A"
+      };
+    };
+
     const docs = await db.collection('groups').find({}).toArray();
     const groups = [];
 
@@ -232,6 +256,7 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 totalMembers: Object.keys(members).length,
                 messages: Array.isArray(doc.messages) ? doc.messages : [],
                 constitutionStartKey: doc.constitutionStartKey,
+                ...resolveAssignedAgent(doc.county, doc.constituency),
                 source: 'groups'
             });
             continue;
@@ -265,6 +290,7 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 totalMembers: doc.members.length,
                 messages: Array.isArray(doc.messages) ? doc.messages : [],
                 constitutionStartKey: doc.constitutionStartKey,
+                ...resolveAssignedAgent(doc.county, doc.constituency),
                 source: 'groups'
             });
             continue;
@@ -299,6 +325,7 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 totalMembers: Object.keys(doc).filter(k => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')).length,
                 messages: Array.isArray(doc.messages) ? doc.messages : [],
                 constitutionStartKey: doc.constitutionStartKey,
+                ...resolveAssignedAgent(doc.county, doc.constituency),
                 source: 'groups'
             });
             continue;
@@ -339,6 +366,7 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                             roleTitle: (roleInfo && (roleInfo.member.title || roleInfo.member.type)) || (isChairperson ? 'Chairperson' : ''),
                             memberNumber: (roleInfo && roleInfo.member.memberNumber) || '',
                             memberId: (roleInfo && roleInfo.member.phone) || item.phone || item.chairpersonalphonenumber || '',
+                            ...resolveAssignedAgent(item.county || countyName, item.constituency || consName),
                             source: 'groups'
                         });
                     }
@@ -382,6 +410,7 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                         roleTitle: (roleInfo && (roleInfo.member.title || roleInfo.member.type)) || (isChairperson ? 'Chairperson' : ''),
                         memberNumber: (roleInfo && roleInfo.member.memberNumber) || '',
                         memberId: (roleInfo && roleInfo.member.phone) || item.phone || item.chairpersonalphonenumber || '',
+                        ...resolveAssignedAgent(item.county || doc.county, item.constituency || key),
                         source: 'groups'
                     });
                 }
