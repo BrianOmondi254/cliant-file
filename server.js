@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+const cors = require("cors");
 const {
   connectDB,
   Dealer,
@@ -64,6 +65,14 @@ app.locals.pendingAdminPasskeys = new Map();
 /* ================= GLOBAL MIDDLEWARE ================= */
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+/* ================= CORS ================= */
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 
 /* 🛡️ Disable Caching to ensure Logout prevents 'Back' button access */
 app.use((req, res, next) => {

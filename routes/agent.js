@@ -731,7 +731,7 @@ router.post("/activate-group", async (req, res) => {
 
   const groupName = displayName;
   const existingGroup = await findGroupByNameInMongo(groupName);
-  const oldPhase = existingGroup ? (existingGroup.phase || 1) : 1;
+  const oldPhase = existingGroup ? (Number(existingGroup.phase) || 1) : 1;
 
   const group = {
     groupName,
@@ -740,7 +740,7 @@ router.post("/activate-group", async (req, res) => {
     pin: constitutionStartKey || '',
     createdAt: existingGroup ? (existingGroup.createdAt || new Date().toISOString()) : (createdAt || new Date().toISOString()),
     agentProcessed: agentProcessed || agentPhone || 'n/a',
-    phase: phase || 2,
+    phase: Number(phase) || 2,
     totalProposedMembers: totalMembers || 0,
     county,
     constituency,

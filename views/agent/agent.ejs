@@ -1,4 +1,4 @@
-html_code = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -737,12 +737,12 @@ html_code = '''<!DOCTYPE html>
                       </div>
                       <div class="ward-groups">
                         <% groupsInWard.forEach(g => {
-                             let statusClass = "status-active";
-                             let statusText = "Active";
-                             if (g.phase === 1) { statusClass = "status-new"; statusText = "New Request"; }
-                             else if (g.phase === 2) { statusClass = "status-pending"; statusText = "Pending Approval"; }
-                             else if (g.phase === 3) { statusClass = "status-active"; statusText = "Active"; }
-                             else { statusClass = "status-unknown"; statusText = "Unknown"; }
+                              let statusClass = "status-active";
+                              let statusText = "Active";
+                              if (g.phase == 1) { statusClass = "status-new"; statusText = "New Request"; }
+                              else if (g.phase == 2) { statusClass = "status-pending"; statusText = "Pending Approval"; }
+                              else if (g.phase == 3) { statusClass = "status-active"; statusText = "Active"; }
+                              else { statusClass = "status-unknown"; statusText = "Unknown"; }
                         %>
                           <div class="group-item" onclick="handleGroupClick('<%= g.groupName %>')">
                             <div style="flex:1; min-width:0;">

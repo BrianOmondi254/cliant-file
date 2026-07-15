@@ -1,0 +1,14 @@
+{
+  "appId": "com.cliant.mobile",
+  "appName": "Cliant",
+  "webDir": "public",
+  "server": {
+    "url": "https://tbank-8sid.onrender.com",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

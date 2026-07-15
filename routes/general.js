@@ -7,7 +7,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
-const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, findGeneralGroupsByMemberPhone, findGroupNameInMongoGroupsCollection, findGroupNameInGroupsMembersCollection, Agent, Dealer, normalizePhone } = require("../mongoose");
+const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, ensureMongoReady, findGeneralGroupsByMemberPhone, findGroupNameInMongoGroupsCollection, findGroupNameInGroupsMembersCollection, Agent, Dealer, normalizePhone } = require("../mongoose");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -274,7 +274,15 @@ const syncFromGeneral = () => {
 /* 🔒 Auth middleware for protected routes */
 router.use((req, res, next) => {
   if (!req.session || !req.session.user) {
-    return res.redirect("/login");
+    // Page navigations (GET) are redirected to login; API calls get JSON so
+    // the client doesn't receive an HTML login page masquerading as a response.
+    if (req.method === "GET") {
+      return res.redirect("/login");
+    }
+    return res.status(401).json({
+      success: false,
+      message: "Session expired or unauthorized. Please log in again.",
+    });
   }
   next();
 });
@@ -999,124 +1007,344 @@ router.post("/update-members", async (req, res) => {
   });
 });
 
-// ✅ Save Group Principles (financial rules set by Trustee)
-router.post("/set-principles", (req, res) => {
-  const { groupName, principles } = req.body;
-  if (!groupName || !principles) return res.json({ success: false, message: "Missing data" });
+const buildAccountTemplates = (principles, principlesSetAt) => {
+  const intervals = principles?.intervals || {};
+  const frequency = intervals.frequency || '';
+  const endSavingPeriod = intervals.endSavingPeriod || '1-year';
+  const startDate = new Date(principlesSetAt || new Date().toISOString());
+  const endDate = new Date(startDate);
 
-  let accounts = readJSON(generalFile, {});
-  if (Array.isArray(accounts)) accounts = restructureData(accounts);
+  if (endSavingPeriod === '6-months') endDate.setMonth(endDate.getMonth() + 6);
+  else if (endSavingPeriod === '1-year') endDate.setFullYear(endDate.getFullYear() + 1);
+  else if (endSavingPeriod === '2-years') endDate.setFullYear(endDate.getFullYear() + 2);
+  else if (endSavingPeriod === '3-years') endDate.setFullYear(endDate.getFullYear() + 3);
+  else if (endSavingPeriod === '4-years') endDate.setFullYear(endDate.getFullYear() + 4);
+  else if (endSavingPeriod === '5-years') endDate.setFullYear(endDate.getFullYear() + 5);
 
-  let targetGroup = null;
-  let locationPath = null;
+  const formatDate = (d) => d.toISOString().split('T')[0];
 
-  outer: for (const c in accounts) {
-    for (const consti in accounts[c]) {
-      const list = accounts[c][consti];
-      if (Array.isArray(list)) {
-        let currentWard = "Unknown Ward";
-        for (let i = 0; i < list.length; i++) {
-          const item = list[i];
-          if (typeof item === 'string') {
-            currentWard = item;
-          } else if (typeof item === 'object' && item !== null && item.groupName === groupName) {
-            targetGroup = item;
-            locationPath = { c, consti, idx: i, w: currentWard };
-            break outer;
-          }
-        }
-      }
-    }
-  }
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const diffDays = Math.floor((endDate - startDate) / msPerDay);
+  let totalRounds = 0;
+  if (frequency === 'daily') totalRounds = Math.floor(diffDays) + 1;
+  else if (frequency === 'weekly') totalRounds = Math.floor(diffDays / 7) + 1;
+  else if (frequency === 'monthly') {
+    const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+    totalRounds = months;
+  } else if (frequency === 'yearly') totalRounds = (endDate.getFullYear() - startDate.getFullYear()) + 1;
 
-  if (!targetGroup) return res.json({ success: false, message: "Group not found" });
-
-  const locationsFile = path.join(__dirname, "../locations.json");
-  const locationsData = readJSON(locationsFile, {});
-  
-  let countyIdx = 0;
-  let globalConstiIdx = 0;
-  let globalWardIdx = 0;
-  
-  let foundCounty = false, foundConsti = false, foundWard = false;
-  
-  const counties = Object.keys(locationsData);
-  for (let c = 0; c < counties.length; c++) {
-    const cName = counties[c];
-    if (!foundCounty) countyIdx++;
-    if (cName === locationPath.c) foundCounty = true;
-    
-    const constituencies = Object.keys(locationsData[cName]);
-    for (let cn = 0; cn < constituencies.length; cn++) {
-      const cnName = constituencies[cn];
-      if (!foundConsti) globalConstiIdx++;
-      if (cName === locationPath.c && cnName === locationPath.consti) foundConsti = true;
-      
-      const wardObj = locationsData[cName][cnName];
-      const wards = Array.isArray(wardObj) ? wardObj : (wardObj.wards || []);
-      for (let w = 0; w < wards.length; w++) {
-        const wName = wards[w];
-        if (!foundWard) globalWardIdx++;
-        if (cName === locationPath.c && cnName === locationPath.consti && wName === locationPath.w) foundWard = true;
-      }
-    }
-  }
-
-  const accountNumber = "254" + 
-                       countyIdx.toString().padStart(3, '0') + 
-                       globalConstiIdx.toString().padStart(3, '0') + 
-                       globalWardIdx.toString().padStart(4, '0') + 
-                       (locationPath.idx + 1).toString().padStart(3, '0');
-
-  // Check for phase graduation (Set Principles graduates group to Phase 3)
-  if (targetGroup.phase !== 3) {
-      perfLogger.logActivity(locationPath.c, locationPath.consti, locationPath.w, 3, true, targetGroup.phase);
-  }
-
-  accounts[locationPath.c][locationPath.consti][locationPath.idx].principles = principles;
-  accounts[locationPath.c][locationPath.consti][locationPath.idx].principlesSetAt = new Date().toISOString();
-  accounts[locationPath.c][locationPath.consti][locationPath.idx].phase = 3;
-  accounts[locationPath.c][locationPath.consti][locationPath.idx].accountNumber = accountNumber;
-  accounts[locationPath.c][locationPath.consti][locationPath.idx].pin = targetGroup.constitutionStartKey || null;
-
-  writeJSON(generalFile, accounts);
-
-  // Also save to MongoDB groups collection
-  const groupForMongo = {
-    ...accounts[locationPath.c][locationPath.consti][locationPath.idx],
-    county: locationPath.c,
-    constituency: locationPath.consti,
-    ward: locationPath.w,
-    principles: principles,
-    principlesSetAt: new Date().toISOString(),
-    phase: 3,
-    accountNumber: accountNumber,
-    pin: targetGroup.constitutionStartKey || null
-  };
-  saveGeneralGroupToMongo(groupForMongo).catch(e => console.error('[general/set-principles] MongoDB save error:', e.message));
-
-  // Send notification to chairperson about constitution key being set
-  const chairpersonPhone = targetGroup.phone || targetGroup.trustee_1?.phone;
-  if (chairpersonPhone && targetGroup.constitutionStartKey) {
-    notification.processMessage(targetGroup.groupName, {
-      to: chairpersonPhone,
-      type: "security_alert",
-      title: "Constitution Key",
-      key: targetGroup.constitutionStartKey,
-      content: `Constitution Start Key: ${targetGroup.constitutionStartKey}`
+  const contribMap = {};
+  if (principles?.otherContributions && Array.isArray(principles.otherContributions)) {
+    principles.otherContributions.forEach(c => {
+      contribMap[c.accountNumber] = c.expectedAmount;
     });
   }
 
-  const totalMembers = Object.keys(targetGroup).filter(k => 
-    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-  ).length;
+  const defaultAccts = {
+    "001": { accountId: "001", accountName: "Saving" },
+    "002": { accountId: "002", accountName: "Registration" },
+    "003": { accountId: "003", accountName: "latenes" },
+    "004": { accountId: "004", accountName: "welfare" }
+  };
 
-  res.json({ 
-    success: true, 
-    accountNumber, 
-    groupName: targetGroup.groupName,
-    totalMembers 
+  const accountDefs = (principles?.otherContributions && principles.otherContributions.length > 0)
+    ? principles.otherContributions
+    : Object.values(defaultAccts);
+
+  const templates = {};
+  accountDefs.forEach(acc => {
+    const accountId = acc.accountNumber || acc.accountId;
+    const accountName = acc.accountName;
+    const expectedAmount = acc.expectedAmount || contribMap[accountId] || "100";
+
+    const rounds = [];
+    let current = new Date(startDate);
+    for (let i = 1; i <= totalRounds; i++) {
+      const roundDate = formatDate(current);
+      rounds.push({
+        roundNumber: i,
+        scheduledDate: roundDate,
+        status: 'pending',
+        amount: parseFloat(expectedAmount),
+        contributingMembers: []
+      });
+
+      if (frequency === 'daily') current.setDate(current.getDate() + 1);
+      else if (frequency === 'weekly') current.setDate(current.getDate() + 7);
+      else if (frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+      else if (frequency === 'yearly') current.setFullYear(current.getFullYear() + 1);
+    }
+
+    templates[accountId] = {
+      accountId: accountId,
+      accountName: accountName,
+      expectedAmount: expectedAmount,
+      financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
+      transactionHistory: [],
+      dateIntervalCycle: {
+        frequency,
+        period: frequency === 'weekly' ? (intervals.period || '') : frequency === 'monthly' ? (intervals.dayOfWeek || intervals.period || '') : frequency === 'yearly' ? (intervals.month || '') : '',
+        weekOfMonth: intervals.weekOfMonth || '',
+        month: intervals.month || '',
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate),
+        totalRounds: totalRounds,
+        expectedAmountPerRound: expectedAmount,
+        totalExpectedAmount: (parseFloat(expectedAmount) * totalRounds).toString(),
+        rounds: rounds
+      }
+    };
   });
+
+  return templates;
+};
+
+const initializeGroupMembersInMongo = async (targetGroup, principles, county, constituency, ward, accountNumber) => {
+  const ready = await ensureMongoReady();
+  if (!ready) throw new Error('MongoDB not connected');
+
+  const mongoose = require('mongoose');
+  const db = mongoose.connection.db;
+  if (!db) throw new Error('MongoDB database unavailable');
+
+  const members = {};
+  for (const key of Object.keys(targetGroup)) {
+    if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+      const item = targetGroup[key];
+      if (item && (item.phone || item.memberId)) {
+        const phone = String(item.phone || item.memberId);
+        const name = item.name || item.title || key.replace(/_/g, ' ').replace(/(\d+)/, '#$1');
+        members[phone] = {
+          memberId: phone,
+          name: name,
+          memberFinancials: {
+            openingBalance: 0,
+            amountIn: 0,
+            amountOut: 0,
+            closingBalance: 0
+          },
+          accounts: buildAccountTemplates(principles, targetGroup.principlesSetAt)
+        };
+      }
+    }
+  }
+
+  const accountSchema = {};
+  const templates = members[Object.keys(members)[0]]?.accounts || buildAccountTemplates(principles, targetGroup.principlesSetAt);
+  Object.keys(templates).forEach(id => {
+    accountSchema[id] = {
+      accountId: templates[id].accountId,
+      accountName: templates[id].accountName,
+      expectedAmount: templates[id].expectedAmount
+    };
+  });
+
+  const groupFinancials = {
+    totalOpeningBalance: 0,
+    totalAmountIn: 0,
+    totalAmountOut: 0,
+    totalClosingBalance: 0,
+    availableWithdrawalBalance: 0
+  };
+
+  const regionalMembers = {};
+  for (const [phone, member] of Object.entries(members)) {
+    regionalMembers[phone] = member;
+  }
+
+  const groupDoc = {
+    groupName: targetGroup.groupName,
+    groupNumber: targetGroup.groupNumber || 0,
+    groupId: accountNumber || targetGroup.accountNumber || '',
+    county,
+    constituency,
+    ward,
+    accountNumber: accountNumber || targetGroup.accountNumber || '',
+    principles: principles || targetGroup.principles || {},
+    principlesSetAt: targetGroup.principlesSetAt || new Date().toISOString(),
+    members: regionalMembers,
+    groupFinancials,
+    accountSchema,
+    createdAt: targetGroup.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const col = db.collection('groups-members');
+
+  const countyDoc = await col.findOne({ county });
+  if (!countyDoc) {
+    await col.insertOne({
+      county,
+      countyId: String(county).toLowerCase().replace(/\s+/g, '-'),
+      countryTransaction: {},
+      constituencies: [
+        {
+          name: constituency,
+          wards: [
+            {
+              name: ward,
+              data: [groupDoc]
+            }
+          ]
+        }
+      ],
+      syncedAt: new Date().toISOString()
+    });
+    return;
+  }
+
+  const normalizeLoc = (val) => String(val || "").trim().toLowerCase();
+
+  let constituencyIdx = countyDoc.constituencies?.findIndex(c => normalizeLoc(c.name) === normalizeLoc(constituency)) ?? -1;
+  if (constituencyIdx === -1) {
+    countyDoc.constituencies = countyDoc.constituencies || [];
+    countyDoc.constituencies.push({
+      name: constituency,
+      wards: [{ name: ward, data: [groupDoc] }]
+    });
+    await col.updateOne({ county }, { $set: { constituencies: countyDoc.constituencies, syncedAt: new Date().toISOString() } });
+    return;
+  }
+
+  const constituencyDoc = countyDoc.constituencies[constituencyIdx];
+  let wardIdx = constituencyDoc.wards?.findIndex(w => normalizeLoc(w.name) === normalizeLoc(ward)) ?? -1;
+  if (wardIdx === -1) {
+    constituencyDoc.wards = constituencyDoc.wards || [];
+    constituencyDoc.wards.push({ name: ward, data: [groupDoc] });
+  } else {
+    const existingGroupIdx = constituencyDoc.wards[wardIdx].data?.findIndex(g => normalizeLoc(g.groupName) === normalizeLoc(targetGroup.groupName)) ?? -1;
+    if (existingGroupIdx !== -1) {
+      constituencyDoc.wards[wardIdx].data[existingGroupIdx] = {
+        ...constituencyDoc.wards[wardIdx].data[existingGroupIdx],
+        ...groupDoc
+      };
+    } else {
+      constituencyDoc.wards[wardIdx].data = constituencyDoc.wards[wardIdx].data || [];
+      constituencyDoc.wards[wardIdx].data.push(groupDoc);
+    }
+  }
+
+  await col.updateOne(
+    { county, 'constituencies.name': constituencyDoc.name },
+    { $set: { constituencies: countyDoc.constituencies, syncedAt: new Date().toISOString() } }
+  );
+};
+
+// ✅ Save Group Principles (financial rules set by Trustee)
+router.post("/set-principles", async (req, res) => {
+  try {
+    const { groupName, principles } = req.body;
+    if (!groupName || !principles) return res.json({ success: false, message: "Missing data" });
+
+    const mongoResult = await findGroupNameInMongoGroupsCollection(groupName);
+    if (!mongoResult) {
+      return res.json({ success: false, message: "Group not found in database" });
+    }
+
+    const targetGroup = mongoResult.group;
+    const { county, constituency, ward } = mongoResult;
+
+    const locationsFile = path.join(__dirname, "../locations.json");
+    const locationsData = readJSON(locationsFile, {});
+
+    let countyIdx = 0;
+    let globalConstiIdx = 0;
+    let globalWardIdx = 0;
+
+    let foundCounty = false, foundConsti = false, foundWard = false;
+
+    const counties = Object.keys(locationsData);
+    for (let c = 0; c < counties.length; c++) {
+      const cName = counties[c];
+      if (!foundCounty) countyIdx++;
+      if (cName === county) foundCounty = true;
+
+      const constituencies = Object.keys(locationsData[cName]);
+      for (let cn = 0; cn < constituencies.length; cn++) {
+        const cnName = constituencies[cn];
+        if (!foundConsti) globalConstiIdx++;
+        if (cName === county && cnName === constituency) foundConsti = true;
+
+        const wardObj = locationsData[cName][cnName];
+        const wards = Array.isArray(wardObj) ? wardObj : (wardObj.wards || []);
+        for (let w = 0; w < wards.length; w++) {
+          const wName = wards[w];
+          if (!foundWard) globalWardIdx++;
+          if (cName === county && cnName === constituency && wName === ward) foundWard = true;
+        }
+      }
+    }
+
+    let groupIdx = 0;
+    if (mongoose.connection.readyState === 1) {
+      const db = mongoose.connection.db;
+      if (db) {
+        const countyDoc = await db.collection("groups").findOne({ county });
+        if (countyDoc && Array.isArray(countyDoc[constituency])) {
+          const foundIdx = countyDoc[constituency].findIndex(
+            (item) => typeof item === "object" && item !== null && item.groupName === groupName
+          );
+          if (foundIdx !== -1) groupIdx = foundIdx;
+        }
+      }
+    }
+
+    const accountNumber =
+      "254" +
+      countyIdx.toString().padStart(3, "0") +
+      globalConstiIdx.toString().padStart(3, "0") +
+      globalWardIdx.toString().padStart(4, "0") +
+      (groupIdx + 1).toString().padStart(3, "0");
+
+    if (targetGroup.phase !== 3) {
+      perfLogger.logActivity(county, constituency, ward, 3, true, targetGroup.phase);
+    }
+
+    const updatedGroup = {
+      ...targetGroup,
+      principles,
+      principlesSetAt: new Date().toISOString(),
+      phase: 3,
+      accountNumber,
+      pin: targetGroup.constitutionStartKey || null,
+    };
+
+    await saveGeneralGroupToMongo(updatedGroup);
+
+    const chairpersonPhone = targetGroup.phone || targetGroup.trustee_1?.phone;
+    if (chairpersonPhone && targetGroup.constitutionStartKey) {
+      notification.processMessage(targetGroup.groupName, {
+        to: chairpersonPhone,
+        type: "security_alert",
+        title: "Constitution Key",
+        key: targetGroup.constitutionStartKey,
+        content: `Constitution Start Key: ${targetGroup.constitutionStartKey}`,
+      });
+    }
+
+    const totalMembers = Object.keys(targetGroup).filter(
+      (k) => k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
+    ).length;
+
+    let membersInitError = null;
+    try {
+      await initializeGroupMembersInMongo(updatedGroup, principles, county, constituency, ward, accountNumber);
+    } catch (memberErr) {
+      console.error('[set-principles] Member initialization error:', memberErr.message);
+      membersInitError = memberErr.message;
+    }
+
+    res.json({
+      success: true,
+      accountNumber,
+      groupName: targetGroup.groupName,
+      totalMembers,
+      membersInitError,
+    });
+  } catch (err) {
+    console.error('[set-principles] Error:', err.message);
+    res.status(500).json({ success: false, message: "Server error: " + err.message });
+  }
 });
 
 // JSON endpoints for client-side consumption

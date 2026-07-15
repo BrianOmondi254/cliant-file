@@ -811,8 +811,9 @@
         </div>
         <div class="nav-row">
           <button class="btn btn-back" onclick="prevStep(7)"><i class="fas fa-arrow-left"></i> Back</button>
-          <button class="btn btn-activate" onclick="savePrinciples()">
-            <i class="fas fa-check-double"></i> Activate Principles
+          <button id="activatePrinciplesBtn" class="btn btn-activate" onclick="savePrinciples()">
+            <i id="activatePrinciplesIcon" class="fas fa-check-double"></i>
+            <span id="activatePrinciplesText">Activate Principles</span>
           </button>
         </div>
       </div>
@@ -822,6 +823,16 @@
 </div><!-- end .container -->
  
 <script>
+  /* ─── API Base URL ───
+     Use the page's own origin so the session cookie is sent with the request.
+     If the WebView is served from a non-HTTP scheme (e.g. capacitor://localhost),
+     fall back to the deployed server so the request still reaches an API. For
+     cookie auth to work, the WebView should load from the same origin as the API
+     (see capacitor.config.json server.url). */
+  const API_BASE = /^https?:\/\//.test(window.location.origin)
+    ? window.location.origin
+    : 'https://tbank-8sid.onrender.com';
+  
   /* ─── Data store for confirmed notifications ─── */
   const confirmedSteps = {};
  
@@ -1432,8 +1443,27 @@
     document.getElementById('reviewContentArea').innerHTML = html;
   }
  
+  /* ─── Activate button spinner ─── */
+  function showActivateSpinner() {
+    const btn  = document.getElementById('activatePrinciplesBtn');
+    const icon = document.getElementById('activatePrinciplesIcon');
+    const text = document.getElementById('activatePrinciplesText');
+    if (btn)  { btn.disabled = true; btn.style.opacity = '0.85'; btn.style.cursor = 'wait'; }
+    if (icon) { icon.className = 'fas fa-spinner fa-spin'; }
+    if (text) { text.textContent = 'Activating…'; }
+  }
+
+  function hideActivateSpinner() {
+    const btn  = document.getElementById('activatePrinciplesBtn');
+    const icon = document.getElementById('activatePrinciplesIcon');
+    const text = document.getElementById('activatePrinciplesText');
+    if (btn)  { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    if (icon) { icon.className = 'fas fa-check-double'; }
+    if (text) { text.textContent = 'Activate Principles'; }
+  }
+
   /* ─── Save / Submit ─── */
-  function savePrinciples() {
+  async function savePrinciples() {
     const accounts = window.confirmedAccounts || [];
     const principles = {
       otherContributions: accounts,
@@ -1488,7 +1518,7 @@
       },
       confirmedStepNotifications: confirmedSteps
     };
- 
+  
     if (val('loanCategory') === 'long') {
       principles.loans.longTerm = {
         paymentPeriod: val('longTermPaymentPeriod'),
@@ -1497,22 +1527,65 @@
         customRounds: val('customRoundsCount')
       };
     }
- 
-    fetch('/general/set-principles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ groupName, principles })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        alert('✓ Principles activated successfully!');
-        window.location.href = '/agent';
-      } else {
-        alert('Error: ' + data.message);
+  
+    const url = API_BASE + '/general/set-principles';
+    const maxRetries = 3;
+    let lastError = null;
+
+    showActivateSpinner();
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupName, principles }),
+          signal: controller.signal,
+          credentials: 'include',
+          redirect: 'follow'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!response.ok) {
+          let msg = 'Server error: ' + response.status;
+          try {
+            const errData = await response.json();
+            if (errData && errData.message) msg = errData.message;
+          } catch (e) { /* non-JSON error body */ }
+          throw new Error(msg);
+        }
+
+        if (!contentType.includes('application/json')) {
+          throw new Error('Session expired or unauthorized. Please log in again.');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('✓ Principles activated successfully!');
+          window.location.href = API_BASE + '/agent';
+          return;
+        } else {
+          hideActivateSpinner();
+          alert('Error: ' + (data.message || 'Unknown error'));
+          return;
+        }
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+        }
       }
-    })
-    .catch(err => alert('Error saving principles: ' + err.message));
+    }
+    
+    hideActivateSpinner();
+    alert('Error saving principles: ' + (lastError?.message || 'Network error. Please check your connection and try again.'));
   }
  
   /* ─── Key flow ─── */
