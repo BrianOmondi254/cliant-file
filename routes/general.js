@@ -7,7 +7,7 @@ const generalFile = path.join(__dirname, "../general.json");
 const notification = require("../notification/notification");
 const perfLogger = require("../performance/group-performance");
 const regPerfLogger = require("../performance/registration-performance");
-const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, mongoose, ensureMongoReady, findGeneralGroupsByMemberPhone, findGroupNameInMongoGroupsCollection, findGroupNameInGroupsMembersCollection, Agent, Dealer, normalizePhone } = require("../mongoose");
+const { saveGeneralGroupToMongo, isGroupNameAvailableInMongo, cleanupStaleGroupKeys, fixGroupKeyIndex, createPerformanceIndexes, mongoose, ensureMongoReady, findGeneralGroupsByMemberPhone, findGroupNameInMongoGroupsCollection, findGroupNameInGroupsMembersCollection, Agent, Dealer, normalizePhone } = require("../mongoose");
 
 /* ================= HELPERS ================= */
 const readJSON = (file, fallback) => {
@@ -1107,6 +1107,9 @@ const initializeGroupMembersInMongo = async (targetGroup, principles, county, co
   const db = mongoose.connection.db;
   if (!db) throw new Error('MongoDB database unavailable');
 
+  console.log('[INIT-MEMBERS DEBUG] Initializing members for group:', targetGroup.groupName);
+  console.log('[INIT-MEMBERS DEBUG] County:', county, 'Constituency:', constituency, 'Ward:', ward);
+  
   const members = {};
   for (const key of Object.keys(targetGroup)) {
     if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
@@ -1128,6 +1131,8 @@ const initializeGroupMembersInMongo = async (targetGroup, principles, county, co
       }
     }
   }
+  
+  console.log('[INIT-MEMBERS DEBUG] Found', Object.keys(members).length, 'members:', Object.keys(members));
 
   const accountSchema = {};
   const templates = members[Object.keys(members)[0]]?.accounts || buildAccountTemplates(principles, targetGroup.principlesSetAt);
@@ -1170,9 +1175,13 @@ const initializeGroupMembersInMongo = async (targetGroup, principles, county, co
   };
 
   const col = db.collection('groups-members');
+  console.log('[INIT-MEMBERS DEBUG] Using collection:', col.collectionName);
 
   const countyDoc = await col.findOne({ county });
+  console.log('[INIT-MEMBERS DEBUG] Existing county doc found:', !!countyDoc);
+  
   if (!countyDoc) {
+    console.log('[INIT-MEMBERS DEBUG] Creating new county document for:', county);
     await col.insertOne({
       county,
       countyId: String(county).toLowerCase().replace(/\s+/g, '-'),
@@ -1190,53 +1199,79 @@ const initializeGroupMembersInMongo = async (targetGroup, principles, county, co
       ],
       syncedAt: new Date().toISOString()
     });
-    return;
+    console.log('[INIT-MEMBERS DEBUG] Successfully inserted new county document');
+    return Object.values(members);
   }
 
   const normalizeLoc = (val) => String(val || "").trim().toLowerCase();
 
   let constituencyIdx = countyDoc.constituencies?.findIndex(c => normalizeLoc(c.name) === normalizeLoc(constituency)) ?? -1;
   if (constituencyIdx === -1) {
+    console.log('[INIT-MEMBERS DEBUG] Adding new constituency:', constituency);
     countyDoc.constituencies = countyDoc.constituencies || [];
     countyDoc.constituencies.push({
       name: constituency,
       wards: [{ name: ward, data: [groupDoc] }]
     });
-    await col.updateOne({ county }, { $set: { constituencies: countyDoc.constituencies, syncedAt: new Date().toISOString() } });
-    return;
+    const constiFilter = countyDoc._id ? { _id: countyDoc._id } : { county };
+    await col.updateOne(constiFilter, { $set: { constituencies: countyDoc.constituencies, syncedAt: new Date().toISOString() } });
+    console.log('[INIT-MEMBERS DEBUG] Successfully added new constituency');
+    return Object.values(members);
   }
 
   const constituencyDoc = countyDoc.constituencies[constituencyIdx];
   let wardIdx = constituencyDoc.wards?.findIndex(w => normalizeLoc(w.name) === normalizeLoc(ward)) ?? -1;
   if (wardIdx === -1) {
+    console.log('[INIT-MEMBERS DEBUG] Adding new ward:', ward);
     constituencyDoc.wards = constituencyDoc.wards || [];
     constituencyDoc.wards.push({ name: ward, data: [groupDoc] });
   } else {
     const existingGroupIdx = constituencyDoc.wards[wardIdx].data?.findIndex(g => normalizeLoc(g.groupName) === normalizeLoc(targetGroup.groupName)) ?? -1;
     if (existingGroupIdx !== -1) {
+      console.log('[INIT-MEMBERS DEBUG] Updating existing group at index:', existingGroupIdx);
       constituencyDoc.wards[wardIdx].data[existingGroupIdx] = {
         ...constituencyDoc.wards[wardIdx].data[existingGroupIdx],
         ...groupDoc
       };
     } else {
+      console.log('[INIT-MEMBERS DEBUG] Adding group to existing ward');
       constituencyDoc.wards[wardIdx].data = constituencyDoc.wards[wardIdx].data || [];
       constituencyDoc.wards[wardIdx].data.push(groupDoc);
     }
   }
 
-  await col.updateOne(
-    { county, 'constituencies.name': constituencyDoc.name },
+  console.log('[INIT-MEMBERS DEBUG] Updating county document in groups-members collection');
+  const updateFilter = countyDoc._id ? { _id: countyDoc._id } : { county };
+  const updateResult = await col.updateOne(
+    updateFilter,
     { $set: { constituencies: countyDoc.constituencies, syncedAt: new Date().toISOString() } }
   );
+  if (updateResult.matchedCount === 0) {
+    console.error('[INIT-MEMBERS DEBUG] WARNING: updateOne matched 0 documents for county:', county, '- data may not have persisted');
+  }
+  console.log('[INIT-MEMBERS DEBUG] Successfully updated county document (matched:', updateResult.matchedCount, ')');
+  
+  return Object.values(members);
 };
 
 // ✅ Save Group Principles (financial rules set by Trustee)
 router.post("/set-principles", async (req, res) => {
   try {
     const { groupName, principles } = req.body;
-    if (!groupName || !principles) return res.json({ success: false, message: "Missing data" });
+    console.log('[SET-PRINCIPLES DEBUG] Session user:', req.session?.user ? 'exists' : 'MISSING');
+    console.log('[SET-PRINCIPLES DEBUG] Request body groupName:', groupName);
+    console.log('[SET-PRINCIPLES DEBUG] Request body principles keys:', Object.keys(principles || {}));
+    
+    if (!groupName || !principles) {
+      console.log('[SET-PRINCIPLES DEBUG] Missing data - groupName:', !!groupName, 'principles:', !!principles);
+      return res.json({ success: false, message: "Missing data" });
+    }
 
     const mongoResult = await findGroupNameInMongoGroupsCollection(groupName);
+    console.log('[SET-PRINCIPLES DEBUG] findGroupNameInMongoGroupsCollection result:', mongoResult ? 'FOUND' : 'NOT FOUND');
+    if (mongoResult) {
+      console.log('[SET-PRINCIPLES DEBUG] Group county:', mongoResult.county, 'constituency:', mongoResult.constituency, 'ward:', mongoResult.ward);
+    }
     if (!mongoResult) {
       return res.json({ success: false, message: "Group not found in database" });
     }
@@ -1309,28 +1344,42 @@ router.post("/set-principles", async (req, res) => {
       pin: targetGroup.constitutionStartKey || null,
     };
 
+    console.log('[SET-PRINCIPLES DEBUG] Saving group to MongoDB...');
+    console.log('[SET-PRINCIPLES DEBUG] Updated group phase:', updatedGroup.phase, 'accountNumber:', accountNumber);
+    
     await saveGeneralGroupToMongo(updatedGroup);
+    
+    console.log('[SET-PRINCIPLES DEBUG] Successfully saved to MongoDB');
 
-    const chairpersonPhone = targetGroup.phone || targetGroup.trustee_1?.phone;
-    if (chairpersonPhone && targetGroup.constitutionStartKey) {
-      notification.processMessage(targetGroup.groupName, {
-        to: chairpersonPhone,
-        type: "security_alert",
-        title: "Constitution Key",
-        key: targetGroup.constitutionStartKey,
-        content: `Constitution Start Key: ${targetGroup.constitutionStartKey}`,
-      });
+    try {
+      const chairpersonPhone = targetGroup.phone || targetGroup.trustee_1?.phone;
+      if (chairpersonPhone && targetGroup.constitutionStartKey) {
+        notification.processMessage(targetGroup.groupName, {
+          to: chairpersonPhone,
+          type: "security_alert",
+          title: "Constitution Key",
+          key: targetGroup.constitutionStartKey,
+          content: `Constitution Start Key: ${targetGroup.constitutionStartKey}`,
+        });
+      }
+    } catch (notifErr) {
+      console.error('[SET-PRINCIPLES DEBUG] Notification error (non-critical):', notifErr.message);
     }
 
     const totalMembers = Object.keys(targetGroup).filter(
       (k) => k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")
     ).length;
+    console.log('[SET-PRINCIPLES DEBUG] Total members found in targetGroup:', totalMembers);
 
     let membersInitError = null;
+    let initializedMembers = [];
     try {
-      await initializeGroupMembersInMongo(updatedGroup, principles, county, constituency, ward, accountNumber);
+      console.log('[SET-PRINCIPLES DEBUG] Calling initializeGroupMembersInMongo...');
+      initializedMembers = await initializeGroupMembersInMongo(updatedGroup, principles, county, constituency, ward, accountNumber);
+      console.log('[SET-PRINCIPLES DEBUG] initializeGroupMembersInMongo returned', initializedMembers.length, 'members');
     } catch (memberErr) {
-      console.error('[set-principles] Member initialization error:', memberErr.message);
+      console.error('[SET-PRINCIPLES DEBUG] initializeGroupMembersInMongo error:', memberErr.message);
+      console.error('[SET-PRINCIPLES DEBUG] Error stack:', memberErr.stack);
       membersInitError = memberErr.message;
     }
 
@@ -1340,6 +1389,7 @@ router.post("/set-principles", async (req, res) => {
       groupName: targetGroup.groupName,
       totalMembers,
       membersInitError,
+      members: initializedMembers,
     });
   } catch (err) {
     console.error('[set-principles] Error:', err.message);
@@ -2554,5 +2604,9 @@ router.post("/fix-groupkey-index", async (req, res) => {
     res.status(500).json({ success: false, message: "Fix failed: " + err.message });
   }
 });
+
+if (mongoose.connection.readyState === 1) {
+  createPerformanceIndexes().catch(e => console.error('[startup] Index creation error:', e.message));
+}
 
 module.exports = router;

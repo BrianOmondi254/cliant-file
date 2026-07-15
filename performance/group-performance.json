@@ -3,8 +3,8 @@
     "Siaya": {
       "totals": {
         "phase1": 5,
-        "phase2": -5,
-        "phase3": 10,
+        "phase2": -12,
+        "phase3": 17,
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 15
@@ -105,6 +105,30 @@
           "phase4": 0,
           "phase5": 0,
           "totalMembers": 0
+        },
+        "2026-07-15-21": {
+          "phase1": 0,
+          "phase2": -1,
+          "phase3": 1,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        },
+        "2026-07-15-22": {
+          "phase1": 0,
+          "phase2": -4,
+          "phase3": 4,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
+        },
+        "2026-07-15-23": {
+          "phase1": 0,
+          "phase2": -2,
+          "phase3": 2,
+          "phase4": 0,
+          "phase5": 0,
+          "totalMembers": 0
         }
       },
       "weekly": {
@@ -134,8 +158,8 @@
         },
         "2026-W29": {
           "phase1": -1,
-          "phase2": -6,
-          "phase3": 7,
+          "phase2": -13,
+          "phase3": 14,
           "phase4": 0,
           "phase5": 0,
           "totalMembers": 3
@@ -168,8 +192,8 @@
         },
         "2026-07": {
           "phase1": -1,
-          "phase2": -6,
-          "phase3": 7,
+          "phase2": -13,
+          "phase3": 14,
           "phase4": 0,
           "phase5": 0,
           "totalMembers": 3
@@ -179,8 +203,8 @@
         "Ugenya": {
           "totals": {
             "phase1": 5,
-            "phase2": -5,
-            "phase3": 10,
+            "phase2": -12,
+            "phase3": 17,
             "phase4": 0,
             "phase5": 0,
             "totalMembers": 15
@@ -281,6 +305,30 @@
               "phase4": 0,
               "phase5": 0,
               "totalMembers": 0
+            },
+            "2026-07-15-21": {
+              "phase1": 0,
+              "phase2": -1,
+              "phase3": 1,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            },
+            "2026-07-15-22": {
+              "phase1": 0,
+              "phase2": -4,
+              "phase3": 4,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
+            },
+            "2026-07-15-23": {
+              "phase1": 0,
+              "phase2": -2,
+              "phase3": 2,
+              "phase4": 0,
+              "phase5": 0,
+              "totalMembers": 0
             }
           },
           "weekly": {
@@ -310,8 +358,8 @@
             },
             "2026-W29": {
               "phase1": -1,
-              "phase2": -6,
-              "phase3": 7,
+              "phase2": -13,
+              "phase3": 14,
               "phase4": 0,
               "phase5": 0,
               "totalMembers": 3
@@ -344,8 +392,8 @@
             },
             "2026-07": {
               "phase1": -1,
-              "phase2": -6,
-              "phase3": 7,
+              "phase2": -13,
+              "phase3": 14,
               "phase4": 0,
               "phase5": 0,
               "totalMembers": 3
@@ -355,8 +403,8 @@
             "East Ugenya": {
               "totals": {
                 "phase1": 5,
-                "phase2": -5,
-                "phase3": 10,
+                "phase2": -12,
+                "phase3": 17,
                 "phase4": 0,
                 "phase5": 0,
                 "totalMembers": 15
@@ -457,6 +505,30 @@
                   "phase4": 0,
                   "phase5": 0,
                   "totalMembers": 0
+                },
+                "2026-07-15-21": {
+                  "phase1": 0,
+                  "phase2": -1,
+                  "phase3": 1,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                },
+                "2026-07-15-22": {
+                  "phase1": 0,
+                  "phase2": -4,
+                  "phase3": 4,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
+                },
+                "2026-07-15-23": {
+                  "phase1": 0,
+                  "phase2": -2,
+                  "phase3": 2,
+                  "phase4": 0,
+                  "phase5": 0,
+                  "totalMembers": 0
                 }
               },
               "weekly": {
@@ -486,8 +558,8 @@
                 },
                 "2026-W29": {
                   "phase1": -1,
-                  "phase2": -6,
-                  "phase3": 7,
+                  "phase2": -13,
+                  "phase3": 14,
                   "phase4": 0,
                   "phase5": 0,
                   "totalMembers": 3
@@ -520,8 +592,8 @@
                 },
                 "2026-07": {
                   "phase1": -1,
-                  "phase2": -6,
-                  "phase3": 7,
+                  "phase2": -13,
+                  "phase3": 14,
                   "phase4": 0,
                   "phase5": 0,
                   "totalMembers": 3
@@ -1774,6 +1846,30 @@
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 0
+      },
+      "2026-07-15-21": {
+        "phase1": 0,
+        "phase2": -1,
+        "phase3": 1,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "2026-07-15-22": {
+        "phase1": 0,
+        "phase2": -4,
+        "phase3": 4,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
+      },
+      "2026-07-15-23": {
+        "phase1": 0,
+        "phase2": -2,
+        "phase3": 2,
+        "phase4": 0,
+        "phase5": 0,
+        "totalMembers": 0
       }
     },
     "weekly": {
@@ -1819,8 +1915,8 @@
       },
       "2026-W29": {
         "phase1": -1,
-        "phase2": -6,
-        "phase3": 7,
+        "phase2": -13,
+        "phase3": 14,
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 3
@@ -1853,8 +1949,8 @@
       },
       "2026-07": {
         "phase1": -1,
-        "phase2": -6,
-        "phase3": 7,
+        "phase2": -13,
+        "phase3": 14,
         "phase4": 0,
         "phase5": 0,
         "totalMembers": 3
@@ -1862,8 +1958,8 @@
     },
     "totals": {
       "phase1": 18,
-      "phase2": -5,
-      "phase3": 10,
+      "phase2": -12,
+      "phase3": 17,
       "phase4": 0,
       "phase5": 0,
       "totalMembers": 15

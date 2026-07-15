@@ -581,6 +581,8 @@ const saveGeneralGroupToMongo = async (groupData) => {
     }
 
     // Build the group object (no groupKey on nested objects — county docs don't need it)
+    // NOTE: createdAt is intentionally left out here and stamped per-branch below,
+    // so updates to an existing group can preserve its original createdAt.
     const accountToSave = {
       ...accountFields,
       updatedAt: now,
@@ -592,7 +594,10 @@ const saveGeneralGroupToMongo = async (groupData) => {
 
     if (!countyDoc) {
       const newDoc = { county };
-      newDoc[constituency] = [ward, accountToSave];
+      newDoc[constituency] = [
+        ward,
+        { ...accountToSave, createdAt: accountFields.createdAt || now },
+      ];
       const insertResult = await col.insertOne(newDoc);
       console.log(
         `[GeneralGroup] Created county doc for ${county} & inserted group: ${groupName}`,
@@ -612,18 +617,24 @@ const saveGeneralGroupToMongo = async (groupData) => {
     );
 
     if (existingIdx !== -1) {
+      const existingItem = constituencyArray[existingIdx];
       constituencyArray[existingIdx] = {
-        ...constituencyArray[existingIdx],
+        ...existingItem,
         ...accountToSave,
+        createdAt: existingItem.createdAt || accountFields.createdAt || now,
       };
     } else {
+      const newGroupEntry = {
+        ...accountToSave,
+        createdAt: accountFields.createdAt || now,
+      };
       let wardIndex = constituencyArray.findIndex(
         (item) =>
           typeof item === "string" && item.toLowerCase() === ward.toLowerCase(),
       );
 
       if (wardIndex === -1) {
-        constituencyArray.push(ward, accountToSave);
+        constituencyArray.push(ward, newGroupEntry);
       } else {
         let insertIndex = wardIndex + 1;
         while (
@@ -632,7 +643,7 @@ const saveGeneralGroupToMongo = async (groupData) => {
         ) {
           insertIndex++;
         }
-        constituencyArray.splice(insertIndex, 0, accountToSave);
+        constituencyArray.splice(insertIndex, 0, newGroupEntry);
       }
     }
 
@@ -783,6 +794,44 @@ const fixGroupKeyIndex = async () => {
   }
 };
 
+const createPerformanceIndexes = async () => {
+  try {
+    if (mongoose.connection.readyState !== 1) return false;
+    const db = mongoose.connection.db;
+    if (!db) return false;
+
+    const results = [];
+
+    const groupsCol = db.collection("groups");
+    try {
+      const idx1 = await groupsCol.createIndex(
+        { county: 1 },
+        { background: true, name: "county_1" }
+      );
+      results.push(`groups: ${idx1}`);
+    } catch (e) {
+      results.push(`groups index error: ${e.message}`);
+    }
+
+    const membersCol = db.collection("groups-members");
+    try {
+      const idx2 = await membersCol.createIndex(
+        { county: 1 },
+        { background: true, name: "county_1" }
+      );
+      results.push(`groups-members: ${idx2}`);
+    } catch (e) {
+      results.push(`groups-members index error: ${e.message}`);
+    }
+
+    console.log("[Index] Performance indexes ensured:", results.join(", "));
+    return true;
+  } catch (err) {
+    console.error("[Index] Error creating performance indexes:", err.message);
+    return false;
+  }
+};
+
 /**
  * Public function to clean up null groupKeys - can be called on startup or via endpoint
  */
@@ -801,8 +850,12 @@ const getGeneralGroupsFromMongo = async () => {
   const db = mongoose.connection.db;
   if (!db) throw new Error("MongoDB database unavailable");
 
-  const countyDocs = await db.collection("groups").find({}).toArray();
-  return countyDocs.flatMap(flattenMongoCountyDoc);
+  const cursor = db.collection("groups").find({});
+  const allGroups = [];
+  for await (const doc of cursor) {
+    allGroups.push(...flattenMongoCountyDoc(doc));
+  }
+  return allGroups;
 };
 
 const findGeneralGroupsByMemberPhone = async (phone) => {
@@ -813,8 +866,11 @@ const findGeneralGroupsByMemberPhone = async (phone) => {
   if (!db) throw new Error("MongoDB database unavailable");
 
   const normalized = normalizePhone(phone);
-  const countyDocs = await db.collection("groups").find({}).toArray();
-  const allGroups = countyDocs.flatMap(flattenMongoCountyDoc);
+  const cursor = db.collection("groups").find({});
+  const allGroups = [];
+  for await (const doc of cursor) {
+    allGroups.push(...flattenMongoCountyDoc(doc));
+  }
 
   return allGroups.filter((group) => {
     if (normalizePhone(group.phone) === normalized) return true;
@@ -842,11 +898,11 @@ const findGroupNameInMongoGroupsCollection = async (groupName) => {
   if (!target) return null;
 
   try {
-    const countyDocs = await db
+    const cursor = db
       .collection("groups")
-      .find({}, { maxTimeMS: 3000 })
-      .toArray();
-    for (const doc of countyDocs) {
+      .find({});
+
+    for await (const doc of cursor) {
       const groups = flattenMongoCountyDoc(doc);
       for (const group of groups) {
         const flatName = normalizeGroupName(group.groupName);
@@ -878,11 +934,11 @@ const findGroupNameInGroupsMembersCollection = async (groupName) => {
   if (!target) return null;
 
   try {
-    const docs = await db
+    const cursor = db
       .collection("groups-members")
-      .find({}, { maxTimeMS: 3000 })
-      .toArray();
-    for (const doc of docs) {
+      .find({});
+
+    for await (const doc of cursor) {
       if (!doc || !Array.isArray(doc.constituencies)) continue;
       for (const constituency of doc.constituencies) {
         if (!constituency || !Array.isArray(constituency.wards)) continue;
@@ -1895,6 +1951,7 @@ module.exports = {
   findGeneralGroupsByMemberPhone,
   findGroupNameInMongoGroupsCollection,
   findGroupNameInGroupsMembersCollection,
+  createPerformanceIndexes,
   cleanupStaleGroupKeys,
   fixGroupKeyIndex,
   saveTbankSettings,

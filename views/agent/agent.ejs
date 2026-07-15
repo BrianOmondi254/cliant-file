@@ -764,13 +764,36 @@
                 </div>
               <% }); %>
             </div>
-          <% }); } else { %>
-            <div class="empty-state">
-              <i class="fa-solid fa-folder-open"></i>
-              <h3>No Groups Available</h3>
-              <p>No groups found in the system.</p>
-            </div>
-          <% } %>
+           <% }); } else if (groups && groups.length > 0) { %>
+             <% groups.forEach(g => {
+                   let statusClass = "status-active";
+                   let statusText = "Active";
+                   if (g.phase == 1) { statusClass = "status-new"; statusText = "New Request"; }
+                   else if (g.phase == 2) { statusClass = "status-pending"; statusText = "Pending Approval"; }
+                   else if (g.phase == 3) { statusClass = "status-active"; statusText = "Active"; }
+                   else { statusClass = "status-unknown"; statusText = "Unknown"; }
+             %>
+               <div class="group-item" onclick="handleGroupClick('<%= g.groupName %>')">
+                 <div style="flex:1; min-width:0;">
+                   <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; flex-wrap:wrap;">
+                     <span class="group-name"><%= g.groupName || 'Unnamed Group' %></span>
+                     <span class="group-status <%= statusClass %>"><%= statusText %></span>
+                   </div>
+                   <div class="group-meta">
+                     <i class="fa-solid fa-users" style="margin-right:3px; opacity:0.7;"></i>
+                     <%= g.totalProposedMembers || 0 %> members
+                   </div>
+                 </div>
+                 <i class="fas fa-chevron-right chevron"></i>
+               </div>
+             <% }); %>
+           <% } else { %>
+             <div class="empty-state">
+               <i class="fa-solid fa-folder-open"></i>
+               <h3>No Groups Available</h3>
+               <p>No groups found in the system.</p>
+             </div>
+           <% } %>
         </div>
 
         <!-- PERSONAL: EMPTY -->

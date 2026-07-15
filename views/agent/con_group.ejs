@@ -1528,16 +1528,41 @@
       };
     }
   
-    const url = API_BASE + '/general/set-principles';
+    // Use a relative URL for the API call whenever the page itself was served
+    // over http/https — this guarantees same-origin regardless of what
+    // window.location.origin resolves to, and sidesteps any CORS/CSP surprise.
+    // Only fall back to the absolute API_BASE for non-http schemes (e.g. a
+    // Capacitor WebView loading from capacitor://localhost).
+    const isHttpOrigin = /^https?:\/\//.test(window.location.origin);
+    const url = isHttpOrigin ? '/general/set-principles' : API_BASE + '/general/set-principles';
     const maxRetries = 3;
     let lastError = null;
+
+    console.log('[CON-GROUP DEBUG] window.location.origin:', window.location.origin);
+    console.log('[CON-GROUP DEBUG] API_BASE:', API_BASE);
+    console.log('[CON-GROUP DEBUG] Save URL:', url);
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        console.log('[CON-GROUP DEBUG] Active service worker registrations:', regs.length,
+          regs.map(r => r.active && r.active.scriptURL));
+      });
+    }
+    console.log('[CON-GROUP DEBUG] Group name:', groupName);
+    console.log('[CON-GROUP DEBUG] Principles keys:', Object.keys(principles || {}));
+
+    const activateBtn = document.getElementById('activatePrinciplesBtn');
+    if (activateBtn) {
+      activateBtn.disabled = true;
+      activateBtn.style.opacity = '0.6';
+      activateBtn.style.cursor = 'not-allowed';
+    }
 
     showActivateSpinner();
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
         
         const response = await fetch(url, {
           method: 'POST',
@@ -1551,6 +1576,9 @@
         clearTimeout(timeoutId);
         
         const contentType = response.headers.get('content-type') || '';
+        
+        console.log('[CON-GROUP DEBUG] Attempt', attempt, '- Response status:', response.status);
+        console.log('[CON-GROUP DEBUG] Response content-type:', contentType);
 
         if (!response.ok) {
           let msg = 'Server error: ' + response.status;
@@ -1562,22 +1590,41 @@
         }
 
         if (!contentType.includes('application/json')) {
+          const responseText = await response.text();
+          console.error('[CON-GROUP DEBUG] Non-JSON response received:');
+          console.error('[CON-GROUP DEBUG] Status:', response.status);
+          console.error('[CON-GROUP DEBUG] Content-Type:', contentType);
+          console.error('[CON-GROUP DEBUG] Response body (first 500 chars):', responseText.substring(0, 500));
           throw new Error('Session expired or unauthorized. Please log in again.');
         }
 
         const data = await response.json();
         
         if (data.success) {
+          if (data.members && data.members.length > 0) {
+            window.confirmedAccounts = data.members;
+          }
           alert('✓ Principles activated successfully!');
           window.location.href = API_BASE + '/agent';
           return;
         } else {
           hideActivateSpinner();
           alert('Error: ' + (data.message || 'Unknown error'));
+          if (activateBtn) {
+            activateBtn.disabled = false;
+            activateBtn.style.opacity = '';
+            activateBtn.style.cursor = '';
+          }
           return;
         }
       } catch (err) {
         lastError = err;
+        console.error('[CON-GROUP DEBUG] Attempt', attempt, 'failed:', err.name + ':', err.message);
+        if (err.name === 'AbortError') {
+          console.error('[CON-GROUP DEBUG] Request timed out after 60s — server likely hung on this request (check server terminal for a stuck operation).');
+        } else if (err.name === 'TypeError') {
+          console.error('[CON-GROUP DEBUG] Connection never reached the server. Open the Network tab, find the failed "set-principles" request, and hover its status for the real reason (e.g. net::ERR_CONNECTION_REFUSED, CORS error, or a service worker interception).');
+        }
         if (attempt < maxRetries) {
           await new Promise(r => setTimeout(r, 1000 * attempt));
         }
@@ -1585,6 +1632,11 @@
     }
     
     hideActivateSpinner();
+    if (activateBtn) {
+      activateBtn.disabled = false;
+      activateBtn.style.opacity = '';
+      activateBtn.style.cursor = '';
+    }
     alert('Error saving principles: ' + (lastError?.message || 'Network error. Please check your connection and try again.'));
   }
  

@@ -201,7 +201,7 @@ const isGroupManagedByAgent = (group, agentPhone, profile) => {
   if (agentPhones.some((p) => p && normPhone(p) === agentNorm)) {
     return true;
   }
-  if (profile.county && profile.constituency && profile.ward) {
+  if (profile.county) {
     return matchesAgentRegion(group, profile);
   }
   return false;
@@ -219,6 +219,121 @@ const buildRegionalGroups = (groups, profile) => {
     regionalGroups[county][constituency][ward].push(group);
   });
   return regionalGroups;
+};
+
+// Build the agent-specific group view data (managed groups + regional buckets + member names).
+// Shared by the full page render and the real-time JSON feed so both stay in sync.
+const prepareAgentGroupData = async (rawPhone) => {
+  const currentPhoneNumber = normPhone(rawPhone || "");
+  const users = await getUsersFromMongo();
+
+  let agent = null;
+  try {
+    agent = await findAgentByPhone(currentPhoneNumber);
+  } catch (e) {
+    console.error("[AGENT] prepareAgentGroupData agent lookup error:", e.message);
+  }
+
+  let mongoUser = findUserInList(users, currentPhoneNumber);
+  if (!mongoUser) {
+    try {
+      mongoUser = await findUserByPhone(currentPhoneNumber);
+    } catch (e) {
+      console.error("[AGENT] prepareAgentGroupData verification error:", e.message);
+    }
+  }
+
+  let general = [];
+  try {
+    const mongoGroups = await getGeneralGroupsFromMongo();
+    if (Array.isArray(mongoGroups)) general = mongoGroups;
+  } catch (e) {
+    console.error("[AGENT] Error loading groups from MongoDB:", e.message);
+  }
+
+  const agentNorm = normPhone(currentPhoneNumber);
+  const phoneMatchedGroups = general.filter((g) => {
+    const fields = [g.agentProcessed, g.registeredByAgent, g.processorPhone];
+    return fields.some((p) => p && normPhone(p) === agentNorm);
+  });
+
+  let agentProfile = agent
+    ? resolveAgentProfile(agent, mongoUser, phoneMatchedGroups)
+    : null;
+  let managedGroups = phoneMatchedGroups;
+
+  if (agentProfile) {
+    const regionMatched = general.filter((g) =>
+      isGroupManagedByAgent(g, currentPhoneNumber, agentProfile)
+    );
+    const merged = [...phoneMatchedGroups];
+    regionMatched.forEach((g) => {
+      if (
+        !merged.some(
+          (m) =>
+            (m._id && g._id && m._id.toString() === g._id.toString()) ||
+            m.groupName === g.groupName
+        )
+      ) {
+        merged.push(g);
+      }
+    });
+    managedGroups = merged;
+  }
+
+  if (!agentProfile?.county && managedGroups.length > 0) {
+    agentProfile = resolveAgentProfile(agent, mongoUser, managedGroups);
+  }
+
+  // Augment managed groups with a list of members including their full names
+  const userMap = buildUserNameMap(users);
+  managedGroups.forEach((group) => {
+    if (group.membersPopulatedAt || (group.phase && group.phase >= 2)) {
+      group.membersList = [];
+      for (const key in group) {
+        if (
+          key.startsWith("trustee_") ||
+          key.startsWith("official_") ||
+          key.startsWith("member_")
+        ) {
+          let member = group[key];
+          let phone = null;
+
+          if (member && typeof member === "object" && member.phone) {
+            phone = member.phone;
+          } else if (typeof member === "string") {
+            phone = member;
+          }
+
+          if (phone) {
+            const normalizedPhone = normPhone(phone);
+            const memberName =
+              userMap.get(normalizedPhone) ||
+              (typeof member === "object" && member.name ? member.name : "") ||
+              "Unknown Name";
+
+            const memberObj =
+              typeof member === "object"
+                ? { ...member }
+                : { phone: phone, type: key.split("_")[0] };
+            memberObj.name = memberName;
+
+            group.membersList.push(memberObj);
+
+            if (typeof group[key] === "object") {
+              group[key].name = memberName;
+            } else {
+              group[key] = memberObj;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const regionalGroups = buildRegionalGroups(managedGroups, agentProfile);
+
+  return { managedGroups, regionalGroups, agentProfile };
 };
 
 /* ── MongoDB helpers (replaces general.json) ── */
@@ -346,81 +461,16 @@ if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     }
   }
 
-  // Load groups from MongoDB only (general.json removed)
-  let general = [];
+  // Load groups from MongoDB only (general.json removed) and prepare agent-specific view
+  let preparedGroups = { managedGroups: [], regionalGroups: {}, agentProfile: null };
   try {
-    const mongoGroups = await getGeneralGroupsFromMongo();
-    if (Array.isArray(mongoGroups)) {
-      general = mongoGroups;
-    }
+    preparedGroups = await prepareAgentGroupData(currentPhoneNumber);
   } catch (e) {
-    console.error('[AGENT] Error loading groups from MongoDB:', e.message);
+    console.error("[AGENT] Error preparing agent groups:", e.message);
   }
-
-  const agentNorm = normPhone(currentPhoneNumber);
-  const phoneMatchedGroups = general.filter((g) => {
-    const fields = [g.agentProcessed, g.registeredByAgent, g.processorPhone];
-    return fields.some((p) => p && normPhone(p) === agentNorm);
-  });
-  let agentProfile = agent
-    ? resolveAgentProfile(agent, mongoUser, phoneMatchedGroups)
-    : null;
-  let managedGroups = phoneMatchedGroups;
-  if (agentProfile) {
-    const regionMatched = general.filter((g) => isGroupManagedByAgent(g, currentPhoneNumber, agentProfile));
-    const merged = [...phoneMatchedGroups];
-    regionMatched.forEach(g => {
-      if (!merged.some(m => (m._id && g._id && m._id.toString() === g._id.toString()) || m.groupName === g.groupName)) {
-        merged.push(g);
-      }
-    });
-    managedGroups = merged;
-  }
-  if (!agentProfile?.county && managedGroups.length > 0) {
-    agentProfile = resolveAgentProfile(agent, mongoUser, managedGroups);
-  }
-
-  // Augment managed groups with a list of members including their full names
-  const userMap = buildUserNameMap(users);
-  managedGroups.forEach(group => {
-    // Only create a membersList if the group is already populated with members
-    if (group.membersPopulatedAt || (group.phase && group.phase >= 2)) {
-        group.membersList = [];
-        for (const key in group) {
-            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
-                let member = group[key];
-                let phone = null;
-                
-                if (member && typeof member === 'object' && member.phone) {
-                    phone = member.phone;
-                } else if (typeof member === 'string') {
-                    phone = member;
-                }
-
-                if (phone) {
-                    const normalizedPhone = normPhone(phone);
-                    // Lookup name from MongoDB registry, fallback to existing name, fallback to 'Unknown'
-                    const memberName = userMap.get(normalizedPhone) || (typeof member === 'object' && member.name ? member.name : '') || 'Unknown Name';
-                    
-                    // Standardize member object
-                    const memberObj = typeof member === 'object' ? { ...member } : { phone: phone, type: key.split('_')[0] };
-                    memberObj.name = memberName;
-
-                    // 1. Add to cleaned list for easy iteration
-                    group.membersList.push(memberObj);
-
-                    // 2. Update the original key in the group object so legacy views find the name
-                    if (typeof group[key] === 'object') {
-                        group[key].name = memberName;
-                    } else {
-                        // Convert string-only member to object in-memory
-                        group[key] = memberObj;
-                    }
-                }
-            }
-        }
-    }
-  });
+  let managedGroups = preparedGroups.managedGroups;
+  let regionalGroups = preparedGroups.regionalGroups;
+  let agentProfile = preparedGroups.agentProfile;
 
   const dealer = (agentProfile && agentProfile.dealerPhone)
     ? { phoneNumber: agentProfile.dealerPhone }
@@ -456,8 +506,6 @@ if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     managedGroups[selectedGroupIndex] = minimalGroup;
     selectedGroup = minimalGroup;
   }
-
-  const regionalGroups = buildRegionalGroups(managedGroups, agentProfile);
 
   const businessPhone = agent ? agent.phoneNumber : currentPhoneNumber;
   let businessFloat = 0;
@@ -503,6 +551,27 @@ if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
     businessTotal
   });
 
+});
+
+// GET /agent/api/groups - JSON feed used by the agent portal for real-time group list updates
+router.get("/api/groups", async (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  try {
+    const prepared = await prepareAgentGroupData(req.session.user.phoneNumber);
+    return res.json({
+      success: true,
+      managedGroups: prepared.managedGroups,
+      regionalGroups: prepared.regionalGroups,
+    });
+  } catch (e) {
+    console.error("[AGENT] /api/groups error:", e.message);
+    return res.status(500).json({ success: false, message: "Failed to load groups" });
+  }
 });
 
 // GET /agent/new-group - Redirect to a dedicated page for populating new group requests

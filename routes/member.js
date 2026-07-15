@@ -309,9 +309,9 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
     const db = mongoose.connection.db;
     if (!db) return null;
 
-    const docs = await db.collection('groups-members').find({}).toArray();
+    const cursor = db.collection('groups-members').find({}, { projection: { county: 1, constituencies: 1, _id: 0 } });
 
-    for (const doc of docs) {
+    for await (const doc of cursor) {
       if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
 
       for (const constituency of doc.constituencies) {
@@ -924,9 +924,10 @@ const findGroupInGroupsMembersCollection = async (groupName) => {
   if (!db) return null;
 
   const targetName = String(groupName || '').trim().toLowerCase();
-  const docs = await db.collection('groups-members').find({}).toArray();
 
-  for (const doc of docs) {
+  const cursor = db.collection('groups-members').find({}, { projection: { county: 1, constituencies: 1, _id: 0 } });
+
+  for await (const doc of cursor) {
     if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
 
     for (const constituency of doc.constituencies) {
