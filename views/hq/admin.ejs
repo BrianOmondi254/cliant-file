@@ -412,8 +412,8 @@
       <div class="dropdown-content auth-options" style="left: auto; right: 0; margin-top: 6px; min-width: 180px;">
         <div class="dropdown-item" id="auth-email">Email</div>
         <div class="dropdown-item" id="auth-otp">OTP</div>
-        <div class="dropdown-item" id="auth-call">Call</div>
         <div class="dropdown-item" id="login-option">login</div>
+        <div class="dropdown-item" id="auth-suspend">Suspend</div>
       </div>
     </div>
     <div class="dropdown" style="margin-left: auto;">
@@ -1007,13 +1007,13 @@
       openPinAuthModal();
     };
 
-    document.getElementById("auth-call").onclick = function() {
-      selectedAuthOption = "Call";
+    document.getElementById("login-option").onclick = function() {
+      selectedAuthOption = "login";
       openPinAuthModal();
     };
 
-    document.getElementById("login-option").onclick = function() {
-      selectedAuthOption = "login";
+    document.getElementById("auth-suspend").onclick = function() {
+      selectedAuthOption = "Suspend";
       openPinAuthModal();
     };
 
@@ -1025,6 +1025,8 @@
       document.getElementById("auth-pin-input").value = "";
       document.getElementById("auth-pin-error").classList.add("hidden");
       document.getElementById("auth-pin-input").focus();
+      const label = document.querySelector("#pin-auth-modal p[style*='Authentication']");
+      if (label) label.innerHTML = "Authentication — " + (selectedAuthOption || "");
     }
 
     function closePinAuthModal() {
@@ -1057,12 +1059,14 @@
         });
         const data = await res.json();
 
-        if (data.status === "SUCCESS") {
+         if (data.status === "SUCCESS") {
           pinAuthRedirectUrl = "/hq/" + (data.department || "").toLowerCase().replace(/\s+/g, '-');
           document.querySelector("#pin-auth-modal .m-info-banner").classList.add("hidden");
           document.querySelector("#pin-auth-modal .m-field").classList.add("hidden");
           document.getElementById("approve-login-btn").classList.add("hidden");
           document.getElementById("auth-pin-error").classList.add("hidden");
+          const successTitle = document.querySelector("#pin-auth-success p[style*='Successfully Authenticated']");
+          if (successTitle) successTitle.textContent = selectedAuthOption === "Suspend" ? "Account Suspended" : "Successfully Authenticated";
           document.getElementById("pin-auth-success").classList.remove("hidden");
         } else if (data.status === "NO_PIN") {
           errDiv.classList.remove("hidden");

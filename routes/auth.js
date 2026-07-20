@@ -378,6 +378,7 @@ router.get("/login", async (req, res) => {
 
   // Reflect the HQ-selected auth option (Email / OTP / login)
   let authOption = "login";
+  let suspended = false;
   try {
     if (await ensureMongoReady()) {
       const settings = await getTbankSettings();
@@ -385,7 +386,9 @@ router.get("/login", async (req, res) => {
         settings && settings.lastSelectedAuthOption && settings.lastSelectedAuthOption.option
           ? String(settings.lastSelectedAuthOption.option).toLowerCase()
           : "";
-      if (opt === "email" || opt === "otp") {
+      if (opt === "suspend") {
+        suspended = true;
+      } else if (opt === "email" || opt === "otp") {
         authOption = opt;
       }
     }
@@ -393,9 +396,19 @@ router.get("/login", async (req, res) => {
     console.error("Error reading auth option:", e.message);
   }
 
-  res.render("login", { 
-    alert: null, 
-    authOption,
+  res.render("login", buildLoginContext({ alert: null, authOption, suspended }));
+});
+
+/**
+ * Builds the full set of variables the login.ejs template requires,
+ * so every render path (GET and POST-failure) supplies firebaseConfig,
+ * authOption and suspended consistently.
+ */
+function buildLoginContext(extra = {}) {
+  return Object.assign({
+    alert: null,
+    authOption: "login",
+    suspended: false,
     firebaseConfig: {
       apiKey: process.env.FIREBASE_API_KEY,
       authDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -405,8 +418,8 @@ router.get("/login", async (req, res) => {
       appId: process.env.FIREBASE_APP_ID,
       measurementId: process.env.FIREBASE_MEASUREMENT_ID
     }
-  });
-});
+  }, extra);
+}
 
 /* 🔑 Firebase Login Success Callback */
 router.post("/firebase-login", async (req, res) => {
@@ -519,7 +532,7 @@ router.post("/login", async (req, res) => {
   const valid = await bcrypt.compare(loginPassword, user.password);
   console.log("   bcrypt result :", valid ? "✅ MATCH" : "❌ NO MATCH");
 
-  if (!valid) return res.render("login", { alert: "Wrong password! Check your password and try again." });
+  if (!valid) return res.render("login", loginRenderContext({ alert: "Wrong password! Check your password and try again." }));
 
   // Update last login in MongoDB
   try {
@@ -639,6 +652,170 @@ router.post("/admin/reset-password", async (req, res) => {
   }
 
   return res.status(404).json({ error: "User not found" });
+});
+
+/* 📨 Send Email OTP Code */
+const nodemailer = require("nodemailer");
+
+router.post("/send-email-otp", async (req, res) => {
+  let { phoneNumber, email } = req.body;
+  phoneNumber = (phoneNumber || "").trim();
+  email = (email || "").trim();
+
+  if (!phoneNumber || !email) {
+    return res.json({ success: false, message: "Phone number and email are required." });
+  }
+
+  const dbReady = await ensureMongoReady();
+  if (!dbReady) {
+    return res.json({ success: false, message: "Database not available. Please try again later." });
+  }
+
+  try {
+    const user = await findUserByPhone(phoneNumber);
+    if (!user) {
+      return res.json({ success: false, message: "Phone number is not registered. Please create an account first." });
+    }
+
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in session with 5 minutes expiration
+    req.session.emailOtp = {
+      code,
+      phoneNumber: user.phoneNumber,
+      email,
+      expires: Date.now() + 5 * 60 * 1000
+    };
+
+    console.log(`\n📨 [DEV MODE] Email OTP generated for ${email}: ${code}\n`);
+
+    // Attempt to send email
+    try {
+      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || "smtp.gmail.com",
+          port: parseInt(process.env.SMTP_PORT || "587"),
+          secure: process.env.SMTP_SECURE === "true",
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        const mailOptions = {
+          from: `"Tbank Investment" <${process.env.SMTP_USER}>`,
+          to: email,
+          subject: "Your Tbank Verification Code",
+          text: `Your verification code is: ${code}. It expires in 5 minutes.`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px; max-width: 500px; border: 1px solid #e2e8f0; border-radius: 12px; margin: 0 auto;">
+              <h2 style="color: #0f9d58; margin-bottom: 8px;">Tbank Investment</h2>
+              <p style="color: #475569; font-size: 14px;">You requested a one-time code to sign in to your Tbank account.</p>
+              <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 4px; text-align: center; color: #1e293b; margin: 20px 0;">
+                ${code}
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin-top: 20px;">This code is valid for 5 minutes. If you did not request this code, please ignore this email.</p>
+            </div>
+          `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`[SMTP] Verification email sent successfully to ${email}`);
+      } else {
+        console.warn("[SMTP] Credentials not found in .env file. Running in dev-print mode only.");
+      }
+    } catch (mailErr) {
+      console.error("[SMTP] Mail send error:", mailErr.message);
+      // Fallback gracefully so local dev doesn't crash: still succeed and let them check node terminal console
+    }
+
+    return res.json({ 
+      success: true, 
+      message: process.env.SMTP_USER && process.env.SMTP_PASS 
+        ? "Verification code sent to your email address." 
+        : "Dev Mode: Verification code printed to Server Console log."
+    });
+  } catch (err) {
+    console.error("Send Email OTP Error:", err);
+    return res.json({ success: false, message: "Server error sending OTP." });
+  }
+});
+
+/* 📨 Verify Email OTP Code */
+router.post("/verify-email-otp", async (req, res) => {
+  const { otp } = req.body;
+  
+  if (!req.session.emailOtp) {
+    return res.json({ success: false, message: "No active verification session. Please request a new code." });
+  }
+
+  const { code, phoneNumber, expires } = req.session.emailOtp;
+
+  if (Date.now() > expires) {
+    delete req.session.emailOtp;
+    return res.json({ success: false, message: "Verification code expired. Please request a new one." });
+  }
+
+  if (otp !== code) {
+    return res.json({ success: false, message: "Invalid verification code." });
+  }
+
+  const dbReady = await ensureMongoReady();
+  if (!dbReady) {
+    return res.json({ success: false, message: "Database error during validation." });
+  }
+
+  try {
+    const user = await findUserByPhone(phoneNumber);
+    if (!user) {
+      return res.json({ success: false, message: "User account not found." });
+    }
+
+    // Clean up OTP session
+    delete req.session.emailOtp;
+
+    // Update last login
+    await updateLastLogin(phoneNumber);
+
+    // Save session user
+    req.session.user = { 
+      phoneNumber: user.phoneNumber,
+      firstName: user.FirstName,
+      lastName: user.LastName,
+      idNumber: user.idNumber
+    };
+
+    const tbankData = readJSON(tbankFile, {});
+    req.session.loginSeason = tbankData.compliance?.periods?.season || "Annual";
+
+    const normalizedUserPhone = normalizePhone(user.phoneNumber || "");
+    const rawPhone = user.phoneNumber || "";
+    const phoneVariants = [...new Set([
+      rawPhone,
+      normalizedUserPhone,
+      "0" + normalizedUserPhone,
+      "254" + normalizedUserPhone,
+      "+254" + normalizedUserPhone
+    ])];
+    let mongoAgent = await Agent.findOne({ phoneNumber: { $in: phoneVariants } }).lean();
+    let mongoDealer = await Dealer.findOne({ phoneNumber: { $in: phoneVariants } }).lean();
+
+    req.session.isAgent = !!mongoAgent;
+    req.session.isDealer = !!mongoDealer;
+    req.session.agent = mongoAgent ? mongoAgent : (req.session.isAgent ? { phoneNumber: user.phoneNumber } : null);
+    req.session.hasAgentPin = req.session.agent ? !!req.session.agent.pin : false;
+    
+    req.session.dealer = mongoDealer ? mongoDealer : (req.session.isDealer ? { phoneNumber: user.phoneNumber } : null);
+    req.session.hasDealerPin = req.session.dealer ? !!req.session.dealer.pin : false;
+
+    req.session.save((err) => {
+      return res.json({ success: true, redirect: "/personal" });
+    });
+  } catch (err) {
+    console.error("Verify Email OTP DB Error:", err);
+    return res.json({ success: false, message: "Database validation error." });
+  }
 });
 
 /* 🚪 Logout */

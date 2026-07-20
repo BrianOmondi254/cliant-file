@@ -16,6 +16,7 @@
   "dependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
+    "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
     "claude": "^0.1.1",
     "cors": "^2.8.6",
@@ -26,12 +27,15 @@
     "express-session": "^1.18.2",
     "firebase": "^12.16.0",
     "mongoose": "^9.6.2",
+    "ngrok": "^5.0.0-beta.2",
+    "nodemailer": "^9.0.3",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
-    "pdfkit": "^0.18.0"
+    "pdfkit": "^0.18.0",
+    "pesapal-v3-node": "^1.2.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.0.0",
+    "@capacitor/cli": "^8.4.2",
     "nodemon": "^3.1.11"
   }
 }

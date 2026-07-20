@@ -1,421 +1,1182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tbank Investment</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tbank Investment — Secure Login</title>
+  <meta name="description" content="Sign in securely to your Tbank Investment account.">
 
-<style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Inter',sans-serif;
-}
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-body{
-    height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);
-}
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
-/* Container */
-.container{
-    width:95%;
-    max-width:420px;
-}
+  <!-- Server config -->
+  <script>
+    window.__FIREBASE_CONFIG__ = <%- JSON.stringify(firebaseConfig) %>;
+    window.__AUTH_OPTION__     = '<%= authOption %>';
+  </script>
 
-/* Card */
-.card{
-    background:#ffffff;
-    border-radius:22px 22px 5px 5px;
-    padding:35px 25px;
-    box-shadow:0 25px 60px rgba(0,0,0,0.35);
-}
+  <style>
+    /* ═══ Reset ═══ */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-/* Header */
-.header{
-    text-align:center;
-    margin-bottom:30px;
-}
+    /* ═══ Page ═══ */
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(145deg, #0a1628 0%, #0f2540 45%, #1a3a5c 100%);
+      padding: 20px 0 32px;
+    }
 
-.header h1{
-    font-size:22px;
-    font-weight:700;
-    color:#1e293b;
-}
+    /* ═══ Wrapper ═══ */
+    .wrap { width: 95%; max-width: 420px; }
 
-.header p{
-    font-size:13px;
-    color:#64748b;
-}
+    /* ═══ Card ═══ */
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05);
+    }
 
-/* Input Field */
-.field{
-    position:relative;
-    margin-bottom:20px;
-}
+    /* ═══ Header ═══ */
+    .card-header {
+      background: linear-gradient(135deg, #059652 0%, #0f9d58 50%, #34d399 100%);
+      padding: 38px 24px 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
 
-.field input{
-    width:100%;
-    padding:16px 45px 16px 45px;
-    border-radius:14px;
-    border:1.5px solid #e2e8f0;
-    font-size:14px;
-    outline:none;
-    transition:0.3s ease;
-}
+    /* animated rings */
+    .card-header::before,
+    .card-header::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      animation: pulse-ring 4s ease-in-out infinite;
+    }
+    .card-header::before {
+      width: 260px; height: 260px;
+      top: -80px; right: -60px;
+    }
+    .card-header::after {
+      width: 180px; height: 180px;
+      bottom: -60px; left: -40px;
+      animation-delay: 2s;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50%       { opacity: 0.15; transform: scale(1.06); }
+    }
 
-.field input:focus{
-    border-color:#0f9d58;
-    box-shadow:0 0 0 3px rgba(15,157,88,0.15);
-}
+    /* logo circle */
+    .logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 68px; height: 68px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 50%;
+      backdrop-filter: blur(6px);
+      margin-bottom: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-5px); }
+    }
+    .logo-wrap i { font-size: 28px; color: #fff; }
 
-/* Icons */
-.icon{
-    position:absolute;
-    top:50%;
-    transform:translateY(-50%);
-    left:15px;
-    width:18px;
-    height:18px;
-    fill:#94a3b8;
-}
+    .card-header h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .card-header .tagline {
+      font-size: 10px;
+      color: rgba(255,255,255,0.85);
+      text-transform: uppercase;
+      letter-spacing: 3.5px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
 
-.toggle{
-    position:absolute;
-    right:15px;
-    top:50%;
-    transform:translateY(-50%);
-    cursor:pointer;
-    font-size:13px;
-    color:#64748b;
-}
+    /* trust chips */
+    .trust-chips {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.92);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .chip i { font-size: 9px; }
 
-/* Button */
-.btn{
-    width:100%;
-    padding:16px;
-    border:none;
-    border-radius:14px;
-    background:linear-gradient(135deg,#0f9d58,#34d399);
-    color:white;
-    font-weight:600;
-    cursor:pointer;
-    position:relative;
-    overflow:hidden;
-    transition:0.3s;
-}
+    /* Admin badge */
+    .admin-badge {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      background: rgba(0,0,0,0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.15);
+      transition: background 0.2s, color 0.2s;
+      z-index: 10;
+    }
+    .admin-badge:hover { background: rgba(0,0,0,0.35); color: #fff; }
 
-.btn:active{
-    transform:scale(0.98);
-}
+    /* ═══ Card body ═══ */
+    .card-body { padding: 28px 28px 24px; }
 
-.btn.loading{
-    opacity:0.7;
-    pointer-events:none;
-}
+    /* ═══ Alert ═══ */
+    .alert-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #15803d;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .alert-box i { font-size: 16px; flex-shrink: 0; }
 
-/* Footer Links */
-.footer{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap:0;
-    margin-top:25px;
-    flex-wrap:wrap;
-}
+    /* ═══ Maintenance / Suspended notice ═══ */
+    .maintenance-box {
+      text-align: center;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      padding: 28px 20px;
+      border-radius: 14px;
+      margin-bottom: 22px;
+    }
+    .maintenance-box i {
+      font-size: 34px;
+      color: #ea580c;
+      margin-bottom: 12px;
+    }
+    .maintenance-box h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #7c2d12;
+      margin-bottom: 10px;
+    }
+    .maintenance-box p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #9a3412;
+      margin-bottom: 8px;
+    }
+    .maintenance-box a {
+      color: #ea580c;
+      font-weight: 600;
+      text-decoration: underline;
+    }
+    .maintenance-box .m-thanks {
+      margin-top: 6px;
+      font-weight: 600;
+    }
 
-.footer a{
-    text-decoration:none;
-    font-size:13px;
-    color:#0f9d58;
-    font-weight:500;
-    padding:6px 12px;
-    transition:color 0.2s;
-}
+    /* ═══ Section label ═══ */
+    .section-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+    .section-sub {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+    .section-sub i { margin-right: 4px; color: #0f9d58; }
 
-.footer a:hover{
-    color:#059642;
-}
+    /* ═══ Field ═══ */
+    .field { position: relative; margin-bottom: 18px; }
 
-.footer-divider{
-    color:#cbd5e1;
-    font-size:13px;
-    user-select:none;
-}
+    .field label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .field label i { font-size: 11px; color: #0f9d58; }
 
-.error {
-    font-size:12px;
-    color:#15803d;
-    margin-top:5px;
-    display:none;
-}
+    .field input {
+      width: 100%;
+      padding: 14px 44px 14px 44px;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      font-size: 14px;
+      color: #1e293b;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s, background 0.2s;
+    }
+    .field input:focus {
+      background: #fff;
+      border-color: #0f9d58;
+      box-shadow: 0 0 0 3.5px rgba(15,157,88,0.12);
+    }
+    .field input::placeholder { color: #94a3b8; }
 
-/* Modal styles preserved */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 100;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-}
+    /* left icon */
+    .f-icon {
+      position: absolute;
+      top: 38px; left: 14px;
+      font-size: 15px;
+      color: #94a3b8;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+    .field input:focus ~ .f-icon,
+    .field:focus-within .f-icon { color: #0f9d58; }
 
-.modal-content {
-    background-color: #fefefe;
-    margin: 15% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 300px;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-}
+    /* right toggle */
+    .f-toggle {
+      position: absolute;
+      top: 38px; right: 14px;
+      font-size: 14px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .f-toggle:hover { color: #0f9d58; }
 
-.modal-content h2 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #1e293b;
-}
+    /* error */
+    .f-error {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: #dc2626;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .f-error i { font-size: 11px; }
 
-.modal-content input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border-radius: 10px;
-    border: 1.5px solid #e2e8f0;
-    outline: none;
-}
+    /* ═══ Button ═══ */
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #059652, #0f9d58 50%, #34d399);
+      background-size: 200% 100%;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-position 0.4s, box-shadow 0.2s, transform 0.15s, opacity 0.2s;
+      box-shadow: 0 4px 16px rgba(15,157,88,0.35);
+    }
+    .btn:hover {
+      background-position: right center;
+      box-shadow: 0 6px 22px rgba(15,157,88,0.45);
+    }
+    .btn:active  { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+    .btn.btn-sm  { padding: 12px; font-size: 13px; }
 
-.modal-content button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 10px;
-    background: #0f9d58;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-}
+    /* ═══ Step hint ═══ */
+    .step-hint {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 13px;
+      color: #166534;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .step-hint i { display: block; font-size: 28px; color: #0f9d58; margin-bottom: 8px; }
 
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
+    /* ═══ Status message ═══ */
+    .status-msg {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 10px;
+      min-height: 18px;
+      font-weight: 500;
+    }
 
-.alert-box {
-    color: #15803d;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    font-size: 13px;
-    text-align: center;
-}
-</style>
+    /* ═══ Divider ═══ */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0;
+    }
+    .divider span { flex: 1; height: 1px; background: #e2e8f0; }
+    .divider p { font-size: 11px; color: #94a3b8; font-weight: 500; white-space: nowrap; }
+
+    /* ═══ Footer ═══ */
+    .card-footer {
+      border-top: 1px solid #f1f5f9;
+      padding: 16px 28px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .card-footer a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+      font-size: 13px;
+      color: #0f9d58;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .card-footer a:hover { background: #f0fdf4; color: #059642; }
+    .footer-sep { color: #cbd5e1; font-size: 13px; }
+
+    /* ═══ Security note ═══ */
+    .security-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      font-weight: 500;
+    }
+    .security-note i { font-size: 12px; color: #34d399; }
+
+    /* ═══ Modals ═══ */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(10,22,40,0.65);
+      backdrop-filter: blur(4px);
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .modal.open { display: flex; }
+
+    .modal-card {
+      background: #fff;
+      border-radius: 22px;
+      padding: 32px 26px 26px;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      position: relative;
+      animation: pop-in 0.2s ease;
+    }
+    @keyframes pop-in {
+      from { transform: scale(0.92); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .modal-icon {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+      border: 2px solid #86efac;
+    }
+    .modal-icon i { font-size: 22px; color: #0f9d58; }
+
+    .modal-card h2 {
+      font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 6px;
+    }
+    .modal-card > p {
+      font-size: 12px; color: #64748b; margin-bottom: 20px; line-height: 1.6;
+    }
+
+    .modal-field { position: relative; margin-bottom: 14px; text-align: left; }
+    .modal-field label {
+      font-size: 11px; font-weight: 600; color: #475569;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .modal-field label i { color: #0f9d58; font-size: 10px; }
+    .modal-field input {
+      width: 100%; padding: 11px 14px;
+      border-radius: 10px; border: 1.5px solid #e2e8f0;
+      font-size: 14px; color: #1e293b; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #f8fafc;
+    }
+    .modal-field input:focus {
+      border-color: #0f9d58;
+      box-shadow: 0 0 0 3px rgba(15,157,88,0.12);
+      background: #fff;
+    }
+
+    .modal-close {
+      position: absolute; top: 14px; right: 16px;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: #f1f5f9;
+      color: #64748b; cursor: pointer; font-size: 14px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .modal-close:hover { background: #e2e8f0; color: #1e293b; }
+
+    .modal-msg {
+      font-size: 12px; margin-top: 12px; font-weight: 500;
+      min-height: 16px; text-align: center;
+    }
+  </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="card">
+<div class="wrap">
+  <div class="card">
 
-        <div class="header" style="background: linear-gradient(135deg, #0f9d58, #34d399); padding: 35px 20px; color: white; margin: -35px -25px 30px -25px; text-align: center; position: relative; overflow: hidden; border-radius: 5px 5px 0 0;">
-            <a href="#" id="adminBtn" style="position:absolute; top:12px; right:15px; font-size:11px; color:rgba(255,255,255,0.85); text-decoration:none; background:rgba(255,255,255,0.15); padding:4px 10px; border-radius:20px; font-weight:600; letter-spacing:0.5px; backdrop-filter:blur(4px); transition:background 0.2s; z-index:10;">Admin</a>
-            <h1 style="font-size: 26px; font-weight: 800; color: white; margin: 0; letter-spacing: -1px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tbank Investment</h1>
-            <p style="font-size: 10px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin-top: 4px;">Secure Digital Wealth</p>
-            
-            <div style="position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: rgba(255, 255, 255, 0.1); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -30%; left: -10%; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.05); border-radius: 50%;"></div>
+    <!-- ════ HEADER ════ -->
+    <div class="card-header">
+      <a href="#" class="admin-badge" id="adminBtn">
+        <i class="fa-solid fa-shield-halved"></i> Admin
+      </a>
+
+      <h1>Tbank Investment</h1>
+      <p class="tagline">Secure Digital Wealth Platform</p>
+
+
+    </div>
+
+    <!-- ════ BODY ════ -->
+    <div class="card-body">
+
+      <!-- Server alert -->
+      <% if (alert) { %>
+        <div class="alert-box">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><%= alert %></span>
+        </div>
+      <% } %>
+
+      <!-- Maintenance / Suspended notice -->
+      <% if (suspended) { %>
+        <div class="maintenance-box">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+          <h2>Tbank is currently under maintenance</h2>
+          <p>We will respond to you shortly, or email us through <a href="mailto:tbankinvestement@gmail.com">tbankinvestement@gmail.com</a>.</p>
+          <p class="m-thanks">Thank you for your patience.</p>
+        </div>
+      <% } %>
+
+
+      <% if (!suspended) { %>
+      <!-- ══════════════════════════════
+           EMAIL FLOW (Firebase Email Link)
+      ══════════════════════════════ -->
+      <% if (authOption === 'email') { %>
+
+        <p class="section-label">Sign In with Email</p>
+        <p class="section-sub">
+          <i class="fa-solid fa-circle-info"></i>
+          We'll send a secure verification link to your email address.
+        </p>
+
+        <div id="emailStep">
+          <div class="field">
+            <label><i class="fa-solid fa-mobile-screen-button"></i> Phone Number</label>
+            <input type="tel" id="phone" placeholder="e.g. 0712 345 678" inputmode="numeric" required>
+            <i class="f-icon fa-solid fa-mobile-screen-button"></i>
+            <div class="f-error" id="phoneError"><i class="fa-solid fa-triangle-exclamation"></i> Invalid phone number.</div>
+          </div>
+          <div class="field">
+            <label><i class="fa-solid fa-envelope"></i> Email Address</label>
+            <input type="email" id="emailInput" placeholder="you@example.com" required>
+            <i class="f-icon fa-solid fa-envelope"></i>
+            <div class="f-error" id="emailError"></div>
+          </div>
+          <button class="btn" id="sendEmailBtn" onclick="sendEmailOtp()">
+            <i class="fa-solid fa-paper-plane"></i> Send Verification Email
+          </button>
         </div>
 
-        <!-- Alert message from server -->
-        <% if (alert) { %>
-            <div class="alert-box"><%= alert %></div>
-        <% } %>
+        <div id="emailVerifyStep" style="display:none">
+          <div class="step-hint">
+            <i class="fa-regular fa-envelope-open"></i>
+            Verification link sent!<br>
+            Open your email, click the link, then return here and tap the button below.
+          </div>
+          <button class="btn" id="checkEmailBtn" onclick="checkEmailVerified()">
+            <i class="fa-solid fa-circle-check"></i> I've Verified My Email
+          </button>
 
-        <form id="loginForm" action="/login" method="POST">
-            <div class="field">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M6 2h12v20H6zM8 4v2h8V4z"/>
-                </svg>
-                <input type="tel" id="phone" name="phoneNumber" placeholder="Phone Number" inputmode="numeric" pattern="[0-9]*" required>
-                <div class="error" id="phoneError">Invalid phone format. Use +254, 254, or 07/01 format.</div>
-            </div>
-            <div class="field">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M12 17a2 2 0 100-4 2 2 0 000 4zm6-6h-1V9a5 5 0 00-10 0v2H6v10h12V11z"/>
-                </svg>
-                <input type="password" id="password" name="password" placeholder="Password" required>
-                <div class="error" id="passwordError" style="display:none;"></div>
-            </div>
-            <button type="submit" class="btn" id="loginBtn">Login</button>
+          <p class="status-msg" id="emailVerifyMsg"></p>
+        </div>
+
+
+      <!-- ══════════════════════════════
+           OTP FLOW (Firebase Phone Auth)
+      ══════════════════════════════ -->
+      <% } else if (authOption === 'otp') { %>
+
+        <p class="section-label">Verify Account</p>
+        <p class="section-sub">
+          <i class="fa-solid fa-circle-info"></i>
+          Choose your preferred verification method to receive your 6-digit code.
+        </p>
+
+        <!-- Selector for verification channel -->
+        <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+          <button id="channelSmsBtn" type="button" onclick="toggleOtpChannel('sms')" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid #0f9d58; background: #f0fdf4; color: #0f9d58; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.2s;">
+            <i class="fa-solid fa-comment-sms"></i> Verify with SMS
+          </button>
+          <button id="channelEmailBtn" type="button" onclick="toggleOtpChannel('email')" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.2s;">
+            <i class="fa-solid fa-envelope"></i> Verify with Email
+          </button>
+        </div>
+
+        <div id="otpPhoneStep" style="display:none">
+          <div class="field">
+            <label><i class="fa-solid fa-mobile-screen-button"></i> Phone Number</label>
+            <input type="tel" id="phone" placeholder="e.g. 254712345678" inputmode="numeric" pattern="254[0-9]{9}" maxlength="12" required>
+            <i class="f-icon fa-solid fa-mobile-screen-button"></i>
+            <div class="f-error" id="phoneError"><i class="fa-solid fa-triangle-exclamation"></i> Enter a valid number starting with 254 (12 digits).</div>
+          </div>
+          
+          <div class="field" id="emailFieldContainer" style="display: none;">
+            <label><i class="fa-solid fa-envelope"></i> Email Address</label>
+            <input type="email" id="emailInput" placeholder="you@example.com">
+            <i class="f-icon fa-solid fa-envelope"></i>
+            <div class="f-error" id="emailError"><i class="fa-solid fa-triangle-exclamation"></i> Enter a valid email address.</div>
+          </div>
+
+          <div id="recaptcha-container"></div>
+          <button class="btn" id="sendOtpBtn" onclick="sendOtpCode()">
+            <i class="fa-solid fa-paper-plane"></i> Send OTP Code
+          </button>
+        </div>
+
+        <div id="otpVerifyStep" style="display:none">
+          <div class="step-hint" id="otpStepHint">
+            <i class="fa-solid fa-comment-dots"></i>
+            OTP sent to your phone.<br>Enter the 6-digit code below.
+          </div>
+          <div class="field">
+            <label><i class="fa-solid fa-hashtag"></i> One-Time Password</label>
+            <input type="text" id="otpInput" placeholder="• • • • • •" maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:8px;font-size:18px;font-weight:700">
+            <i class="f-icon fa-solid fa-key"></i>
+          </div>
+          <button class="btn" id="verifyOtpBtn" onclick="verifyOtpCode()">
+            <i class="fa-solid fa-circle-check"></i> Verify OTP
+          </button>
+          <p class="status-msg" id="otpMsg"></p>
+        </div>
+
+
+      <!-- ══════════════════════════════
+           STANDARD FLOW (Phone + Password)
+      ══════════════════════════════ -->
+      <% } else { %>
+
+        <p class="section-label">Welcome back</p>
+        <p class="section-sub">
+          <i class="fa-solid fa-circle-info"></i>
+          Sign in with your registered phone number and password.
+        </p>
+
+        <form id="loginForm" action="/login" method="POST" novalidate>
+          <div class="field">
+            <label><i class="fa-solid fa-mobile-screen-button"></i> Phone Number</label>
+            <input type="tel" id="phone" name="phoneNumber" placeholder="e.g. 254712345678" inputmode="numeric" pattern="254[0-9]{9}" maxlength="12" required autocomplete="tel">
+            <i class="f-icon fa-solid fa-mobile-screen-button"></i>
+            <div class="f-error" id="phoneError"><i class="fa-solid fa-triangle-exclamation"></i> Enter a valid phone number.</div>
+          </div>
+
+          <div class="field">
+            <label><i class="fa-solid fa-lock"></i> Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+            <i class="f-icon fa-solid fa-lock"></i>
+            <span class="f-toggle" id="togglePassword" title="Show / Hide password">
+              <i id="eyeIcon" class="fa-solid fa-eye"></i>
+            </span>
+            <div class="f-error" id="passwordError"><i class="fa-solid fa-triangle-exclamation"></i></div>
+          </div>
+
+          <button type="submit" class="btn" id="loginBtn">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In
+          </button>
         </form>
 
-        <div class="footer">
-            <a href="/register">Create Account</a>
-            <span class="footer-divider" id="forgotDivider" style="display:none;">|</span>
-            <a href="#" id="forgotPinBtn" style="display:none;">Forgot PIN?</a>
-        </div>
+      <% } %>
+      <% } %>
 
+    </div><!-- /.card-body -->
 
+    <!-- ════ FOOTER ════ -->
+    <div class="card-footer">
+      <a href="/register">
+        <i class="fa-solid fa-user-plus"></i> Create Account
+      </a>
+      <span class="footer-sep" id="forgotDivider" style="display:none">•</span>
+      <a href="#" id="forgotPinBtn" style="display:none">
+        <i class="fa-solid fa-rotate-left"></i> Forgot Password?
+      </a>
     </div>
+
+  </div><!-- /.card -->
+</div><!-- /.wrap -->
+
+<!-- Security note below card -->
+<p class="security-note">
+  <i class="fa-solid fa-lock"></i>
+  Your connection to Tbank is encrypted &amp; secure
+</p>
+
+
+<!-- ════════════════════════════════
+     ADMIN MODAL
+════════════════════════════════ -->
+<div id="adminModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+  <div class="modal-card">
+    <div class="modal-close" id="adminModalClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></div>
+    <div class="modal-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <h2 id="adminModalTitle">Admin Access</h2>
+    <p>Enter your secret access code to enter the HQ portal.</p>
+    <div class="modal-field">
+      <label><i class="fa-solid fa-key"></i> Access Code</label>
+      <input type="password" id="adminCode" placeholder="Enter code" autocomplete="off">
+    </div>
+    <button class="btn btn-sm" id="submitAdminCode">
+      <i class="fa-solid fa-arrow-right-to-bracket"></i> Access HQ
+    </button>
+    <p class="modal-msg" id="adminMsg"></p>
+  </div>
 </div>
 
-<!-- Admin Modal -->
-<div id="adminModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Access Code</h2>
-        <input type="text" id="demoCode" placeholder="Enter code">
-        <button id="submitCode">Submit</button>
+
+<!-- ════════════════════════════════
+     FORGOT PASSWORD MODAL
+════════════════════════════════ -->
+<div id="forgotPinModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="forgotModalTitle">
+  <div class="modal-card">
+    <div class="modal-close" id="forgotModalClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></div>
+    <div class="modal-icon"><i class="fa-solid fa-rotate-left"></i></div>
+    <h2 id="forgotModalTitle">Forgot Password?</h2>
+    <p>Enter your registered phone number. A start key will be sent to you via SMS.</p>
+    <div class="modal-field">
+      <label><i class="fa-solid fa-mobile-screen-button"></i> Phone Number</label>
+      <input type="tel" id="forgotPinPhone" placeholder="e.g. 254712345678" inputmode="numeric" pattern="254[0-9]{9}" maxlength="12">
     </div>
+    <button class="btn btn-sm" id="submitForgotPin">
+      <i class="fa-solid fa-paper-plane"></i> Send Start Key
+    </button>
+    <p class="modal-msg" id="forgotPinMessage"></p>
+  </div>
 </div>
 
-<!-- Forgot PIN Modal -->
-<div id="forgotPinModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Forgot PIN?</h2>
-        <p style="font-size:13px;color:#64748b;text-align:center;margin-bottom:15px;">Enter your phone number to request a start key via SMS.</p>
-        <input type="tel" id="forgotPinPhone" placeholder="Phone Number" inputmode="numeric">
-        <button id="submitForgotPin">Request Start Key</button>
-        <p id="forgotPinMessage" style="font-size:13px;text-align:center;margin-top:10px;"></p>
-    </div>
-</div>
 
+<!-- ════════════════════════════════
+     UI SCRIPT
+════════════════════════════════ -->
 <script>
-  const loginForm = document.getElementById("loginForm");
-  const loginBtn = document.getElementById("loginBtn");
-  const phoneError = document.getElementById("phoneError");
-  const passwordError = document.getElementById("passwordError");
+(function () {
+  'use strict';
 
-  loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const phone = document.getElementById("phone").value.trim();
-    const password = document.getElementById("password").value;
+  /* ── helpers ── */
+  function showMsg(el, text, color) {
+    el.innerHTML = text || '';
+    el.style.color = color || '';
+    el.style.display = text ? 'block' : 'none';
+  }
+  function showError(el, text) {
+    el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + text;
+    el.style.display = 'flex';
+  }
+  function hideEl(el) { el.style.display = 'none'; }
 
-    if (!phone || !password) {
-        if (!phone) phoneError.style.display = "block";
-        if (!password) { passwordError.style.display = "block"; passwordError.textContent = "Password is required"; }
-        return;
-    }
+  /* ── modal ── */
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-    phoneError.style.display = "none";
-    passwordError.style.display = "none";
-
-    loginBtn.classList.add("loading");
-    loginBtn.innerText = "Logging in...";
-
-    fetch("/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ phoneNumber: phone, password: password })
-    })
-    .then(res => {
-        if (res.redirected) {
-            window.location.href = res.url;
-        } else {
-            return res.text().then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, "text/html");
-                const alertEl = doc.querySelector(".alert-box");
-                const msgEl = doc.querySelector(".message");
-                const errorText = alertEl ? alertEl.textContent : (msgEl ? msgEl.textContent : "Login failed");
-                phoneError.textContent = errorText;
-                phoneError.style.display = "block";
-                loginBtn.classList.remove("loading");
-                loginBtn.innerText = "Login";
-                // Show Forgot PIN if wrong password
-                if (errorText.toLowerCase().includes("wrong") || errorText.toLowerCase().includes("password") || errorText.toLowerCase().includes("incorrect") || errorText.toLowerCase().includes("invalid")) {
-                    document.getElementById("forgotPinBtn").style.display = "inline";
-                    document.getElementById("forgotDivider").style.display = "inline";
-                }
-            });
-        }
-    })
-    .catch(err => {
-        console.error("Login error:", err);
-        phoneError.textContent = "Network error. Please try again.";
-        phoneError.style.display = "block";
-        loginBtn.classList.remove("loading");
-        loginBtn.innerText = "Login";
-    });
+  document.querySelectorAll('.modal').forEach(function(m) {
+    m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('open'); });
   });
 
-  // Dynamic Phone Maxlength
-  const phoneInput = document.getElementById("phone");
-  if(phoneInput) {
-      phoneInput.addEventListener('input', function() {
-          let val = this.value.replace(/[^0-9]/g, '').trim();
-          this.value = val;
-          if (val.startsWith('254')) {
-              this.maxLength = 12;
-          } else if (val.startsWith('07') || val.startsWith('01')) {
-              this.maxLength = 10;
-          } else {
-              this.maxLength = 13;
-          }
+  /* ── Admin modal ── */
+  document.getElementById('adminBtn').addEventListener('click', function(e) {
+    e.preventDefault(); openModal('adminModal');
+  });
+  document.getElementById('adminModalClose').addEventListener('click', function() {
+    closeModal('adminModal');
+  });
+  document.getElementById('submitAdminCode').addEventListener('click', function() {
+    var code = document.getElementById('adminCode').value.trim();
+    var msg  = document.getElementById('adminMsg');
+    if (code === '35951444') {
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Entering…';
+      window.location.href = '/hq';
+    } else {
+      showMsg(msg, '<i class="fa-solid fa-triangle-exclamation"></i> Invalid access code.', '#dc2626');
+    }
+  });
+
+  /* ── Forgot Password modal ── */
+  var forgotPinBtn = document.getElementById('forgotPinBtn');
+  if (forgotPinBtn) {
+    forgotPinBtn.addEventListener('click', function(e) { e.preventDefault(); openModal('forgotPinModal'); });
+  }
+  document.getElementById('forgotModalClose').addEventListener('click', function() {
+    closeModal('forgotPinModal');
+  });
+  document.getElementById('submitForgotPin').addEventListener('click', async function() {
+    var phone = document.getElementById('forgotPinPhone').value.trim();
+    var msg   = document.getElementById('forgotPinMessage');
+    if (!phone) { showMsg(msg, '<i class="fa-solid fa-triangle-exclamation"></i> Please enter your phone number.', '#dc2626'); return; }
+    showMsg(msg, '<i class="fa-solid fa-spinner fa-spin"></i> Processing…', '#64748b');
+    try {
+      var res  = await fetch('/forgot-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ phoneNumber: phone })
       });
-  }
+      var data = await res.json();
+      showMsg(msg,
+        (data.success ? '<i class="fa-solid fa-circle-check"></i> ' : '<i class="fa-solid fa-triangle-exclamation"></i> ') +
+        (data.message || (data.success ? 'Request received.' : 'Failed.')),
+        data.success ? '#15803d' : '#dc2626'
+      );
+    } catch (err) {
+      showMsg(msg, '<i class="fa-solid fa-wifi"></i> Network error. Please try again.', '#dc2626');
+    }
+  });
 
-  // Admin Modal Script
-  const adminModal = document.getElementById("adminModal");
-  const adminBtn = document.getElementById("adminBtn");
-  const adminSpan = document.getElementsByClassName("close")[0];
-  adminBtn.onclick = function(e) { e.preventDefault(); adminModal.style.display = "block"; }
-  adminSpan.onclick = function() { adminModal.style.display = "none"; }
-  window.onclick = function(event) { if (event.target == adminModal) { adminModal.style.display = "none"; } }
-  document.getElementById("submitCode").onclick = function() {
-      const code = document.getElementById("demoCode").value;
-      if (code === "35951444") { window.location.href = "/hq"; } else { alert("Invalid code"); }
-  }
+  /* ── Standard login form ── */
+  var loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    var loginBtn      = document.getElementById('loginBtn');
+    var phoneError    = document.getElementById('phoneError');
+    var passwordError = document.getElementById('passwordError');
 
-  // Forgot PIN Modal Script
-  const forgotPinModal = document.getElementById("forgotPinModal");
-  const forgotPinBtn = document.getElementById("forgotPinBtn");
-  const forgotPinSpan = document.getElementsByClassName("close")[1];
-  forgotPinBtn.onclick = function(e) { e.preventDefault(); forgotPinModal.style.display = "block"; }
-  forgotPinSpan.onclick = function() { forgotPinModal.style.display = "none"; }
-  window.onclick = function(event) { if (event.target == forgotPinModal) { forgotPinModal.style.display = "none"; } }
+    /* show/hide password */
+    var togglePwd = document.getElementById('togglePassword');
+    if (togglePwd) {
+      togglePwd.addEventListener('click', function() {
+        var pw  = document.getElementById('password');
+        var ico = document.getElementById('eyeIcon');
+        var vis = pw.type === 'password';
+        pw.type = vis ? 'text' : 'password';
+        ico.className = vis ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        togglePwd.title = vis ? 'Hide password' : 'Show password';
+      });
+    }
 
-  document.getElementById("submitForgotPin").onclick = async function() {
-      const phone = document.getElementById("forgotPinPhone").value.trim();
-      const msg = document.getElementById("forgotPinMessage");
-      if (!phone) { msg.textContent = "Please enter your phone number"; msg.style.color = "red"; return; }
+    /* phone auto-format: always normalise to 254 + up to 9 digits */
+    var phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', function() {
+        var val = this.value.replace(/[^0-9]/g, '');
+        if (val.length === 0) { this.value = ''; return; }
+        // Normalise a leading 0 (e.g. 0712...) to 254...
+        if (val.startsWith('0')) val = '254' + val.substring(1);
+        // If the user hasn't typed the prefix yet, prepend 254
+        if (!val.startsWith('254')) val = '254' + val;
+        // Keep only the 9 digits after 254
+        val = '254' + val.substring(3).slice(0, 9);
+        if (val.length > 12) val = val.slice(0, 12);
+        this.value = val;
+        this.maxLength = 12;
+      });
+    }
 
-      msg.textContent = "Processing..."; msg.style.color = "#64748b";
+    /* submit */
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var phone    = (document.getElementById('phone').value || '').trim();
+      var password = document.getElementById('password').value;
 
-      try {
-          const res = await fetch("/forgot-pin", {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: new URLSearchParams({ phoneNumber: phone })
-          });
-          const data = await res.json();
-          if (data.success) {
-              msg.textContent = data.message || "Start key request received.";
-              msg.style.color = "#15803d";
-          } else {
-              msg.textContent = data.message || "Failed to process request.";
-              msg.style.color = "red";
+      hideEl(phoneError); hideEl(passwordError);
+
+      if (!phone)    { showError(phoneError, 'Phone number is required.'); return; }
+      if (!/^254[0-9]{9}$/.test(phone)) { showError(phoneError, 'Enter a valid number starting with 254 (12 digits).'); return; }
+      if (!password) { showError(passwordError, 'Password is required.'); return; }
+
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Signing in…';
+
+      fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ phoneNumber: phone, password: password })
+      })
+      .then(function(res) {
+        if (res.redirected) { window.location.href = res.url; return; }
+        return res.text().then(function(html) {
+          var doc       = new DOMParser().parseFromString(html, 'text/html');
+          var alertEl   = doc.querySelector('.alert-box');
+          var errorText = alertEl ? alertEl.textContent.trim() : 'Login failed. Please try again.';
+          var docText   = (doc.body ? doc.body.textContent : '') + ' ' + errorText;
+          var isWrongCred = /wrong|password|incorrect|invalid|login failed/i.test(docText);
+
+          // Single, coherent message: append reset info only when it's a credential error
+          if (isWrongCred && !/forgot/i.test(errorText)) {
+            errorText += ' Forgot your password? Use the "Forgot Password?" link below to reset it via SMS.';
           }
-      } catch (err) {
-          msg.textContent = "Network error. Please try again.";
-          msg.style.color = "red";
-      }
+          showError(phoneError, errorText);
+
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In';
+
+          if (isWrongCred) {
+            document.getElementById('forgotPinBtn').style.display  = 'inline-flex';
+            document.getElementById('forgotDivider').style.display = 'inline';
+          }
+        });
+      })
+      .catch(function() {
+        showError(phoneError, 'Network error. Check your connection and try again.');
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Sign In';
+      });
+    });
   }
+
+})();
+</script>
+
+
+<!-- ════════════════════════════════
+     FIREBASE AUTH SCRIPT
+════════════════════════════════ -->
+<script>
+(function () {
+  var authOption = window.__AUTH_OPTION__;
+  var cfg        = window.__FIREBASE_CONFIG__;
+
+  if (!cfg || !cfg.apiKey) return;
+
+  if (!firebase.apps.length) firebase.initializeApp(cfg);
+  var auth = firebase.auth();
+
+  function firebaseLogin(phone) {
+    var f = document.createElement('form');
+    f.method = 'POST'; f.action = '/firebase-login';
+    var i = document.createElement('input');
+    i.type = 'hidden'; i.name = 'phoneNumber'; i.value = phone || '';
+    f.appendChild(i); document.body.appendChild(f); f.submit();
+  }
+
+  /* ── EMAIL LINK FLOW ── */
+  if (authOption === 'email') {
+    if (auth.isSignInWithEmailLink(window.location.href)) {
+      var sEmail = localStorage.getItem('emailForSignIn');
+      var sPhone = localStorage.getItem('phoneForSignIn');
+      if (sEmail) {
+        auth.signInWithEmailLink(sEmail, window.location.href)
+          .then(function() {
+            localStorage.removeItem('emailForSignIn');
+            localStorage.removeItem('phoneForSignIn');
+            firebaseLogin(sPhone);
+          })
+          .catch(function(err) { alert('Verification failed: ' + err.message); });
+      }
+    }
+
+    window.sendEmailOtp = function() {
+      var phone    = (document.getElementById('phone').value || '').trim();
+      var email    = (document.getElementById('emailInput').value || '').trim();
+      var emailErr = document.getElementById('emailError');
+      if (!phone || !email) {
+        emailErr.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Please fill in both fields.';
+        emailErr.style.display = 'flex'; return;
+      }
+      var btn = document.getElementById('sendEmailBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+
+      auth.sendSignInLinkToEmail(email, { url: window.location.href, handleCodeInApp: true })
+        .then(function() {
+          localStorage.setItem('emailForSignIn', email);
+          localStorage.setItem('phoneForSignIn', phone);
+          document.getElementById('emailStep').style.display = 'none';
+          document.getElementById('emailVerifyStep').style.display = 'block';
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Verification Email';
+          emailErr.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + err.message;
+          emailErr.style.display = 'flex';
+        });
+    };
+
+    window.checkEmailVerified = function() {
+      var user = auth.currentUser;
+      var msg  = document.getElementById('emailVerifyMsg');
+      if (!user) {
+        msg.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Not verified yet — please click the link in your email.';
+        msg.style.color = '#b45309'; return;
+      }
+      user.reload().then(function() {
+        if (user.emailVerified) {
+          msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verified! Logging you in…';
+          msg.style.color = '#15803d';
+          firebaseLogin(localStorage.getItem('phoneForSignIn') || '');
+        } else {
+          msg.innerHTML = '<i class="fa-solid fa-envelope"></i> Not verified yet — please check your inbox.';
+          msg.style.color = '#b45309';
+        }
+      });
+    };
+  }
+
+  /* ── COMBINED PHONE & EMAIL OTP FLOW ── */
+  if (authOption === 'otp') {
+    var confirmationResult = null;
+    var activeChannel = 'sms'; // default channel
+
+    window.toggleOtpChannel = function(channel) {
+      activeChannel = channel;
+      var smsBtn = document.getElementById('channelSmsBtn');
+      var emailBtn = document.getElementById('channelEmailBtn');
+      var emailContainer = document.getElementById('emailFieldContainer');
+      var emailInput = document.getElementById('emailInput');
+      var phoneStep = document.getElementById('otpPhoneStep');
+
+      // Reveal the input section once a channel is chosen
+      phoneStep.style.display = 'block';
+
+      if (channel === 'sms') {
+        // Style SMS button as active
+        smsBtn.style.border = '1.5px solid #0f9d58';
+        smsBtn.style.background = '#f0fdf4';
+        smsBtn.style.color = '#0f9d58';
+
+        // Style Email button as inactive
+        emailBtn.style.border = '1.5px solid #e2e8f0';
+        emailBtn.style.background = '#f8fafc';
+        emailBtn.style.color = '#64748b';
+
+        // Hide email field
+        emailContainer.style.display = 'none';
+        emailInput.required = false;
+      } else {
+        // Style Email button as active
+        emailBtn.style.border = '1.5px solid #0f9d58';
+        emailBtn.style.background = '#f0fdf4';
+        emailBtn.style.color = '#0f9d58';
+
+        // Style SMS button as inactive
+        smsBtn.style.border = '1.5px solid #e2e8f0';
+        smsBtn.style.background = '#f8fafc';
+        smsBtn.style.color = '#64748b';
+
+        // Show email field
+        emailContainer.style.display = 'block';
+        emailInput.required = true;
+      }
+    };
+
+    window.sendOtpCode = function() {
+      var raw = (document.getElementById('phone').value || '').trim();
+      var phoneError = document.getElementById('phoneError');
+      var emailError = document.getElementById('emailError');
+      
+      // Hide errors
+      phoneError.style.display = 'none';
+      emailError.style.display = 'none';
+
+      if (!raw) {
+        phoneError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Phone number is required.';
+        phoneError.style.display = 'flex';
+        return;
+      }
+
+      var phone = raw.startsWith('07') || raw.startsWith('01') ? '+254' + raw.substring(1)
+                : raw.startsWith('254') ? '+' + raw : raw;
+
+      if (!/^\+?254[0-9]{9}$/.test(phone)) {
+        phoneError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Enter a valid number starting with 254 (12 digits).';
+        phoneError.style.display = 'flex';
+        btn.disabled = false;
+        return;
+      }
+
+      var btn = document.getElementById('sendOtpBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+
+      if (activeChannel === 'sms') {
+        // --- Firebase Phone Auth (SMS) ---
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { size: 'invisible' });
+        }
+        auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+          .then(function(result) {
+            confirmationResult = result;
+            document.getElementById('otpPhoneStep').style.display  = 'none';
+            document.getElementById('otpVerifyStep').style.display = 'block';
+            document.getElementById('otpStepHint').innerHTML = '<i class="fa-solid fa-comment-dots"></i> OTP sent to your phone.<br>Enter the 6-digit code below.';
+          })
+          .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send OTP Code';
+            phoneError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + err.message;
+            phoneError.style.display = 'flex';
+          });
+      } else {
+        // --- Custom Email OTP (Node Server) ---
+        var email = (document.getElementById('emailInput').value || '').trim();
+        if (!email) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send OTP Code';
+          emailError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Email address is required.';
+          emailError.style.display = 'flex';
+          return;
+        }
+
+        // Save variables for confirmation stage
+        localStorage.setItem('phoneForSignIn', phone);
+
+        fetch('/send-email-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ phoneNumber: phone, email: email })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success) {
+            document.getElementById('otpPhoneStep').style.display  = 'none';
+            document.getElementById('otpVerifyStep').style.display = 'block';
+            document.getElementById('otpStepHint').innerHTML = '<i class="fa-solid fa-envelope"></i> ' + data.message + '<br>Enter the 6-digit code below.';
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send OTP Code';
+            emailError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + data.message;
+            emailError.style.display = 'flex';
+          }
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send OTP Code';
+          emailError.innerHTML = '<i class="fa-solid fa-wifi"></i> Connection error. Try again.';
+          emailError.style.display = 'flex';
+        });
+      }
+    };
+
+    window.verifyOtpCode = function() {
+      var otp = (document.getElementById('otpInput').value || '').trim();
+      var msg = document.getElementById('otpMsg');
+      var btn = document.getElementById('verifyOtpBtn');
+
+      if (otp.length < 6) {
+        msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Enter the full 6-digit OTP.';
+        msg.style.color = '#dc2626'; 
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying…';
+
+      if (activeChannel === 'sms') {
+        // --- Firebase Phone Auth verification ---
+        confirmationResult.confirm(otp)
+          .then(function(result) {
+            msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> OTP verified! Logging in…';
+            msg.style.color = '#15803d';
+            firebaseLogin(result.user.phoneNumber);
+          })
+          .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verify OTP';
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + err.message;
+            msg.style.color = '#dc2626';
+          });
+      } else {
+        // --- Custom Email OTP verification ---
+        var phone = localStorage.getItem('phoneForSignIn') || '';
+        fetch('/verify-email-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ phoneNumber: phone, otp: otp })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success) {
+            msg.innerHTML = '<i class="fa-solid fa-circle-check"></i> Code verified! Logging in…';
+            msg.style.color = '#15803d';
+            localStorage.removeItem('phoneForSignIn');
+            // Redirect directly to dashboard as server returned redirection path
+            window.location.href = data.redirect || '/personal';
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verify OTP';
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ' + data.message;
+            msg.style.color = '#dc2626';
+          }
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Verify OTP';
+          msg.innerHTML = '<i class="fa-solid fa-wifi"></i> Connection error. Try again.';
+          msg.style.color = '#dc2626';
+        });
+      }
+    };
+  }
+
+})();
 </script>
 
 </body>
