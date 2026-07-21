@@ -1622,4 +1622,11 @@ router.get("/group-performance", async (req, res) => {
       });
   });
 
+router.get("/test", async (req, res) => {
+  if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+    return res.redirect("/login");
+  }
+  res.render("agent/test");
+});
+
 module.exports = router;

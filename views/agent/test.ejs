@@ -1,126 +1,322 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Member Verification</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent - Pesapal Payment Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
+        :root {
+            --primary: #007bff;
+            --primary-dark: #0056b3;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --input-bg: #f8f9fa;
+            --border-color: #dee2e6;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg-gradient);
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
             margin: 0;
+            color: var(--text-color);
             padding: 20px;
         }
-
-        .container {
-            max-width: 600px;
-            margin: auto;
+        .payment-box { 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 20px; 
+            width: 100%;
+            max-width: 450px; 
+            box-shadow: var(--shadow);
+            text-align: center;
         }
-
-        .card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        h1 { 
+            margin: 0 0 20px 0; 
+            font-size: 26px; 
+            color: var(--primary); 
         }
-
-        .header-box {
-            background: #eef2f7;
-            padding: 15px;
+        p {
+            font-size: 1.1em;
+            color: var(--secondary);
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        button { 
+            width: 100%; 
+            padding: 15px; 
+            background: var(--primary); 
+            color: #fff; 
+            border: none; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            margin-top: 15px; 
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        button:hover { 
+            background: var(--primary-dark); 
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .amount-badge { background: #ecfdf5; color: #047857; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .popup {
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .popup h3 {
+            margin-top: 0;
+            color: #0f172a;
+        }
+        .popup .phone-display {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin: 15px 0;
+        }
+        .popup .amount-display {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #047857;
             margin-bottom: 20px;
         }
-
-        .header-box h3 {
-            margin: 0 0 10px 0;
-        }
-
-        .row {
+        .payment-methods {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
         }
-
-        .label {
-            font-weight: bold;
-            color: #555;
+        .payment-method {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            background: #fff;
+            color: var(--text-color);
+            font-size: 1rem;
         }
-
-        .value {
-            color: #222;
+        .payment-method:hover {
+            border-color: var(--primary);
+            background: #f8f9ff;
         }
-
-        .success {
-            text-align: center;
-            color: green;
-            font-weight: bold;
-            margin-top: 10px;
+        .payment-method i {
+            font-size: 1.2rem;
         }
-
-        .member-box {
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-icon {
+            font-size: 3rem;
+            margin: 15px 0;
+        }
+        .result-success { color: var(--success); }
+        .result-fail { color: var(--danger); }
+        .transaction-code {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+        .dismiss-btn {
+            background: #64748b;
+            width: auto;
+            padding: 10px 30px;
             margin-top: 15px;
         }
-
-        .member-box h4 {
-            margin-bottom: 10px;
+        .dismiss-btn:hover {
+            background: #475569;
         }
-
     </style>
 </head>
 <body>
-
-<div class="container">
     <div class="card">
+        <h2 style="margin-top: 0; color: #0f172a;">Pesapal Payment Test</h2>
+        <p style="color: #64748b; margin-bottom: 2rem; line-height: 1.5;">
+            Enter a phone number and amount to simulate a Pesapal payment request.
+        </p>
+        
+        <form id="paymentForm">
+            <div class="input-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" placeholder="e.g. 254712345678" required autocomplete="off" />
+            </div>
+            <div class="input-group">
+                <label for="amount">Amount (KSH)</label>
+                <input type="number" id="amount" placeholder="e.g. 1000" required min="1" step="0.01" />
+            </div>
+            <button type="button" id="initiatePesapalBtn">Request Payment</button>
+        </form>
 
-        <!-- TOP HEADER (Regional + Group Info) -->
-        <div class="header-box">
-            <h3>Regional Block: <%= member.regionalBlock %></h3>
-
-            <div class="row">
-                <div><span class="label">Group No:</span> <span class="value"><%= member.groupNo %></span></div>
-                <div><span class="label">Group Type:</span> <span class="value"><%= member.groupType %></span></div>
+        <div id="pesapal-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:30px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.2); z-index:1000; text-align:center; min-width: 320px; border: 1px solid #e2e8f0;">
+            <div id="payment-method-view">
+                <h3 style="margin-top:0; color:#0f172a;">Select Payment Method</h3>
+                <div id="popup-phone" class="phone-display"></div>
+                <div id="popup-amount" class="amount-display"></div>
+                <div class="payment-methods">
+                    <button type="button" class="payment-method" onclick="selectMethod('mpesa')">
+                        <i class="fa-solid fa-mobile-screen"></i> M-Pesa
+                    </button>
+                    <button type="button" class="payment-method" onclick="selectMethod('airtel')">
+                        <i class="fa-solid fa-mobile-screen-button"></i> Airtel Money
+                    </button>
+                    <button type="button" class="payment-method" onclick="selectMethod('visa')">
+                        <i class="fa-brands fa-cc-visa"></i> Visa
+                    </button>
+                    <button type="button" class="payment-method" onclick="selectMethod('mastercard')">
+                        <i class="fa-brands fa-cc-mastercard"></i> Mastercard
+                    </button>
+                </div>
             </div>
 
-            <div class="row">
-                <div><span class="label">Certificate:</span> <span class="value"><%= member.certificate %></span></div>
-                <div><span class="label">Agent:</span> <span class="value"><%= member.agentName %></span></div>
+            <div id="payment-processing" style="display:none;">
+                <h3 style="margin-top:0; color:#0f172a;">Processing Payment</h3>
+                <div id="popup-phone-proc" class="phone-display"></div>
+                <div id="popup-amount-proc" class="amount-display"></div>
+                <div class="spinner"></div>
+                <p style="color:#64748b;">Please wait...</p>
             </div>
 
-            <div class="row">
-                <div><span class="label">Phone:</span> <span class="value"><%= member.phone %></span></div>
+            <div id="payment-result" style="display:none;">
+                <h3 style="margin-top:0; color:#0f172a;">Payment Result</h3>
+                <div id="result-icon" class="result-icon"></div>
+                <div id="popup-phone-res" class="phone-display"></div>
+                <div id="popup-amount-res" class="amount-display"></div>
+                <div id="transaction-code" class="transaction-code"></div>
+                <p id="result-message" style="color:#64748b; margin-bottom:15px;"></p>
+                <button type="button" class="dismiss-btn" onclick="dismissPopup()">OK</button>
             </div>
         </div>
-
-        <!-- MEMBER DETAILS -->
-        <div class="member-box">
-            <h4>Member Details</h4>
-
-            <div class="row">
-                <div><span class="label">Member No:</span> <span class="value"><%= member.mno %></span></div>
-            </div>
-
-            <!-- VERIFIED STATUS BELOW MEMBER NO -->
-            <div class="success">
-                Verified Successfully ✔
-            </div>
-
-            <div class="row">
-                <div><span class="label">Name:</span> <span class="value"><%= member.name %></span></div>
-            </div>
-
-            <div class="row">
-                <div><span class="label">ID Number:</span> <span class="value"><%= member.idNumber %></span></div>
-            </div>
-
-            <div class="row">
-                <div><span class="label">Status:</span> <span class="value"><%= member.status %></span></div>
-            </div>
-
-        </div>
-
     </div>
-</div>
 
+    <script>
+        const initiateBtn = document.getElementById('initiatePesapalBtn');
+        const popup = document.getElementById('pesapal-popup');
+        const methodView = document.getElementById('payment-method-view');
+        const processingView = document.getElementById('payment-processing');
+        const resultView = document.getElementById('payment-result');
+
+        initiateBtn.addEventListener('click', function() {
+            const phone = document.getElementById('phone').value.trim();
+            const amount = document.getElementById('amount').value.trim();
+
+            if (!phone || !amount) {
+                alert('Please enter both phone number and amount.');
+                return;
+            }
+
+            document.getElementById('popup-phone').textContent = phone;
+            document.getElementById('popup-amount').textContent = 'KSH ' + amount;
+            document.getElementById('popup-phone-proc').textContent = phone;
+            document.getElementById('popup-amount-proc').textContent = 'KSH ' + amount;
+            document.getElementById('popup-phone-res').textContent = phone;
+            document.getElementById('popup-amount-res').textContent = 'KSH ' + amount;
+
+            showMethodView();
+            popup.style.display = 'block';
+        });
+
+        function showMethodView() {
+            methodView.style.display = 'block';
+            processingView.style.display = 'none';
+            resultView.style.display = 'none';
+        }
+
+        function selectMethod(method) {
+            methodView.style.display = 'none';
+            processingView.style.display = 'block';
+
+            const methodName = method === 'mpesa' ? 'M-Pesa' : 
+                               method === 'airtel' ? 'Airtel Money' :
+                               method === 'visa' ? 'Visa' : 'Mastercard';
+
+            setTimeout(() => {
+                processingView.style.display = 'none';
+                resultView.style.display = 'block';
+
+                const isSuccess = Math.random() > 0.2;
+                const resultIcon = document.getElementById('result-icon');
+                const transactionCode = document.getElementById('transaction-code');
+                const resultMessage = document.getElementById('result-message');
+
+                if (isSuccess) {
+                    resultIcon.innerHTML = '<i class="fa-solid fa-circle-check result-success"></i>';
+                    transactionCode.textContent = 'PSL-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+                    resultMessage.textContent = 'Payment successful via ' + methodName + '. You will receive a confirmation shortly.';
+                } else {
+                    resultIcon.innerHTML = '<i class="fa-solid fa-circle-xmark result-fail"></i>';
+                    transactionCode.textContent = '';
+                    resultMessage.textContent = 'Payment failed. Please try again or use a different method.';
+                }
+            }, 2500);
+        }
+
+        function dismissPopup() {
+            popup.style.display = 'none';
+            showMethodView();
+        }
+    </script>
 </body>
 </html>
