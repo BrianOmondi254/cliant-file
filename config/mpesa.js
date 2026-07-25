@@ -43,8 +43,8 @@ router.post("/stk-push", async (req, res) => {
       PartyB: mpesaConfig.shortcode,
       PhoneNumber: phone,
       CallBackURL: mpesaConfig.callbackUrl,
-      AccountReference: reference,
-      TransactionDesc: description,
+      AccountReference: reference || "Tbank Agent",
+      TransactionDesc: description || "Agent Payment Request",
     };
     
     const response = await fetch(mpesaConfig.stkPushUrl, {
@@ -57,9 +57,20 @@ router.post("/stk-push", async (req, res) => {
     });
     
     const data = await response.json();
-    res.json(data);
+    
+    const isSuccess = data && data.ResponseCode === "0";
+    
+    res.json({
+      success: isSuccess,
+      ResponseCode: data && data.ResponseCode,
+      ResponseDescription: data && data.ResponseDescription,
+      MerchantRequestID: data && data.MerchantRequestID,
+      CheckoutRequestID: data && data.CheckoutRequestID,
+      CustomerMessage: data && data.CustomerMessage,
+      message: data && data.ResponseDescription || (isSuccess ? "STK push initiated" : "Payment initiation failed"),
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

@@ -873,4 +873,55 @@ router.get("/verify-department", async (req, res) => {
   }
 });
 
+router.post("/verify-session-pin", async (req, res) => {
+  if (!req.session || !req.session.hqUser) {
+    return res.json({ status: "UNAUTHENTICATED", message: "Not logged in." });
+  }
+
+  const { pin } = req.body;
+  if (!pin) {
+    return res.json({ status: "ERROR", message: "PIN required." });
+  }
+
+  try {
+    const isSuperAdmin = req.session.hqUser.role === "superadmin";
+
+    if (isSuperAdmin) {
+      const superAdmin = await SuperAdmin.findOne({
+        $or: [
+          { phoneNumber: req.session.hqUser.phoneNumber },
+          { phoneNumber: norm(req.session.hqUser.phoneNumber) },
+        ],
+      }).lean();
+      if (!superAdmin) {
+        return res.json({ status: "NOT_FOUND", message: "Super Admin account not found." });
+      }
+      const pinMatch = await bcrypt.compare(pin, superAdmin.pin);
+      if (!pinMatch) {
+        return res.json({ status: "WRONG_PIN", message: "Wrong PIN." });
+      }
+      return res.json({ status: "SUCCESS" });
+    }
+
+    const phone = norm(req.session.hqUser.phoneNumber);
+    const admin = await Admin.findOne({ phoneNumber: phone }).lean();
+    if (!admin) {
+      return res.json({ status: "NOT_ADMIN", message: "Admin not found." });
+    }
+
+    if (!admin.pin) {
+      return res.json({ status: "NO_PIN", message: "PIN not set." });
+    }
+
+    const pinMatch = await bcrypt.compare(pin, admin.pin);
+    if (!pinMatch) {
+      return res.json({ status: "WRONG_PIN", message: "Wrong PIN." });
+    }
+
+    return res.json({ status: "SUCCESS" });
+  } catch (err) {
+    return res.json({ status: "ERROR", message: err.message });
+  }
+});
+
 module.exports = router;

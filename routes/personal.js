@@ -443,7 +443,7 @@ const restructureData = (data) => {
 
 /* 🔒 Auth middleware */
 router.use((req, res, next) => {
-  if (!req.session || !req.session.user) {
+  if (!req.session || (!req.session.user && !req.session.hqUser)) {
     return res.redirect("/login");
   }
   next();
@@ -707,7 +707,7 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
 router.post("/set-pin", async (req, res) => {
   try {
     const { pin } = req.body;
-    const phone = req.session.user && req.session.user.phoneNumber;
+    const phone = (req.session.user && req.session.user.phoneNumber) || (req.session.hqUser && req.session.hqUser.phoneNumber);
 
     if (!pin || pin.length < 4) {
       return res.status(400).json({ success: false, message: "Invalid PIN format" });
@@ -749,7 +749,7 @@ router.post("/set-pin", async (req, res) => {
 router.post("/verify-pin", async (req, res) => {
   try {
     const { pin } = req.body;
-    const phone = req.session.user && req.session.user.phoneNumber;
+    const phone = (req.session.user && req.session.user.phoneNumber) || (req.session.hqUser && req.session.hqUser.phoneNumber);
 
     if (!pin) {
       return res.status(400).json({ success: false, message: "PIN required" });
@@ -804,7 +804,7 @@ router.post("/verify-pin", async (req, res) => {
 router.post("/change-pin", async (req, res) => {
   try {
     const { oldPin, newPin } = req.body;
-    const phone = req.session.user && req.session.user.phoneNumber;
+    const phone = (req.session.user && req.session.user.phoneNumber) || (req.session.hqUser && req.session.hqUser.phoneNumber);
 
     if (!oldPin || !newPin) {
       return res.status(400).json({ success: false, message: "Old PIN and new PIN are required" });

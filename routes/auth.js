@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const nodemailer = require("nodemailer");
 const {
   ensureMongoReady,
   getMongoConfigHint,
@@ -14,6 +15,7 @@ const {
   Dealer,
   normalizePhone,
   getTbankSettings,
+  saveTbankSettings,
   findAgentByPhone,
   findDealerByPhone,
 } = require("../mongoose");
@@ -76,6 +78,142 @@ router.get("/register", (req, res) => {
   res.render("register", { message: null, form: {} });
 });
 
+/**
+ * Send registration passkey from tbank personal_account_registration
+ * to the user's email or phone (3-minute client countdown).
+ */
+router.post("/register/send-passkey", async (req, res) => {
+  try {
+    const channel = String(req.body.channel || "").toLowerCase();
+    const email = String(req.body.email || "").trim();
+    const phoneNumber = String(req.body.phoneNumber || "").trim();
+
+    if (channel !== "email" && channel !== "phone") {
+      return res.json({ success: false, message: "Choose email or phone." });
+    }
+    if (channel === "email" && !email) {
+      return res.json({ success: false, message: "Email address is required." });
+    }
+    if (channel === "phone" && !phoneNumber) {
+      return res.json({ success: false, message: "Phone number is required." });
+    }
+
+    let personalReg = null;
+    try {
+      const tbankSettings = await getTbankSettings();
+      if (tbankSettings && tbankSettings.compliance) {
+        personalReg = tbankSettings.compliance.personal_account_registration || null;
+      }
+    } catch (mongoErr) {
+      console.error("[auth] send-passkey MongoDB read failed:", mongoErr.message);
+    }
+
+    if (!personalReg) {
+      const tbankData = readJSON(tbankFile, {});
+      personalReg = tbankData.compliance?.personal_account_registration || null;
+    }
+
+    if (!personalReg || !personalReg.paymentMethod) {
+      return res.json({ success: false, message: "Registration passkey is not configured." });
+    }
+
+    const method = String(personalReg.paymentMethod).toLowerCase();
+    if (method !== "passkey" && String(personalReg.amount) !== "0") {
+      return res.json({ success: false, message: "Passkey delivery is not enabled for the current fee setting." });
+    }
+
+    let passkey = personalReg.passkey;
+    if (!passkey) {
+      passkey = Math.floor(1000 + Math.random() * 9000).toString();
+      const updatedReg = {
+        ...personalReg,
+        passkey,
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        await saveTbankSettings({
+          "compliance.personal_account_registration": updatedReg,
+        });
+      } catch (e) {
+        console.error("[auth] Failed to save generated passkey to MongoDB:", e.message);
+      }
+
+      try {
+        const tbankData = readJSON(tbankFile, {});
+        if (!tbankData.compliance) tbankData.compliance = {};
+        tbankData.compliance.personal_account_registration = updatedReg;
+        writeJSON(tbankFile, tbankData);
+      } catch (e) {
+        console.error("[auth] Failed to save generated passkey to tbank.json:", e.message);
+      }
+    }
+
+    req.session.registrationPasskeyDelivery = {
+      channel,
+      email: channel === "email" ? email : null,
+      phoneNumber: channel === "phone" ? phoneNumber : null,
+      sentAt: Date.now(),
+      expiresAt: Date.now() + 3 * 60 * 1000,
+    };
+
+    if (channel === "email") {
+      console.log(`\n📨 [DEV] Registration passkey for ${email}: ${passkey}\n`);
+      try {
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || "smtp.gmail.com",
+            port: parseInt(process.env.SMTP_PORT || "587"),
+            secure: process.env.SMTP_SECURE === "true",
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: `"Tbank Investment" <${process.env.SMTP_USER}>`,
+            to: email,
+            subject: "Your Tbank Registration Passkey",
+            text: `Your registration verification code is: ${passkey}. It expires in 3 minutes.`,
+            html: `
+              <div style="font-family: sans-serif; padding: 20px; max-width: 500px; border: 1px solid #e2e8f0; border-radius: 12px; margin: 0 auto;">
+                <h2 style="color: #0f9d58; margin-bottom: 8px;">Tbank Investment</h2>
+                <p style="color: #475569; font-size: 14px;">Use this code to complete your account registration.</p>
+                <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 4px; text-align: center; color: #1e293b; margin: 20px 0;">
+                  ${passkey}
+                </div>
+                <p style="font-size: 12px; color: #64748b;">This code is valid for 3 minutes.</p>
+              </div>
+            `,
+          });
+        }
+      } catch (mailErr) {
+        console.error("[auth] Registration passkey email error:", mailErr.message);
+      }
+
+      return res.json({
+        success: true,
+        message: process.env.SMTP_USER && process.env.SMTP_PASS
+          ? "Verification code sent to your email."
+          : "Dev Mode: verification code printed to server console.",
+        channel: "email",
+      });
+    }
+
+    // Phone channel — SMS provider not configured; log for delivery / future SMS hook
+    console.log(`\n📱 [DEV] Registration passkey for ${phoneNumber}: ${passkey}\n`);
+    return res.json({
+      success: true,
+      message: "Verification code sent to your phone.",
+      channel: "phone",
+    });
+  } catch (err) {
+    console.error("[auth] /register/send-passkey error:", err);
+    return res.json({ success: false, message: "Server error sending verification code." });
+  }
+});
+
 /* 📝 Register (POST submission) */
 router.post("/register", async (req, res) => {
   let {
@@ -126,28 +264,49 @@ router.post("/register", async (req, res) => {
     });
   }
 
-  const tbankData = readJSON(tbankFile, {});
-  const personalReg = tbankData.compliance?.personal_account_registration;
+  let personalReg = null;
 
-  const registrationData = req.body;
+  try {
+    const { getTbankSettings } = require('./../mongoose');
+    const tbankSettings = await getTbankSettings();
+    if (tbankSettings && tbankSettings.compliance) {
+      personalReg = tbankSettings.compliance.personal_account_registration;
+    }
+  } catch (mongoErr) {
+    console.error("[auth] Failed to read personal_account_registration from MongoDB:", mongoErr.message);
+  }
 
-  if (personalReg && personalReg.amount) {
-    if (personalReg.paymentMethod === 'passkey' && personalReg.passkey) {
-      return res.render('payment', {
-        paymentMethod: 'passkey',
-        passkey: personalReg.passkey,
-        amount: personalReg.amount,
-        registrationData: JSON.stringify(registrationData),
-        hasPasskey: false
-      });
-    } else if (personalReg.paymentMethod === 'mpesa') {
-      return res.render('payment', {
-        paymentMethod: 'mpesa',
-        passkey: personalReg.passkey,
-        amount: personalReg.amount,
-        registrationData: JSON.stringify(registrationData),
-        hasPasskey: !!personalReg.passkey
-      });
+  if (!personalReg) {
+    const tbankData = readJSON(tbankFile, {});
+    personalReg = tbankData.compliance?.personal_account_registration;
+  }
+
+  if (personalReg && personalReg.amount && personalReg.paymentMethod) {
+    const amount = personalReg.amount;
+    const paymentMethod = personalReg.paymentMethod;
+    const paymentConfirmed = req.body.paymentConfirmed === 'true';
+
+    if (paymentMethod === 'passkey') {
+      const userPasskey = req.body.passkey;
+      if (!userPasskey || userPasskey !== personalReg.passkey) {
+          return res.render('payment', {
+              paymentMethod: 'passkey',
+              passkey: personalReg.passkey,
+              amount: personalReg.amount,
+              registrationData: JSON.stringify(req.body),
+              hasPasskey: false
+          });
+      }
+    } else if (paymentMethod === 'mpesa' || paymentMethod === 'pesapal') {
+      if (!paymentConfirmed) {
+        return res.render('payment', {
+            paymentMethod: paymentMethod,
+            passkey: personalReg.passkey,
+            amount: personalReg.amount,
+            registrationData: JSON.stringify(req.body),
+            hasPasskey: !!personalReg.passkey
+        });
+      }
     }
   }
 
@@ -230,7 +389,7 @@ router.post("/register", async (req, res) => {
   // 🔄 Rotate passkey for the next user
   rotatePasskey();
 
-  res.render("login", { alert: "Registration successful. Login now." });
+  res.render("login", buildLoginContext({ alert: "Registration successful. Login now." }));
 });
 
 router.post("/complete-registration", async (req, res) => {
@@ -252,18 +411,44 @@ router.post("/complete-registration", async (req, res) => {
         idNumber
     } = userData;
 
-    // 🛡️ Security Check: Verify Passkey against HQ Compliance
-    const tbankData = readJSON(tbankFile, {});
-    const personalReg = tbankData.compliance?.personal_account_registration;
+    let personalReg = null;
 
-    // If a passkey is required by HQ, ensure the user provided the matching one
-    if (personalReg && (personalReg.paymentMethod === 'passkey' || personalReg.paymentMethod === 'mpesa') && personalReg.passkey) {
-        if (passkey !== personalReg.passkey) {
+    try {
+      const { getTbankSettings } = require('./../mongoose');
+      const tbankSettings = await getTbankSettings();
+      if (tbankSettings && tbankSettings.compliance) {
+        personalReg = tbankSettings.compliance.personal_account_registration;
+      }
+    } catch (mongoErr) {
+      console.error("[auth] Failed to read personal_account_registration from MongoDB:", mongoErr.message);
+    }
+
+    if (!personalReg) {
+      const tbankData = readJSON(tbankFile, {});
+      personalReg = tbankData.compliance?.personal_account_registration;
+    }
+
+    if (personalReg && personalReg.amount && personalReg.paymentMethod) {
+      const amount = personalReg.amount;
+      const paymentMethod = personalReg.paymentMethod;
+      const paymentConfirmed = req.body.paymentConfirmed === 'true';
+
+      if (paymentMethod === 'passkey') {
+        if (!passkey || passkey !== personalReg.passkey) {
             return res.render("register", {
                 message: "Registration failed: Invalid Passkey.",
                 form: userData
             });
         }
+      } else if ((paymentMethod === 'mpesa' || paymentMethod === 'pesapal') && !paymentConfirmed) {
+        return res.render("register", {
+            message: `To register your account, you need to pay a registration fee of ${amount} KES via ${paymentMethod === 'mpesa' ? 'M-Pesa' : 'Pesapal'}. Please complete the payment and try again.`,
+            form: userData,
+            requirePayment: true,
+            paymentAmount: amount,
+            paymentMethod: paymentMethod
+        });
+      }
     }
 
     // Normalize phone number
@@ -366,7 +551,7 @@ router.post("/complete-registration", async (req, res) => {
     // 🔄 Rotate passkey for the next user
     rotatePasskey();
 
-    res.render("login", { alert: "Registration successful. Login now." });
+  res.render("login", buildLoginContext({ alert: "Registration successful. Login now." }));
 });
 
 /* 🔑 Login (GET form) */
@@ -427,7 +612,7 @@ router.post("/firebase-login", async (req, res) => {
 
   const dbReady = await ensureMongoReady();
   if (!dbReady) {
-    return res.render("login", { alert: getMongoConfigHint() });
+    return res.render("login", buildLoginContext({ alert: getMongoConfigHint() }));
   }
 
   try {
@@ -478,7 +663,7 @@ router.post("/firebase-login", async (req, res) => {
     });
   } catch (err) {
     console.error("Firebase Login DB Error:", err);
-    return res.render("login", { alert: "Database error during login." });
+    return res.render("login", buildLoginContext({ alert: "Database error during login." }));
   }
 });
 
@@ -496,9 +681,9 @@ router.post("/login", async (req, res) => {
   const dbReady = await ensureMongoReady();
   if (!dbReady) {
     console.log("   ❌ MongoDB not connected during login");
-    return res.render("login", {
+    return res.render("login", buildLoginContext({
       alert: getMongoConfigHint(),
-    });
+    }));
   }
 
   // 1️⃣ Find user in MongoDB counties collection (primary registry)
@@ -509,9 +694,9 @@ router.post("/login", async (req, res) => {
     }
   } catch (dbErr) {
     console.error("❌ Database query error during login:", dbErr.message);
-    return res.render("login", {
+    return res.render("login", buildLoginContext({
       alert: "Could not verify your account. Please try again shortly.",
-    });
+    }));
   }
 
   // 3️⃣ Not registered anywhere
@@ -526,13 +711,13 @@ router.post("/login", async (req, res) => {
   // 4️⃣ Verify password
   if (!user.password) {
     console.log("   ❌ No password hash in user record!");
-    return res.render("login", { alert: "Account error: No password set. Contact admin." });
+    return res.render("login", buildLoginContext({ alert: "Account error: No password set. Contact admin." }));
   }
 
   const valid = await bcrypt.compare(loginPassword, user.password);
   console.log("   bcrypt result :", valid ? "✅ MATCH" : "❌ NO MATCH");
 
-  if (!valid) return res.render("login", loginRenderContext({ alert: "Wrong password! Check your password and try again." }));
+  if (!valid) return res.render("login", buildLoginContext({ alert: "Wrong password! Check your password and try again." }));
 
   // Update last login in MongoDB
   try {
@@ -655,8 +840,6 @@ router.post("/admin/reset-password", async (req, res) => {
 });
 
 /* 📨 Send Email OTP Code */
-const nodemailer = require("nodemailer");
-
 router.post("/send-email-otp", async (req, res) => {
   let { phoneNumber, email } = req.body;
   phoneNumber = (phoneNumber || "").trim();

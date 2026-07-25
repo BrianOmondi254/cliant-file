@@ -2,9 +2,18 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const { findUserInCounties, Admin, normalizePhone } = require("../mongoose");
+const { findUserInCounties, Admin, SuperAdmin, normalizePhone } = require("../mongoose");
 
 const router = express.Router();
+
+const norm = (p) => {
+  if (!p) return "";
+  let s = String(p).trim();
+  if (s.startsWith("+254")) s = s.substring(4);
+  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+  if (s.startsWith("0")) s = s.substring(1);
+  return "0" + s;
+};
 
 const protectDepartment = async (req, res, next) => {
   if (!req.session || !req.session.hqUser) {
@@ -24,7 +33,19 @@ const protectDepartment = async (req, res, next) => {
 
   const requiredDept = deptMap[section];
   if (requiredDept) {
-    const admin = await Admin.findOne({ phoneNumber: normalizePhone(req.session.hqUser.phoneNumber) }).lean();
+    const phone = norm(req.session.hqUser.phoneNumber);
+
+    const superAdmin = await SuperAdmin.findOne({
+      $or: [
+        { phoneNumber: req.session.hqUser.phoneNumber },
+        { phoneNumber: phone },
+      ],
+    }).lean();
+    if (superAdmin) {
+      return next();
+    }
+
+    const admin = await Admin.findOne({ phoneNumber: phone }).lean();
     if (!admin || admin.department !== requiredDept) {
       return res.status(403).send("Forbidden. You do not have access to this department.");
     }
@@ -50,8 +71,6 @@ const readJSON = (file, fallback = []) => {
 const writeJSON = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 };
-
-const norm = (p) => (p ? String(p).trim() : "");
 
 /* ================= GET HQ DASHBOARD ================= */
 router.get("/", (req, res) => {

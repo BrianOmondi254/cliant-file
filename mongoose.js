@@ -40,6 +40,11 @@ const connectionOptions = {
   socketTimeoutMS: 45000,
 };
 
+const adminConnectionOptions = {
+  ...connectionOptions,
+  serverSelectionTimeoutMS: isProduction ? 60000 : 30000,
+};
+
 let connectionPromise = null;
 
 const maskMongoUri = (uri) => String(uri).replace(/:([^:@/]+)@/, ":****@");
@@ -1307,7 +1312,7 @@ const adminSchema = new mongoose.Schema({
   ward: { type: String },
 });
 
-const adminConn = mongoose.createConnection(MONGODB_URI, connectionOptions);
+const adminConn = mongoose.createConnection(MONGODB_URI, adminConnectionOptions);
 // Add error handler to avoid unhandled promise rejection
 adminConn.on('error', (err) => {
   console.error(`❌ Admin MongoDB connection error: ${err.message}`);
@@ -1333,6 +1338,8 @@ const superAdminSchema = new mongoose.Schema({
 const SuperAdmin = adminDb.model("SuperAdmin", superAdminSchema, "superAdmins");
 
 let adminConnectionPromise = null;
+let adminRetryCount = 0;
+const MAX_ADMIN_RETRIES = 5;
 
 /**
  * Connect (and reuse) the separate admin connection.
@@ -1341,25 +1348,43 @@ let adminConnectionPromise = null;
  * created but never opened.
  */
 const connectAdminDB = async () => {
-  if (adminConn.readyState === 1) return adminConn;
+  if (adminConn.readyState === 1) {
+    adminRetryCount = 0;
+    return adminConn;
+  }
   if (adminConnectionPromise) return adminConnectionPromise;
 
-  adminConnectionPromise = (async () => {
-    try {
-      await adminConn.asPromise();
-      return adminConn;
-    } catch (error) {
-      adminConnectionPromise = null;
-      console.error(`❌ Error connecting to admin MongoDB: ${error.message}`);
-      throw error;
-    }
-  })();
+  const attemptConnect = async (retries) => {
+    adminConnectionPromise = (async () => {
+      try {
+        await adminConn.asPromise();
+        adminRetryCount = 0;
+        return adminConn;
+      } catch (error) {
+        if (retries < MAX_ADMIN_RETRIES) {
+          const backoff = Math.min(1000 * Math.pow(2, retries), 30000);
+          console.error(`❌ Admin DB connection attempt ${retries + 1} failed: ${error.message}. Retrying in ${backoff}ms...`);
+          adminConnectionPromise = null;
+          await new Promise(resolve => setTimeout(resolve, backoff));
+          return attemptConnect(retries + 1);
+        }
+        adminConnectionPromise = null;
+        console.error(`❌ Error connecting to admin MongoDB after ${MAX_ADMIN_RETRIES} attempts: ${error.message}`);
+        throw error;
+      }
+    })();
 
-  return adminConnectionPromise;
+    return adminConnectionPromise;
+  };
+
+  return attemptConnect(adminRetryCount);
 };
 
 const ensureAdminReady = async () => {
-  if (adminConn.readyState === 1) return true;
+  if (adminConn.readyState === 1) {
+    adminRetryCount = 0;
+    return true;
+  }
   try {
     await connectAdminDB();
     return adminConn.readyState === 1;

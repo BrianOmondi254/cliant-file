@@ -3,189 +3,522 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tbank Investment - Registration Payment</title>
+    <title>Cliant - Complete Registration</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #007bff;
-            --primary-dark: #0056b3;
-            --secondary: #6c757d;
-            --success: #28a745;
-            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --navy: #0b1f3a;
+            --navy-light: #14335c;
+            --green: #0f9d58;
+            --green-dark: #0c7d46;
+            --green-tint: #e8f8ee;
+            --slate: #5b6b7f;
+            --border: #e2e8f0;
+            --bg: #f4f6f9;
             --card-bg: #ffffff;
-            --text-color: #333;
-            --input-bg: #f8f9fa;
-            --border-color: #dee2e6;
-            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --danger: #d64545;
+            --radius: 14px;
+            --shadow-card: 0 20px 45px -18px rgba(11, 31, 58, 0.25);
         }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: var(--bg-gradient);
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at 15% 10%, rgba(15, 157, 88, 0.08), transparent 40%),
+                radial-gradient(circle at 85% 90%, rgba(11, 31, 58, 0.06), transparent 45%),
+                var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             margin: 0;
-            color: var(--text-color);
-            padding: 20px;
+            padding: 24px;
+            color: var(--navy);
         }
-        .payment-box { 
-            background: var(--card-bg); 
-            padding: 40px; 
-            border-radius: 20px; 
+
+        .card {
+            background: var(--card-bg);
             width: 100%;
-            max-width: 450px; 
-            box-shadow: var(--shadow);
+            max-width: 440px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(11, 31, 58, 0.06);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+            padding: 28px 32px 24px;
             text-align: center;
+            position: relative;
         }
-        h1 { 
-            margin: 0 0 20px 0; 
-            font-size: 26px; 
-            color: var(--primary); 
+
+        .card-header .brand-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+            color: var(--green);
+            font-size: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
         }
-        p {
-            font-size: 1.1em;
-            color: var(--secondary);
+
+        .card-header h1 {
+            margin: 0;
+            font-size: 21px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.01em;
         }
-        .form-group {
-            margin-bottom: 20px;
+
+        .card-header p.eyebrow {
+            margin: 4px 0 0;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .card-body {
+            padding: 30px 32px 32px;
+        }
+
+        .notice {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 0.92em;
+            line-height: 1.55;
+            font-weight: 500;
+            color: var(--green-dark);
+            text-align: left;
+            padding: 14px 16px;
+            background: var(--green-tint);
+            border-radius: 10px;
+            border: 1px solid #bfe9cf;
+            margin-bottom: 26px;
+        }
+
+        .notice i {
+            margin-top: 2px;
+            font-size: 1.05em;
+        }
+
+        h2.section-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 0 0 6px;
             text-align: left;
         }
+
+        p.section-sub {
+            font-size: 0.88em;
+            color: var(--slate);
+            margin: 0 0 20px;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            color: var(--navy);
+            font-size: 0.86em;
             font-weight: 600;
+            letter-spacing: 0.01em;
         }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            background: #fbfcfd;
+            letter-spacing: 0.03em;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.12);
+            background: #fff;
+        }
+
         input[readonly] {
-            background-color: #e9ecef;
+            background-color: #f1f4f7;
             cursor: not-allowed;
         }
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            box-sizing: border-box;
+
+        small.hint {
+            color: var(--slate);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 0.8rem;
         }
-        button { 
-            width: 100%; 
-            padding: 15px; 
-            background: var(--primary); 
-            color: #fff; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            margin-top: 15px; 
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--green);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.97rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            transition: background 0.15s ease, transform 0.05s ease;
+            font-family: inherit;
+        }
+
+        .btn:hover { background: var(--green-dark); }
+        .btn:active { transform: translateY(1px); }
+
+        .btn:disabled {
+            background: #a9c9b8;
+            cursor: not-allowed;
+        }
+
+        .btn.btn-secondary {
+            background: var(--slate);
+            width: auto;
+            padding: 10px 28px;
+        }
+
+        .btn.btn-secondary:hover { background: #475363; }
+
+        #submitBtn { margin-top: 6px; }
+
+        /* Verification code modal */
+        #passkey-prompt {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 25px 60px -15px rgba(11, 31, 58, 0.35);
+            z-index: 1000;
+            text-align: center;
+            min-width: 300px;
+            border: 1px solid var(--border);
+        }
+
+        #passkey-prompt h3 {
+            margin-top: 0;
+            color: var(--navy);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        #prompt-value {
+            font-size: 2.1rem;
+            font-weight: 800;
+            margin: 18px 0;
+            letter-spacing: 4px;
+            color: var(--green);
+            font-variant-numeric: tabular-nums;
+        }
+
+        #passkey-prompt p {
+            color: var(--slate);
+            font-size: 0.86rem;
+            margin: 0 0 20px;
+            line-height: 1.5;
+        }
+
+        .btn.btn-outline {
+            background: #fff;
+            color: var(--green-dark);
+            border: 1.5px solid var(--green);
+        }
+
+        .btn.btn-outline:hover { background: var(--green-tint); }
+
+        .btn + .btn { margin-top: 10px; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 31, 58, 0.45);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: #fff;
+            width: 100%;
+            max-width: 340px;
+            border-radius: 16px;
+            padding: 28px;
+            text-align: center;
+            box-shadow: 0 25px 60px -15px rgba(11, 31, 58, 0.35);
+        }
+
+        .modal-box h3 {
+            margin: 0 0 6px;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .modal-box p {
+            margin: 0 0 20px;
+            font-size: 0.86rem;
+            color: var(--slate);
+            line-height: 1.5;
+        }
+
+        #countdownHint {
+            color: var(--green-dark);
             font-weight: 600;
         }
-        button:hover { 
-            background: var(--primary-dark); 
+
+        .footer-note {
+            margin-top: 22px;
+            text-align: center;
+            font-size: 0.76rem;
+            color: #94a3b8;
         }
-        #mpesa-message {
-            margin-top: 20px;
-        }
-        .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 420px; text-align: center; }
-        .btn { background: #4f46e5; color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: 0.2s; }
-        .btn:hover { background: #4338ca; }
-        .input-group { margin-bottom: 1.5rem; text-align: left; }
-        label { display: block; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; font-weight: 600; }
-        input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.2s; }
-        input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
-        .amount-badge { background: #ecfdf5; color: #047857; padding: 4px 12px; border-radius: 20px; font-weight: 700; }
+
+        .footer-note i { color: var(--green); }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="margin-top: 0; color: #0f172a;">Complete Registration</h2>
-        <p style="color: #64748b; margin-bottom: 2rem; line-height: 1.5;">
-            To activate your account, a fee of <span class="amount-badge">KES <%= amount %></span> is required.
-        </p>
-        
-        <form action="/complete-registration" method="POST">
-            <input type="hidden" name="registrationData" value='<%= registrationData %>'>
-            
-            <div class="input-group" id="passkeyGroup" style="<%= paymentMethod === 'mpesa' ? 'display:none;' : '' %>">
-                <label for="passkey">
-                    <% if (paymentMethod === 'mpesa') { %>
-                        M-Pesa Transaction Code
-                    <% } else { %>
-                        Enter Passkey
-                    <% } %>
-                </label>
-                <input type="text" id="passkeyInput" name="passkey" required autocomplete="off"
-                       value="<%= (typeof passkey !== 'undefined' && passkey) ? passkey : '' %>">
-                <% if (paymentMethod === 'mpesa') { %>
-                    <small style="color: #64748b; display: block; margin-top: 6px; font-size: 0.8rem;">
-                        <i class="fa-solid fa-circle-info"></i> Check your phone for the STK push.
-                    </small>
-                <% } %>
-            </div>
+        <div class="card-header">
+            <h1>Complete Registration</h1>
+        </div>
 
-            <% if (paymentMethod === 'mpesa') { %>
-                <h2>Pay with Mpesa</h2>
-                <p>Registration Fee: <%= amount %> KSH</p>
-                <button type="button" id="initMpesaBtn" onclick="initiateMpesa()" style="<%= hasPasskey ? 'display:none;' : '' %>">Complete Registration</button>
-                
-                <div id="passkey-prompt" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:#fff; padding:30px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.2); z-index:1000; text-align:center; min-width: 300px; border: 1px solid #e2e8f0;">
-                    <h3 style="margin-top:0; color:#0f172a;">M-Pesa Code</h3>
-                    <div id="prompt-value" style="font-size:2rem; font-weight:bold; margin:20px 0; letter-spacing:2px; color:#4f46e5;"><%= (typeof passkey !== 'undefined' && passkey) ? passkey : '' %></div>
-                    <p style="color:#64748b; font-size:0.9rem; margin-bottom:20px;">Use this code to complete registration.</p>
-                    <button type="button" onclick="dismissPrompt()" style="background:#64748b; width:auto; padding:10px 30px;">OK</button>
+        <div class="card-body">
+
+            <form action="/complete-registration" method="POST" id="mainForm">
+                <input type="hidden" name="registrationData" value='<%= registrationData %>'>
+
+                <div class="input-group" id="passkeyGroup" style="<%= paymentMethod === 'mpesa' || paymentMethod === 'passkey' ? 'display:none;' : '' %>">
+                    <label for="passkey">
+                        <% if (paymentMethod === 'mpesa') { %>
+                            M-Pesa Transaction Code
+                        <% } else { %>
+                            Verification Code
+                        <% } %>
+                    </label>
+                    <input type="text" id="passkeyInput" name="passkey" required autocomplete="off"
+                           placeholder="Enter verification code">
+                    <% if (paymentMethod === 'mpesa') { %>
+                        <small class="hint">
+                            <i class="fa-solid fa-circle-info"></i> Check your phone for the STK push.
+                        </small>
+                    <% } %>
                 </div>
 
-                <script>
-                    let promptTimeout;
-                    let currentPasskey = "<%= (typeof passkey !== 'undefined' && passkey) ? passkey : '' %>";
+                <% if (paymentMethod === 'mpesa') { %>
+                    <h2 class="section-title">Verify with M-Pesa</h2>
+                    <p class="section-sub">Complete registration to receive your verification code.</p>
+                    <button type="button" id="initMpesaBtn" class="btn" onclick="initiateMpesa()" style="<%= hasPasskey ? 'display:none;' : '' %>">Complete Registration</button>
 
-                    function initiateMpesa() {
-                        const group = document.getElementById('passkeyGroup');
-                        if(group) group.style.display = 'block';
+                    <div id="passkey-prompt">
+                        <h3>Verification Code</h3>
+                        <div id="prompt-value">-</div>
+                        <p>A verification code will be generated when you click Complete Registration.</p>
+                        <button type="button" class="btn btn-secondary" onclick="dismissPrompt()">OK</button>
+                    </div>
 
-                        generateNewPasskey();
-                    }
+                    <script>
+                        let promptTimeout;
+                        let currentCode = "";
 
-                    function generateNewPasskey() {
-                        // Generate new 5-digit passkey
-                        currentPasskey = Math.floor(10000 + Math.random() * 90000).toString();
-                        
-                        // Update Input
-                        const input = document.getElementById('passkeyInput');
-                        if(input) input.value = currentPasskey;
-                        
-                        // Update Prompt Display
-                        const promptVal = document.getElementById('prompt-value');
-                        if(promptVal) promptVal.innerText = currentPasskey;
-                        
-                        showPrompt();
-                    }
+                        function initiateMpesa() {
+                            const group = document.getElementById('passkeyGroup');
+                            if(group) group.style.display = 'block';
 
-                    function showPrompt() {
-                        
-                        const prompt = document.getElementById('passkey-prompt');
-                        if(prompt) {
-                            prompt.style.display = 'block';
-                            if(promptTimeout) clearTimeout(promptTimeout);
-                            promptTimeout = setTimeout(() => {
+                            generateNewCode();
+                        }
+
+                        function generateNewCode() {
+                            currentCode = Math.floor(10000 + Math.random() * 90000).toString();
+
+                            const input = document.getElementById('passkeyInput');
+                            if(input) input.value = currentCode;
+
+                            const promptVal = document.getElementById('prompt-value');
+                            if(promptVal) promptVal.innerText = currentCode;
+
+                            showPrompt();
+                        }
+
+                        function showPrompt() {
+                            const prompt = document.getElementById('passkey-prompt');
+                            if(prompt) {
+                                prompt.style.display = 'block';
+                                if(promptTimeout) clearTimeout(promptTimeout);
+                                promptTimeout = setTimeout(() => {
+                                    prompt.style.display = 'none';
+                                }, 3000);
+                            }
+                        }
+
+                        function dismissPrompt() {
+                            const prompt = document.getElementById('passkey-prompt');
+                            if(prompt) {
                                 prompt.style.display = 'none';
-                            }, 3000);
+                                if(promptTimeout) clearTimeout(promptTimeout);
+                            }
                         }
-                    }
-                    
-                    function dismissPrompt() {
-                        const prompt = document.getElementById('passkey-prompt');
-                        if(prompt) {
-                            prompt.style.display = 'none';
-                            if(promptTimeout) clearTimeout(promptTimeout);
+                    </script>
+                <% } else if (paymentMethod === 'pesapal') { %>
+                    <h2 class="section-title">Verify with Pesapal</h2>
+                    <p class="section-sub">
+                        You will be redirected to Pesapal secure checkout to complete your registration.
+                    </p>
+                    <button type="button" onclick="initiatePesapal()" class="btn">Complete Registration</button>
+
+                    <script>
+                        async function initiatePesapal() {
+                            const btn = document.querySelector('button[onclick="initiatePesapal()"]');
+                            if(btn) {
+                                btn.disabled = true;
+                                btn.textContent = 'Redirecting to Pesapal...';
+                            }
+
+                            try {
+                                const res = await fetch('/api/payment/pesapal/initiate', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        amount: '<%= amount %>',
+                                        registrationData: '<%= registrationData %>'
+                                    })
+                                });
+                                const data = await res.json();
+                                if (data.redirect_url) {
+                                    window.location.href = data.redirect_url;
+                                } else {
+                                    alert('Failed to initiate Pesapal payment. Please try again.');
+                                    if(btn) {
+                                        btn.disabled = false;
+                                        btn.textContent = 'Complete Registration';
+                                    }
+                                }
+                            } catch (err) {
+                                alert('Network error. Please try again.');
+                                if(btn) {
+                                    btn.disabled = false;
+                                    btn.textContent = 'Complete Registration';
+                                }
+                            }
                         }
-                    }
-                </script>
-            <% } else if (paymentMethod === 'passkey') { %>
-                <h2>Pay with Passkey</h2>
-                <p>Registration Fee: <%= amount %> KSH</p>
-            <% } %>
-            <button type="submit" id="submitBtn" class="btn" style="<%= (paymentMethod === 'mpesa' && !hasPasskey) ? 'display:none;' : '' %>">Verify & Login</button>
-        </form>
+                    </script>
+                <% } else if (paymentMethod === 'passkey') { %>
+                    <div class="notice" id="passkeyNotice">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                        <span id="passkeyNoticeText">We'll send a verification code to your phone number or email to create your account. Choose where to receive it below.</span>
+                    </div>
+
+                    <div id="sendCodeOptions">
+                        <button type="button" class="btn" onclick="sendCode('phone')"><i class="fa-solid fa-mobile-screen-button"></i>&nbsp; Send to Phone</button>
+                        <button type="button" class="btn btn-outline" onclick="sendCode('email')"><i class="fa-solid fa-envelope"></i>&nbsp; Send to Email</button>
+                    </div>
+
+                    <div class="input-group" id="passkeySection" style="display:none;">
+                        <label for="passkey">Verification Code</label>
+                        <input type="text" id="passkeyInput" name="passkey" required autocomplete="off" placeholder="Enter verification code">
+                        <small class="hint" id="countdownHint">
+                            <i class="fa-solid fa-clock"></i> <span id="countdownText">Code expires in 3:00</span>
+                        </small>
+                    </div>
+
+                    <script>
+                        let passkeyCountdownInterval;
+
+                        function sendCode(method) {
+                            const options = document.getElementById('sendCodeOptions');
+                            if (options) options.style.display = 'none';
+
+                            const section = document.getElementById('passkeySection');
+                            if (section) section.style.display = 'block';
+
+                            const submitBtn = document.getElementById('submitBtn');
+                            if (submitBtn) submitBtn.style.display = 'block';
+
+                            const noticeText = document.getElementById('passkeyNoticeText');
+                            if (noticeText) {
+                                noticeText.textContent = method === 'email'
+                                    ? "We've sent a verification code to your email. Enter it below to continue."
+                                    : "We've sent a verification code to your phone number. Enter it below to continue.";
+                            }
+
+                            startPasskeyCountdown();
+                        }
+
+                        function startPasskeyCountdown() {
+                            let seconds = 180;
+                            if (passkeyCountdownInterval) clearInterval(passkeyCountdownInterval);
+
+                            updateCountdownDisplay(seconds);
+
+                            passkeyCountdownInterval = setInterval(() => {
+                                seconds--;
+                                if (seconds <= 0) {
+                                    clearInterval(passkeyCountdownInterval);
+                                    window.location.reload();
+                                } else {
+                                    updateCountdownDisplay(seconds);
+                                }
+                            }, 1000);
+                        }
+
+                        function updateCountdownDisplay(seconds) {
+                            const countdownText = document.getElementById('countdownText');
+                            const mins = Math.floor(seconds / 60);
+                            const secs = seconds % 60;
+                            if (countdownText) countdownText.textContent = 'Code expires in ' + mins + ':' + secs.toString().padStart(2, '0');
+                        }
+
+                    </script>
+                <% } %>
+                <button type="submit" id="submitBtn" class="btn" style="<%= (paymentMethod === 'mpesa' && !hasPasskey) || paymentMethod === 'passkey' ? 'display:none;' : '' %>">Verify & Login</button>
+            </form>
+
+            <script>
+                const mainForm = document.getElementById('mainForm');
+                if (mainForm) {
+                    mainForm.addEventListener('submit', function () {
+                        const btn = document.getElementById('submitBtn');
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>&nbsp; Verifying...';
+                        }
+                    });
+                }
+            </script>
+
+            <p class="footer-note"><i class="fa-solid fa-lock"></i>&nbsp; Secured by Cliant · Your details are encrypted</p>
+        </div>
     </div>
 </body>
 </html>

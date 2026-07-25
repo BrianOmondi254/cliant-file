@@ -276,6 +276,7 @@
         <div class="step-dots">
             <div class="dot active" id="dot1"></div>
             <div class="dot" id="dot2"></div>
+            <div class="dot" id="dot3"></div>
         </div>
 
         <form id="registerForm" action="/register" method="POST">
@@ -328,7 +329,7 @@
                     </select>
                 </div>
 
-                <button type="button" class="btn" onclick="goToStep(2)">
+                <button type="button" class="btn" onclick="handleNextStep()">
                     Next 
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
@@ -383,8 +384,80 @@
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="button" onclick="goToStep(1)" class="btn secondary">Back</button>
-                    <button type="submit" class="btn">Complete</button>
+                    <button type="button" onclick="goBackToStep1()" class="btn secondary">Back</button>
+                    <button type="button" class="btn" onclick="handleNextStep()">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 3: registration fee / passkey (from tbank personal_account_registration) -->
+            <div id="step3" class="hidden">
+                <div id="passkeySection" style="display: none;">
+                    <h4 style="margin-bottom: 8px; font-size: 15px; color: #0f172a;">Passkey Verification</h4>
+
+                    <!-- Channel selection -->
+                    <div id="passkeyChannelStep">
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 14px; line-height: 1.5;">
+                            Choose where to receive your registration verification code.
+                        </p>
+                        <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+                            <button type="button" class="btn" id="sendPasskeyEmailBtn" onclick="sendRegistrationPasskey('email')" style="flex:1;">
+                                Send to Email
+                            </button>
+                            <button type="button" class="btn" id="sendPasskeyPhoneBtn" onclick="sendRegistrationPasskey('phone')" style="flex:1;">
+                                Send to Phone
+                            </button>
+                        </div>
+                        <p id="passkeySendMsg" style="font-size: 12px; color: #64748b; min-height: 16px; margin: 0 0 10px;"></p>
+                        <button type="button" onclick="goBackToStep2()" class="btn secondary" style="width:100%;">Back</button>
+                    </div>
+
+                    <!-- Enter code (after send) -->
+                    <div id="passkeyVerifyStep" style="display: none;">
+                        <p id="passkeySentHint" style="font-size: 13px; color: #64748b; margin-bottom: 10px; line-height: 1.5;"></p>
+                        <p id="passkeyCountdown" style="font-size: 13px; font-weight: 600; color: #0f9d58; margin-bottom: 12px;">
+                            Code expires in <span id="passkeyTimer">3:00</span>
+                        </p>
+                        <div class="field no-label">
+                            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <input type="text" id="passkeyInput" placeholder="Enter verification code" inputmode="numeric" maxlength="10" autocomplete="one-time-code">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button type="button" onclick="goBackToStep2()" class="btn secondary">Back</button>
+                            <button type="button" class="btn" onclick="submitWithPasskey()">Verify Passkey</button>
+                        </div>
+                    </div>
+
+                    <!-- Expired: resend -->
+                    <div id="passkeyExpiredStep" style="display: none;">
+                        <p style="font-size: 13px; color: #b45309; margin-bottom: 14px; line-height: 1.5;">
+                            Verification code expired. Resend a new code or reload the page.
+                        </p>
+                        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                            <button type="button" class="btn" onclick="sendRegistrationPasskey('email')" style="flex:1;">
+                                Resend to Email
+                            </button>
+                            <button type="button" class="btn" onclick="sendRegistrationPasskey('phone')" style="flex:1;">
+                                Resend to Phone
+                            </button>
+                        </div>
+                        <button type="button" class="btn secondary" onclick="window.location.reload()" style="width:100%; margin-bottom: 10px;">
+                            Reload Page
+                        </button>
+                        <button type="button" onclick="goBackToStep2()" class="btn secondary" style="width:100%;">Back</button>
+                    </div>
+                </div>
+
+                <div id="paymentSection" style="display: none;">
+                    <h4 style="margin-bottom: 8px; font-size: 15px; color: #0f172a;">Registration Fee</h4>
+                    <div id="paymentInfo" style="margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p id="paymentAmount" style="font-size: 22px; font-weight: 700; color: #0f9d58; margin: 0 0 6px;"></p>
+                        <p id="paymentMethod" style="font-size: 13px; color: #475569; margin: 0 0 10px;"></p>
+                        <p id="paymentNote" style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;"></p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" onclick="goBackToStep2()" class="btn secondary">Back</button>
+                        <button type="button" class="btn" onclick="startRegistrationPayment()" id="payBtn">Pay</button>
+                    </div>
                 </div>
             </div>
         </form>
@@ -396,6 +469,12 @@
 </div>
 
 <script>
+    let currentRegistration = null;
+    let passkeyChannel = null;
+    let passkeyCountdownTimer = null;
+    let passkeySecondsLeft = 0;
+    const PASSKEY_TTL_SECONDS = 3 * 60;
+
     function togglePass(id, el) {
         const input = document.getElementById(id);
         if (input.type === "password") {
@@ -407,14 +486,155 @@
         }
     }
 
-    function goToStep(n) {
+    function setActiveDot(n) {
+        document.getElementById("dot1").classList.toggle("active", n === 1);
+        document.getElementById("dot2").classList.toggle("active", n === 2);
+        document.getElementById("dot3").classList.toggle("active", n === 3);
+    }
+
+    function showStep(step) {
+        document.getElementById("step1").classList.toggle("hidden", step !== 1);
+        document.getElementById("step2").classList.toggle("hidden", step !== 2);
+        document.getElementById("step3").classList.toggle("hidden", step !== 3);
+        setActiveDot(step);
+    }
+
+    function clearPasskeyCountdown() {
+        if (passkeyCountdownTimer) {
+            clearInterval(passkeyCountdownTimer);
+            passkeyCountdownTimer = null;
+        }
+        passkeySecondsLeft = 0;
+    }
+
+    function formatPasskeyTimer(totalSeconds) {
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        return m + ':' + String(s).padStart(2, '0');
+    }
+
+    function showPasskeySubstep(which) {
+        document.getElementById('passkeyChannelStep').style.display = which === 'channel' ? 'block' : 'none';
+        document.getElementById('passkeyVerifyStep').style.display = which === 'verify' ? 'block' : 'none';
+        document.getElementById('passkeyExpiredStep').style.display = which === 'expired' ? 'block' : 'none';
+    }
+
+    function resetPasskeyUi() {
+        clearPasskeyCountdown();
+        passkeyChannel = null;
+        const input = document.getElementById('passkeyInput');
+        if (input) input.value = '';
+        const msg = document.getElementById('passkeySendMsg');
+        if (msg) {
+            msg.textContent = '';
+            msg.style.color = '#64748b';
+        }
+        showPasskeySubstep('channel');
+    }
+
+    function startPasskeyCountdown() {
+        clearPasskeyCountdown();
+        passkeySecondsLeft = PASSKEY_TTL_SECONDS;
+        const timerEl = document.getElementById('passkeyTimer');
+        const countdownEl = document.getElementById('passkeyCountdown');
+        if (timerEl) timerEl.textContent = formatPasskeyTimer(passkeySecondsLeft);
+        if (countdownEl) countdownEl.style.color = '#0f9d58';
+
+        passkeyCountdownTimer = setInterval(() => {
+            passkeySecondsLeft -= 1;
+            if (timerEl) timerEl.textContent = formatPasskeyTimer(Math.max(0, passkeySecondsLeft));
+
+            if (passkeySecondsLeft <= 30 && countdownEl) {
+                countdownEl.style.color = '#b45309';
+            }
+
+            if (passkeySecondsLeft <= 0) {
+                clearPasskeyCountdown();
+                const input = document.getElementById('passkeyInput');
+                if (input) input.value = '';
+                showPasskeySubstep('expired');
+            }
+        }, 1000);
+    }
+
+    async function sendRegistrationPasskey(channel) {
+        const email = document.querySelector('input[name="email"]').value.trim();
+        const phoneNumber = document.querySelector('input[name="phoneNumber"]').value.trim();
+        const sendMsg = document.getElementById('passkeySendMsg');
+        const emailBtn = document.getElementById('sendPasskeyEmailBtn');
+        const phoneBtn = document.getElementById('sendPasskeyPhoneBtn');
+
+        if (channel === 'email' && !email) {
+            alert('Email address is required.');
+            return;
+        }
+        if (channel === 'phone' && !phoneNumber) {
+            alert('Phone number is required.');
+            return;
+        }
+
+        if (emailBtn) emailBtn.disabled = true;
+        if (phoneBtn) phoneBtn.disabled = true;
+        if (sendMsg) {
+            sendMsg.style.color = '#64748b';
+            sendMsg.textContent = channel === 'email' ? 'Sending to email…' : 'Sending to phone…';
+        }
+
+        try {
+            const res = await fetch('/register/send-passkey', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel, email, phoneNumber })
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                if (sendMsg) {
+                    sendMsg.style.color = '#dc2626';
+                    sendMsg.textContent = data.message || 'Failed to send verification code.';
+                } else {
+                    alert(data.message || 'Failed to send verification code.');
+                }
+                return;
+            }
+
+            passkeyChannel = channel;
+            const dest = channel === 'email' ? email : phoneNumber;
+            const hint = document.getElementById('passkeySentHint');
+            if (hint) {
+                hint.textContent = channel === 'email'
+                    ? ('Code sent to your email (' + dest + '). Enter it below.')
+                    : ('Code sent to your phone (' + dest + '). Enter it below.');
+            }
+
+            showPasskeySubstep('verify');
+            startPasskeyCountdown();
+            const input = document.getElementById('passkeyInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            if (sendMsg) sendMsg.textContent = '';
+        } catch (err) {
+            console.error('sendRegistrationPasskey', err);
+            if (sendMsg) {
+                sendMsg.style.color = '#dc2626';
+                sendMsg.textContent = 'Network error. Please try again.';
+            } else {
+                alert('Network error. Please try again.');
+            }
+        } finally {
+            if (emailBtn) emailBtn.disabled = false;
+            if (phoneBtn) phoneBtn.disabled = false;
+        }
+    }
+
+    async function handleNextStep() {
         const step1 = document.getElementById("step1");
         const step2 = document.getElementById("step2");
-        const dot1 = document.getElementById("dot1");
-        const dot2 = document.getElementById("dot2");
 
-        if (n === 2) {
-            // Basic validation
+        // Step 1 → Step 2 (location)
+        if (!step1.classList.contains("hidden")) {
             const name = document.getElementById("nameInput").value.trim();
             const email = document.querySelector('input[name="email"]').value;
             const pass = document.getElementById("password").value;
@@ -435,12 +655,17 @@
                 return;
             }
 
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert("Please enter a valid email address (e.g., user@example.com)");
+                return;
+            }
+
             if (pass !== confirm) {
                 alert("Passwords do not match");
                 return;
             }
 
-            // Split Name
             const parts = name.split(/\s+/);
             document.getElementById("extFirstName").value = parts[0] || "";
             if (parts.length === 2) {
@@ -450,53 +675,169 @@
                 document.getElementById("extLastName").value = parts[parts.length - 1];
             }
 
-            step1.classList.add("hidden");
-            step2.classList.remove("hidden");
-            dot1.classList.remove("active");
-            dot2.classList.add("active");
-        } else {
-            step2.classList.add("hidden");
-            step1.classList.remove("hidden");
-            dot2.classList.remove("active");
-            dot1.classList.add("active");
+            showStep(2);
+            return;
+        }
+
+        // Step 2 → verify tbank personal_account_registration → Step 3
+        if (!step2.classList.contains("hidden")) {
+            const county = document.getElementById("countySelect").value;
+            const constituency = document.getElementById("constituencySelect").value;
+            const ward = document.getElementById("wardSelect").value;
+            const ageBracket = document.querySelector('input[name="ageBracket"]:checked');
+
+            if (!county || !constituency || !ward || !ageBracket) {
+                alert("Please complete all location and age bracket fields.");
+                return;
+            }
+
+            await loadRegistrationStep();
         }
     }
 
-    // Location APIs
-    function initCounties() {
+    async function loadRegistrationStep() {
+        try {
+            const res = await fetch('/hq/compliance/data');
+            const data = await res.json();
+
+            if (!data.success || !data.data) {
+                alert("Unable to verify registration settings. Please try again.");
+                return;
+            }
+
+            const reg = data.data.personal_account_registration || null;
+            currentRegistration = reg;
+
+            if (!reg || reg.amount === null || reg.amount === undefined || reg.amount === '' || !reg.paymentMethod) {
+                document.getElementById('registerForm').submit();
+                return;
+            }
+
+            const passkeySection = document.getElementById("passkeySection");
+            const paymentSection = document.getElementById("paymentSection");
+            const method = String(reg.paymentMethod).toLowerCase();
+
+            passkeySection.style.display = "none";
+            paymentSection.style.display = "none";
+
+            if (method === 'passkey' || String(reg.amount) === '0') {
+                resetPasskeyUi();
+                passkeySection.style.display = "block";
+            } else if (method === 'mpesa' || method === 'pesapal') {
+                paymentSection.style.display = "block";
+                const methodLabel = method === 'mpesa' ? 'M-Pesa' : 'Pesapal';
+                document.getElementById('paymentAmount').textContent = reg.amount + ' KES';
+                document.getElementById('paymentMethod').textContent = 'Payment Method: ' + methodLabel;
+                document.getElementById('paymentNote').textContent =
+                    'Registration fee is currently set to ' + reg.amount + ' KES via ' + methodLabel +
+                    '. This fee may change based on Finance updates. Click Pay to continue.';
+            } else {
+                alert("Unknown payment method configured. Please contact support.");
+                return;
+            }
+
+            showStep(3);
+        } catch (err) {
+            console.error("Error checking registration settings:", err);
+            alert("Unable to load registration settings. Please try again.");
+        }
+    }
+
+    async function submitWithPasskey() {
+        if (passkeySecondsLeft <= 0) {
+            alert("Verification code expired. Please resend a new code.");
+            showPasskeySubstep('expired');
+            return;
+        }
+
+        const passkey = document.getElementById('passkeyInput').value.trim();
+        if (!passkey) {
+            alert("Please enter the passkey");
+            return;
+        }
+
+        const form = document.getElementById('registerForm');
+        let existingPasskeyInput = document.getElementById('existingPasskey');
+        if (!existingPasskeyInput) {
+            existingPasskeyInput = document.createElement('input');
+            existingPasskeyInput.type = 'hidden';
+            existingPasskeyInput.name = 'passkey';
+            existingPasskeyInput.id = 'existingPasskey';
+            form.appendChild(existingPasskeyInput);
+        }
+        existingPasskeyInput.value = passkey;
+        clearPasskeyCountdown();
+        form.submit();
+    }
+
+    // Pay button — awaiting next payment-flow instructions
+    function startRegistrationPayment() {
+        if (!currentRegistration) {
+            alert("Registration fee settings not loaded.");
+            return;
+        }
+        console.log('[register] Pay clicked', currentRegistration);
+    }
+
+    function goBackToStep1() {
+        resetPasskeyUi();
+        showStep(1);
+        document.getElementById("countySelect").value = "";
+        document.getElementById("constituencySelect").innerHTML = '<option value="" disabled selected>-- Select Constituency --</option>';
+        document.getElementById("wardSelect").innerHTML = '<option value="" disabled selected>-- Select Ward --</option>';
+        document.querySelectorAll('input[name="ageBracket"]').forEach(r => r.checked = false);
+    }
+
+    function goBackToStep2() {
+        resetPasskeyUi();
+        document.getElementById("passkeySection").style.display = "none";
+        document.getElementById("paymentSection").style.display = "none";
+        currentRegistration = null;
+        showStep(2);
+    }
+
+    // Location helpers
+    let countiesLoaded = false;
+
+    async function initCounties() {
+        if (countiesLoaded) return;
         const select = document.getElementById("countySelect");
-        if (select.options.length > 1) return;
-        fetch("/api/locations/counties")
-            .then(r => r.json())
-            .then(list => {
-                list.forEach(c => {
-                    const o = document.createElement("option");
-                    o.value = o.textContent = c;
-                    select.appendChild(o);
-                });
+        try {
+            const res = await fetch('/api/locations/counties');
+            const counties = await res.json();
+            counties.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c;
+                opt.textContent = c;
+                select.appendChild(opt);
             });
+            countiesLoaded = true;
+        } catch (e) {
+            console.error("Failed to load counties", e);
+        }
     }
 
     function loadConstituencies() {
         const county = document.getElementById("countySelect").value;
         const consSelect = document.getElementById("constituencySelect");
         const wardSelect = document.getElementById("wardSelect");
-        
-        // Clear both dropdowns when county changes
+
         consSelect.innerHTML = '<option value="" disabled selected>-- Select Constituency --</option>';
         wardSelect.innerHTML = '<option value="" disabled selected>-- Select Ward --</option>';
 
         if (!county) return;
-        
+
         fetch(`/api/locations/${encodeURIComponent(county)}/constituencies`)
             .then(r => r.json())
             .then(list => {
-                list.sort().forEach(c => {
-                    const o = document.createElement("option");
-                    o.value = o.textContent = c;
-                    consSelect.appendChild(o);
+                list.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item;
+                    opt.textContent = item;
+                    consSelect.appendChild(opt);
                 });
-            });
+            })
+            .catch(e => console.error(e));
     }
 
     function loadWards() {
@@ -504,25 +845,25 @@
         const cons = document.getElementById("constituencySelect").value;
         const wardSelect = document.getElementById("wardSelect");
 
-        if (!county || !cons) return;
-
-        // Clear ward dropdown when constituency changes
         wardSelect.innerHTML = '<option value="" disabled selected>-- Select Ward --</option>';
+        if (!county || !cons) return;
 
         fetch(`/api/locations/${encodeURIComponent(county)}/${encodeURIComponent(cons)}/wards`)
             .then(r => r.json())
             .then(list => {
-                list.sort().forEach(w => {
-                    const o = document.createElement("option");
-                    o.value = o.textContent = w;
-                    wardSelect.appendChild(o);
+                list.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item;
+                    opt.textContent = item;
+                    wardSelect.appendChild(opt);
                 });
-            });
+            })
+            .catch(e => console.error(e));
     }
 
     // Dynamic Phone Validation
     const phoneInput = document.getElementById('phoneInput');
-    if(phoneInput) {
+    if (phoneInput) {
         phoneInput.addEventListener('input', function() {
             let val = this.value.replace(/[^0-9]/g, '').trim();
             this.value = val;

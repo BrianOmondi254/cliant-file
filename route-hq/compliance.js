@@ -1,10 +1,20 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const { findUserInCounties, Dealer, Agent, Admin, SuperAdmin, normalizePhone, Message } = require('../mongoose');
+const bcrypt = require("bcrypt");
+const { findUserInCounties, Dealer, Agent, Admin, SuperAdmin, normalizePhone, Message, saveTbankSettings, getTbankSettings } = require('../mongoose');
 const { processMessage } = require('../notification/notification');
 
 const router = express.Router();
+
+const norm = (p) => {
+  if (!p) return "";
+  let s = String(p).trim();
+  if (s.startsWith("+254")) s = s.substring(4);
+  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
+  if (s.startsWith("0")) s = s.substring(1);
+  return "0" + s;
+};
 
 // Path to JSON database
 const DB_PATH = path.join(__dirname, "..", "tbank.json");
@@ -28,6 +38,14 @@ const getDefaultStructure = () => ({
     membership: null,
     periods: null,
     completed: false,
+    personal_account_registration: {
+      amount: null,
+      paymentMethod: null,
+      passkey: null,
+      updatedAt: null,
+      processedBy: null,
+    },
+    personal_account_registration_history: [],
   },
 });
 
@@ -236,8 +254,8 @@ router.post("/compliance/periods", (req, res) => {
 });
 
 // Save Personal Account Registration Adjustment
-router.post("/compliance/adjust-registration", (req, res) => {
-  const { amount, paymentMethod, passkey } = req.body;
+router.post("/compliance/adjust-registration", protectHq, async (req, res) => {
+  const { amount, paymentMethod, passkey, pin } = req.body;
 
   if (!amount || !paymentMethod) {
     return res
@@ -245,50 +263,122 @@ router.post("/compliance/adjust-registration", (req, res) => {
       .json({ success: false, message: "Missing amount or payment method" });
   }
 
-  const db = readDB();
-  if (!db.compliance) {
-    db.compliance = getDefaultStructure().compliance;
+  const processorPhone = req.session && req.session.hqUser ? req.session.hqUser.phoneNumber : null;
+  const now = new Date().toISOString();
+
+  if (amount === "0") {
+    try {
+      const existing = await getTbankSettings();
+      const existingOption = existing && existing.lastSelectedAuthOption && existing.lastSelectedAuthOption.option ? existing.lastSelectedAuthOption.option : null;
+      if (amount !== existingOption) {
+        const historyEntry = existing && existing.lastSelectedAuthOption ? { ...existing.lastSelectedAuthOption } : null;
+        const updatePayload = {
+          lastSelectedAuthOption: {
+            option: amount,
+            processedBy: processorPhone,
+            replacedAt: now,
+            date: existing && existing.lastSelectedAuthOption ? existing.lastSelectedAuthOption.date : now,
+          },
+        };
+        if (historyEntry) {
+          updatePayload.lastSelectedAuthOptionHistory = [historyEntry];
+        }
+        await saveTbankSettings(updatePayload);
+      }
+    } catch (e) {
+      console.error("[compliance] Failed to update tbank settings:", e.message);
+    }
   }
 
   let finalPasskey = passkey;
 
   if (paymentMethod === "mpesa") {
-    // This method is to automate a Mpesa API to prompt the amount selected above
-    // that will be deducted from Mpesa account, after prompt enter pin and related field.
     finalPasskey = Math.floor(10000 + Math.random() * 90000).toString();
   } else if (paymentMethod === "passkey" && !finalPasskey) {
     finalPasskey = Math.floor(1000 + Math.random() * 9000).toString();
+  } else if (paymentMethod === "pesapal") {
+    finalPasskey = null;
   }
 
-  db.compliance.personal_account_registration = {
+  const newRegistration = {
     amount,
     paymentMethod,
     passkey: finalPasskey || null,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
+    processedBy: processorPhone,
   };
 
-  writeDB(db);
+  try {
+    const existing = await getTbankSettings();
+    const currentRegistration = existing && existing.compliance && existing.compliance.personal_account_registration ? existing.compliance.personal_account_registration : null;
+
+    let history = [];
+    if (currentRegistration && currentRegistration.amount !== null && currentRegistration.amount !== undefined) {
+      const historyEntry = {
+        amount: currentRegistration.amount,
+        paymentMethod: currentRegistration.paymentMethod,
+        passkey: currentRegistration.passkey,
+        processedBy: currentRegistration.processedBy,
+        updatedAt: currentRegistration.updatedAt,
+      };
+      history = [historyEntry];
+    }
+
+    const maxHistory = 50;
+    if (history.length > maxHistory) {
+      history = history.slice(0, maxHistory);
+    }
+
+    await saveTbankSettings({
+      "compliance.personal_account_registration": newRegistration,
+      "compliance.personal_account_registration_history": history,
+    });
+  } catch (e) {
+    console.error("[compliance] Failed to save personal_account_registration to tbank collection:", e.message);
+  }
 
   res.json({
     success: true,
-    message: "Personal account registration adjusted",
+    message: amount === "0" ? "Passkey option selected and saved successfully" : "Personal account registration adjusted",
     passkey: finalPasskey,
   });
 });
 
 // Return compliance data as JSON for client-side sync
-router.get("/compliance/data", (req, res) => {
+router.get("/compliance/data", async (req, res) => {
   try {
-    const db = readDB();
-    const compliance = db.compliance || getDefaultStructure().compliance;
+    let personalAccountRegistration = null;
+    let personalAccountRegistrationHistory = [];
+
+    try {
+      const tbankSettings = await getTbankSettings();
+      if (tbankSettings && tbankSettings.compliance) {
+        personalAccountRegistration = tbankSettings.compliance.personal_account_registration || null;
+        personalAccountRegistrationHistory = tbankSettings.compliance.personal_account_registration_history || [];
+      }
+    } catch (mongoErr) {
+      console.error("[compliance] Failed to read from MongoDB tbank collection:", mongoErr.message);
+    }
+
+    if (!personalAccountRegistration) {
+      try {
+        const db = readDB();
+        const compliance = db.compliance || getDefaultStructure().compliance;
+        personalAccountRegistration = compliance.personal_account_registration || null;
+        personalAccountRegistrationHistory = compliance.personal_account_registration_history || [];
+      } catch (jsonErr) {
+        console.error("[compliance] Failed to read from tbank.json:", jsonErr.message);
+      }
+    }
+
     res.json({
       success: true,
       data: {
-        registration: compliance.registration || {},
-        membership: compliance.membership || {},
-        periods: compliance.periods || {},
-        personal_account_registration:
-          compliance.personal_account_registration || {},
+        registration: {},
+        membership: {},
+        periods: {},
+        personal_account_registration: personalAccountRegistration || {},
+        personal_account_registration_history: personalAccountRegistrationHistory || [],
       },
     });
   } catch (err) {

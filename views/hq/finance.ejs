@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --blue-900: #0a1628;
+            --blue-800: #102040;
+            --blue-700: #1a3060;
+            --blue-600: #1e4080;
+            --blue-500: #1f5cbf;
+            --blue-400: #2e72d2;
+            --blue-300: #5a96e8;
+            --blue-100: #dce8fa;
+            --blue-50:  #f0f5fd;
+            --teal-500: #0e7c6e;
+            --teal-100: #d5f0eb;
+            --gray-900: #111827;
+            --gray-700: #374151;
+            --gray-600: #4b5563;
+            --gray-400: #9ca3af;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50:  #f9fafb;
+            --green-500: #16a34a;
+            --red-500:   #dc2626;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+            --shadow-lg: 0 24px 48px rgba(10,22,40,0.18), 0 8px 20px rgba(10,22,40,0.08);
+            --transition: 0.18s ease;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--gray-50);
+            color: var(--gray-900);
+            min-height: 100vh;
+        }
+        header {
+            background: var(--blue-900);
+            border-bottom: 1px solid var(--blue-800);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+        .topbar {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 28px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .brand-logo {
+            width: 34px; height: 34px;
+            background: var(--blue-400);
+            border-radius: var(--radius-sm);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .brand-logo svg { width: 18px; height: 18px; fill: white; }
+        .brand-name { font-size: 15px; font-weight: 600; color: white; letter-spacing: 0.02em; }
+        .brand-name span { color: var(--blue-300); font-weight: 400; }
+        .topbar-divider { width: 1px; height: 28px; background: var(--blue-700); flex-shrink: 0; }
+        .topbar-title { font-size: 13px; font-weight: 500; color: var(--blue-300); letter-spacing: 0.06em; text-transform: uppercase; flex: 1; }
+        .topbar-auth { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .topbar-auth .user-badge { display: flex; align-items: center; gap: 8px; }
+        .topbar-auth .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--blue-600); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--blue-100); }
+        .topbar-auth .user-name { font-size: 13px; font-weight: 500; color: var(--gray-200); }
+        .btn {
+            font-family: var(--font); font-size: 13px; font-weight: 500;
+            padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid transparent;
+            cursor: pointer; transition: all var(--transition); line-height: 1; white-space: nowrap;
+        }
+        .btn-primary { background: var(--blue-500); color: white; border-color: var(--blue-400); }
+        .btn-primary:hover { background: var(--blue-400); }
+        .btn-ghost { background: transparent; color: var(--gray-400); border-color: var(--blue-700); }
+        .btn-ghost:hover { background: var(--blue-800); color: white; border-color: var(--blue-600); }
+        .btn-danger { background: transparent; color: #f87171; border-color: rgba(220, 38, 38, 0.3); }
+        .btn-danger:hover { background: rgba(220, 38, 38, 0.1); color: #fca5a5; }
+        .page { max-width: 1280px; margin: 0 auto; padding: 40px 28px 60px; }
+        .page-header { margin-bottom: 36px; }
+        .page-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-500); margin-bottom: 6px; }
+        .page-heading { font-size: 26px; font-weight: 600; color: var(--gray-900); margin-bottom: 6px; }
+        .page-sub { font-size: 14px; color: var(--gray-600); }
+        .page-divider { border: none; border-top: 1px solid var(--gray-200); margin: 28px 0; }
+        .card {
+            background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg);
+            padding: 28px 24px; box-shadow: var(--shadow-sm); margin-bottom: 24px;
+        }
+        .card h3 { font-size: 18px; font-weight: 600; color: var(--gray-900); margin-bottom: 20px; }
+        .radio-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .radio-card {
+            position: relative; border: 2px solid var(--gray-200); border-radius: var(--radius-md);
+            padding: 16px; text-align: center; cursor: pointer; transition: all var(--transition);
+        }
+        .radio-card:hover { border-color: var(--blue-300); }
+        .radio-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+        .radio-card:has(input:checked) { border-color: var(--blue-500); background: var(--blue-50); }
+        .radio-card label { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-size: 14px; color: var(--gray-700); }
+        .radio-card label span { font-size: 20px; font-weight: 700; color: var(--blue-500); }
+        .radio-card label small { font-size: 11px; color: var(--gray-400); text-transform: uppercase; }
+        .radio-card.uncharged:has(input:checked) { border-color: var(--green-500); background: #f0fdf4; }
+        .radio-card.uncharged:has(input:checked) label span { color: var(--green-500); }
+        .btn-full {
+            width: 100%; padding: 10px; font-size: 14px; font-weight: 500;
+            border-radius: var(--radius-sm); background: var(--blue-500); color: white;
+            border: none; cursor: pointer; transition: background var(--transition); font-family: var(--font);
+        }
+        .btn-full:hover { background: var(--blue-400); }
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: white; padding: 12px 20px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 13px; z-index: 10002;
+            animation: toastSlideUp 0.3s ease forwards;
+        }
+        .toast.success { background: #10b981; }
+        .toast.error { background: #ef4444; }
+        @keyframes toastSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .hidden { display: none !important; }
+
+        .form-section { margin-bottom: 24px; }
+
+        .modal-panel { position: relative; background: white; border-radius: var(--radius-lg); padding: 0; max-width: 400px; width: 100%; box-shadow: var(--shadow-lg); overflow: hidden; }
+        .modal-header {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            padding: 24px 28px; border-bottom: 1px solid var(--gray-200);
+        }
+        .modal-title { font-size: 16px; font-weight: 600; color: var(--gray-900); }
+        .modal-subtitle { font-size: 13px; color: var(--gray-600); margin-top: 3px; }
+        .modal-close {
+            background: transparent; border: none; cursor: pointer; color: var(--gray-400);
+            padding: 4px; border-radius: var(--radius-sm); transition: all var(--transition); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-close:hover { background: var(--gray-100); color: var(--gray-700); }
+        .modal-close svg { width: 16px; height: 16px; }
+        .modal-body { display: flex; flex-direction: column; gap: 18px; padding: 28px; }
+        .field-group { display: flex; flex-direction: column; gap: 8px; }
+        .field-label { font-size: 13px; font-weight: 500; color: var(--gray-700); }
+        .pin-input {
+            width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-200); border-radius: var(--radius-md);
+            font-family: var(--font); letter-spacing: 8px; font-size: 20px; font-weight: 700; text-align: center;
+            color: var(--gray-900); transition: border-color var(--transition), box-shadow var(--transition);
+        }
+        .pin-input:focus { outline: none; border-color: var(--blue-400); box-shadow: 0 0 0 3px var(--blue-50); }
+        .modal-footnote { font-size: 12px; color: var(--gray-400); text-align: center; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="topbar">
+            <div class="topbar-brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <span class="brand-name">T-Bank <span>Investment</span></span>
+            </div>
+            <div class="topbar-divider"></div>
+            <span class="topbar-title">Finance Dashboard</span>
+            <div class="topbar-auth" id="auth-area">
+                <button class="btn btn-ghost" onclick="window.location.href='/hq'">Back to HQ</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="page">
+        <div class="page-header">
+            <p class="page-eyebrow">Finance Department</p>
+            <h1 class="page-heading">Registration Fee Management</h1>
+            <p class="page-sub">Adjust the registration fee amount for personal accounts.</p>
+        </div>
+        <hr class="page-divider">
+
+        <div class="card" id="currentRegCard">
+            <h3><i class="fa-solid fa-circle-info"></i> Current Registration Setting</h3>
+            <p id="currentRegSummary" style="font-size:14px;color:var(--gray-600);">Loading…</p>
+        </div>
+
+        <div class="card">
+            <h3><i class="fa-solid fa-dollar-sign"></i> Adjust Registration Fee</h3>
+            <form id="feeForm" onsubmit="handleFeeSubmit(event)">
+                <div class="form-section">
+                    <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--gray-700);">Registration Amount</h4>
+                    <div class="radio-group">
+                        <div class="radio-card uncharged">
+                            <input type="radio" id="amount0" name="amount" value="0" onchange="onAmountChange()">
+                            <label for="amount0"><span>Passkey</span></label>
+                        </div>
+                        <div class="radio-card">
+                            <input type="radio" id="amount50" name="amount" value="50" onchange="onAmountChange()">
+                            <label for="amount50"><span>50</span> <small>KES</small></label>
+                        </div>
+                        <div class="radio-card">
+                            <input type="radio" id="amount100" name="amount" value="100" onchange="onAmountChange()">
+                            <label for="amount100"><span>100</span> <small>KES</small></label>
+                        </div>
+                        <div class="radio-card">
+                            <input type="radio" id="amount150" name="amount" value="150" onchange="onAmountChange()">
+                            <label for="amount150"><span>150</span> <small>KES</small></label>
+                        </div>
+                        <div class="radio-card">
+                            <input type="radio" id="amount200" name="amount" value="200" onchange="onAmountChange()">
+                            <label for="amount200"><span>200</span> <small>KES</small></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-section" id="paymentMethodSection">
+                    <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--gray-700);">Payment Method</h4>
+                    <div class="radio-group">
+                        <div class="radio-card">
+                            <input type="radio" id="mpesa" name="paymentMethod" value="mpesa" onchange="togglePaymentComment()">
+                            <label for="mpesa">Mpesa Integration</label>
+                        </div>
+                        <div class="radio-card">
+                            <input type="radio" id="pesapal" name="paymentMethod" value="pesapal" onchange="togglePaymentComment()">
+                            <label for="pesapal">Pesapal</label>
+                        </div>
+                        <input type="radio" id="passkeyMethod" name="paymentMethod" value="passkey" class="hidden">
+                    </div>
+                    <p id="mpesaComment" style="margin-top:15px; font-size:0.85rem; color:var(--gray-600); display:none;">
+                        This process is optional to integrate Mpesa API for payment.
+                    </p>
+                    <p id="pesapalComment" style="margin-top:15px; font-size:0.85rem; color:var(--gray-600); display:none;">
+                        Payment will be processed through Pesapal secure checkout.
+                    </p>
+                    <p id="passkeyComment" style="margin-top:15px; font-size:0.85rem; color:var(--gray-600); display:none;">
+                        Free registration via generated passkey (amount 0).
+                    </p>
+                </div>
+                <button type="submit" class="btn-full">Update Fee</button>
+            </form>
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <div id="pin-modal" class="hidden" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;">
+        <div style="position:absolute;inset:0;background:rgba(10,22,40,0.55);" onclick="app.closePinModal()"></div>
+        <div class="modal-panel">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">Enter PIN</div>
+                    <div class="modal-subtitle">Authorize registration fee update</div>
+                </div>
+                <button class="modal-close" onclick="app.closePinModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="pinModalError" class="hidden" style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:13px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <span id="pinModalErrorText"></span>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Your PIN</label>
+                    <input type="password" class="pin-input" id="pinModalInput" maxlength="4" placeholder="••••" inputmode="numeric">
+                </div>
+                <button class="btn-full" onclick="app.verifyPinAndSubmit()">
+                    <i class="fa-solid fa-check"></i> Authorize
+                </button>
+                <p class="modal-footnote">This confirms it's really you before we proceed.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchComplianceData() {
+            try {
+                const res = await fetch('/hq/compliance/data');
+                if (!res.ok) return {};
+                const json = await res.json();
+                return json.data || {};
+            } catch (e) {
+                console.error('fetchComplianceData', e);
+                return {};
+            }
+        }
+
+        function formatRegSummary(reg) {
+            if (!reg || reg.amount === null || reg.amount === undefined || reg.amount === '') {
+                return 'No personal account registration setting saved yet.';
+            }
+            const amountLabel = String(reg.amount) === '0' ? 'Passkey (free)' : (reg.amount + ' KES');
+            const method = reg.paymentMethod || '—';
+            const by = reg.processedBy ? (' · by ' + reg.processedBy) : '';
+            const at = reg.updatedAt ? (' · ' + new Date(reg.updatedAt).toLocaleString()) : '';
+            return 'Amount: ' + amountLabel + ' · Method: ' + method + by + at;
+        }
+
+        function applyRegistrationToForm(reg) {
+            if (!reg) return;
+            const amount = reg.amount != null ? String(reg.amount) : null;
+            if (amount !== null) {
+                const amountInput = document.querySelector('input[name="amount"][value="' + amount + '"]');
+                if (amountInput) amountInput.checked = true;
+            }
+            onAmountChange();
+            if (amount !== '0' && reg.paymentMethod) {
+                const methodInput = document.querySelector('input[name="paymentMethod"][value="' + reg.paymentMethod + '"]');
+                if (methodInput) methodInput.checked = true;
+            }
+            togglePaymentComment();
+        }
+
+        async function loadCurrentRegistration() {
+            const data = await fetchComplianceData();
+            const reg = data.personal_account_registration || {};
+            document.getElementById('currentRegSummary').textContent = formatRegSummary(reg);
+            applyRegistrationToForm(reg);
+        }
+
+        function onAmountChange() {
+            const amountChecked = document.querySelector('input[name="amount"]:checked');
+            const amount = amountChecked ? amountChecked.value : null;
+            const paymentSection = document.getElementById('paymentMethodSection');
+            const passkeyMethod = document.getElementById('passkeyMethod');
+            const passkeyComment = document.getElementById('passkeyComment');
+            const paidMethodCards = paymentSection
+                ? paymentSection.querySelectorAll('.radio-card')
+                : [];
+
+            if (amount === '0') {
+                if (passkeyMethod) passkeyMethod.checked = true;
+                paidMethodCards.forEach((card) => { card.style.display = 'none'; });
+                if (passkeyComment) passkeyComment.style.display = 'block';
+                document.getElementById('mpesaComment').style.display = 'none';
+                document.getElementById('pesapalComment').style.display = 'none';
+            } else {
+                if (passkeyMethod) passkeyMethod.checked = false;
+                paidMethodCards.forEach((card) => { card.style.display = ''; });
+                if (passkeyComment) passkeyComment.style.display = 'none';
+                togglePaymentComment();
+            }
+        }
+
+        function togglePaymentComment() {
+            const mpesaRadio = document.getElementById('mpesa');
+            const pesapalRadio = document.getElementById('pesapal');
+            const mpesaComment = document.getElementById('mpesaComment');
+            const pesapalComment = document.getElementById('pesapalComment');
+            const passkeyComment = document.getElementById('passkeyComment');
+
+            if (passkeyComment) passkeyComment.style.display = 'none';
+            if (mpesaRadio && mpesaComment) {
+                mpesaComment.style.display = mpesaRadio.checked ? 'block' : 'none';
+            }
+            if (pesapalRadio && pesapalComment) {
+                pesapalComment.style.display = pesapalRadio.checked ? 'block' : 'none';
+            }
+        }
+
+        async function handleFeeSubmit(event) {
+            event.preventDefault();
+            const form = document.getElementById('feeForm');
+            const amountChecked = form.querySelector('input[name="amount"]:checked');
+
+            if (!amountChecked) {
+                showToast('Please select a Registration Amount.', 'error');
+                return;
+            }
+
+            const amount = amountChecked.value;
+            let paymentMethod;
+
+            if (amount === '0') {
+                paymentMethod = 'passkey';
+                document.getElementById('passkeyMethod').checked = true;
+            } else {
+                const paymentChecked = form.querySelector('input[name="paymentMethod"]:checked');
+                paymentMethod = paymentChecked ? paymentChecked.value : null;
+                if (!paymentMethod || paymentMethod === 'passkey') {
+                    showToast('Please select a Payment Method.', 'error');
+                    return;
+                }
+            }
+
+            app.pendingAmount = amount;
+            app.pendingPaymentMethod = paymentMethod;
+            app.openPinModal();
+        }
+
+        function closePinModal() {
+            document.getElementById('pin-modal').classList.add('hidden');
+            document.getElementById('pinModalInput').value = '';
+            const errDiv = document.getElementById('pinModalError');
+            errDiv.classList.add('hidden');
+        }
+
+        function openPinModal() {
+            document.getElementById('pin-modal').classList.remove('hidden');
+            document.getElementById('pinModalInput').focus();
+        }
+
+        async function verifyPinAndSubmit() {
+            const pin = document.getElementById('pinModalInput').value;
+            const errDiv = document.getElementById('pinModalError');
+            const errTxt = document.getElementById('pinModalErrorText');
+
+            if (!pin || pin.length < 4) {
+                errDiv.classList.remove('hidden');
+                errTxt.textContent = 'Please enter a 4-digit PIN.';
+                return;
+            }
+
+            try {
+                const res = await fetch('/hq/admin/verify-session-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin })
+                });
+                const data = await res.json();
+
+                if (data.status !== 'SUCCESS') {
+                    errDiv.classList.remove('hidden');
+                    errTxt.textContent = data.message || 'Incorrect PIN.';
+                    return;
+                }
+            } catch (e) {
+                console.error('Error verifying PIN:', e);
+                errDiv.classList.remove('hidden');
+                errTxt.textContent = 'Server communication error.';
+                return;
+            }
+
+            closePinModal();
+
+            const amount = app.pendingAmount;
+            const paymentMethod = app.pendingPaymentMethod;
+            // Match compliance.js: only send passkey for passkey method; mpesa/pesapal handled server-side
+            let passkey = null;
+            if (paymentMethod === 'passkey') {
+                passkey = Math.floor(1000 + Math.random() * 9000).toString();
+            }
+
+            try {
+                const res = await fetch('/hq/compliance/adjust-registration', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: amount,
+                        paymentMethod: paymentMethod,
+                        passkey: passkey,
+                        pin: pin
+                    })
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    const msg = amount === '0'
+                        ? 'Passkey registration option saved'
+                        : ('Registration fee updated: ' + amount + ' KES via ' + paymentMethod);
+                    showToast(msg, 'success');
+                    await loadCurrentRegistration();
+                } else {
+                    showToast(result.message || 'Adjustment failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error', 'error');
+                console.error(err);
+            }
+        }
+
+        const app = {
+            pendingAmount: null,
+            pendingPaymentMethod: null,
+            closePinModal,
+            openPinModal,
+            verifyPinAndSubmit
+        };
+
+        function showToast(msg, type = 'info', duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = msg;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        document.addEventListener('DOMContentLoaded', loadCurrentRegistration);
+    </script>
+</body>
+</html>
