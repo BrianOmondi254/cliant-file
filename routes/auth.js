@@ -19,6 +19,9 @@ const {
   findAgentByPhone,
   findDealerByPhone,
 } = require("../mongoose");
+const {
+  consumeVerifiedRegistration,
+} = require("./pesapal");
 
 const router = express.Router();
 const tbankFile = path.join(__dirname, "../tbank.json");
@@ -75,7 +78,11 @@ router.get("/", (req, res) => res.redirect("/login"));
 
 /* 📝 Register (GET form) */
 router.get("/register", (req, res) => {
-  res.render("register", { message: null, form: {} });
+  const qmsg = (req.query.message || "").toString().slice(0, 500);
+  res.render("register", {
+    message: qmsg || null,
+    form: req.query.form ? req.query.form : {}
+  });
 });
 
 /**
@@ -394,7 +401,7 @@ router.post("/register", async (req, res) => {
 
 router.post("/complete-registration", async (req, res) => {
     const { registrationData, startky, passkey } = req.body;
-    const userData = JSON.parse(registrationData);
+    const userData = JSON.parse(registrationData || "{}");
 
     const {
         FirstName,
@@ -429,9 +436,11 @@ router.post("/complete-registration", async (req, res) => {
     }
 
     if (personalReg && personalReg.amount && personalReg.paymentMethod) {
-      const amount = personalReg.amount;
+      const expectedAmount = Number(personalReg.amount || 0);
       const paymentMethod = personalReg.paymentMethod;
       const paymentConfirmed = req.body.paymentConfirmed === 'true';
+      const providedNonce = String(req.body.__verification_nonce || "");
+      const moneyMatches = (a, b) => Number(a).toFixed(2) === Number(b).toFixed(2);
 
       if (paymentMethod === 'passkey') {
         if (!passkey || passkey !== personalReg.passkey) {
@@ -440,12 +449,91 @@ router.post("/complete-registration", async (req, res) => {
                 form: userData
             });
         }
-      } else if ((paymentMethod === 'mpesa' || paymentMethod === 'pesapal') && !paymentConfirmed) {
-        return res.render("register", {
-            message: `To register your account, you need to pay a registration fee of ${amount} KES via ${paymentMethod === 'mpesa' ? 'M-Pesa' : 'Pesapal'}. Please complete the payment and try again.`,
+      } else if (paymentMethod === 'pesapal') {
+        // CRITICAL: do NOT trust client-supplied paymentConfirmed=true.
+        // Consume the server-issued nonce that Pesapal callback handler placed
+        // in the user's session only after verifying a COMPLETED order with
+        // the expected amount/currency via Pesapal GetTransactionStatus.
+        if (!providedNonce) {
+          console.warn(
+            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: no __verification_nonce supplied. ` +
+              `client claimed paymentConfirmed=${paymentConfirmed}. phone=${userData.phoneNumber}`
+          );
+          return res.render("register", {
+            message: `To register your account, you need to pay a registration fee of ${expectedAmount} KES via Pesapal. Please complete the Pesapal checkout and wait for redirect before submitting any form.`,
             form: userData,
             requirePayment: true,
-            paymentAmount: amount,
+            paymentAmount: expectedAmount,
+            paymentMethod: paymentMethod
+          });
+        }
+
+        let verifiedPayload = null;
+        try {
+          verifiedPayload = consumeVerifiedRegistration(req, providedNonce);
+        } catch (e) {
+          console.error("[complete-registration] consumeVerifiedRegistration threw:", e.message);
+          verifiedPayload = null;
+        }
+
+        if (!verifiedPayload) {
+          console.warn(
+            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: nonce not found/expired/already consumed. phone=${userData.phoneNumber}. nonce_prefix=${providedNonce.slice(0,6)}...`
+          );
+          return res.render("register", {
+            message: `Payment session expired or already used. If you were charged, contact support. Otherwise, restart the Pesapal payment flow. Do NOT attempt to resubmit this form directly.`,
+            form: userData,
+            requirePayment: true,
+            paymentAmount: expectedAmount,
+            paymentMethod: paymentMethod
+          });
+        }
+
+        const chargedOk = moneyMatches(Number(verifiedPayload.amount || 0), expectedAmount);
+        const statusOk =
+          Number(verifiedPayload.statusCode) === 1 ||
+          String(verifiedPayload.statusCode || "").toUpperCase() === "COMPLETED" ||
+          String(verifiedPayload.paymentStatusDescription || "").toUpperCase() === "COMPLETED";
+
+        if (!chargedOk || !statusOk) {
+          console.error(
+            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: server-verified payload does not match required. ` +
+              `expectedAmount=${expectedAmount} session.amount=${verifiedPayload.amount} session.statusCode=${verifiedPayload.statusCode}. phone=${userData.phoneNumber}`
+          );
+          return res.render("register", {
+            message: `Payment verification mismatch. Expected ${expectedAmount} KES / completed. Contact support if already charged.`,
+            form: userData,
+            requirePayment: true,
+            paymentAmount: expectedAmount,
+            paymentMethod: paymentMethod
+          });
+        }
+
+        // Optional: cross-check phone numbers loosely so a stolen session can't
+        // pay for a different user's registration.
+        const normPhone = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
+        if (
+          verifiedPayload.phoneNumber &&
+          userData.phoneNumber &&
+          normPhone(verifiedPayload.phoneNumber) !== normPhone(userData.phoneNumber)
+        ) {
+          console.warn(
+            `[complete-registration] PAYMENT/REG PHONE MISMATCH: session payment phone ${verifiedPayload.phoneNumber} vs form ${userData.phoneNumber}. Blocking.`
+          );
+          return res.render("register", {
+            message: `Payment was made for a different phone number. Start a fresh registration.`,
+            form: userData,
+            requirePayment: true,
+            paymentAmount: expectedAmount,
+            paymentMethod: paymentMethod
+          });
+        }
+      } else if ((paymentMethod === 'mpesa') && !paymentConfirmed) {
+        return res.render("register", {
+            message: `To register your account, you need to pay a registration fee of ${expectedAmount} KES via M-Pesa. Please complete the payment and try again.`,
+            form: userData,
+            requirePayment: true,
+            paymentAmount: expectedAmount,
             paymentMethod: paymentMethod
         });
       }

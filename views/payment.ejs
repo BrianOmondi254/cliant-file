@@ -395,11 +395,13 @@
                     <p class="section-sub">
                         You will be redirected to Pesapal secure checkout to complete your registration.
                     </p>
-                    <button type="button" onclick="initiatePesapal()" class="btn">Complete Registration</button>
+                    <button type="button" onclick="initiatePesapal()" class="btn" id="pesapalBtn">Complete Registration</button>
 
                     <script>
+                        const __pesapalAmount = <%- JSON.stringify(amount) %>;
+                        const __pesapalRegistrationData = <%- JSON.stringify(registrationData || '') %>;
                         async function initiatePesapal() {
-                            const btn = document.querySelector('button[onclick="initiatePesapal()"]');
+                            const btn = document.getElementById('pesapalBtn');
                             if(btn) {
                                 btn.disabled = true;
                                 btn.textContent = 'Redirecting to Pesapal...';
@@ -410,15 +412,15 @@
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                        amount: '<%= amount %>',
-                                        registrationData: '<%= registrationData %>'
+                                        amount: __pesapalAmount,
+                                        registrationData: __pesapalRegistrationData
                                     })
                                 });
                                 const data = await res.json();
-                                if (data.redirect_url) {
+                                if (data.success && data.redirect_url) {
                                     window.location.href = data.redirect_url;
                                 } else {
-                                    alert('Failed to initiate Pesapal payment. Please try again.');
+                                    alert(data.message || 'Failed to initiate Pesapal payment. Please try again.');
                                     if(btn) {
                                         btn.disabled = false;
                                         btn.textContent = 'Complete Registration';
@@ -432,6 +434,11 @@
                                 }
                             }
                         }
+                        window.addEventListener('DOMContentLoaded', function () {
+                            setTimeout(function () {
+                                try { initiatePesapal(); } catch (e) {}
+                            }, 400);
+                        });
                     </script>
                 <% } else if (paymentMethod === 'passkey') { %>
                     <div class="notice" id="passkeyNotice">

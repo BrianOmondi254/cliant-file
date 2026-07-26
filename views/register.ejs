@@ -770,13 +770,67 @@
         form.submit();
     }
 
-    // Pay button — awaiting next payment-flow instructions
     function startRegistrationPayment() {
         if (!currentRegistration) {
             alert("Registration fee settings not loaded.");
             return;
         }
-        console.log('[register] Pay clicked', currentRegistration);
+        const method = String(currentRegistration.paymentMethod || '').toLowerCase();
+        console.log('[register] Pay clicked with method:', method, currentRegistration);
+
+        const payBtn = document.getElementById('payBtn');
+        if (payBtn) {
+            payBtn.disabled = true;
+            const originalText = payBtn.textContent;
+            payBtn.textContent = 'Preparing payment...';
+        }
+
+        const form = document.getElementById('registerForm');
+        if (!form) {
+            alert("Registration form not found. Please try again.");
+            if (payBtn) { payBtn.disabled = false; payBtn.textContent = originalText; }
+            return;
+        }
+
+        if (method === 'pesapal') {
+            try {
+                const fd = new FormData(form);
+                const payload = {};
+                fd.forEach((v, k) => { payload[k] = v; });
+                payload.passkey = '';
+
+                fetch('/api/payment/pesapal/initiate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: currentRegistration.amount,
+                        registrationData: JSON.stringify(payload)
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.success && data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        alert(data?.message || 'Failed to initiate Pesapal payment. Falling back to confirmation page...');
+                        form.submit();
+                    }
+                })
+                .catch(err => {
+                    console.error('[register] Pesapal initiate error:', err);
+                    alert('Network error initiating Pesapal. Falling back to confirmation page.');
+                    form.submit();
+                })
+                .finally(() => {
+                    if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay'; }
+                });
+                return;
+            } catch (e) {
+                console.error('[register] Building Pesapal payload failed:', e);
+            }
+        }
+
+        form.submit();
     }
 
     function goBackToStep1() {

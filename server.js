@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ override: true });
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
@@ -24,6 +24,12 @@ const generalRoutes = require("./routes/general");
 const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
 const mpesaRoutes = require("./config/mpesa");
+const pesapalRoutes = require("./routes/pesapal");
+const {
+  handlePesapalCallback,
+  handlePesapalIpnGet,
+  handlePesapalIpnPost,
+} = require("./routes/pesapal");
 const memberRoutes = require("./routes/member");
 const tranRoutes = require("./tran_account/tran");
 const personalAccountRoutes = require("./p_account/personal.js");
@@ -125,6 +131,11 @@ app.use("/general", generalRoutes);
 app.use("/member", memberRoutes);
 app.use("/api/locations", locationsRoutes);
 app.use("/api/mpesa", mpesaRoutes);
+app.use("/api/payment/pesapal", pesapalRoutes);
+
+app.get("/register/pesapal-callback", handlePesapalCallback);
+app.get("/api/pesapal/ipn", handlePesapalIpnGet);
+app.post("/api/pesapal/ipn", handlePesapalIpnPost);
 
 // Inbox message delete
 app.post("/api/inbox/delete", (req, res) => {
@@ -330,16 +341,85 @@ app.get("/", (req, res) => {
 const isProduction =
   process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
 
+async function validatePesapalIpnOnStartup() {
+  try {
+    if (!process.env.PESAPAL_CONSUMER_KEY || !process.env.PESAPAL_CONSUMER_SECRET) {
+      console.log("ℹ [Pesapal Startup] PESAPAL_CONSUMER_KEY/SECRET not configured — skipping IPN validation.");
+      return;
+    }
+    const { ensureValidIpn } = pesapalRoutes;
+    if (typeof ensureValidIpn !== "function") {
+      console.warn("⚠ [Pesapal Startup] ensureValidIpn helper not exported from pesapal routes. Skipping.");
+      return;
+    }
+    const currentIpnId = process.env.PESAPAL_IPN_ID || "";
+    const result = await ensureValidIpn({
+      preferredNotifType: "POST",
+      writeFile: false,
+      log: false,
+    });
+    const needsFileUpdate =
+      result.envWritten !== true &&
+      currentIpnId !== result.ipnId;
+
+    let actionLabel = "OK";
+    switch (result.actionTaken) {
+      case "reused-id":
+        actionLabel = "✅ PESAPAL_IPN_ID is valid and already a POST-type on Pesapal";
+        break;
+      case "reused-post":
+        actionLabel = `✅ Replaced stale IPN_ID with a registered POST IPN on Pesapal (${result.ipnId}) — .env update needed`;
+        break;
+      case "registered-new":
+        actionLabel = `🆕 Registered NEW POST IPN on Pesapal (${result.ipnId}) — .env update needed`;
+        break;
+      default:
+        actionLabel = `ℹ ensureValidIpn reported action=${result.actionTaken} with ipnId=${result.ipnId}`;
+    }
+
+    console.log(`[Pesapal Startup] ${actionLabel}`);
+
+    if (needsFileUpdate) {
+      try {
+        if (typeof pesapalRoutes.writeEnvWithIpnId === "function") {
+          pesapalRoutes.writeEnvWithIpnId(result.ipnId);
+          console.log(
+            `[Pesapal Startup] Auto-updated PESAPAL_IPN_ID in ${pesapalRoutes.ENV_PATH || ".env"} to:`,
+            result.ipnId
+          );
+        } else {
+          console.warn(
+            `[Pesapal Startup] Could not auto-write .env. Please update PESAPAL_IPN_ID=${result.ipnId} manually.`
+          );
+        }
+      } catch (writeErr) {
+        console.warn(
+          "[Pesapal Startup] Tried to auto-write IPN ID but file write failed:",
+          writeErr.message
+        );
+      }
+    }
+  } catch (err) {
+    const details = err?.response?.data?.error?.message || err?.message || String(err);
+    console.warn(
+      "[Pesapal Startup] Could not validate IPN on boot. Payments will still work (fallback to browser callback + no-notification retry). Details:",
+      details
+    );
+  }
+}
+
 connectDB()
-  .then(() => {
+  .then(async () => {
+    await validatePesapalIpnOnStartup();
     app.listen(PORT, "0.0.0.0", () => {
       const base =
         process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
       console.log(`✅ Server running at ${base}`);
     });
   })
-  .catch((err) => {
+  .catch(async (err) => {
     console.error("Failed to connect to MongoDB:", err.message);
+    await validatePesapalIpnOnStartup();
     if (isProduction) {
       console.error(
         "Deploy fix: In Render Dashboard → Environment, set MONGODB_URI to your Atlas connection string. In Atlas → Network Access, allow 0.0.0.0/0.",

@@ -1,58 +1,46 @@
 const axios = require("axios");
-const { v4: uuidv4 } = require("uuid");
-const pesapal = require("./pesapal");
+
+const ALLOWED_NOTIF_TYPES = new Set(["GET", "POST"]);
+
+function assertHttpsUrl(input, label) {
+  if (!input) return "";
+  let parsed;
+  try {
+    parsed = new URL(input);
+  } catch (e) {
+    throw new Error(`${label} is not a valid URL: ${input}`);
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error(`${label} must use HTTPS (received ${parsed.protocol})`);
+  }
+  return parsed.toString();
+}
+
+const pesapalConfig = {
+  environment: process.env.PESAPAL_ENVIRONMENT || "sandbox",
+  consumerKey: process.env.PESAPAL_CONSUMER_KEY || "",
+  consumerSecret: process.env.PESAPAL_CONSUMER_SECRET || "",
+  callbackUrl: process.env.PESAPAL_CALLBACK_URL || "",
+  ipnUrl: process.env.PESAPAL_IPN_URL || "",
+  ipnId: process.env.PESAPAL_IPN_ID || "",
+  ipnSecret: process.env.PESAPAL_IPN_SECRET || "",
+};
 
 const BASE_URL =
-  pesapal.environment === "live"
+  pesapalConfig.environment === "live"
     ? "https://pay.pesapal.com/v3"
     : "https://cybqa.pesapal.com/pesapalv3";
 
-/**
- * Get Access Token
- */
 async function getAccessToken() {
   try {
     const response = await axios.post(
       `${BASE_URL}/api/Auth/RequestToken`,
       {
-        consumer_key: pesapal.consumerKey,
-        consumer_secret: pesapal.consumerSecret,
+        consumer_key: pesapalConfig.consumerKey,
+        consumer_secret: pesapalConfig.consumerSecret,
       },
       {
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      }
-    );
-
-    return response.data.token;
-  } catch (error) {
-    console.error(
-      "Pesapal Authentication Error:",
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-}
-
-/**
- * Register IPN
- * Only run this once if you don't already have an IPN ID.
- */
-async function registerIPN() {
-  const token = await getAccessToken();
-
-  try {
-    const response = await axios.post(
-      `${BASE_URL}/api/URLSetup/RegisterIPN`,
-      {
-        url: pesapal.ipnUrl,
-        ipn_notification_type: "GET",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },
@@ -62,60 +50,114 @@ async function registerIPN() {
     return response.data;
   } catch (error) {
     console.error(
-      "Register IPN Error:",
+      "Pesapal Token Error:",
       error.response?.data || error.message
     );
     throw error;
   }
 }
 
-/**
- * Submit Order
- */
-async function submitOrder({
-  phone,
-  amount,
-  firstName = "Customer",
-  lastName = "User",
-  email = "customer@tbank.local",
-  description = "T-BANK Payment",
-}) {
-  const token = await getAccessToken();
-
-  const payload = {
-    id: uuidv4(),
-    currency: "KES",
-    amount: Number(amount),
-    description,
-
-    callback_url: pesapal.callbackUrl,
-
-    notification_id: pesapal.ipnId,
-
-    billing_address: {
-      phone_number: phone,
-      email_address: email,
-      first_name: firstName,
-      last_name: lastName,
-      line_1: "Kenya",
-      line_2: "",
-      city: "Nairobi",
-      state: "Nairobi",
-      postal_code: "00100",
-      zip_code: "00100",
-      country_code: "KE",
-    },
-  };
-
+async function registerIpnUrl(ipnUrl, notificationType = "GET") {
   try {
+    const auth = await getAccessToken();
+    const safeUrl = assertHttpsUrl(ipnUrl, "IPN URL");
+    const notif = String(notificationType || "GET").toUpperCase();
+    if (!ALLOWED_NOTIF_TYPES.has(notif)) {
+      throw new Error(`Invalid notificationType: ${notif}. Must be GET or POST.`);
+    }
+    const response = await axios.post(
+      `${BASE_URL}/api/URLSetup/RegisterIPN`,
+      {
+        url: safeUrl,
+        ipn_notification_type: notif,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Pesapal Register IPN Error:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+}
+
+async function getIpnList() {
+  try {
+    const auth = await getAccessToken();
+    const response = await axios.get(
+      `${BASE_URL}/api/URLSetup/GetIpnList`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Pesapal Get IPN List Error:",
+      error.response?.data || error.message
+    );
+    throw error;
+  }
+}
+
+async function submitOrderRequest(orderData, options = {}) {
+  try {
+    const auth = await getAccessToken();
+    const safeCallbackUrl = orderData.callbackUrl
+      ? assertHttpsUrl(orderData.callbackUrl, "Callback URL")
+      : pesapalConfig.callbackUrl;
+    const payload = {
+      id: orderData.id,
+      currency: orderData.currency || "KES",
+      amount: orderData.amount,
+      description: orderData.description || "Cliant Payment",
+      callback_url: safeCallbackUrl,
+      branch: orderData.branch || "",
+      billing_address: orderData.billingAddress || {
+        phone_number: orderData.phoneNumber || "",
+        email_address: orderData.email || "",
+        first_name: orderData.firstName || "",
+        middle_name: orderData.middleName || "",
+        last_name: orderData.lastName || "",
+        line_1: orderData.line1 || "",
+        line_2: orderData.line2 || "",
+        city: orderData.city || "",
+        state: orderData.state || "",
+        postal_code: orderData.postalCode || "",
+        zip_code: orderData.zipCode || "",
+        country_code: orderData.countryCode || "KE",
+      },
+    };
+
+    const notificationId = options.skipNotificationId
+      ? null
+      : (orderData.notificationId || pesapalConfig.ipnId);
+
+    if (notificationId && String(notificationId).trim()) {
+      payload.notification_id = String(notificationId).trim();
+    }
+
     const response = await axios.post(
       `${BASE_URL}/api/Transactions/SubmitOrderRequest`,
       payload,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json",
+          Authorization: `Bearer ${auth.token}`,
         },
       }
     );
@@ -123,26 +165,26 @@ async function submitOrder({
     return response.data;
   } catch (error) {
     console.error(
-      "Submit Order Error:",
+      "Pesapal Submit Order Error:",
       error.response?.data || error.message
     );
     throw error;
   }
 }
 
-/**
- * Get Transaction Status
- */
 async function getTransactionStatus(orderTrackingId) {
-  const token = await getAccessToken();
-
   try {
+    if (!orderTrackingId || typeof orderTrackingId !== "string" || !orderTrackingId.trim()) {
+      throw new Error("orderTrackingId is required for getTransactionStatus");
+    }
+    const auth = await getAccessToken();
     const response = await axios.get(
-      `${BASE_URL}/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`,
+      `${BASE_URL}/api/Transactions/GetTransactionStatus`,
       {
+        params: { orderTrackingId: orderTrackingId },
         headers: {
-          Authorization: `Bearer ${token}`,
           Accept: "application/json",
+          Authorization: `Bearer ${auth.token}`,
         },
       }
     );
@@ -150,34 +192,7 @@ async function getTransactionStatus(orderTrackingId) {
     return response.data;
   } catch (error) {
     console.error(
-      "Transaction Status Error:",
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-}
-
-/**
- * Get Merchant IPNs
- */
-async function getRegisteredIPNs() {
-  const token = await getAccessToken();
-
-  try {
-    const response = await axios.get(
-      `${BASE_URL}/api/URLSetup/GetIpnList`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    console.error(
-      "Get IPNs Error:",
+      "Pesapal Transaction Status Error:",
       error.response?.data || error.message
     );
     throw error;
@@ -185,9 +200,11 @@ async function getRegisteredIPNs() {
 }
 
 module.exports = {
+  ...pesapalConfig,
+  BASE_URL,
   getAccessToken,
-  registerIPN,
-  submitOrder,
+  registerIpnUrl,
+  getIpnList,
+  submitOrderRequest,
   getTransactionStatus,
-  getRegisteredIPNs,
 };

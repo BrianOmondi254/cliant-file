@@ -1,26 +1,32 @@
-// Firebase client bootstrap (browser-safe).
-// Loads Firebase only from a CDN global (window.firebase) so it never breaks
-// the page if the SDK or config is missing. Uses window.__FIREBASE_CONFIG__
-// (injected by the server into cliant.ejs) and falls back to guarded env vars
-// when running under Node/bundler.
+/**
+ * Firebase config (server) + browser bootstrap helpers.
+ * Env vars: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID, etc.
+ */
 
-(function () {
+function getFirebaseConfig() {
+  return {
+    apiKey: process.env.FIREBASE_API_KEY || "",
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || "",
+    projectId: process.env.FIREBASE_PROJECT_ID || "",
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "",
+    appId: process.env.FIREBASE_APP_ID || "",
+    measurementId: process.env.FIREBASE_MEASUREMENT_ID || "",
+  };
+}
+
+function isFirebaseConfigured(cfg = getFirebaseConfig()) {
+  return !!(cfg && cfg.apiKey && cfg.projectId);
+}
+
+/**
+ * Browser-safe init (also available at /js/firebase-client.js).
+ * Uses window.__FIREBASE_CONFIG__ injected by the server.
+ */
+const browserBootstrap = `(function () {
   function readConfig() {
-    // Prefer the server-injected config.
     if (typeof window !== "undefined" && window.__FIREBASE_CONFIG__) {
       return window.__FIREBASE_CONFIG__;
-    }
-    // Guarded fallback for Node/bundler contexts.
-    if (typeof process !== "undefined" && process.env) {
-      return {
-        apiKey: process.env.FIREBASE_API_KEY,
-        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.FIREBASE_APP_ID,
-        measurementId: process.env.FIREBASE_MEASUREMENT_ID
-      };
     }
     return null;
   }
@@ -29,11 +35,9 @@
     return !!(cfg && cfg.apiKey && cfg.projectId);
   }
 
-  // Exposed globally so views (e.g. cliant.ejs) can initialise.firebase
-  // without risk of crashing the page.
   window.initFirebase = function () {
     try {
-      const cfg = readConfig();
+      var cfg = readConfig();
       if (!isConfigured(cfg)) {
         console.warn("[firebase] No valid config provided; skipping init.");
         return null;
@@ -43,7 +47,7 @@
         console.warn("[firebase] SDK (window.firebase) not loaded; skipping init.");
         return null;
       }
-      const app = window.firebase.initializeApp(cfg);
+      var app = window.firebase.initializeApp(cfg);
       window.__firebaseAppInstance__ = app;
       try {
         if (window.firebase.analytics) {
@@ -59,10 +63,18 @@
     }
   };
 
-  // Auto-init when the SDK is present (e.g. via CDN script tag).
   if (typeof window !== "undefined") {
     window.addEventListener("DOMContentLoaded", function () {
       try { window.initFirebase(); } catch (e) { /* never break the page */ }
     });
   }
-})();
+})();`;
+
+module.exports = {
+  getFirebaseConfig,
+  isFirebaseConfigured,
+  browserBootstrap,
+  get firebaseConfig() {
+    return getFirebaseConfig();
+  },
+};
