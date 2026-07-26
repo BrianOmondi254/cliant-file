@@ -2,6 +2,7 @@ require("dotenv").config({ override: true });
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const cors = require("cors");
 const {
   connectDB,
@@ -103,11 +104,21 @@ app.use((req, res, next) => {
 });
 
 /* 🛡️ Session middleware (required for login-protected routes) */
+const mongoUri = process.env.MONGODB_URI;
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "generalAccountSecret",
     resave: false,
     saveUninitialized: false,
+    store: mongoUri
+      ? MongoStore.create({
+          mongoUrl: mongoUri,
+          ttl: 24 * 60 * 60, // 1 day session TTL
+          crypto: {
+            secret: process.env.SESSION_SECRET || "generalAccountSecret",
+          },
+        })
+      : undefined,
     cookie: { maxAge: 24 * 60 * 60 * 1000, sameSite: "lax" },
   }),
 );
