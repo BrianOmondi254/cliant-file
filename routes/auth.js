@@ -21,6 +21,7 @@ const {
 } = require("../mongoose");
 const {
   consumeVerifiedRegistration,
+  handlePesapalCallback,
 } = require("./pesapal");
 
 const router = express.Router();
@@ -133,6 +134,8 @@ router.get("/register", (req, res) => {
     form: req.query.form ? req.query.form : {}
   });
 });
+
+router.get("/register/pesapal-callback", handlePesapalCallback);
 
 /**
  * Send registration passkey from tbank personal_account_registration
