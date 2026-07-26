@@ -2,7 +2,8 @@ require("dotenv").config({ override: true });
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
-const MongoStore = require("connect-mongo");
+const connectMongo = require("connect-mongo");
+const MongoStore = connectMongo.MongoStore || connectMongo.default || connectMongo;
 const cors = require("cors");
 const {
   connectDB,
