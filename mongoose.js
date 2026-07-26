@@ -1214,7 +1214,22 @@ const saveMemberDataToMongo = async (memberData) => {
  * Personal Account Schema - Mirrors p_account/personal.json per-user snapshot
  */
 const personalAccountSchema = new mongoose.Schema({
+  county: { type: String, required: true },
+  constituency: { type: String, required: true },
+  ward: { type: String, required: true },
   phone: { type: String, required: true, unique: true },
+  account: {
+    business: {
+      name: { type: String, default: "" },
+      "total-bal": { type: Number, default: 0 },
+      float: { type: Number, default: 0 },
+      benefit: { type: Number, default: 0 },
+    },
+    personal: {
+      reg_fee: { type: Number, default: 0 },
+      personal: { type: Number, default: 0 },
+    },
+  },
   transactions: [
     new mongoose.Schema(
       {
@@ -1242,6 +1257,8 @@ const personalAccountSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
+
+personalAccountSchema.index({ county: 1, constituency: 1, ward: 1 });
 
 const PersonalAccount =
   mongoose.models.PersonalAccount ||
@@ -1981,4 +1998,4 @@ module.exports = {
   fixGroupKeyIndex,
   saveTbankSettings,
   getTbankSettings,
-};
+}; 

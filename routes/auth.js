@@ -54,6 +54,55 @@ const norm = (p) => {
 };
 
 /**
+ * Normalizes county/constituency/ward strings so they can be used as
+ * consistent object keys across personalAccounts, groups, and groups-members.
+ * Prevents the same case-sensitivity duplicate-branch bug fixed in general.js.
+ */
+const normRegionKey = (v) => String(v || "").trim();
+
+/**
+ * Builds a fresh personal-account entry in the shape:
+ * { phone, account: { business: {...}, personal: {...} }, transactions: [], createdAt, updatedAt }
+ */
+const buildPersonalAccountEntry = (phone) => ({
+  phone,
+  account: {
+    business: {
+      name: "",
+      "total-bal": 0,
+      float: 0,
+      benefit: 0
+    },
+    personal: {
+      reg_fee: 0,
+      personal: 0
+    }
+  },
+  transactions: [],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString()
+});
+
+/**
+ * Inserts a personal account entry into the nested
+ * county -> constituency -> ward -> [ accounts ] structure in personal.json.
+ */
+const insertPersonalAccountEntry = (personalData, county, constituency, ward, entry) => {
+  const countyKey = normRegionKey(county);
+  const constituencyKey = normRegionKey(constituency);
+  const wardKey = normRegionKey(ward);
+
+  personalData.personalAccounts[countyKey] = personalData.personalAccounts[countyKey] || {};
+  personalData.personalAccounts[countyKey][constituencyKey] =
+    personalData.personalAccounts[countyKey][constituencyKey] || {};
+  personalData.personalAccounts[countyKey][constituencyKey][wardKey] =
+    personalData.personalAccounts[countyKey][constituencyKey][wardKey] || [];
+
+  personalData.personalAccounts[countyKey][constituencyKey][wardKey].push(entry);
+  return { countyKey, constituencyKey, wardKey };
+};
+
+/**
  * 🔄 Rotates the registration passkey after an account is created.
  * This ensures "variation" for each new user.
  */
@@ -358,21 +407,23 @@ router.post("/register", async (req, res) => {
   try {
     const personalFile = path.join(__dirname, "../p_account/personal.json");
     const personalData = readJSON(personalFile, { personalAccounts: {} });
-    const accountKey = `acct_${Object.keys(personalData.personalAccounts || {}).length + 1}`;
-    personalData.personalAccounts[accountKey] = {
-      phone: phoneNumber,
-      transactions: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+
+    const entry = buildPersonalAccountEntry(phoneNumber);
+    const { countyKey, constituencyKey, wardKey } =
+      insertPersonalAccountEntry(personalData, county, constituency, ward, entry);
+
     personalData.metadata = { ...personalData.metadata, lastUpdated: new Date().toISOString() };
     writeJSON(personalFile, personalData);
-    console.log(`[REGISTER] Created personal account ${accountKey} for ${phoneNumber}`);
+    console.log(`[REGISTER] Created personal account for ${phoneNumber} under ${countyKey}/${constituencyKey}/${wardKey}`);
 
     // Also save to MongoDB PersonalAccount collection
     try {
       const newPersonalAccount = new PersonalAccount({
+        county: countyKey,
+        constituency: constituencyKey,
+        ward: wardKey,
         phone: phoneNumber,
+        account: entry.account,
         transactions: [],
         createdAt: new Date(),
         updatedAt: new Date()
@@ -591,21 +642,23 @@ router.post("/complete-registration", async (req, res) => {
     try {
       const personalFile = path.join(__dirname, "../p_account/personal.json");
       const personalData = readJSON(personalFile, { personalAccounts: {} });
-      const accountKey = `acct_${Object.keys(personalData.personalAccounts || {}).length + 1}`;
-      personalData.personalAccounts[accountKey] = {
-        phone: normPhone,
-        transactions: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+
+      const entry = buildPersonalAccountEntry(normPhone);
+      const { countyKey, constituencyKey, wardKey } =
+        insertPersonalAccountEntry(personalData, county, constituency, ward, entry);
+
       personalData.metadata = { ...personalData.metadata, lastUpdated: new Date().toISOString() };
       writeJSON(personalFile, personalData);
-      console.log(`[REGISTER] Created personal account ${accountKey} for ${normPhone}`);
+      console.log(`[REGISTER] Created personal account for ${normPhone} under ${countyKey}/${constituencyKey}/${wardKey}`);
 
       // Also save to MongoDB PersonalAccount collection
       try {
         const newPersonalAccount = new PersonalAccount({
+          county: countyKey,
+          constituency: constituencyKey,
+          ward: wardKey,
           phone: normPhone,
+          account: entry.account,
           transactions: [],
           createdAt: new Date(),
           updatedAt: new Date()

@@ -1,7 +1,22 @@
 {
+  "personal": {
+    "environment_details": {}
+  },
   "personalAccounts": {
     "acct_1": {
       "phone": "0740001141",
+      "account": {
+        "business": {
+          "name": "",
+          "total-bal": 0,
+          "float": 0,
+          "benefit": 0
+        },
+        "personal": {
+          "reg_fee": 0,
+          "personal": 0
+        }
+      },
       "transactions": [
         {
           "id": "txn_cord_001",
@@ -28,12 +43,36 @@
     },
     "acct_2": {
       "phone": "0707070707",
+      "account": {
+        "business": {
+          "name": "",
+          "total-bal": 0,
+          "float": 0,
+          "benefit": 0
+        },
+        "personal": {
+          "reg_fee": 0,
+          "personal": 0
+        }
+      },
       "transactions": [],
       "createdAt": "2026-06-01T11:16:20.245Z",
       "updatedAt": "2026-06-01T11:16:20.245Z"
     },
     "acct_3": {
       "phone": "0708080808",
+      "account": {
+        "business": {
+          "name": "",
+          "total-bal": 0,
+          "float": 0,
+          "benefit": 0
+        },
+        "personal": {
+          "reg_fee": 0,
+          "personal": 0
+        }
+      },
       "transactions": [],
       "createdAt": "2026-06-01T11:41:07.254Z",
       "updatedAt": "2026-06-01T11:41:07.254Z"
