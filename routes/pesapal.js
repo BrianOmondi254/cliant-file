@@ -172,37 +172,98 @@ const getBaseUrl = (req) => {
   return `${proto}://${req.get("host")}`;
 };
 
+const globalPendingPayments = new Map();
+const globalVerifiedRegistrations = new Map();
+
+// Automatically clean up old pending items older than 2 hours to avoid memory leaks
+setInterval(() => {
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+  for (const [key, val] of globalPendingPayments.entries()) {
+    if (val.initiatedAtMs && val.initiatedAtMs < cutoff) {
+      globalPendingPayments.delete(key);
+    }
+  }
+  for (const [key, val] of globalVerifiedRegistrations.entries()) {
+    if (val.expiresAt && val.expiresAt < Date.now()) {
+      globalVerifiedRegistrations.delete(key);
+    }
+  }
+}, 15 * 60 * 1000);
+
 const getPendingPayment = (req) => {
-  if (!req.session.pesapalPayments) req.session.pesapalPayments = {};
-  return req.session.pesapalPayments;
+  const sessionPayments = (req && req.session && req.session.pesapalPayments) ? req.session.pesapalPayments : {};
+  const merged = { ...sessionPayments };
+  for (const [key, val] of globalPendingPayments.entries()) {
+    if (!merged[key]) {
+      merged[key] = val;
+    }
+  }
+  return merged;
 };
 
 const setPendingPayment = (req, orderId, data) => {
-  const payments = getPendingPayment(req);
-  payments[orderId] = data;
+  if (req && req.session) {
+    if (!req.session.pesapalPayments) req.session.pesapalPayments = {};
+    req.session.pesapalPayments[orderId] = data;
+  }
+  if (orderId) {
+    globalPendingPayments.set(orderId, data);
+  }
+  if (data && data.orderTrackingId) {
+    globalPendingPayments.set(data.orderTrackingId, data);
+  }
+  if (data && data.merchantReference) {
+    globalPendingPayments.set(data.merchantReference, data);
+  }
 };
 
 const clearPendingPayment = (req, orderId) => {
-  const payments = getPendingPayment(req);
-  delete payments[orderId];
+  if (req && req.session && req.session.pesapalPayments) {
+    delete req.session.pesapalPayments[orderId];
+  }
+  if (orderId) {
+    const data = globalPendingPayments.get(orderId);
+    globalPendingPayments.delete(orderId);
+    if (data) {
+      if (data.orderTrackingId) globalPendingPayments.delete(data.orderTrackingId);
+      if (data.merchantReference) globalPendingPayments.delete(data.merchantReference);
+    }
+  }
 };
 
 const getVerifiedRegistrations = (req) => {
-  if (!req.session.pesapalVerifiedRegistrations) {
-    req.session.pesapalVerifiedRegistrations = {};
+  const sessionMap = (req && req.session && req.session.pesapalVerifiedRegistrations) ? req.session.pesapalVerifiedRegistrations : {};
+  const merged = { ...sessionMap };
+  for (const [key, val] of globalVerifiedRegistrations.entries()) {
+    if (!merged[key]) {
+      merged[key] = val;
+    }
   }
-  return req.session.pesapalVerifiedRegistrations;
+  return merged;
 };
 
 const setVerifiedRegistration = (req, verificationNonce, data) => {
-  const map = getVerifiedRegistrations(req);
-  map[verificationNonce] = data;
+  if (req && req.session) {
+    if (!req.session.pesapalVerifiedRegistrations) {
+      req.session.pesapalVerifiedRegistrations = {};
+    }
+    req.session.pesapalVerifiedRegistrations[verificationNonce] = data;
+  }
+  if (verificationNonce) {
+    globalVerifiedRegistrations.set(verificationNonce, data);
+  }
 };
 
 const consumeVerifiedRegistration = (req, verificationNonce) => {
-  const map = getVerifiedRegistrations(req);
-  const found = map[verificationNonce];
-  if (found) delete map[verificationNonce];
+  let found = null;
+  if (req && req.session && req.session.pesapalVerifiedRegistrations) {
+    found = req.session.pesapalVerifiedRegistrations[verificationNonce];
+    if (found) delete req.session.pesapalVerifiedRegistrations[verificationNonce];
+  }
+  if (!found && verificationNonce) {
+    found = globalVerifiedRegistrations.get(verificationNonce) || null;
+    if (found) globalVerifiedRegistrations.delete(verificationNonce);
+  }
   return found || null;
 };
 

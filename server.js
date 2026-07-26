@@ -44,6 +44,7 @@ const complianceRoutes = require("./route-hq/compliance");
 
 /* ================= APP INIT ================= */
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
 
 /* ================= STATIC FILES FOR MOBILE ================= */
@@ -107,7 +108,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "generalAccountSecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 },
+    cookie: { maxAge: 24 * 60 * 60 * 1000, sameSite: "lax" },
   }),
 );
 
