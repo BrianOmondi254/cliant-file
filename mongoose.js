@@ -274,6 +274,27 @@ const TbankSettings =
   mongoose.models.TbankSettings ||
   mongoose.model("TbankSettings", tbankSettingsSchema, "tbank");
 
+const pesapalPendingPaymentSchema = new mongoose.Schema(
+  {
+    orderId: { type: String, required: true, index: true },
+    orderTrackingId: { type: String, default: null },
+    merchantReference: { type: String, default: null },
+    amount: { type: Number, required: true },
+    expectedAmount: { type: Number, required: true },
+    currency: { type: String, default: "KES" },
+    registrationData: { type: mongoose.Schema.Types.Mixed, default: {} },
+    status: { type: String, default: "INITIATED" },
+    ipnUsed: { type: Boolean, default: false },
+    initiatedAtMs: { type: Number },
+    expiresAt: { type: Number },
+  },
+  { timestamps: true }
+);
+
+const PesapalPendingPayment =
+  mongoose.models.PesapalPendingPayment ||
+  mongoose.model("PesapalPendingPayment", pesapalPendingPaymentSchema, "pesapal_pending_payments");
+
 /**
  * Message Schema - For storing group notifications and constitution keys
  */
@@ -1998,4 +2019,5 @@ module.exports = {
   fixGroupKeyIndex,
   saveTbankSettings,
   getTbankSettings,
+  PesapalPendingPayment,
 }; 

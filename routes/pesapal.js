@@ -14,6 +14,14 @@ const {
   ipnId: envIpnId,
 } = require("../config/pesapal");
 
+let PesapalPendingPayment = null;
+try {
+  const mongoose = require("../mongoose");
+  PesapalPendingPayment = mongoose.PesapalPendingPayment;
+} catch (e) {
+  console.warn("[Pesapal] Could not load PesapalPendingPayment model:", e.message);
+}
+
 const router = express.Router();
 
 const ENV_PATH = path.resolve(__dirname, "..", ".env");
@@ -188,9 +196,14 @@ setInterval(() => {
       globalVerifiedRegistrations.delete(key);
     }
   }
+  if (PesapalPendingPayment) {
+    PesapalPendingPayment.deleteMany({ expiresAt: { $lt: Date.now() } }).catch((e) => {
+      console.error("[Pesapal] Failed to clean up expired pending payments from MongoDB:", e.message);
+    });
+  }
 }, 15 * 60 * 1000);
 
-const getPendingPayment = (req) => {
+const getPendingPayment = async (req) => {
   const sessionPayments = (req && req.session && req.session.pesapalPayments) ? req.session.pesapalPayments : {};
   const merged = { ...sessionPayments };
   for (const [key, val] of globalPendingPayments.entries()) {
@@ -198,10 +211,37 @@ const getPendingPayment = (req) => {
       merged[key] = val;
     }
   }
+  if (PesapalPendingPayment) {
+    try {
+      const dbPayments = await PesapalPendingPayment.find({
+        expiresAt: { $gt: Date.now() },
+      }).lean();
+      for (const doc of dbPayments) {
+        const key = doc.orderId;
+        if (!merged[key]) {
+          merged[key] = {
+            orderId: doc.orderId,
+            orderTrackingId: doc.orderTrackingId,
+            merchantReference: doc.merchantReference,
+            amount: doc.amount,
+            expectedAmount: doc.expectedAmount,
+            currency: doc.currency,
+            registrationData: doc.registrationData,
+            status: doc.status,
+            ipnUsed: doc.ipnUsed,
+            initiatedAtMs: doc.initiatedAtMs,
+            expiresAt: doc.expiresAt,
+          };
+        }
+      }
+    } catch (e) {
+      console.error("[Pesapal] Failed to load pending payments from MongoDB:", e.message);
+    }
+  }
   return merged;
 };
 
-const setPendingPayment = (req, orderId, data) => {
+const setPendingPayment = async (req, orderId, data) => {
   if (req && req.session) {
     if (!req.session.pesapalPayments) req.session.pesapalPayments = {};
     req.session.pesapalPayments[orderId] = data;
@@ -215,9 +255,32 @@ const setPendingPayment = (req, orderId, data) => {
   if (data && data.merchantReference) {
     globalPendingPayments.set(data.merchantReference, data);
   }
+  if (PesapalPendingPayment) {
+    try {
+      await PesapalPendingPayment.replaceOne(
+        { orderId },
+        {
+          orderId,
+          orderTrackingId: data.orderTrackingId || null,
+          merchantReference: data.merchantReference || null,
+          amount: data.amount,
+          expectedAmount: data.expectedAmount,
+          currency: data.currency || "KES",
+          registrationData: data.registrationData,
+          status: data.status || "INITIATED",
+          ipnUsed: data.ipnUsed || false,
+          initiatedAtMs: data.initiatedAtMs,
+          expiresAt: data.expiresAt || Date.now() + 2 * 60 * 60 * 1000,
+        },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error("[Pesapal] Failed to persist pending payment to MongoDB:", e.message);
+    }
+  }
 };
 
-const clearPendingPayment = (req, orderId) => {
+const clearPendingPayment = async (req, orderId) => {
   if (req && req.session && req.session.pesapalPayments) {
     delete req.session.pesapalPayments[orderId];
   }
@@ -227,6 +290,13 @@ const clearPendingPayment = (req, orderId) => {
     if (data) {
       if (data.orderTrackingId) globalPendingPayments.delete(data.orderTrackingId);
       if (data.merchantReference) globalPendingPayments.delete(data.merchantReference);
+    }
+  }
+  if (PesapalPendingPayment) {
+    try {
+      await PesapalPendingPayment.deleteOne({ orderId });
+    } catch (e) {
+      console.error("[Pesapal] Failed to delete pending payment from MongoDB:", e.message);
     }
   }
 };
@@ -265,6 +335,26 @@ const consumeVerifiedRegistration = (req, verificationNonce) => {
     if (found) globalVerifiedRegistrations.delete(verificationNonce);
   }
   return found || null;
+};
+
+const normPhoneDigits = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
+
+const findVerifiedRegistrationByPhone = (req, inputPhone) => {
+  if (!inputPhone) return null;
+  const target = normPhoneDigits(inputPhone);
+  if (!target) return null;
+
+  const map = getVerifiedRegistrations(req);
+  for (const [nonce, data] of Object.entries(map)) {
+    if (!data) continue;
+    if (data.expiresAt && data.expiresAt < Date.now()) continue;
+
+    const phoneInPayload = normPhoneDigits(data.phoneNumber || "");
+    if (phoneInPayload && phoneInPayload === target) {
+      return { nonce, ...data };
+    }
+  }
+  return null;
 };
 
 function isAdminSession(req) {
@@ -500,11 +590,11 @@ router.post("/initiate", async (req, res) => {
         success: false,
         message:
           orderResult?.error?.message ||
-          "Failed to initiate Pesapal payment. Please check your Pesapal credentials.",
-      });
-    }
+      "Failed to initiate Pesapal payment. Please check your Pesapal credentials.",
+    });
+  }
 
-    setPendingPayment(req, orderId, {
+  await setPendingPayment(req, orderId, {
       amount: expectedAmount,
       expectedAmount: expectedAmount,
       registrationData:
@@ -555,7 +645,7 @@ async function handlePesapalCallback(req, res) {
       .send("Invalid Pesapal callback: Missing OrderTrackingId.");
   }
 
-  const payments = getPendingPayment(req);
+  const payments = await getPendingPayment(req);
   let matchedOrderId = null;
   let pending = null;
 
@@ -596,8 +686,8 @@ async function handlePesapalCallback(req, res) {
     const amountOk = moneyEq(chargedAmount, expectedAmount, 0);
     const currencyOk = currency === "KES" || currency === "";
 
-    if (isSuccessStatus(statusCode) && amountOk && currencyOk) {
-      clearPendingPayment(req, matchedOrderId);
+     if (isSuccessStatus(statusCode) && amountOk && currencyOk) {
+       await clearPendingPayment(req, matchedOrderId);
       const verificationNonce = crypto.randomBytes(24).toString("hex");
       const createdAt = Date.now();
 
@@ -844,20 +934,20 @@ async function handlePesapalCallback(req, res) {
 
     if (isSuccessStatus(statusCode) && (!amountOk || !currencyOk)) {
       console.error(
-        `[Pesapal Callback] FRAUD SUSPICION: status=COMPLETED but amount/currency mismatch. ` +
-          `expectedAmount=${expectedAmount} chargedAmount=${chargedAmount} expectedCurrency=KES chargedCurrency=${currency}. orderId=${matchedOrderId}. Clearing session.`
-      );
-      clearPendingPayment(req, matchedOrderId);
-      const msg = encodeURIComponent(
+       `[Pesapal Callback] FRAUD SUSPICION: status=COMPLETED but amount/currency mismatch. ` +
+           `expectedAmount=${expectedAmount} chargedAmount=${chargedAmount} expectedCurrency=KES chargedCurrency=${currency}. orderId=${matchedOrderId}. Clearing session.`
+       );
+       await clearPendingPayment(req, matchedOrderId);
+       const msg = encodeURIComponent(
         "Payment verification mismatch. Please contact support if you have already been charged. Do NOT submit multiple duplicate forms."
       );
       return res.redirect(`/register?message=${msg}`);
     }
 
-    if (isTerminalFailure(statusCode)) {
-      clearPendingPayment(req, matchedOrderId);
-      const msg = encodeURIComponent(
-        `Pesapal payment failed: ${paymentStatusDescription || "Transaction was not completed."} Please try again.`
+     if (isTerminalFailure(statusCode)) {
+       await clearPendingPayment(req, matchedOrderId);
+       const msg = encodeURIComponent(
+         `Pesapal payment failed: ${paymentStatusDescription || "Transaction was not completed."} Please try again.`
       );
       return res.redirect(`/register?message=${msg}`);
     }
@@ -877,9 +967,9 @@ async function handlePesapalCallback(req, res) {
   }
 }
 
-function hasPendingTrackingId(req, orderTrackingId) {
+async function hasPendingTrackingId(req, orderTrackingId) {
   if (!orderTrackingId) return false;
-  const payments = getPendingPayment(req) || {};
+  const payments = await getPendingPayment(req) || {};
   for (const data of Object.values(payments)) {
     if (data && data.orderTrackingId === orderTrackingId) return true;
     if (data && data.merchantReference && (
@@ -904,7 +994,7 @@ async function handlePesapalIpnGet(req, res) {
     `[Pesapal IPN (GET)] OrderTrackingId=${OrderTrackingId} Type=${OrderNotificationType}`
   );
 
-  if (OrderTrackingId && hasPendingTrackingId(req, OrderTrackingId)) {
+  if (OrderTrackingId && await hasPendingTrackingId(req, OrderTrackingId)) {
     try {
       const status = await getTransactionStatus(OrderTrackingId);
       console.log(
@@ -941,7 +1031,7 @@ async function handlePesapalIpnPost(req, res) {
   }
   console.log(`[Pesapal IPN (POST)] payload:`, body);
 
-  if (OrderTrackingId && hasPendingTrackingId(req, OrderTrackingId)) {
+  if (OrderTrackingId && await hasPendingTrackingId(req, OrderTrackingId)) {
     try {
       const status = await getTransactionStatus(OrderTrackingId);
       console.log(
@@ -1032,6 +1122,7 @@ module.exports.writeEnvWithIpnId = writeEnvWithIpnId;
 module.exports.readEnvFile = readEnvFile;
 module.exports.ENV_PATH = ENV_PATH;
 module.exports.consumeVerifiedRegistration = consumeVerifiedRegistration;
+module.exports.findVerifiedRegistrationByPhone = findVerifiedRegistrationByPhone;
 module.exports.requireAdminOrInternalSecret = requireAdminOrInternalSecret;
 
 async function runCliSetup() {

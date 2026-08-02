@@ -22,6 +22,7 @@ const {
 const {
   consumeVerifiedRegistration,
   handlePesapalCallback,
+  findVerifiedRegistrationByPhone,
 } = require("./pesapal");
 
 const router = express.Router();
@@ -62,45 +63,92 @@ const norm = (p) => {
 const normRegionKey = (v) => String(v || "").trim();
 
 /**
- * Builds a fresh personal-account entry in the shape:
- * { phone, account: { business: {...}, personal: {...} }, transactions: [], createdAt, updatedAt }
+ * Creates or updates the MongoDB PersonalAccount document for a phone number.
+ *
+ * This is the ONLY place a PersonalAccount is written from registration —
+ * the old parallel write to p_account/personal.json has been removed. That
+ * file write ran before the Mongo save and threw on Render's filesystem,
+ * which meant the outer catch swallowed the error and the MongoDB
+ * PersonalAccount.save() below it never executed. That's the "database
+ * error" that was silently dropping personal accounts.
+ *
+ * Uses findOneAndUpdate + upsert instead of `new PersonalAccount().save()`
+ * so re-submitting /complete-registration (e.g. from the resume-payment
+ * popup) updates the existing doc instead of throwing an E11000 duplicate
+ * key error on the unique `phone` index.
+ *
+ * If a registration fee was actually paid (amount > 0), it is added to
+ * account.personal.reg_fee and account.personal.personal, and a matching
+ * transaction entry is recorded.
  */
-const buildPersonalAccountEntry = (phone) => ({
+const upsertPersonalAccountMongo = async ({
   phone,
-  account: {
-    business: {
-      name: "",
-      "total-bal": 0,
-      float: 0,
-      benefit: 0
-    },
-    personal: {
-      reg_fee: 0,
-      personal: 0
-    }
-  },
-  transactions: [],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-});
-
-/**
- * Inserts a personal account entry into the nested
- * county -> constituency -> ward -> [ accounts ] structure in personal.json.
- */
-const insertPersonalAccountEntry = (personalData, county, constituency, ward, entry) => {
+  county,
+  constituency,
+  ward,
+  amount,
+  paymentMethod,
+  reference
+}) => {
   const countyKey = normRegionKey(county);
   const constituencyKey = normRegionKey(constituency);
   const wardKey = normRegionKey(ward);
+  const paidAmount = Number(amount || 0);
+  const now = new Date();
 
-  personalData.personalAccounts[countyKey] = personalData.personalAccounts[countyKey] || {};
-  personalData.personalAccounts[countyKey][constituencyKey] =
-    personalData.personalAccounts[countyKey][constituencyKey] || {};
-  personalData.personalAccounts[countyKey][constituencyKey][wardKey] =
-    personalData.personalAccounts[countyKey][constituencyKey][wardKey] || [];
+  const existing = await PersonalAccount.findOne({ phone }).lean();
+  const prevPersonal = existing?.account?.personal?.personal || 0;
+  const prevRegFee = existing?.account?.personal?.reg_fee || 0;
+  const newPersonal = prevPersonal + paidAmount;
+  const newRegFee = prevRegFee + paidAmount;
 
-  personalData.personalAccounts[countyKey][constituencyKey][wardKey].push(entry);
-  return { countyKey, constituencyKey, wardKey };
+  const setFields = {
+    county: countyKey,
+    constituency: constituencyKey,
+    ward: wardKey,
+    updatedAt: now,
+    "account.personal.reg_fee": newRegFee,
+    "account.personal.personal": newPersonal
+  };
+
+  const update = {
+    $setOnInsert: {
+      phone,
+      createdAt: now,
+      "account.business": { name: "", "total-bal": 0, float: 0, benefit: 0 }
+    },
+    $set: setFields
+  };
+
+  if (paidAmount > 0) {
+    update.$push = {
+      transactions: {
+        reference: reference || "",
+        time: now,
+        openingBalance: prevPersonal,
+        amount: paidAmount,
+        type: "received",
+        to: { name: "Personal Account", number: phone },
+        closingBalance: newPersonal,
+        environment: paymentMethod || "unknown",
+        notes: "Registration fee"
+      }
+    };
+  }
+
+  try {
+    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
+      upsert: true,
+      new: true,
+      runValidators: true,
+      setDefaultsOnInsert: true
+    });
+    console.log(`[REGISTER] Personal account upserted in MongoDB for ${phone} (fee=${paidAmount})`);
+    return doc;
+  } catch (mongoPersonalErr) {
+    console.error("Error upserting personal account in MongoDB:", mongoPersonalErr.message);
+    return null;
+  }
 };
 
 /**
@@ -131,11 +179,46 @@ router.get("/register", (req, res) => {
   const qmsg = (req.query.message || "").toString().slice(0, 500);
   res.render("register", {
     message: qmsg || null,
-    form: req.query.form ? req.query.form : {}
+    form: req.query.form ? req.query.form : {},
+    resumePayment: null
   });
 });
 
 router.get("/register/pesapal-callback", handlePesapalCallback);
+
+/**
+ * 🔍 Check if a phone number has an active Pesapal payment session.
+ * Called from register.ejs Step 1 "Next" button before advancing.
+ * Returns: { found: bool, nonce, fullName, amount, currency, orderTrackingId, registrationDataEncoded }
+ */
+router.post("/api/check-payment-session", (req, res) => {
+  const phone = String(req.body.phone || "").trim();
+  if (!phone) return res.json({ found: false });
+
+  const paymentSession = findVerifiedRegistrationByPhone(req, phone);
+  if (!paymentSession) return res.json({ found: false });
+
+  const regData = typeof paymentSession.registrationData === "string"
+    ? (() => { try { return JSON.parse(paymentSession.registrationData); } catch(e) { return {}; } })()
+    : (paymentSession.registrationData || {});
+
+  const fullName = [
+    regData.FirstName || regData.firstName,
+    regData.MiddleName || regData.middleName,
+    regData.LastName || regData.lastName
+  ].filter(Boolean).join(" ") || "Valued Member";
+
+  return res.json({
+    found: true,
+    nonce: paymentSession.nonce,
+    fullName,
+    amount: paymentSession.amount,
+    currency: paymentSession.currency || "KES",
+    orderTrackingId: paymentSession.orderTrackingId,
+    registrationDataEncoded: JSON.stringify(paymentSession.registrationData || {})
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+  });
+});
 
 /**
  * Send registration passkey from tbank personal_account_registration
@@ -340,10 +423,18 @@ router.post("/register", async (req, res) => {
     personalReg = tbankData.compliance?.personal_account_registration;
   }
 
+  // Tracks the fee actually verified/confirmed below, so the PersonalAccount
+  // write further down records the real amount + method + reference instead
+  // of always writing zeros.
+  let paidFeeAmount = 0;
+  let paidFeeMethod = "none";
+  let paidFeeReference = "";
+
   if (personalReg && personalReg.amount && personalReg.paymentMethod) {
-    const amount = personalReg.amount;
+    const amount = Number(personalReg.amount || 0);
     const paymentMethod = personalReg.paymentMethod;
     const paymentConfirmed = req.body.paymentConfirmed === 'true';
+    const moneyMatches = (a, b) => Number(a).toFixed(2) === Number(b).toFixed(2);
 
     if (paymentMethod === 'passkey') {
       const userPasskey = req.body.passkey;
@@ -356,7 +447,80 @@ router.post("/register", async (req, res) => {
               hasPasskey: false
           });
       }
-    } else if (paymentMethod === 'mpesa' || paymentMethod === 'pesapal') {
+      paidFeeAmount = amount;
+      paidFeeMethod = 'passkey';
+      paidFeeReference = userPasskey;
+    } else if (paymentMethod === 'pesapal') {
+      // Same server-side gate as /complete-registration: never trust a
+      // client-supplied paymentConfirmed=true. Require the nonce Pesapal's
+      // callback handler issued after verifying a COMPLETED order.
+      const providedNonce = String(req.body.__verification_nonce || "");
+      if (!providedNonce) {
+        return res.render('payment', {
+            paymentMethod: 'pesapal',
+            passkey: personalReg.passkey,
+            amount: personalReg.amount,
+            registrationData: JSON.stringify(req.body),
+            hasPasskey: !!personalReg.passkey
+        });
+      }
+
+      let verifiedPayload = null;
+      try {
+        verifiedPayload = consumeVerifiedRegistration(req, providedNonce);
+      } catch (e) {
+        console.error("[register] consumeVerifiedRegistration threw:", e.message);
+        verifiedPayload = null;
+      }
+
+      if (!verifiedPayload) {
+        return res.render('payment', {
+            paymentMethod: 'pesapal',
+            passkey: personalReg.passkey,
+            amount: personalReg.amount,
+            registrationData: JSON.stringify(req.body),
+            hasPasskey: !!personalReg.passkey,
+            message: "Payment session expired or already used. Please restart the Pesapal payment."
+        });
+      }
+
+      const chargedOk = moneyMatches(Number(verifiedPayload.amount || 0), amount);
+      const statusOk =
+        Number(verifiedPayload.statusCode) === 1 ||
+        String(verifiedPayload.statusCode || "").toUpperCase() === "COMPLETED" ||
+        String(verifiedPayload.paymentStatusDescription || "").toUpperCase() === "COMPLETED";
+
+      if (!chargedOk || !statusOk) {
+        return res.render('payment', {
+            paymentMethod: 'pesapal',
+            passkey: personalReg.passkey,
+            amount: personalReg.amount,
+            registrationData: JSON.stringify(req.body),
+            hasPasskey: !!personalReg.passkey,
+            message: "Payment verification mismatch. Contact support if you were already charged."
+        });
+      }
+
+      const normPhone = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
+      if (
+        verifiedPayload.phoneNumber &&
+        phoneNumber &&
+        normPhone(verifiedPayload.phoneNumber) !== normPhone(phoneNumber)
+      ) {
+        return res.render('payment', {
+            paymentMethod: 'pesapal',
+            passkey: personalReg.passkey,
+            amount: personalReg.amount,
+            registrationData: JSON.stringify(req.body),
+            hasPasskey: !!personalReg.passkey,
+            message: "Payment was made for a different phone number. Start a fresh registration."
+        });
+      }
+
+      paidFeeAmount = Number(verifiedPayload.amount || amount);
+      paidFeeMethod = 'pesapal';
+      paidFeeReference = verifiedPayload.orderTrackingId || providedNonce;
+    } else if (paymentMethod === 'mpesa') {
       if (!paymentConfirmed) {
         return res.render('payment', {
             paymentMethod: paymentMethod,
@@ -366,6 +530,9 @@ router.post("/register", async (req, res) => {
             hasPasskey: !!personalReg.passkey
         });
       }
+      paidFeeAmount = amount;
+      paidFeeMethod = 'mpesa';
+      paidFeeReference = req.body.mpesaReceiptNumber || '';
     }
   }
 
@@ -408,34 +575,15 @@ router.post("/register", async (req, res) => {
   }
 
   try {
-    const personalFile = path.join(__dirname, "../p_account/personal.json");
-    const personalData = readJSON(personalFile, { personalAccounts: {} });
-
-    const entry = buildPersonalAccountEntry(phoneNumber);
-    const { countyKey, constituencyKey, wardKey } =
-      insertPersonalAccountEntry(personalData, county, constituency, ward, entry);
-
-    personalData.metadata = { ...personalData.metadata, lastUpdated: new Date().toISOString() };
-    writeJSON(personalFile, personalData);
-    console.log(`[REGISTER] Created personal account for ${phoneNumber} under ${countyKey}/${constituencyKey}/${wardKey}`);
-
-    // Also save to MongoDB PersonalAccount collection
-    try {
-      const newPersonalAccount = new PersonalAccount({
-        county: countyKey,
-        constituency: constituencyKey,
-        ward: wardKey,
-        phone: phoneNumber,
-        account: entry.account,
-        transactions: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      await newPersonalAccount.save();
-      console.log(`[REGISTER] Saved personal account to MongoDB for ${phoneNumber}`);
-    } catch (mongoPersonalErr) {
-      console.error("Error saving personal account to MongoDB during registration:", mongoPersonalErr.message);
-    }
+    await upsertPersonalAccountMongo({
+      phone: phoneNumber,
+      county,
+      constituency,
+      ward,
+      amount: paidFeeAmount,
+      paymentMethod: paidFeeMethod,
+      reference: paidFeeReference
+    });
   } catch (personalErr) {
     console.error("Error creating personal account during registration:", personalErr.message);
   }
@@ -489,6 +637,13 @@ router.post("/complete-registration", async (req, res) => {
       personalReg = tbankData.compliance?.personal_account_registration;
     }
 
+    // Tracks the fee actually verified/confirmed below, so the PersonalAccount
+    // write further down records the real amount + method + reference instead
+    // of always writing zeros.
+    let paidFeeAmount = 0;
+    let paidFeeMethod = "none";
+    let paidFeeReference = "";
+
     if (personalReg && personalReg.amount && personalReg.paymentMethod) {
       const expectedAmount = Number(personalReg.amount || 0);
       const paymentMethod = personalReg.paymentMethod;
@@ -503,6 +658,9 @@ router.post("/complete-registration", async (req, res) => {
                 form: userData
             });
         }
+        paidFeeAmount = expectedAmount;
+        paidFeeMethod = 'passkey';
+        paidFeeReference = passkey;
       } else if (paymentMethod === 'pesapal') {
         // CRITICAL: do NOT trust client-supplied paymentConfirmed=true.
         // Consume the server-issued nonce that Pesapal callback handler placed
@@ -582,14 +740,25 @@ router.post("/complete-registration", async (req, res) => {
             paymentMethod: paymentMethod
           });
         }
-      } else if ((paymentMethod === 'mpesa') && !paymentConfirmed) {
-        return res.render("register", {
-            message: `To register your account, you need to pay a registration fee of ${expectedAmount} KES via M-Pesa. Please complete the payment and try again.`,
-            form: userData,
-            requirePayment: true,
-            paymentAmount: expectedAmount,
-            paymentMethod: paymentMethod
-        });
+
+        // Payment gate fully passed — record the server-verified amount, not
+        // the client-claimed one.
+        paidFeeAmount = Number(verifiedPayload.amount || expectedAmount);
+        paidFeeMethod = 'pesapal';
+        paidFeeReference = verifiedPayload.orderTrackingId || providedNonce;
+      } else if (paymentMethod === 'mpesa') {
+        if (!paymentConfirmed) {
+          return res.render("register", {
+              message: `To register your account, you need to pay a registration fee of ${expectedAmount} KES via M-Pesa. Please complete the payment and try again.`,
+              form: userData,
+              requirePayment: true,
+              paymentAmount: expectedAmount,
+              paymentMethod: paymentMethod
+          });
+        }
+        paidFeeAmount = expectedAmount;
+        paidFeeMethod = 'mpesa';
+        paidFeeReference = req.body.mpesaReceiptNumber || '';
       }
     }
 
@@ -643,34 +812,15 @@ router.post("/complete-registration", async (req, res) => {
     }
 
     try {
-      const personalFile = path.join(__dirname, "../p_account/personal.json");
-      const personalData = readJSON(personalFile, { personalAccounts: {} });
-
-      const entry = buildPersonalAccountEntry(normPhone);
-      const { countyKey, constituencyKey, wardKey } =
-        insertPersonalAccountEntry(personalData, county, constituency, ward, entry);
-
-      personalData.metadata = { ...personalData.metadata, lastUpdated: new Date().toISOString() };
-      writeJSON(personalFile, personalData);
-      console.log(`[REGISTER] Created personal account for ${normPhone} under ${countyKey}/${constituencyKey}/${wardKey}`);
-
-      // Also save to MongoDB PersonalAccount collection
-      try {
-        const newPersonalAccount = new PersonalAccount({
-          county: countyKey,
-          constituency: constituencyKey,
-          ward: wardKey,
-          phone: normPhone,
-          account: entry.account,
-          transactions: [],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        await newPersonalAccount.save();
-        console.log(`[REGISTER] Saved personal account to MongoDB for ${normPhone}`);
-      } catch (mongoPersonalErr) {
-        console.error("Error saving personal account to MongoDB during registration:", mongoPersonalErr.message);
-      }
+      await upsertPersonalAccountMongo({
+        phone: normPhone,
+        county,
+        constituency,
+        ward,
+        amount: paidFeeAmount,
+        paymentMethod: paidFeeMethod,
+        reference: paidFeeReference
+      });
     } catch (personalErr) {
       console.error("Error creating personal account during completion:", personalErr.message);
     }
@@ -762,9 +912,30 @@ router.post("/firebase-login", async (req, res) => {
   try {
     let user = await findUserByPhone(loginPhone);
     if (!user) {
+      // Check if there is a live Pesapal payment session for this phone
+      const paymentSession = findVerifiedRegistrationByPhone(req, loginPhone);
+      if (paymentSession) {
+        const regData = typeof paymentSession.registrationData === "string"
+          ? (() => { try { return JSON.parse(paymentSession.registrationData); } catch(e) { return {}; } })()
+          : (paymentSession.registrationData || {});
+        return res.render("register", {
+          message: null,
+          form: regData,
+          resumePayment: {
+            nonce: paymentSession.nonce,
+            fullName: [regData.FirstName || regData.firstName, regData.LastName || regData.lastName].filter(Boolean).join(" ") || "Valued Member",
+            amount: paymentSession.amount,
+            currency: paymentSession.currency || "KES",
+            orderTrackingId: paymentSession.orderTrackingId,
+            registrationDataEncoded: JSON.stringify(paymentSession.registrationData || {})
+              .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+          }
+        });
+      }
       return res.render("register", {
         message: "Phone number not registered. Please create an account.",
         form: { phoneNumber: loginPhone },
+        resumePayment: null
       });
     }
 
@@ -846,9 +1017,30 @@ router.post("/login", async (req, res) => {
   // 3️⃣ Not registered anywhere
   if (!user) {
     console.log("   ❌ Phone not found in MongoDB counties registry");
+    // Check if there is a live Pesapal payment session for this phone
+    const paymentSession = findVerifiedRegistrationByPhone(req, loginPhone);
+    if (paymentSession) {
+      const regData = typeof paymentSession.registrationData === "string"
+        ? (() => { try { return JSON.parse(paymentSession.registrationData); } catch(e) { return {}; } })()
+        : (paymentSession.registrationData || {});
+      return res.render("register", {
+        message: null,
+        form: regData,
+        resumePayment: {
+          nonce: paymentSession.nonce,
+          fullName: [regData.FirstName || regData.firstName, regData.LastName || regData.lastName].filter(Boolean).join(" ") || "Valued Member",
+          amount: paymentSession.amount,
+          currency: paymentSession.currency || "KES",
+          orderTrackingId: paymentSession.orderTrackingId,
+          registrationDataEncoded: JSON.stringify(paymentSession.registrationData || {})
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+        }
+      });
+    }
     return res.render("register", {
       message: "Phone number not registered. Please create an account.",
       form: { phoneNumber: req.body.phoneNumber },
+      resumePayment: null
     });
   }
 
