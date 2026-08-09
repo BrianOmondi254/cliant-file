@@ -274,26 +274,50 @@ const TbankSettings =
   mongoose.models.TbankSettings ||
   mongoose.model("TbankSettings", tbankSettingsSchema, "tbank");
 
-const pesapalPendingPaymentSchema = new mongoose.Schema(
+
+/**
+ * PendingAccount Schema - Stores Pesapal callback data and registration inquiries
+ * before full account creation. Replaces the old pesapal_pending_payments collection.
+ */
+const pendingAccountSchema = new mongoose.Schema(
   {
-    orderId: { type: String, required: true, index: true },
-    orderTrackingId: { type: String, default: null },
-    merchantReference: { type: String, default: null },
-    amount: { type: Number, required: true },
-    expectedAmount: { type: Number, required: true },
+    orderId: { type: String, index: true },
+    orderTrackingId: { type: String, index: true },
+    merchantReference: { type: String },
+    amount: { type: Number },
+    chargedAmount: { type: Number },
     currency: { type: String, default: "KES" },
+    statusCode: { type: mongoose.Schema.Types.Mixed },
+    paymentStatusDescription: { type: String },
+    paymentMethod: { type: String },
+    paymentAccount: { type: String },
+    confirmationCode: { type: String },
+    verificationNonce: { type: String, index: true },
+    phoneNumber: { type: String, index: true },
+    FirstName: { type: String },
+    MiddleName: { type: String },
+    LastName: { type: String },
+    email: { type: String },
+    gender: { type: String },
+    ageBracket: { type: String },
+    idNumber: { type: String },
+    county: { type: String },
+    constituency: { type: String },
+    ward: { type: String },
+    password: { type: String },
+    passkey: { type: String },
+    startky: { type: String },
     registrationData: { type: mongoose.Schema.Types.Mixed, default: {} },
     status: { type: String, default: "INITIATED" },
-    ipnUsed: { type: Boolean, default: false },
-    initiatedAtMs: { type: Number },
-    expiresAt: { type: Number },
+    createdAt: { type: Date, default: Date.now },
+    completedAt: { type: Date },
   },
   { timestamps: true }
 );
 
-const PesapalPendingPayment =
-  mongoose.models.PesapalPendingPayment ||
-  mongoose.model("PesapalPendingPayment", pesapalPendingPaymentSchema, "pesapal_pending_payments");
+const PendingAccount =
+  mongoose.models.PendingAccount ||
+  mongoose.model("PendingAccount", pendingAccountSchema, "pendingaccount");
 
 /**
  * Message Schema - For storing group notifications and constitution keys
@@ -1249,6 +1273,10 @@ const personalAccountSchema = new mongoose.Schema({
     personal: {
       reg_fee: { type: Number, default: 0 },
       personal: { type: Number, default: 0 },
+      // Added for trans.js: tracks confirmed/available funds (openBalance)
+      // separately from funds still awaiting reconciliation (pendingBalance).
+      openBalance: { type: Number, default: 0 },
+      pendingBalance: { type: Number, default: 0 },
     },
   },
   transactions: [
@@ -1271,6 +1299,8 @@ const personalAccountSchema = new mongoose.Schema({
         closingBalance: { type: Number, default: 0 },
         environment: { type: String, default: "unknown" },
         notes: { type: String },
+        // "pending" until reconciled elsewhere, then flipped to "completed".
+        status: { type: String, enum: ["pending", "completed"], default: "completed" },
       },
       { _id: false },
     ),
@@ -2019,5 +2049,5 @@ module.exports = {
   fixGroupKeyIndex,
   saveTbankSettings,
   getTbankSettings,
-  PesapalPendingPayment,
-}; 
+  PendingAccount,
+};

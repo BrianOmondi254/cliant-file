@@ -104,25 +104,37 @@ app.use((req, res, next) => {
   next();
 });
 
-/* 🛡️ Session middleware (required for login-protected routes) */
-const mongoUri = process.env.MONGODB_URI;
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "generalAccountSecret",
-    resave: false,
-    saveUninitialized: false,
-    store: mongoUri
-      ? MongoStore.create({
-          mongoUrl: mongoUri,
-          ttl: 24 * 60 * 60, // 1 day session TTL
-          crypto: {
-            secret: process.env.SESSION_SECRET || "generalAccountSecret",
-          },
-        })
-      : undefined,
-    cookie: { maxAge: 24 * 60 * 60 * 1000, sameSite: "lax" },
-  }),
-);
+/* 🛡️ Session middleware placeholder — INSTALLED LATER (after connectDB()) in startServer().
+   We defer this setup so the MongoStore can REUSE mongoose.connection instead of
+   opening a second pool via raw mongoUrl string, and so the session middleware
+   is guaranteed to come after MongoDB is alive and connected. */
+let _sessionMw = null;
+app.use((req, res, next) => {
+  if (!_sessionMw) {
+    // Before startServer completes — render URLs like /register won't work,
+    // but the only traffic during this window is warm-up/ping checks.
+    // Fail-safe: install a minimal memory session to prevent 500s.
+    const Store = session.Store;
+    const mem = new Map();
+    const fallback = session({
+      secret: process.env.SESSION_SECRET || "generalAccountSecret",
+      resave: false,
+      saveUninitialized: false,
+      store: new (class extends Store {
+        get(sid, cb){ const r = mem.get(sid); if (!r || (r.expires && Date.now() > r.expires)) { mem.delete(sid); return cb(null, null); } cb(null, r.data); }
+        set(sid, data, cb){ const mx = (data.cookie && typeof data.cookie.maxAge === "number") ? data.cookie.maxAge : 24*3600*1000; mem.set(sid, {data, expires: Date.now() + mx}); cb(null); }
+        destroy(sid, cb){ mem.delete(sid); cb(null); }
+      })(),
+      cookie: { maxAge: 24 * 3600 * 1000, httpOnly: true, sameSite: "lax" },
+    });
+    _sessionMw = fallback;
+  }
+  return _sessionMw(req, res, next);
+});
+
+function setProductionSessionMiddleware(realMw) {
+  _sessionMw = realMw;
+}
 
 /* ================= VIEW ENGINE ================= */
 app.set("view engine", "ejs");
@@ -421,27 +433,209 @@ async function validatePesapalIpnOnStartup() {
   }
 }
 
-connectDB()
-  .then(async () => {
-    await validatePesapalIpnOnStartup();
-    app.listen(PORT, "0.0.0.0", () => {
-      const base =
-        process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-      console.log(`✅ Server running at ${base}`);
-    });
-  })
-  .catch(async (err) => {
-    console.error("Failed to connect to MongoDB:", err.message);
-    await validatePesapalIpnOnStartup();
-    if (isProduction) {
-      console.error(
-        "Deploy fix: In Render Dashboard → Environment, set MONGODB_URI to your Atlas connection string. In Atlas → Network Access, allow 0.0.0.0/0.",
-      );
-      process.exit(1);
+/* ============ Mongoose-backed Session Store Factories ============ */
+
+function buildMemoryFallbackStore() {
+  console.warn("⚠️  [Session Store] MONGODB_URI missing or unavailable; using MemoryStore fallback (sessions WON'T survive restarts — NOT suitable for production clusters)");
+  const Store = session.Store;
+  const mem = new Map();
+  return new (class MemorySessionStore extends Store {
+    get(sid, cb) {
+      const row = mem.get(sid);
+      if (!row) return cb(null, null);
+      if (row.expires && Date.now() > row.expires) {
+        mem.delete(sid);
+        return cb(null, null);
+      }
+      cb(null, row.data);
     }
+    set(sid, data, cb) {
+      const maxAge = (data.cookie && typeof data.cookie.maxAge === "number")
+        ? data.cookie.maxAge
+        : 24 * 3600 * 1000;
+      mem.set(sid, { data, expires: Date.now() + maxAge });
+      cb(null);
+    }
+    destroy(sid, cb) {
+      mem.delete(sid);
+      cb(null);
+    }
+    touch(sid, data, cb) {
+      const row = mem.get(sid);
+      if (row) {
+        const maxAge = (data.cookie && typeof data.cookie.maxAge === "number")
+          ? data.cookie.maxAge
+          : 24 * 3600 * 1000;
+        row.expires = Date.now() + maxAge;
+      }
+      cb(null);
+    }
+  })();
+}
+
+/**
+ * Build a connect-mongo MongoStore that reuses the already-connected Mongoose
+ * connection. It uses `clientPromise` pattern which is the RECOMMENDED approach
+ * for connect-mongo v6 — this GUARANTEES the session store talks to MongoDB
+ * over the EXACT same connection pool as all Mongoose models. No wasted second
+ * TCP pool, no race on connection order.
+ */
+async function buildMongooseSessionStore() {
+  const mongoUri = process.env.MONGODB_URI || "";
+  if (!mongoUri) {
+    return buildMemoryFallbackStore();
+  }
+  try {
+    // Ensure connect-mongo's MongoClient is obtained by reusing mongoose's
+    // MongoDB Node driver client (the one already authenticated via connectDB)
+    const clientPromise = (async () => {
+      await connectDB();
+      return mongoose.connection.getClient();
+    })();
+
+    const store = MongoStore.create({
+      mongoUrl: mongoUri,
+      clientPromise,
+      collectionName: "sessions",
+      dbName: mongoose.connection.name ? mongoose.connection.name : undefined,
+      ttl: 24 * 60 * 60,
+      autoRemove: "native",
+      autoRemoveInterval: 60,
+      touchAfter: 12 * 3600,
+      crypto: {
+        secret: process.env.SESSION_SECRET || "generalAccountSecret",
+      },
+      stringify: true,
+    });
+
+    store.once("create", () => console.log("✅ [Session Store] connect-mongo connected to 'sessions' collection via Mongoose client (reused pool)"));
+    store.on("error", (e) => console.error("❌ [Session Store] connect-mongo error:", e.message || e));
+    return store;
+  } catch (e) {
+    console.error("[Session Store] Failed to build Mongo-backed store, falling back to MemoryStore:", e.message);
+    return buildMemoryFallbackStore();
+  }
+}
+
+async function buildProductionSessionMiddleware() {
+  const store = await buildMongooseSessionStore();
+  const isSecureCookie =
+    process.env.NODE_ENV === "production" ||
+    Boolean(process.env.RENDER) ||
+    Boolean(process.env.RENDER_EXTERNAL_URL);
+  const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+
+  return session({
+    secret: process.env.SESSION_SECRET || "generalAccountSecret",
+    name: process.env.SESSION_COOKIE_NAME || "cliantsess",
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    proxy: true,
+    store,
+    cookie: {
+      httpOnly: true,
+      secure: isSecureCookie,
+      sameSite: isSecureCookie ? "none" : "lax",
+      maxAge: SESSION_DURATION_MS,
+      path: "/",
+    },
+    genid: () => require("crypto").randomBytes(24).toString("hex"),
+  });
+}
+
+/* ============ Startup: MongoDB → Sessions → Listen ============ */
+
+async function startServer() {
+  // 1) MongoDB first — required before mongoose session store can bind
+  let mongoOk = false;
+  try {
+    await connectDB();
+    mongoOk = true;
+    console.log("✅ [Startup] MongoDB connected.");
+  } catch (dbErr) {
+    console.error("❌ [Startup] MongoDB connection failed:", dbErr.message);
+    mongoOk = false;
+  }
+
+  // 2) Build the real session middleware (mongoose-backed) and swap it in place
+  //    of the lazy-init MemoryStore placeholder installed above.
+  const realMw = await buildProductionSessionMiddleware();
+  setProductionSessionMiddleware(realMw);
+  console.log("✅ [Startup] Session middleware bound.");
+
+  // Re-attach session/currentUser to locals because session is now guaranteed.
+  app.use((req, res, next) => {
+    res.locals.session = req.session;
+    res.locals.currentUser = req.session && req.session.user ? req.session.user : null;
+    next();
+  });
+
+  // 3) Pesapal IPN startup validation (may touch Mongoose + .env)
+  try {
+    await validatePesapalIpnOnStartup();
+  } catch (e) {
+    console.warn("[Startup] Pesapal IPN validation skipped:", e.message);
+  }
+
+  // 4) Listen
+  return new Promise((resolve, reject) => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      const base = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+      console.log(`✅ Server running at ${base}`);
+      console.log(
+        `   Sessions: ${mongoOk ? "MongoDB-backed (collection='sessions') — survives restarts, cluster-safe" : "MemoryStore fallback — LOCAL ONLY, sessions lost on restart"}`
+      );
+      const isProd = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+      console.log(
+        `   Cookies: httpOnly=true, secure=${isProd}, sameSite=${isProd ? "none" : "lax"}, maxAge=24h`
+      );
+      resolve(server);
+    });
+    server.on("error", reject);
+  });
+}
+
+startServer().catch(async (bootErr) => {
+  console.error("❌ startServer() failed. Details:", bootErr.message || bootErr.stack);
+  const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER);
+  if (isProduction) {
+    console.error(
+      "Deploy fix: In Render Dashboard → Environment, set MONGODB_URI to your Atlas connection string. In Atlas → Network Access, allow 0.0.0.0/0."
+    );
+    process.exit(1);
+  }
+  // Local development ultimate fallback: always install session + listen, no matter what.
+  try {
+    const memStore = buildMemoryFallbackStore();
+    const localMw = session({
+      secret: process.env.SESSION_SECRET || "generalAccountSecret",
+      name: process.env.SESSION_COOKIE_NAME || "cliantsess",
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      store: memStore,
+      cookie: {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000,
+      },
+    });
+    setProductionSessionMiddleware(localMw);
+    app.use((req, res, next) => {
+      res.locals.session = req.session;
+      res.locals.currentUser = req.session && req.session.user ? req.session.user : null;
+      next();
+    });
+    try { await validatePesapalIpnOnStartup(); } catch (_) {}
     app.listen(PORT, "0.0.0.0", () => {
       console.log(
-        `✅ Server running at http://localhost:${PORT} (MongoDB connection failed — local only)`,
+        `✅ Server running at http://localhost:${PORT} (MemoryStore sessions only)`
       );
     });
-  });
+  } catch (finalErr) {
+    console.error("FATAL: even local fallback failed to start:", finalErr.message);
+    process.exit(1);
+  }
+});

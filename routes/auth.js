@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcrypt");
 const nodemailer = require("nodemailer");
+const mongoose = require("mongoose");
 const {
   ensureMongoReady,
   getMongoConfigHint,
@@ -18,12 +19,15 @@ const {
   saveTbankSettings,
   findAgentByPhone,
   findDealerByPhone,
+  PendingAccount,
 } = require("../mongoose");
 const {
   consumeVerifiedRegistration,
   handlePesapalCallback,
   findVerifiedRegistrationByPhone,
+  findVerifiedRegistrationByOrderTrackingId,
 } = require("./pesapal");
+const { creditPendingToPersonalAccount } = require("./trans");
 
 const router = express.Router();
 const tbankFile = path.join(__dirname, "../tbank.json");
@@ -191,11 +195,17 @@ router.get("/register/pesapal-callback", handlePesapalCallback);
  * Called from register.ejs Step 1 "Next" button before advancing.
  * Returns: { found: bool, nonce, fullName, amount, currency, orderTrackingId, registrationDataEncoded }
  */
-router.post("/api/check-payment-session", (req, res) => {
+router.post("/api/check-payment-session", async (req, res) => {
   const phone = String(req.body.phone || "").trim();
   if (!phone) return res.json({ found: false });
 
-  const paymentSession = findVerifiedRegistrationByPhone(req, phone);
+  let paymentSession = null;
+  try {
+    paymentSession = await findVerifiedRegistrationByPhone(req, phone);
+  } catch (e) {
+    console.error("[api/check-payment-session] findVerifiedRegistrationByPhone threw:", e.message);
+    paymentSession = null;
+  }
   if (!paymentSession) return res.json({ found: false });
 
   const regData = typeof paymentSession.registrationData === "string"
@@ -218,6 +228,501 @@ router.post("/api/check-payment-session", (req, res) => {
     registrationDataEncoded: JSON.stringify(paymentSession.registrationData || {})
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
   });
+});
+
+/**
+ * 🔍 Check if a phone number is already registered in the MongoDB counties
+ * collection. Called from register.ejs Step 1 "Next" button BEFORE allowing
+ * the user to advance to the regional block (county/constituency/ward picker).
+ * Prevents duplicate registrations by redirecting the user to /login with a
+ * friendly message instead of letting them re-enter the regional block
+ * they've already filled before.
+ *
+ * Also checks Agent / Dealer / Admin / SuperAdmin collections so no account
+ * type can be used to bypass the "already registered" prompt.
+ *
+ * Returns: { registered: boolean, user?: { firstName, lastName, phoneNumber } }
+ */
+router.post("/api/check-phone-registered", async (req, res) => {
+  const phone = String(req.body.phone || "").trim();
+  if (!phone) return res.json({ registered: false });
+
+  let user = null;
+  try {
+    if (await ensureMongoReady()) {
+      user = await findUserByPhone(phone);
+    }
+  } catch (e) {
+    console.error("[api/check-phone-registered] findUserByPhone error:", e.message);
+    user = null;
+  }
+
+  if (user) {
+    return res.json({
+      registered: true,
+      user: {
+        firstName: user.FirstName,
+        middleName: user.MiddleName,
+        lastName: user.LastName,
+        phoneNumber: user.phoneNumber,
+      }
+    });
+  }
+
+  // Also check Agent / Dealer / Admin / SuperAdmin tables — a user might
+  // have an account in another role and shouldn't be able to register a
+  // duplicate personal account with the same phone.
+  try {
+    if (await ensureMongoReady()) {
+      const { normalizePhone, Agent, Dealer, Admin, SuperAdmin } = require("../mongoose");
+      const nPhone = normalizePhone(phone);
+      const match = { phoneNumber: nPhone };
+      const agent = await Agent && Agent.findOne ? await Agent.findOne(match).lean() : null;
+      const dealer = await Dealer && Dealer.findOne ? await Dealer.findOne(match).lean() : null;
+      const admin = await Admin && Admin.findOne ? await Admin.findOne(match).lean() : null;
+      const superAdmin = await SuperAdmin && SuperAdmin.findOne ? await SuperAdmin.findOne(match).lean() : null;
+      const roleMatch = agent || dealer || admin || superAdmin;
+      if (roleMatch) {
+        const roleName = agent ? "Agent" : dealer ? "Dealer" : admin ? "Admin" : "SuperAdmin";
+        return res.json({
+          registered: true,
+          user: {
+            firstName: roleMatch.name ? roleMatch.name.split(" ")[0] : "",
+            lastName: roleMatch.name ? roleMatch.name.split(" ").slice(-1)[0] : "",
+            phoneNumber: roleMatch.phoneNumber,
+          },
+          accountRole: roleName,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[api/check-phone-registered] role-tables check error:", e.message);
+  }
+
+  return res.json({ registered: false });
+});
+
+/**
+ * 🔍 Check if a phone number exists in the County collection.
+ * Called from register.ejs Step 1 "Next" button BEFORE allowing any
+ * further registration steps. If found → redirect to /login (existing user).
+ *
+ * Returns: { found: boolean, county?: string, constituency?: string, ward?: string }
+ */
+router.post("/api/check-phone-county", async (req, res) => {
+  const phone = String(req.body.phone || "").trim();
+  if (!phone) return res.json({ found: false });
+
+  try {
+    if (!(await ensureMongoReady())) {
+      return res.json({ found: false });
+    }
+    const { verifyPhoneInCounty } = require("./trans");
+    const result = await verifyPhoneInCounty(phone);
+    return res.json(result);
+  } catch (e) {
+    console.error("[api/check-phone-county] error:", e.message);
+    return res.json({ found: false });
+  }
+});
+
+/**
+ * 🔍 Check if a phone number has an entry in PendingAccount collection
+ * with a verified/completed payment status. Returns all PendingAccount
+ * fields so the frontend can populate the "Complete Registration" popup
+ * with callback data and other stored values.
+ *
+ * Returns:
+ *   { found: false }  OR
+ *   { found: true, _id, FirstName, MiddleName, LastName, email, gender,
+ *     ageBracket, idNumber, county, constituency, ward, phoneNumber,
+ *     amount, currency, orderTrackingId, merchantReference,
+ *     paymentMethod, paymentStatusDescription, status, verificationNonce }
+ */
+router.post("/api/check-phone-pendingaccount", async (req, res) => {
+  const phone = String(req.body.phone || "").trim();
+  if (!phone) return res.json({ found: false });
+
+  try {
+    if (!(await ensureMongoReady()) || !PendingAccount) {
+      return res.json({ found: false });
+    }
+
+    const { normalizePhone } = require("../mongoose");
+    const target = normalizePhone(phone);
+
+    const pending = await PendingAccount.findOne({
+      $or: [{ phoneNumber: phone }, { phoneNumber: target }],
+      status: {
+        $in: [
+          "VERIFIED_PENDING_COMPLETION",
+          "COMPLETED",
+          "INITIATED",
+          "PAID",
+        ],
+      },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!pending) {
+      return res.json({ found: false });
+    }
+
+    const statusOk =
+      Number(pending.statusCode) === 1 ||
+      String(pending.statusCode || "").toUpperCase() === "COMPLETED" ||
+      String(pending.paymentStatusDescription || "").toUpperCase() ===
+        "COMPLETED" ||
+      String(pending.status || "").toUpperCase() !== "FAILED";
+
+    if (!statusOk && String(pending.status || "").toUpperCase() === "FAILED") {
+      return res.json({ found: false });
+    }
+
+    return res.json({
+      found: true,
+      _id: pending._id,
+      FirstName: pending.FirstName,
+      MiddleName: pending.MiddleName,
+      LastName: pending.LastName,
+      email: pending.email,
+      gender: pending.gender,
+      ageBracket: pending.ageBracket,
+      idNumber: pending.idNumber,
+      county: pending.county,
+      constituency: pending.constituency,
+      ward: pending.ward,
+      phoneNumber: pending.phoneNumber,
+      password: undefined,
+      passkey: undefined,
+      startky: undefined,
+      amount: pending.amount,
+      chargedAmount: pending.chargedAmount,
+      currency: pending.currency || "KES",
+      orderTrackingId: pending.orderTrackingId,
+      merchantReference: pending.merchantReference,
+      paymentMethod: pending.paymentMethod,
+      paymentAccount: pending.paymentAccount,
+      confirmationCode: pending.confirmationCode,
+      paymentStatusDescription: pending.paymentStatusDescription,
+      status: pending.status,
+      verificationNonce: pending.verificationNonce,
+      orderId: pending.orderId,
+    });
+  } catch (e) {
+    console.error("[api/check-phone-pendingaccount] error:", e.message);
+    return res.json({ found: false });
+  }
+});
+
+/**
+ * ✅ Finalize a registration from an existing PendingAccount record
+ * (accepted from the frontend "Complete Registration" popup).
+ *
+ * 🔒 SECURITY: Every value used to create the County member + PersonalAccount
+ * transaction is RE-READ from the PendingAccount document server-side. The
+ * client only sends a *lookup key* (_id / orderTrackingId / phoneNumber),
+ * and even that key is cross-validated against the other fields. No user-
+ * editable popup content (hidden inputs, text content) is ever trusted.
+ *
+ * Steps performed:
+ *   1. Load PendingAccount doc. If duplicate keys sent, require them ALL to
+ *      resolve to the SAME document (cross-key tamper check).
+ *   2. Validate payment status ∈ {VERIFIED_PENDING_COMPLETION, PAID, COMPLETED}
+ *      and amount > 0 (FAILED/INITIATED-only records are rejected).
+ *   3. Re-validate every required field *directly from the PendingAccount* doc.
+ *   4. Dedup: if user already in County → DELETE pending doc → success.
+ *   5. Save member to County collection.
+ *   6. Registrar → Personal transfer (uses PendingAccount amount/region only).
+ *   7. DELETE the PendingAccount document (not just mark COMPLETED) so it
+ *      can never be replayed or re-consumed.
+ *   8. Rotate passkey + log performance → redirect client to /login.
+ *
+ * Returns: { success: boolean, message?: string }
+ */
+router.post("/api/complete-from-pendingaccount", async (req, res) => {
+  const rawBody = req.body || {};
+  const { pendingAccountId, orderTrackingId, phoneNumber } = rawBody;
+  const normInputPhone = norm(phoneNumber || "");
+
+  if (!pendingAccountId && !orderTrackingId && !normInputPhone) {
+    return res.status(400).json({
+      success: false,
+      message: "Pending account identifier missing.",
+    });
+  }
+
+  // Allow only explicitly named fields. Reject any payload with extra keys
+  // or stringified-object values that might bypass validation via coercion.
+  const ALLOWED_KEYS = new Set(["pendingAccountId", "orderTrackingId", "phoneNumber"]);
+  for (const k of Object.keys(rawBody)) {
+    if (!ALLOWED_KEYS.has(k)) {
+      return res.status(400).json({
+        success: false,
+        message: "Unrecognized field in request.",
+      });
+    }
+    if (typeof rawBody[k] !== "string" && typeof rawBody[k] !== "undefined") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid field type in request.",
+      });
+    }
+    if (typeof rawBody[k] === "string" && rawBody[k].length > 120) {
+      return res.status(400).json({
+        success: false,
+        message: "Field value too long.",
+      });
+    }
+  }
+
+  try {
+    if (!(await ensureMongoReady())) {
+      return res.status(500).json({
+        success: false,
+        message: "Database unavailable. Please try again.",
+      });
+    }
+
+    const { normalizePhone } = require("../mongoose");
+    const ObjectId = mongoose.Types.ObjectId;
+    const validStatuses = new Set([
+      "VERIFIED_PENDING_COMPLETION",
+      "PAID",
+      "COMPLETED",
+    ]);
+
+    // ---- Step 1a: load candidate PendingAccount by each provided key ----
+    async function loadPendingBy(key, value) {
+      if (!value) return null;
+      let q;
+      if (key === "_id") {
+        try { q = { _id: new ObjectId(String(value).trim()) }; } catch { return null; }
+      } else if (key === "orderTrackingId") {
+        q = { orderTrackingId: String(value).trim() };
+      } else if (key === "phoneNumber") {
+        const raw = String(value).trim();
+        const n = normalizePhone(raw);
+        q = { $or: [{ phoneNumber: raw }, { phoneNumber: n }] };
+      } else {
+        return null;
+      }
+      return PendingAccount.findOne(q).sort({ createdAt: -1 }).lean();
+    }
+
+    const byId = pendingAccountId ? await loadPendingBy("_id", pendingAccountId) : null;
+    const byOtid = orderTrackingId ? await loadPendingBy("orderTrackingId", orderTrackingId) : null;
+    const byPhone = normInputPhone ? await loadPendingBy("phoneNumber", phoneNumber) : null;
+
+    // ---- Step 1b: if more than one key provided, all must resolve to the SAME doc ----
+    const candidates = [byId, byOtid, byPhone].filter(Boolean);
+    if (candidates.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Pending registration not found.",
+      });
+    }
+    const canonicalIds = new Set(candidates.map((c) => String(c._id)));
+    if (canonicalIds.size !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Lookup keys do not match the same pending record.",
+      });
+    }
+    const pending = candidates[0];
+
+    // ---- Step 1c: status + payment validation ----
+    if (!validStatuses.has(String(pending.status || ""))) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Pending registration is not in a completable state (status=" +
+          pending.status +
+          ").",
+      });
+    }
+    const amount = Number(pending.amount || pending.chargedAmount || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid payment amount recorded.",
+      });
+    }
+    const currency = String(pending.currency || "KES").toUpperCase();
+    if (currency !== "KES") {
+      return res.status(400).json({
+        success: false,
+        message: "Unsupported currency in pending registration.",
+      });
+    }
+
+    // ---- Step 2: derive ALL values DIRECTLY from PendingAccount (never client) ----
+    const userInfo = (
+      typeof pending.registrationData === "string"
+        ? (() => {
+            try {
+              return JSON.parse(pending.registrationData);
+            } catch (_) {
+              return {};
+            }
+          })()
+        : pending.registrationData || {}
+    );
+
+    const FirstName = (
+      pending.FirstName ||
+      userInfo.FirstName ||
+      userInfo.firstName ||
+      ""
+    ).trim();
+    const MiddleName = (
+      pending.MiddleName ||
+      userInfo.MiddleName ||
+      userInfo.middleName ||
+      ""
+    ).trim();
+    const LastName = (
+      pending.LastName ||
+      userInfo.LastName ||
+      userInfo.lastName ||
+      ""
+    ).trim();
+    const email = (pending.email || userInfo.email || "").trim();
+    const gender = (pending.gender || userInfo.gender || "").trim();
+    const ageBracket = (pending.ageBracket || userInfo.ageBracket || "").trim();
+    const idNumber = (pending.idNumber || userInfo.idNumber || "").trim();
+    const county = (pending.county || userInfo.county || "").trim();
+    const constituency = (pending.constituency || userInfo.constituency || "").trim();
+    const ward = (pending.ward || userInfo.ward || "").trim();
+    const finalPhoneRaw = pending.phoneNumber || phoneNumber || "";
+    const finalPhone = normalizePhone(String(finalPhoneRaw));
+
+    // Phone cross-check: if client sent phone and PendingAccount also has a
+    // phone, they must normalize to the same value (popup tamper guard).
+    if (normInputPhone && pending.phoneNumber) {
+      if (normalizePhone(String(pending.phoneNumber)) !== normInputPhone) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number mismatch on pending record.",
+        });
+      }
+    }
+
+    if (
+      !FirstName ||
+      !LastName ||
+      !finalPhone ||
+      !pending.password ||
+      !county ||
+      !constituency ||
+      !ward
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Incomplete registration data. Please restart registration from scratch.",
+      });
+    }
+
+    // ---- Step 3: ensure user is NOT already registered in County ----
+    const existingUser = await findUserByPhone(finalPhone);
+    if (existingUser) {
+      // Already registered → clean up pending doc and succeed (idempotent).
+      try { await PendingAccount.deleteOne({ _id: pending._id }); } catch (_) {}
+      return res.json({
+        success: true,
+        message: "Already registered. Redirecting to login.",
+      });
+    }
+
+    // ---- Step 4: save user to County collection ----
+    const newUser = {
+      FirstName,
+      MiddleName,
+      LastName,
+      email,
+      phoneNumber: finalPhone,
+      password: pending.password,
+      gender: gender || "Other",
+      county,
+      constituency,
+      ward,
+      ageBracket: ageBracket || "18-25",
+      idNumber: idNumber || null,
+      passkey: pending.passkey || undefined,
+      personalPin: undefined,
+      startky: pending.startky || undefined,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await saveUserToMongoDB(newUser);
+    } catch (saveErr) {
+      console.error(
+        "[complete-from-pendingaccount] saveUserToMongoDB error:",
+        saveErr.message
+      );
+      return res.status(500).json({
+        success: false,
+        message: "Failed to register member in county register.",
+      });
+    }
+
+    // ---- Step 5: PersonalAccount + Registrar transfer (trans.js) ----
+    const {
+      transferRegistrarFeeToPersonal,
+    } = require("./trans");
+    try {
+      await transferRegistrarFeeToPersonal({
+        phone: finalPhone,
+        county,
+        constituency,
+        ward,
+        amount,
+        reference: pending.orderTrackingId || pending.merchantReference || "REG-FEE",
+        paymentMethod: pending.paymentMethod || "pesapal",
+        notes: "Registrar → Personal account transfer (registration fee)",
+      });
+    } catch (txErr) {
+      console.error(
+        "[complete-from-pendingaccount] transferRegistrarFeeToPersonal error:",
+        txErr.message
+      );
+    }
+
+    // ---- Step 6: DELETE PendingAccount (prevents replay / double-consume) ----
+    try {
+      await PendingAccount.deleteOne({ _id: pending._id });
+    } catch (pendErr) {
+      console.error(
+        "[complete-from-pendingaccount] PendingAccount delete error:",
+        pendErr.message
+      );
+    }
+
+    // ---- Step 7: rotate passkey, log performance ----
+    try {
+      rotatePasskey();
+      if (typeof regPerfLogger?.logRegistration === "function") {
+        regPerfLogger.logRegistration(county, constituency, ward, "members");
+      }
+    } catch (_) {}
+
+    return res.json({
+      success: true,
+      message: "Registration completed successfully.",
+    });
+  } catch (err) {
+    console.error(
+      "[api/complete-from-pendingaccount] Unhandled error:",
+      err.message
+    );
+    return res.status(500).json({
+      success: false,
+      message: "Server error processing registration.",
+    });
+  }
 });
 
 /**
@@ -451,11 +956,8 @@ router.post("/register", async (req, res) => {
       paidFeeMethod = 'passkey';
       paidFeeReference = userPasskey;
     } else if (paymentMethod === 'pesapal') {
-      // Same server-side gate as /complete-registration: never trust a
-      // client-supplied paymentConfirmed=true. Require the nonce Pesapal's
-      // callback handler issued after verifying a COMPLETED order.
-      const providedNonce = String(req.body.__verification_nonce || "");
-      if (!providedNonce) {
+      const orderTrackingId = String(req.body.__order_tracking_id || req.body.__verification_nonce || "");
+      if (!orderTrackingId) {
         return res.render('payment', {
             paymentMethod: 'pesapal',
             passkey: personalReg.passkey,
@@ -467,10 +969,19 @@ router.post("/register", async (req, res) => {
 
       let verifiedPayload = null;
       try {
-        verifiedPayload = consumeVerifiedRegistration(req, providedNonce);
+        verifiedPayload = await findVerifiedRegistrationByOrderTrackingId(orderTrackingId);
       } catch (e) {
-        console.error("[register] consumeVerifiedRegistration threw:", e.message);
+        console.error("[register] findVerifiedRegistrationByOrderTrackingId threw:", e.message);
         verifiedPayload = null;
+      }
+
+      if (!verifiedPayload) {
+        try {
+          verifiedPayload = consumeVerifiedRegistration(req, orderTrackingId);
+        } catch (e) {
+          console.error("[register] consumeVerifiedRegistration fallback threw:", e.message);
+          verifiedPayload = null;
+        }
       }
 
       if (!verifiedPayload) {
@@ -507,19 +1018,18 @@ router.post("/register", async (req, res) => {
         phoneNumber &&
         normPhone(verifiedPayload.phoneNumber) !== normPhone(phoneNumber)
       ) {
-        return res.render('payment', {
-            paymentMethod: 'pesapal',
-            passkey: personalReg.passkey,
-            amount: personalReg.amount,
-            registrationData: JSON.stringify(req.body),
-            hasPasskey: !!personalReg.passkey,
-            message: "Payment was made for a different phone number. Start a fresh registration."
-        });
+        console.warn(
+          `[register] PESAPAL PHONE OVERRIDE: form phone ${phoneNumber} vs. payment source ${verifiedPayload.phoneNumber}. ` +
+            `Using payment source phone (callback paymentAccount) as canonical for County + transactions.`
+        );
+      }
+      if (verifiedPayload.phoneNumber) {
+        phoneNumber = String(verifiedPayload.phoneNumber).trim();
       }
 
       paidFeeAmount = Number(verifiedPayload.amount || amount);
       paidFeeMethod = 'pesapal';
-      paidFeeReference = verifiedPayload.orderTrackingId || providedNonce;
+      paidFeeReference = verifiedPayload.orderTrackingId || orderTrackingId;
     } else if (paymentMethod === 'mpesa') {
       if (!paymentConfirmed) {
         return res.render('payment', {
@@ -566,6 +1076,24 @@ router.post("/register", async (req, res) => {
 
   try {
     await saveUserToMongoDB(newUser);
+    if (PendingAccount) {
+      try {
+        const queryNonce = req.body.__verification_nonce;
+        if (queryNonce) {
+          await PendingAccount.updateOne(
+            { verificationNonce: queryNonce },
+            { $set: { status: "COMPLETED", completedAt: new Date() } }
+          );
+        } else if (phoneNumber) {
+          await PendingAccount.updateMany(
+            { phoneNumber, status: "VERIFIED_PENDING_COMPLETION" },
+            { $set: { status: "COMPLETED", completedAt: new Date() } }
+          );
+        }
+      } catch (pendingErr) {
+        console.error("Error updating pendingaccount status upon registration:", pendingErr.message);
+      }
+    }
   } catch (mongoErr) {
     console.error("Error: Failed to save to MongoDB during registration:", mongoErr.message);
     return res.render("register", {
@@ -662,13 +1190,10 @@ router.post("/complete-registration", async (req, res) => {
         paidFeeMethod = 'passkey';
         paidFeeReference = passkey;
       } else if (paymentMethod === 'pesapal') {
-        // CRITICAL: do NOT trust client-supplied paymentConfirmed=true.
-        // Consume the server-issued nonce that Pesapal callback handler placed
-        // in the user's session only after verifying a COMPLETED order with
-        // the expected amount/currency via Pesapal GetTransactionStatus.
-        if (!providedNonce) {
+        const orderTrackingId = String(req.body.__order_tracking_id || providedNonce || "");
+        if (!orderTrackingId) {
           console.warn(
-            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: no __verification_nonce supplied. ` +
+            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: no __order_tracking_id supplied. ` +
               `client claimed paymentConfirmed=${paymentConfirmed}. phone=${userData.phoneNumber}`
           );
           return res.render("register", {
@@ -682,15 +1207,24 @@ router.post("/complete-registration", async (req, res) => {
 
         let verifiedPayload = null;
         try {
-          verifiedPayload = consumeVerifiedRegistration(req, providedNonce);
+          verifiedPayload = await findVerifiedRegistrationByOrderTrackingId(orderTrackingId);
         } catch (e) {
-          console.error("[complete-registration] consumeVerifiedRegistration threw:", e.message);
+          console.error("[complete-registration] findVerifiedRegistrationByOrderTrackingId threw:", e.message);
           verifiedPayload = null;
         }
 
         if (!verifiedPayload) {
+          try {
+            verifiedPayload = consumeVerifiedRegistration(req, orderTrackingId);
+          } catch (e) {
+            console.error("[complete-registration] consumeVerifiedRegistration fallback threw:", e.message);
+            verifiedPayload = null;
+          }
+        }
+
+        if (!verifiedPayload) {
           console.warn(
-            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: nonce not found/expired/already consumed. phone=${userData.phoneNumber}. nonce_prefix=${providedNonce.slice(0,6)}...`
+            `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: orderTrackingId not found/expired/already consumed. phone=${userData.phoneNumber}. otid_prefix=${orderTrackingId.slice(0,8)}...`
           );
           return res.render("register", {
             message: `Payment session expired or already used. If you were charged, contact support. Otherwise, restart the Pesapal payment flow. Do NOT attempt to resubmit this form directly.`,
@@ -710,7 +1244,7 @@ router.post("/complete-registration", async (req, res) => {
         if (!chargedOk || !statusOk) {
           console.error(
             `[complete-registration] PESAPAL PAYMENT GATE BLOCKED: server-verified payload does not match required. ` +
-              `expectedAmount=${expectedAmount} session.amount=${verifiedPayload.amount} session.statusCode=${verifiedPayload.statusCode}. phone=${userData.phoneNumber}`
+              `expectedAmount=${expectedAmount} db.amount=${verifiedPayload.amount} db.statusCode=${verifiedPayload.statusCode}. phone=${userData.phoneNumber}`
           );
           return res.render("register", {
             message: `Payment verification mismatch. Expected ${expectedAmount} KES / completed. Contact support if already charged.`,
@@ -721,31 +1255,24 @@ router.post("/complete-registration", async (req, res) => {
           });
         }
 
-        // Optional: cross-check phone numbers loosely so a stolen session can't
-        // pay for a different user's registration.
-        const normPhone = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
+        const normPhoneCmp = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
         if (
           verifiedPayload.phoneNumber &&
           userData.phoneNumber &&
-          normPhone(verifiedPayload.phoneNumber) !== normPhone(userData.phoneNumber)
+          normPhoneCmp(verifiedPayload.phoneNumber) !== normPhoneCmp(userData.phoneNumber)
         ) {
           console.warn(
-            `[complete-registration] PAYMENT/REG PHONE MISMATCH: session payment phone ${verifiedPayload.phoneNumber} vs form ${userData.phoneNumber}. Blocking.`
+            `[complete-registration] PESAPAL PHONE OVERRIDE: form phone ${userData.phoneNumber} vs. payment source ${verifiedPayload.phoneNumber}. ` +
+              `Using payment source phone (callback paymentAccount) as canonical for County + transactions.`
           );
-          return res.render("register", {
-            message: `Payment was made for a different phone number. Start a fresh registration.`,
-            form: userData,
-            requirePayment: true,
-            paymentAmount: expectedAmount,
-            paymentMethod: paymentMethod
-          });
+        }
+        if (verifiedPayload.phoneNumber) {
+          userData.phoneNumber = String(verifiedPayload.phoneNumber).trim();
         }
 
-        // Payment gate fully passed — record the server-verified amount, not
-        // the client-claimed one.
         paidFeeAmount = Number(verifiedPayload.amount || expectedAmount);
         paidFeeMethod = 'pesapal';
-        paidFeeReference = verifiedPayload.orderTrackingId || providedNonce;
+        paidFeeReference = verifiedPayload.orderTrackingId || orderTrackingId;
       } else if (paymentMethod === 'mpesa') {
         if (!paymentConfirmed) {
           return res.render("register", {
@@ -762,8 +1289,9 @@ router.post("/complete-registration", async (req, res) => {
       }
     }
 
-    // Normalize phone number
-    let normPhone = (phoneNumber || "").trim();
+    // Normalize phone number — prefer userData.phoneNumber (may be overridden by
+    // Pesapal gate with paymentAccount from callback) over early-destructured value
+    let normPhone = (userData.phoneNumber || phoneNumber || "").trim();
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -803,6 +1331,24 @@ router.post("/complete-registration", async (req, res) => {
     // Save to MongoDB
     try {
       await saveUserToMongoDB(newUser);
+      if (PendingAccount) {
+        try {
+          const queryNonce = req.body.__verification_nonce || providedNonce;
+          if (queryNonce) {
+            await PendingAccount.updateOne(
+              { verificationNonce: queryNonce },
+              { $set: { status: "COMPLETED", completedAt: new Date() } }
+            );
+          } else if (normPhone) {
+            await PendingAccount.updateMany(
+              { phoneNumber: normPhone, status: "VERIFIED_PENDING_COMPLETION" },
+              { $set: { status: "COMPLETED", completedAt: new Date() } }
+            );
+          }
+        } catch (pendingErr) {
+          console.error("Error updating pendingaccount status upon completion:", pendingErr.message);
+        }
+      }
     } catch (mongoErr) {
       console.error("Error: Failed to save to MongoDB during completion:", mongoErr.message);
       return res.render("register", {
@@ -823,6 +1369,30 @@ router.post("/complete-registration", async (req, res) => {
       });
     } catch (personalErr) {
       console.error("Error creating personal account during completion:", personalErr.message);
+    }
+
+    // trans.js: verifies the phone landed in the County collection, then
+    // credits the paid amount into PersonalAccount.account.personal.openBalance
+    // and logs a matching "pending" transaction that also adds to
+    // account.personal.pendingBalance. Runs only when a fee was actually
+    // paid; failures here are logged but never block registration completion.
+    if (paidFeeAmount > 0) {
+      try {
+        const creditResult = await creditPendingToPersonalAccount({
+          phone: normPhone,
+          amount: paidFeeAmount,
+          paymentMethod: paidFeeMethod,
+          reference: paidFeeReference,
+          notes: "Complete registration fee",
+        });
+        if (!creditResult.success) {
+          console.warn(
+            `[complete-registration] trans.js credit skipped for ${normPhone}: ${creditResult.reason}`
+          );
+        }
+      } catch (transErr) {
+        console.error("[complete-registration] trans.js credit error:", transErr.message);
+      }
     }
 
     // Log Performance
@@ -913,7 +1483,13 @@ router.post("/firebase-login", async (req, res) => {
     let user = await findUserByPhone(loginPhone);
     if (!user) {
       // Check if there is a live Pesapal payment session for this phone
-      const paymentSession = findVerifiedRegistrationByPhone(req, loginPhone);
+      let paymentSession = null;
+      try {
+        paymentSession = await findVerifiedRegistrationByPhone(req, loginPhone);
+      } catch (e) {
+        console.error("[firebase-login] findVerifiedRegistrationByPhone threw:", e.message);
+        paymentSession = null;
+      }
       if (paymentSession) {
         const regData = typeof paymentSession.registrationData === "string"
           ? (() => { try { return JSON.parse(paymentSession.registrationData); } catch(e) { return {}; } })()
@@ -1018,7 +1594,13 @@ router.post("/login", async (req, res) => {
   if (!user) {
     console.log("   ❌ Phone not found in MongoDB counties registry");
     // Check if there is a live Pesapal payment session for this phone
-    const paymentSession = findVerifiedRegistrationByPhone(req, loginPhone);
+    let paymentSession = null;
+    try {
+      paymentSession = await findVerifiedRegistrationByPhone(req, loginPhone);
+    } catch (e) {
+      console.error("[login POST] findVerifiedRegistrationByPhone threw:", e.message);
+      paymentSession = null;
+    }
     if (paymentSession) {
       const regData = typeof paymentSession.registrationData === "string"
         ? (() => { try { return JSON.parse(paymentSession.registrationData); } catch(e) { return {}; } })()
