@@ -1,4 +1,8 @@
-require("dotenv").config({ override: true });
+require("dotenv").config({
+  override: true,
+  quiet: !process.env.DEBUG_DOTENV,
+  debug: process.env.DEBUG_DOTENV ? true : false,
+});
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
@@ -7,6 +11,7 @@ const MongoStore = connectMongo.MongoStore || connectMongo.default || connectMon
 const cors = require("cors");
 const {
   connectDB,
+  mongoose,
   Dealer,
   Agent,
   Admin,
