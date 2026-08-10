@@ -448,15 +448,13 @@
                 </div>
 
                 <div id="paymentSection" style="display: none;">
-                    <h4 style="margin-bottom: 8px; font-size: 15px; color: #0f172a;">Registration Fee</h4>
-                    <div id="paymentInfo" style="margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <p id="paymentAmount" style="font-size: 22px; font-weight: 700; color: #0f9d58; margin: 0 0 6px;"></p>
-                        <p id="paymentMethod" style="font-size: 13px; color: #475569; margin: 0 0 10px;"></p>
-                        <p id="paymentNote" style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;"></p>
+                    <div id="paymentInfo" style="margin-bottom: 16px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center;">
+                        <p id="paymentAmount" style="font-size: 24px; font-weight: 800; color: #0f9d58; margin: 0 0 8px;"></p>
+                        <p id="paymentNote" style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0;"></p>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button type="button" onclick="goBackToStep2()" class="btn secondary">Back</button>
-                        <button type="button" class="btn" onclick="startRegistrationPayment()" id="payBtn">Pay</button>
+                        <button type="button" onclick="goBackToStep2()" class="btn secondary" style="flex: 1;">Back</button>
+                        <button type="button" class="btn" onclick="startRegistrationPayment()" id="payBtn" style="flex: 2; padding: 14px 16px; font-size: 14px; font-weight: 600; line-height: 1.3;">Proceed with paying</button>
                     </div>
                 </div>
             </div>
@@ -1068,12 +1066,17 @@
                 passkeySection.style.display = "block";
             } else if (method === 'mpesa' || method === 'pesapal') {
                 paymentSection.style.display = "block";
-                const methodLabel = method === 'mpesa' ? 'M-Pesa' : 'Pesapal';
-                document.getElementById('paymentAmount').textContent = reg.amount + ' KES';
-                document.getElementById('paymentMethod').textContent = 'Payment Method: ' + methodLabel;
-                document.getElementById('paymentNote').textContent =
-                    'Registration fee is currently set to ' + reg.amount + ' KES via ' + methodLabel +
-                    '. This fee may change based on Finance updates. Click Pay to continue.';
+                const amtVal = reg.amount;
+                const amtEl = document.getElementById('paymentAmount');
+                if (amtEl) amtEl.textContent = 'KSH ' + amtVal;
+                const noteEl = document.getElementById('paymentNote');
+                if (noteEl) {
+                    noteEl.textContent = 'Proceed with paying KSH ' + amtVal + ' to create your Tbank account.';
+                }
+                const payBtn = document.getElementById('payBtn');
+                if (payBtn) {
+                    payBtn.textContent = 'Proceed with paying KSH ' + amtVal + ' to create your Tbank account';
+                }
             } else {
                 showToast("Unknown payment method configured. Please contact support.", 'error');
                 return;
@@ -1165,7 +1168,10 @@
                     window.setTimeout(function () { form.submit(); }, 1500);
                 })
                 .finally(() => {
-                    if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay'; }
+                    if (payBtn) {
+                        payBtn.disabled = false;
+                        payBtn.textContent = 'Proceed with paying KSH ' + (currentRegistration ? currentRegistration.amount : '') + ' to create your Tbank account';
+                    }
                 });
                 return;
             } catch (e) {
