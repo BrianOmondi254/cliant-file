@@ -34,7 +34,7 @@ const {
   phoneMatchesLast5,
   normPhoneDigits,
 } = require("./pesapal");
-const { creditPendingToPersonalAccount } = require("./trans");
+const { creditPendingToPersonalAccount, settlePendingToPersonal, transferRegistrarFeeToPersonal } = require("./trans");
 
 const router = express.Router();
 const tbankFile = path.join(__dirname, "../tbank.json");
@@ -731,24 +731,43 @@ router.post("/api/complete-from-pendingaccount", async (req, res) => {
       });
     }
 
-    // ---- Step 5: PersonalAccount + Registrar transfer (trans.js) ----
+    // ---- Step 5: Settle pending holding → PersonalAccount (trans.js) ----
+    // Moves the registration fee from account.pending.value INTO account.personal,
+    // and records a "completed" settlement transaction. Falls back to
+    // transferRegistrarFeeToPersonal if no pending holding exists yet.
     const {
+      settlePendingToPersonal,
       transferRegistrarFeeToPersonal,
     } = require("./trans");
     try {
-      await transferRegistrarFeeToPersonal({
+      // Attempt settle (pending.value → personal). If there is no pending holding
+      // (e.g. creditPendingHolding was never called), fall back to a direct transfer.
+      const settleResult = await settlePendingToPersonal({
         phone: finalPhone,
-        county,
-        constituency,
-        ward,
         amount,
-        reference: pending.orderTrackingId || pending.merchantReference || "REG-FEE",
+        reference: pending.orderTrackingId || pending.merchantReference || "SETTLE-PENDING",
         paymentMethod: pending.paymentMethod || "pesapal",
-        notes: "Registrar → Personal account transfer (registration fee)",
+        notes: "Pending holding → Personal account (registration completed)",
       });
+      if (!settleResult.success) {
+        console.warn(
+          `[complete-from-pendingaccount] settlePendingToPersonal failed (${settleResult.reason}) — ` +
+            `falling back to transferRegistrarFeeToPersonal for ${finalPhone}`,
+        );
+        await transferRegistrarFeeToPersonal({
+          phone: finalPhone,
+          county,
+          constituency,
+          ward,
+          amount,
+          reference: pending.orderTrackingId || pending.merchantReference || "REG-FEE",
+          paymentMethod: pending.paymentMethod || "pesapal",
+          notes: "Registrar → Personal account transfer (registration fee — fallback)",
+        });
+      }
     } catch (txErr) {
       console.error(
-        "[complete-from-pendingaccount] transferRegistrarFeeToPersonal error:",
+        "[complete-from-pendingaccount] settlement error:",
         txErr.message
       );
     }
@@ -1201,6 +1220,37 @@ router.post("/register", async (req, res) => {
     console.error("Error creating personal account during registration:", personalErr.message);
   }
 
+  if (paidFeeAmount > 0) {
+    try {
+      const settleResult = await settlePendingToPersonal({
+        phone: phoneNumber,
+        amount: paidFeeAmount,
+        reference: paidFeeReference || "SETTLE-PENDING",
+        paymentMethod: paidFeeMethod || "mpesa",
+        notes: "Pending holding → Personal account (registration completed)",
+      });
+      if (!settleResult.success) {
+        console.warn(
+          `[register] settlePendingToPersonal failed (${settleResult.reason}) — ` +
+            `falling back to transferRegistrarFeeToPersonal for ${phoneNumber}`,
+        );
+        const { transferRegistrarFeeToPersonal } = require('./trans');
+        await transferRegistrarFeeToPersonal({
+          phone: phoneNumber,
+          county,
+          constituency,
+          ward,
+          amount: paidFeeAmount,
+          reference: paidFeeReference || "REG-FEE",
+          paymentMethod: paidFeeMethod || "mpesa",
+          notes: "Registrar → Personal account transfer (registration fee — fallback)",
+        });
+      }
+    } catch (transErr) {
+      console.error("[register] trans.js settlement error:", transErr.message);
+    }
+  }
+
   // Log Performance
   try {
       regPerfLogger.logRegistration(newUser.county, newUser.constituency, newUser.ward, 'members');
@@ -1477,27 +1527,38 @@ router.post("/complete-registration", async (req, res) => {
       console.error("Error creating personal account during completion:", personalErr.message);
     }
 
-    // trans.js: verifies the phone landed in the County collection, then
-    // credits the paid amount into PersonalAccount.account.personal.openBalance
-    // and logs a matching "pending" transaction that also adds to
-    // account.personal.pendingBalance. Runs only when a fee was actually
-    // paid; failures here are logged but never block registration completion.
+    // trans.js: settles the pending holding (if any) from account.pending.value
+    // INTO account.personal, and logs a "completed" settlement transaction.
+    // Falls back to transferRegistrarFeeToPersonal if no pending holding exists.
+    // Runs only when a fee was actually paid; failures are logged but never
+    // block registration completion.
     if (paidFeeAmount > 0) {
       try {
-        const creditResult = await creditPendingToPersonalAccount({
+        const settleResult = await settlePendingToPersonal({
           phone: normPhone,
           amount: paidFeeAmount,
-          paymentMethod: paidFeeMethod,
-          reference: paidFeeReference,
-          notes: "Complete registration fee",
+          reference: paidFeeReference || "SETTLE-PENDING",
+          paymentMethod: paidFeeMethod || "unknown",
+          notes: "Pending holding → Personal account (registration completed)",
         });
-        if (!creditResult.success) {
+        if (!settleResult.success) {
           console.warn(
-            `[complete-registration] trans.js credit skipped for ${normPhone}: ${creditResult.reason}`
+            `[complete-registration] settlePendingToPersonal failed (${settleResult.reason}) — ` +
+              `falling back to transferRegistrarFeeToPersonal for ${normPhone}`,
           );
+          await transferRegistrarFeeToPersonal({
+            phone: normPhone,
+            county,
+            constituency,
+            ward,
+            amount: paidFeeAmount,
+            reference: paidFeeReference || "REG-FEE",
+            paymentMethod: paidFeeMethod || "unknown",
+            notes: "Registrar → Personal account transfer (registration fee — fallback)",
+          });
         }
       } catch (transErr) {
-        console.error("[complete-registration] trans.js credit error:", transErr.message);
+        console.error("[complete-registration] trans.js settlement error:", transErr.message);
       }
     }
 

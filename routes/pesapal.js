@@ -1,3 +1,5 @@
+const { creditPendingHolding } = require("./trans");
+
 const express = require("express");
 const crypto = require("crypto");
 const fs = require("fs");
@@ -896,6 +898,23 @@ async function handlePesapalCallback(req, res) {
             createdAt: new Date(createdAt),
           });
           console.log(`[Pesapal Callback] Saved callback info to Mongoose 'pendingaccount' collection (OrderTrackingId: ${strOrderTrackingId})`);
+
+          if (resolvedPhone && expectedAmount > 0) {
+            try {
+              await creditPendingHolding({
+                phone: resolvedPhone,
+                county: userData.county || "",
+                constituency: userData.constituency || "",
+                ward: userData.ward || "",
+                amount: expectedAmount,
+                reference: strOrderTrackingId || OrderMerchantReference || "",
+                paymentMethod: paymentMethod || "pesapal",
+                notes: "Registration fee received — held pending account completion",
+              });
+            } catch (holdErr) {
+              console.error("[Pesapal Callback] creditPendingHolding error:", holdErr.message);
+            }
+          }
         } catch (dbErr) {
           console.error("[Pesapal Callback] Error saving to pendingaccount collection:", dbErr.message);
         }

@@ -1,34 +1,40 @@
 /**
  * trans.js
  *
- * Handles the post-"Complete Registration" money movement into the
- * PersonalAccount collection.
+ * Handles post-registration money movement into the PersonalAccount collection.
  *
- * Flow:
- *   1. verifyPhoneInCounty(phone)   -> confirms the phone number exists in
- *      the County collection (i.e. the member registration actually landed
- *      there) before any money is touched.
- *   2. creditPendingToPersonalAccount(...) -> looks up the PersonalAccount
- *      by phone, adds `amount` to account.personal.openBalance, appends a
- *      transaction entry with status "pending", and adds `amount` to
- *      account.personal.pendingBalance.
+ * Account flow:
  *
- * openBalance vs pendingBalance:
- *   - openBalance is incremented immediately so the funds show up on the
- *     account right away.
- *   - pendingBalance tracks the same amount separately until it is
- *     reconciled/cleared elsewhere (e.g. an admin/HQ confirmation step or a
- *     payment-provider webhook that flips the transaction's status to
- *     "completed"). Nothing in this file clears pendingBalance — that is a
- *     separate reconciliation step to be wired up wherever "pending"
- *     transactions get confirmed.
+ *   STEP A — PendingAccount updated (payment received, not yet completed):
+ *     creditPendingHolding(phone, amount, ...)
+ *       → Creates/updates PersonalAccount
+ *       → Adds amount to account.pending.value
+ *       → Logs a "pending" transaction: Registrar → Pending Holding
+ *
+ *   STEP B — Complete Registration executed:
+ *     settlePendingToPersonal(phone, amount, ...)
+ *       → Deducts amount from account.pending.value
+ *       → Adds amount to account.personal.personal + reg_fee + openBalance
+ *       → Clears account.personal.pendingBalance by the same amount
+ *       → Logs a "received" (completed) transaction: Pending Holding → Personal
+ *
+ *   transferRegistrarFeeToPersonal(...)  (legacy / direct-register path)
+ *       → Used for direct POST /register (passkey/Pesapal/M-Pesa paid inline).
+ *       → Credits account.personal directly + logs transaction.
+ *
+ *   creditPendingToPersonalAccount(...)  (legacy / complete-registration path)
+ *       → Used by POST /complete-registration (Pesapal callback confirmation).
+ *       → Credits account.personal openBalance + pendingBalance.
  */
 
 const { County, PersonalAccount, normalizePhone } = require("../mongoose");
 
+// ---------------------------------------------------------------------------
+// Helper: verify phone in county collection
+// ---------------------------------------------------------------------------
 /**
  * Confirms a phone number exists somewhere in the County collection's
- * nested county -> constituency -> ward -> data hierarchy.
+ * nested county → constituency → ward → data hierarchy.
  *
  * @param {string} phoneNumber
  * @returns {Promise<{found: boolean, county?: string, constituency?: string, ward?: string}>}
@@ -62,6 +68,213 @@ async function verifyPhoneInCounty(phoneNumber) {
   return { found: false };
 }
 
+// ---------------------------------------------------------------------------
+// STEP A: Credit pending holding (PendingAccount stage)
+// ---------------------------------------------------------------------------
+/**
+ * Called when a PendingAccount record is created/updated with a verified
+ * payment. Creates or updates the PersonalAccount for this phone number and
+ * parks the registration fee in account.pending.value so it appears in the
+ * ledger immediately. The money stays there until the member completes
+ * registration (settlePendingToPersonal moves it to account.personal).
+ *
+ * NOTE: This can be called BEFORE the user exists in the County collection,
+ * so it does NOT call verifyPhoneInCounty. The caller must supply county,
+ * constituency, and ward from the PendingAccount record.
+ *
+ * @param {Object} params
+ * @param {string} params.phone
+ * @param {string} params.county
+ * @param {string} params.constituency
+ * @param {string} params.ward
+ * @param {number} params.amount
+ * @param {string} [params.reference]
+ * @param {string} [params.paymentMethod]  e.g. "pesapal" | "mpesa" | "passkey"
+ * @param {string} [params.notes]
+ * @returns {Promise<{success: boolean, reason?: string, account?: object}>}
+ */
+async function creditPendingHolding({
+  phone,
+  county,
+  constituency,
+  ward,
+  amount,
+  reference = "",
+  paymentMethod = "unknown",
+  notes = "",
+}) {
+  const holdAmount = Number(amount || 0);
+  if (!phone) return { success: false, reason: "NO_PHONE" };
+  if (!holdAmount || holdAmount <= 0) return { success: false, reason: "INVALID_AMOUNT" };
+  if (!county || !constituency || !ward) return { success: false, reason: "MISSING_REGION" };
+
+  const now = new Date();
+  const existing = await PersonalAccount.findOne({ phone }).lean();
+  const prevPendingValue = existing?.account?.pending?.value || 0;
+  const newPendingValue = prevPendingValue + holdAmount;
+  const prevOpenBalance = existing?.account?.personal?.openBalance || 0;
+
+  const update = {
+    $setOnInsert: {
+      phone,
+      county,
+      constituency,
+      ward,
+      createdAt: now,
+      "account.business": { name: "", "total-bal": 0, float: 0, benefit: 0 },
+    },
+    $set: {
+      updatedAt: now,
+      "account.pending.value": newPendingValue,
+    },
+    $push: {
+      transactions: {
+        reference: reference || "PENDING-HOLD",
+        time: now,
+        openingBalance: prevOpenBalance,
+        amount: holdAmount,
+        type: "received",
+        from: {
+          name: "Registrar",
+          number: "REGISTRAR-HOLDING",
+        },
+        to: { name: "Pending Holding", number: phone },
+        closingBalance: prevOpenBalance, // personal balance unchanged at this stage
+        environment: paymentMethod,
+        notes: notes || "Registration fee received — held pending account completion",
+        status: "pending",
+      },
+    },
+  };
+
+  try {
+    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
+      upsert: true,
+      new: true,
+      runValidators: true,
+      setDefaultsOnInsert: true,
+    });
+    console.log(
+      `[trans] creditPendingHolding: parked ${holdAmount} in account.pending.value for ${phone} ` +
+        `(new pending.value=${newPendingValue})`,
+    );
+    return { success: true, account: doc };
+  } catch (err) {
+    console.error("[trans] Error in creditPendingHolding:", err.message);
+    return { success: false, reason: "DB_ERROR", error: err.message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// STEP B: Settle pending → personal (Complete Registration stage)
+// ---------------------------------------------------------------------------
+/**
+ * Called when the member clicks "Complete Registration" from the pending
+ * account popup. Moves `amount` FROM account.pending.value TO account.personal,
+ * and records the settlement as a completed transaction.
+ *
+ * The function verifies the phone is now registered in the County collection
+ * before moving funds.
+ *
+ * @param {Object} params
+ * @param {string} params.phone
+ * @param {number} params.amount
+ * @param {string} [params.reference]
+ * @param {string} [params.paymentMethod]
+ * @param {string} [params.notes]
+ * @returns {Promise<{success: boolean, reason?: string, account?: object}>}
+ */
+async function settlePendingToPersonal({
+  phone,
+  amount,
+  reference = "",
+  paymentMethod = "unknown",
+  notes = "",
+}) {
+  const settleAmount = Number(amount || 0);
+  if (!phone) return { success: false, reason: "NO_PHONE" };
+  if (!settleAmount || settleAmount <= 0) return { success: false, reason: "INVALID_AMOUNT" };
+
+  // Verify the phone is now in the County collection (registration must have landed).
+  const membership = await verifyPhoneInCounty(phone);
+  if (!membership.found) {
+    console.warn(
+      `[trans] settlePendingToPersonal: phone not in County yet — ${phone}`,
+    );
+    return { success: false, reason: "NOT_REGISTERED" };
+  }
+
+  const now = new Date();
+  const existing = await PersonalAccount.findOne({ phone }).lean();
+
+  const prevPendingValue = existing?.account?.pending?.value || 0;
+  const prevOpenBalance = existing?.account?.personal?.openBalance || 0;
+  const prevPendingBalance = existing?.account?.personal?.pendingBalance || 0;
+  const prevRegFee = existing?.account?.personal?.reg_fee || 0;
+  const prevPersonal = existing?.account?.personal?.personal || 0;
+
+  // Deduct from pending holding (floor at 0 to avoid negative).
+  const newPendingValue = Math.max(0, prevPendingValue - settleAmount);
+
+  // Credit personal balances.
+  const newOpenBalance = prevOpenBalance + settleAmount;
+  const newPendingBalance = Math.max(0, prevPendingBalance - settleAmount); // clear the pending entry
+  const newRegFee = prevRegFee + settleAmount;
+  const newPersonal = prevPersonal + settleAmount;
+
+  const update = {
+    $set: {
+      updatedAt: now,
+      "account.pending.value": newPendingValue,
+      "account.personal.reg_fee": newRegFee,
+      "account.personal.personal": newPersonal,
+      "account.personal.openBalance": newOpenBalance,
+      "account.personal.pendingBalance": newPendingBalance,
+    },
+    $push: {
+      transactions: {
+        reference: reference || "SETTLE-PENDING",
+        time: now,
+        openingBalance: prevOpenBalance,
+        amount: settleAmount,
+        type: "received",
+        from: {
+          name: "Pending Holding",
+          number: "PENDING-HOLDING",
+        },
+        to: { name: "Personal Account", number: phone },
+        closingBalance: newOpenBalance,
+        environment: paymentMethod,
+        notes: notes || "Pending holding → Personal account (registration completed)",
+        status: "completed",
+      },
+    },
+  };
+
+  try {
+    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
+      new: true,
+      runValidators: true,
+    });
+    if (!doc) {
+      console.warn(`[trans] settlePendingToPersonal: no PersonalAccount found for ${phone}`);
+      return { success: false, reason: "ACCOUNT_NOT_FOUND" };
+    }
+    console.log(
+      `[trans] settlePendingToPersonal: moved ${settleAmount} from pending.value to personal for ${phone} ` +
+        `— pending.value=${newPendingValue}, personal.openBalance=${newOpenBalance}, ` +
+        `personal.pendingBalance=${newPendingBalance}`,
+    );
+    return { success: true, account: doc };
+  } catch (err) {
+    console.error("[trans] Error in settlePendingToPersonal:", err.message);
+    return { success: false, reason: "DB_ERROR", error: err.message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Legacy: creditPendingToPersonalAccount (used by /complete-registration)
+// ---------------------------------------------------------------------------
 /**
  * Credits `amount` into a member's PersonalAccount, keyed by phone number.
  * Adds to openBalance immediately and logs a "pending" transaction that
@@ -168,18 +381,15 @@ async function creditPendingToPersonalAccount({
   }
 }
 
+// ---------------------------------------------------------------------------
+// Legacy: transferRegistrarFeeToPersonal (used by direct POST /register)
+// ---------------------------------------------------------------------------
 /**
  * Records a registration-fee bookkeeping transfer FROM the "Registrar"
  * holding account TO a newly activated personal account.
  *
- * This mirrors the double-entry bookkeeping performed by
- * creditPendingToPersonalAccount but additionally bumps the
- * `account.personal.reg_fee` and `account.personal.personal` counters
- * (the same counters the POST /register path updates via
- * upsertPersonalAccountMongo in auth.js). The transaction entry is
- * marked as a "received" from the member's point of view, with the
- * counterparty explicitly set to `from: { name: "Registrar", ... }` so
- * any audit trace clearly shows where the opening balance originated.
+ * Used when a member registers directly via POST /register (passkey,
+ * Pesapal inline, or M-Pesa) — bypassing the PendingAccount stage entirely.
  *
  * @param {Object} params
  * @param {string} params.phone
@@ -287,6 +497,8 @@ async function transferRegistrarFeeToPersonal({
 
 module.exports = {
   verifyPhoneInCounty,
+  creditPendingHolding,
+  settlePendingToPersonal,
   creditPendingToPersonalAccount,
   transferRegistrarFeeToPersonal,
 };

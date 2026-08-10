@@ -1757,11 +1757,17 @@ const personalAccountSchema = new mongoose.Schema({
       float: { type: Number, default: 0 },
       benefit: { type: Number, default: 0 },
     },
+    // Funds held in the pending stage (payment received but registration not yet
+    // completed). When the member completes registration, this is debited and the
+    // same amount is credited to account.personal.
+    pending: {
+      value: { type: Number, default: 0 },
+    },
     personal: {
       reg_fee: { type: Number, default: 0 },
       personal: { type: Number, default: 0 },
-      // Added for trans.js: tracks confirmed/available funds (openBalance)
-      // separately from funds still awaiting reconciliation (pendingBalance).
+      // Confirmed/available funds (openBalance) and funds still awaiting
+      // reconciliation (pendingBalance).
       openBalance: { type: Number, default: 0 },
       pendingBalance: { type: Number, default: 0 },
     },
