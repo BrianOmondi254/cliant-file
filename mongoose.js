@@ -293,17 +293,6 @@ const pendingAccountRecordSchema = new mongoose.Schema(
     paymentAccount: { type: String },
     confirmationCode: { type: String },
     verificationNonce: { type: String },
-    phoneNumber: { type: String },
-    FirstName: { type: String },
-    MiddleName: { type: String },
-    LastName: { type: String },
-    email: { type: String },
-    gender: { type: String },
-    ageBracket: { type: String },
-    idNumber: { type: String },
-    password: { type: String },
-    passkey: { type: String },
-    startky: { type: String },
     registrationData: { type: mongoose.Schema.Types.Mixed, default: {} },
     status: { type: String, default: "INITIATED" },
     createdAt: { type: Date, default: Date.now },
@@ -364,8 +353,29 @@ const flattenPendingAccountDoc = (doc) => {
       const wardName = ward.name;
       for (const rec of ward.data || []) {
         const obj = rec.toObject ? rec.toObject() : { ...rec };
+        let regData = obj.registrationData || {};
+        if (typeof regData === "string") {
+          try { regData = JSON.parse(regData); } catch (_) { regData = {}; }
+        }
+        const fn = obj.FirstName || regData.FirstName || regData.firstName || "";
+        const mn = obj.MiddleName || regData.MiddleName || regData.middleName || "";
+        const ln = obj.LastName || regData.LastName || regData.lastName || "";
+        const fullName = regData.name || [fn, mn, ln].filter(Boolean).join(" ");
+
         flat.push({
           ...obj,
+          phoneNumber: obj.phoneNumber || regData.phoneNumber || regData.PhoneNumber || regData.phone || "",
+          FirstName: fn,
+          MiddleName: mn,
+          LastName: ln,
+          name: fullName,
+          email: obj.email || regData.email || "",
+          gender: obj.gender || regData.gender || "",
+          ageBracket: obj.ageBracket || regData.ageBracket || "",
+          idNumber: obj.idNumber || regData.idNumber || "",
+          password: obj.password || regData.password || "",
+          passkey: obj.passkey || regData.passkey || "",
+          startky: obj.startky || regData.startky || "",
           county,
           constituency,
           ward: wardName,
@@ -710,12 +720,12 @@ const updatePendingRecord = async (predicate, setFields = {}) => {
  * — whichever is present in `data` first, the existing record is found.
  */
 const upsertPendingAccount = async (data) => {
-  const regData =
+  let regData =
     data && typeof data.registrationData === "string"
       ? (() => {
           try { return JSON.parse(data.registrationData); } catch (_) { return {}; }
         })()
-      : (data?.registrationData || {});
+      : ({ ...(data?.registrationData || {}) });
 
   const county =
     String(data.county || regData.county || "").trim() || "Unknown";
@@ -724,8 +734,40 @@ const upsertPendingAccount = async (data) => {
   const ward =
     String(data.ward || regData.ward || "").trim() || "Unknown Ward";
 
-  const phoneNumber =
-    String(data.phoneNumber || regData.phoneNumber || regData.PhoneNumber || regData.phone || "").trim();
+  // Build complete user profile object inside registrationData
+  const FirstName = data.FirstName || regData.FirstName || regData.firstName || "";
+  const MiddleName = data.MiddleName || regData.MiddleName || regData.middleName || "";
+  const LastName = data.LastName || regData.LastName || regData.lastName || "";
+  const fullName = regData.name || [FirstName, MiddleName, LastName].filter(Boolean).join(" ");
+  const phoneNumber = String(data.phoneNumber || regData.phoneNumber || regData.PhoneNumber || regData.phone || "").trim();
+  const email = data.email || regData.email || "";
+  const password = data.password || regData.password || "";
+  const idNumber = data.idNumber || regData.idNumber || "";
+  const gender = data.gender || regData.gender || "";
+  const ageBracket = data.ageBracket || regData.ageBracket || "";
+  const passkey = data.passkey || regData.passkey || "";
+  const startky = data.startky || regData.startky || "";
+
+  const cleanedRegData = {
+    ...regData,
+    FirstName,
+    MiddleName,
+    LastName,
+    name: fullName,
+    email,
+    password,
+    phoneNumber,
+    idNumber,
+    gender,
+    ageBracket,
+    passkey,
+    startky,
+  };
+
+  // Remove regional block from registrationData since county, constituency, ward are in document hierarchy
+  delete cleanedRegData.county;
+  delete cleanedRegData.constituency;
+  delete cleanedRegData.ward;
 
   const matchKeys = [];
   if (data.orderId) matchKeys.push((r) => r.orderId === data.orderId);
@@ -749,18 +791,7 @@ const upsertPendingAccount = async (data) => {
     paymentAccount: data.paymentAccount || undefined,
     confirmationCode: data.confirmationCode || undefined,
     verificationNonce: data.verificationNonce || undefined,
-    phoneNumber,
-    FirstName: data.FirstName || regData.FirstName || regData.firstName || undefined,
-    MiddleName: data.MiddleName || regData.MiddleName || regData.middleName || undefined,
-    LastName: data.LastName || regData.LastName || regData.lastName || undefined,
-    email: data.email || regData.email || undefined,
-    gender: data.gender || regData.gender || undefined,
-    ageBracket: data.ageBracket || regData.ageBracket || undefined,
-    idNumber: data.idNumber || regData.idNumber || undefined,
-    password: data.password || regData.password || undefined,
-    passkey: data.passkey || regData.passkey || undefined,
-    startky: data.startky || regData.startky || undefined,
-    registrationData: data.registrationData !== undefined ? (typeof data.registrationData === "string" ? regData : data.registrationData) : undefined,
+    registrationData: cleanedRegData,
     status: data.status || "INITIATED",
     createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
     completedAt: data.completedAt ? new Date(data.completedAt) : undefined,

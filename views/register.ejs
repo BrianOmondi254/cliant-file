@@ -571,9 +571,6 @@
                 <span class="rp-value" style="font-size:11px;" id="rpReference"></span>
               </div>
             </div>
-            <div class="rp-instruction">
-              <strong>ℹ️ What happens next:</strong> Clicking Confirm will finalize your account registration using the payment already made. No additional payment is needed.
-            </div>
             <form id="resumeCompleteForm" action="/complete-registration" method="POST">
               <input type="hidden" name="registrationData" id="rpRegistrationData">
               <input type="hidden" name="paymentConfirmed" value="true">
@@ -684,9 +681,6 @@
                 <span class="rp-label">Payment Status</span>
                 <span class="rp-value green" id="paStatus"></span>
               </div>
-            </div>
-            <div class="rp-instruction">
-              <strong>ℹ️ What happens next:</strong> Clicking Confirm will finalize your account, create your member profile in the county register, and record the registration fee as a transfer from the Registrar account to your Personal Account. No additional payment is needed.
             </div>
             <form id="pendingCompleteForm" action="/api/complete-from-pendingaccount" method="POST">
               <input type="hidden" name="pendingAccountId" id="paPendingAccountId">
@@ -1448,10 +1442,6 @@
         <span class="rp-label">Reference ID</span>
         <span class="rp-value" style="font-size:11px;"><%= resumePayment.orderTrackingId %></span>
       </div>
-    </div>
-
-    <div class="rp-instruction">
-      <strong>ℹ️ What happens next:</strong> Clicking Confirm will finalize your account registration using the payment already made. No additional payment is needed.
     </div>
 
     <form id="resumeCompleteForm" action="/complete-registration" method="POST">

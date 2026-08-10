@@ -909,51 +909,59 @@ async function handlePesapalCallback(req, res) {
 
       res.send(`
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
           <head>
             <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>Confirm Account Registration</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <title>Complete Your Registration</title>
             <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
             <style>
+              * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+              }
               body {
-                font-family: 'Outfit', sans-serif;
+                font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 min-height: 100vh;
+                min-height: -webkit-fill-available;
                 margin: 0;
                 background: linear-gradient(135deg, #0b1c33 0%, #060e1a 100%);
                 color: #e2e8f0;
-                padding: 20px;
+                padding: 16px;
+              }
+              html {
+                height: -webkit-fill-available;
               }
               .card {
-                background: rgba(255, 255, 255, 0.03);
+                background: rgba(255, 255, 255, 0.04);
                 border: 1px solid rgba(255, 255, 255, 0.08);
                 backdrop-filter: blur(16px);
                 -webkit-backdrop-filter: blur(16px);
-                padding: 40px;
-                border-radius: 24px;
-                box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+                padding: 32px 20px;
+                border-radius: 20px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
                 text-align: center;
-                max-width: 480px;
+                max-width: 380px;
                 width: 100%;
-                box-sizing: border-box;
               }
               .icon-container {
-                width: 72px;
-                height: 72px;
+                width: 64px;
+                height: 64px;
                 background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 24px;
-                box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+                margin: 0 auto 20px;
+                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
               }
               .icon-container svg {
-                width: 36px;
-                height: 36px;
+                width: 32px;
+                height: 32px;
                 fill: none;
                 stroke: white;
                 stroke-width: 3;
@@ -961,73 +969,41 @@ async function handlePesapalCallback(req, res) {
                 stroke-linejoin: round;
               }
               h2 {
-                font-size: 26px;
+                font-size: 22px;
                 font-weight: 700;
                 margin: 0 0 10px;
-                background: linear-gradient(to right, #ffffff, #94a3b8);
+                background: linear-gradient(to right, #ffffff, #cbd5e1);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
               }
               .description {
                 font-size: 14px;
                 color: #94a3b8;
-                line-height: 1.6;
-                margin: 0 0 28px;
-              }
-              .details-list {
-                background: rgba(255, 255, 255, 0.02);
-                border: 1px solid rgba(255, 255, 255, 0.04);
-                border-radius: 16px;
-                padding: 20px;
-                margin-bottom: 30px;
-                text-align: left;
-              }
-              .detail-item {
-                display: flex;
-                justify-content: space-between;
-                padding: 12px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                font-size: 14px;
-              }
-              .detail-item:last-child {
-                border-bottom: none;
-                padding-bottom: 0;
-              }
-              .detail-item:first-child {
-                padding-top: 0;
-              }
-              .detail-label {
-                color: #64748b;
-                font-weight: 500;
-              }
-              .detail-value {
-                color: #f1f5f9;
-                font-weight: 600;
-                text-align: right;
-                word-break: break-all;
-                padding-left: 10px;
+                line-height: 1.5;
+                margin: 0 0 24px;
               }
               .btn {
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                 color: white;
                 border: none;
-                padding: 16px 32px;
-                border-radius: 14px;
+                min-height: 50px;
+                padding: 14px 24px;
+                border-radius: 12px;
                 font-size: 16px;
                 font-weight: 600;
                 cursor: pointer;
                 width: 100%;
-                transition: all 0.25s ease;
-                box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+                transition: all 0.2s ease;
+                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 10px;
+                -webkit-tap-highlight-color: transparent;
               }
-              .btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
-                background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+              .btn:hover, .btn:focus {
+                transform: translateY(-1px);
+                box-shadow: 0 12px 25px rgba(16, 185, 129, 0.45);
               }
               .btn:active {
                 transform: translateY(1px);
@@ -1052,7 +1028,7 @@ async function handlePesapalCallback(req, res) {
               }
               .btn.loading {
                 pointer-events: none;
-                opacity: 0.8;
+                opacity: 0.85;
               }
             </style>
           </head>
@@ -1063,23 +1039,8 @@ async function handlePesapalCallback(req, res) {
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </div>
-              <h2>Payment Verified</h2>
-              <p class="description">Your registration fee has been successfully received. Click confirm below to complete setting up your account.</p>
-              
-              <div class="details-list">
-                <div class="detail-item">
-                  <span class="detail-label">Name</span>
-                  <span class="detail-value">${fullName}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">Amount Paid</span>
-                  <span class="detail-value" style="color: #10b981;">${chargedAmount} ${currency}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">Reference ID</span>
-                  <span class="detail-value">${OrderTrackingId}</span>
-                </div>
-              </div>
+              <h2>Complete Your Registration</h2>
+              <p class="description">Your payment was successful! Tap the button below to complete setting up your account.</p>
 
               <form id="completeForm" action="/complete-registration" method="POST">
                 <input type="hidden" name="registrationData" value="${rdEscaped}">
@@ -1089,7 +1050,7 @@ async function handlePesapalCallback(req, res) {
                 <input type="hidden" name="passkey" value="">
                 <button type="submit" class="btn" id="submitBtn">
                   <span class="btn-spinner"></span>
-                  <span class="btn-text">Confirm & Complete Registration</span>
+                  <span class="btn-text">Complete Registration</span>
                 </button>
               </form>
             </div>
