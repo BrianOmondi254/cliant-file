@@ -1,40 +1,54 @@
 /**
  * trans.js
  *
- * Handles post-registration money movement into the PersonalAccount collection.
+ * Handles the post-"Complete Registration" money movement into the
+ * PersonalAccount collection.
  *
- * Account flow:
+ * PersonalAccount is stored in the SAME regional nesting pattern as
+ * PendingAccount / County:
+ *   county doc → constituencies[].wards[].data[]  (one leaf per user/phone)
  *
- *   STEP A — PendingAccount updated (payment received, not yet completed):
- *     creditPendingHolding(phone, amount, ...)
- *       → Creates/updates PersonalAccount
- *       → Adds amount to account.pending.value
- *       → Logs a "pending" transaction: Registrar → Pending Holding
+ * The county / constituency / ward strings exist ONLY on the document
+ * hierarchy — they are NOT duplicated inside the leaf record (except when
+ * we return a flat projection where we re-attach them manually).
  *
- *   STEP B — Complete Registration executed:
- *     settlePendingToPersonal(phone, amount, ...)
- *       → Deducts amount from account.pending.value
- *       → Adds amount to account.personal.personal + reg_fee + openBalance
- *       → Clears account.personal.pendingBalance by the same amount
- *       → Logs a "received" (completed) transaction: Pending Holding → Personal
+ * Flow:
+ *   STEP A — Pesapal callback runs creditPendingHolding(phone, amount, ...)
+ *        → Creates/updates the nested PersonalAccount
+ *        → Adds amount to account.pending.value (holding bucket)
+ *        → Logs a "pending" transaction: Registrar → Pending Holding
  *
- *   transferRegistrarFeeToPersonal(...)  (legacy / direct-register path)
- *       → Used for direct POST /register (passkey/Pesapal/M-Pesa paid inline).
- *       → Credits account.personal directly + logs transaction.
+ *   STEP B — Complete Registration runs settlePendingToPersonal(phone, amount, ...)
+ *        → Deducts amount from account.pending.value
+ *        → Adds amount to account.personal.{personal, reg_fee, openBalance, pendingBalance}
+ *        → Logs a settlement transaction
+ *        → On failure, falls back to transferRegistrarFeeToPersonal which skips
+ *          the holding bucket entirely and writes directly to personal counters.
  *
- *   creditPendingToPersonalAccount(...)  (legacy / complete-registration path)
- *       → Used by POST /complete-registration (Pesapal callback confirmation).
- *       → Credits account.personal openBalance + pendingBalance.
+ * openBalance vs pendingBalance:
+ *   - openBalance is incremented immediately so the funds show up on the
+ *     account right away.
+ *   - pendingBalance tracks the same amount separately until it is
+ *     reconciled/cleared elsewhere (e.g. an admin/HQ confirmation step or a
+ *     payment-provider webhook that flips the transaction's status to
+ *     "completed"). Nothing in this file clears pendingBalance — that is a
+ *     separate reconciliation step to be wired up wherever "pending"
+ *     transactions get confirmed.
  */
 
-const { County, PersonalAccount, normalizePhone } = require("../mongoose");
+const {
+  County,
+  PersonalAccount,
+  normalizePhone,
+  findPersonalAccountByPhone,
+  savePersonalAccountToMongo,
+  mutatePersonalLeaves,
+  findPersonalRecord,
+} = require("../mongoose");
 
-// ---------------------------------------------------------------------------
-// Helper: verify phone in county collection
-// ---------------------------------------------------------------------------
 /**
  * Confirms a phone number exists somewhere in the County collection's
- * nested county → constituency → ward → data hierarchy.
+ * nested county -> constituency -> ward -> data hierarchy.
  *
  * @param {string} phoneNumber
  * @returns {Promise<{found: boolean, county?: string, constituency?: string, ward?: string}>}
@@ -68,11 +82,8 @@ async function verifyPhoneInCounty(phoneNumber) {
   return { found: false };
 }
 
-// ---------------------------------------------------------------------------
-// STEP A: Credit pending holding (PendingAccount stage)
-// ---------------------------------------------------------------------------
 /**
- * Called when a PendingAccount record is created/updated with a verified
+ * STEP A — Called from Pesapal callback immediately after a successful
  * payment. Creates or updates the PersonalAccount for this phone number and
  * parks the registration fee in account.pending.value so it appears in the
  * ledger immediately. The money stays there until the member completes
@@ -80,7 +91,7 @@ async function verifyPhoneInCounty(phoneNumber) {
  *
  * NOTE: This can be called BEFORE the user exists in the County collection,
  * so it does NOT call verifyPhoneInCounty. The caller must supply county,
- * constituency, and ward from the PendingAccount record.
+ * constituency, ward explicitly.
  *
  * @param {Object} params
  * @param {string} params.phone
@@ -89,7 +100,7 @@ async function verifyPhoneInCounty(phoneNumber) {
  * @param {string} params.ward
  * @param {number} params.amount
  * @param {string} [params.reference]
- * @param {string} [params.paymentMethod]  e.g. "pesapal" | "mpesa" | "passkey"
+ * @param {string} [params.paymentMethod]
  * @param {string} [params.notes]
  * @returns {Promise<{success: boolean, reason?: string, account?: object}>}
  */
@@ -105,79 +116,124 @@ async function creditPendingHolding({
 }) {
   const holdAmount = Number(amount || 0);
   if (!phone) return { success: false, reason: "NO_PHONE" };
-  if (!holdAmount || holdAmount <= 0) return { success: false, reason: "INVALID_AMOUNT" };
-  if (!county || !constituency || !ward) return { success: false, reason: "MISSING_REGION" };
+  if (!holdAmount || holdAmount <= 0) {
+    return { success: false, reason: "INVALID_AMOUNT" };
+  }
+  if (!county || !constituency || !ward) {
+    return { success: false, reason: "MISSING_REGION" };
+  }
 
   const now = new Date();
-  const existing = await PersonalAccount.findOne({ phone }).lean();
-  const prevPendingValue = existing?.account?.pending?.value || 0;
-  const newPendingValue = prevPendingValue + holdAmount;
-  const prevOpenBalance = existing?.account?.personal?.openBalance || 0;
-
-  const update = {
-    $setOnInsert: {
-      phone,
-      county,
-      constituency,
-      ward,
-      createdAt: now,
-      "account.business": { name: "", "total-bal": 0, float: 0, benefit: 0 },
-    },
-    $set: {
-      updatedAt: now,
-      "account.pending.value": newPendingValue,
-    },
-    $push: {
-      transactions: {
-        reference: reference || "PENDING-HOLD",
-        time: now,
-        openingBalance: prevOpenBalance,
-        amount: holdAmount,
-        type: "received",
-        from: {
-          name: "Registrar",
-          number: "REGISTRAR-HOLDING",
-        },
-        to: { name: "Pending Holding", number: phone },
-        closingBalance: prevOpenBalance, // personal balance unchanged at this stage
-        environment: paymentMethod,
-        notes: notes || "Registration fee received — held pending account completion",
-        status: "pending",
-      },
-    },
-  };
+  let savedDoc = null;
 
   try {
-    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
-      upsert: true,
-      new: true,
-      runValidators: true,
-      setDefaultsOnInsert: true,
-    });
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === normalizePhone(phone),
+      (rec) => {
+        const prevPendingValue =
+          (rec && rec.account && rec.account.pending &&
+            typeof rec.account.pending.value === "number")
+            ? rec.account.pending.value
+            : 0;
+        const newPendingValue = prevPendingValue + holdAmount;
+
+        if (!rec.account) rec.account = {};
+        if (!rec.account.pending) rec.account.pending = {};
+        if (!rec.account.business) {
+          rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+        }
+        if (!rec.account.personal) {
+          rec.account.personal = {
+            reg_fee: 0, personal: 0, openBalance: 0, pendingBalance: 0,
+          };
+        }
+        rec.account.pending.value = newPendingValue;
+
+        const prevOpenBalance = rec.account.personal.openBalance || 0;
+        const newTxn = {
+          reference: reference || "PENDING-HOLDING",
+          time: now,
+          openingBalance: prevOpenBalance,
+          amount: holdAmount,
+          type: "received",
+          from: { name: "Registrar", number: "REGISTRAR-HOLDING" },
+          to: { name: "Pending Holding", number: phone },
+          closingBalance: prevOpenBalance,
+          environment: paymentMethod,
+          notes: notes || "Registration fee received — held pending account completion",
+          status: "pending",
+        };
+
+        if (!rec.transactions) rec.transactions = [];
+        rec.transactions.push(newTxn);
+        rec.updatedAt = now;
+
+        savedDoc = rec;
+        return rec;
+      },
+    );
+
+    if (!savedDoc) {
+      const leaf = {
+        phone,
+        account: {
+          business: { name: "", "total-bal": 0, float: 0, benefit: 0 },
+          pending: { value: holdAmount },
+          personal: { reg_fee: 0, personal: 0, openBalance: 0, pendingBalance: 0 },
+        },
+        transactions: [{
+          reference: reference || "PENDING-HOLDING",
+          time: now,
+          openingBalance: 0,
+          amount: holdAmount,
+          type: "received",
+          from: { name: "Registrar", number: "REGISTRAR-HOLDING" },
+          to: { name: "Pending Holding", number: phone },
+          closingBalance: 0,
+          environment: paymentMethod,
+          notes: notes || "Registration fee received — held pending account completion",
+          status: "pending",
+        }],
+        createdAt: now,
+        updatedAt: now,
+      };
+      savedDoc = await savePersonalAccountToMongo({
+        county, constituency, ward, ...leaf,
+      });
+    }
+
+    const newPendingValue =
+      (savedDoc && savedDoc.account && savedDoc.account.pending)
+        ? savedDoc.account.pending.value
+        : holdAmount;
+
     console.log(
       `[trans] creditPendingHolding: parked ${holdAmount} in account.pending.value for ${phone} ` +
         `(new pending.value=${newPendingValue})`,
     );
-    return { success: true, account: doc };
+    return { success: true, account: savedDoc };
   } catch (err) {
     console.error("[trans] Error in creditPendingHolding:", err.message);
     return { success: false, reason: "DB_ERROR", error: err.message };
   }
 }
 
-// ---------------------------------------------------------------------------
-// STEP B: Settle pending → personal (Complete Registration stage)
-// ---------------------------------------------------------------------------
 /**
- * Called when the member clicks "Complete Registration" from the pending
- * account popup. Moves `amount` FROM account.pending.value TO account.personal,
- * and records the settlement as a completed transaction.
+ * STEP B — Called when Complete Registration is clicked (from any of the
+ * three completion paths). Moves `amount` FROM account.pending.value TO
+ * account.personal. All four personal counters (reg_fee, personal,
+ * openBalance, pendingBalance) are incremented by `amount`. Records a
+ * settlement transaction.
  *
- * The function verifies the phone is now registered in the County collection
- * before moving funds.
+ * Precondition: the phone number MUST already exist in the County register
+ * (member was saved). If verifyPhoneInCounty fails this returns NOT_REGISTERED
+ * so the caller can fall back to transferRegistrarFeeToPersonal.
  *
  * @param {Object} params
  * @param {string} params.phone
+ * @param {string} [params.county]
+ * @param {string} [params.constituency]
+ * @param {string} [params.ward]
  * @param {number} params.amount
  * @param {string} [params.reference]
  * @param {string} [params.paymentMethod]
@@ -186,6 +242,9 @@ async function creditPendingHolding({
  */
 async function settlePendingToPersonal({
   phone,
+  county,
+  constituency,
+  ward,
   amount,
   reference = "",
   paymentMethod = "unknown",
@@ -193,9 +252,10 @@ async function settlePendingToPersonal({
 }) {
   const settleAmount = Number(amount || 0);
   if (!phone) return { success: false, reason: "NO_PHONE" };
-  if (!settleAmount || settleAmount <= 0) return { success: false, reason: "INVALID_AMOUNT" };
+  if (!settleAmount || settleAmount <= 0) {
+    return { success: false, reason: "INVALID_AMOUNT" };
+  }
 
-  // Verify the phone is now in the County collection (registration must have landed).
   const membership = await verifyPhoneInCounty(phone);
   if (!membership.found) {
     console.warn(
@@ -203,93 +263,100 @@ async function settlePendingToPersonal({
     );
     return { success: false, reason: "NOT_REGISTERED" };
   }
+  const c = county || membership.county;
+  const cn = constituency || membership.constituency;
+  const w = ward || membership.ward;
+
+  const existing = await findPersonalAccountByPhone(phone);
+  if (!existing) {
+    console.warn(`[trans] settlePendingToPersonal: no PersonalAccount found for ${phone}`);
+    return { success: false, reason: "ACCOUNT_NOT_FOUND" };
+  }
 
   const now = new Date();
-  const existing = await PersonalAccount.findOne({ phone }).lean();
-
-  const prevPendingValue = existing?.account?.pending?.value || 0;
-  const prevOpenBalance = existing?.account?.personal?.openBalance || 0;
-  const prevPendingBalance = existing?.account?.personal?.pendingBalance || 0;
-  const prevRegFee = existing?.account?.personal?.reg_fee || 0;
-  const prevPersonal = existing?.account?.personal?.personal || 0;
-
-  // Deduct from pending holding (floor at 0 to avoid negative).
-  const newPendingValue = Math.max(0, prevPendingValue - settleAmount);
-
-  // Credit personal balances.
-  const newOpenBalance = prevOpenBalance + settleAmount;
-  const newPendingBalance = Math.max(0, prevPendingBalance - settleAmount); // clear the pending entry
-  const newRegFee = prevRegFee + settleAmount;
-  const newPersonal = prevPersonal + settleAmount;
-
-  const update = {
-    $set: {
-      updatedAt: now,
-      "account.pending.value": newPendingValue,
-      "account.personal.reg_fee": newRegFee,
-      "account.personal.personal": newPersonal,
-      "account.personal.openBalance": newOpenBalance,
-      "account.personal.pendingBalance": newPendingBalance,
-    },
-    $push: {
-      transactions: {
-        reference: reference || "SETTLE-PENDING",
-        time: now,
-        openingBalance: prevOpenBalance,
-        amount: settleAmount,
-        type: "received",
-        from: {
-          name: "Pending Holding",
-          number: "PENDING-HOLDING",
-        },
-        to: { name: "Personal Account", number: phone },
-        closingBalance: newOpenBalance,
-        environment: paymentMethod,
-        notes: notes || "Pending holding → Personal account (registration completed)",
-        status: "completed",
-      },
-    },
-  };
+  let savedDoc = null;
 
   try {
-    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
-      new: true,
-      runValidators: true,
-    });
-    if (!doc) {
-      console.warn(`[trans] settlePendingToPersonal: no PersonalAccount found for ${phone}`);
-      return { success: false, reason: "ACCOUNT_NOT_FOUND" };
-    }
-    console.log(
-      `[trans] settlePendingToPersonal: moved ${settleAmount} from pending.value to personal for ${phone} ` +
-        `— pending.value=${newPendingValue}, personal.openBalance=${newOpenBalance}, ` +
-        `personal.pendingBalance=${newPendingBalance}`,
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === normalizePhone(phone),
+      (rec) => {
+        const prevPendingValue =
+          (rec.account && rec.account.pending &&
+            typeof rec.account.pending.value === "number")
+            ? rec.account.pending.value
+            : 0;
+        const prevOpenBalance = rec.account?.personal?.openBalance || 0;
+        const prevPendingBalance = rec.account?.personal?.pendingBalance || 0;
+        const prevRegFee = rec.account?.personal?.reg_fee || 0;
+        const prevPersonal = rec.account?.personal?.personal || 0;
+
+        const newPendingValue = Math.max(0, prevPendingValue - settleAmount);
+        const newOpenBalance = prevOpenBalance + settleAmount;
+        const newPendingBalance = prevPendingBalance + settleAmount;
+        const newRegFee = prevRegFee + settleAmount;
+        const newPersonal = prevPersonal + settleAmount;
+
+        if (!rec.account) rec.account = {};
+        if (!rec.account.pending) rec.account.pending = {};
+        if (!rec.account.business) {
+          rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+        }
+        if (!rec.account.personal) rec.account.personal = {};
+
+        rec.account.pending.value = newPendingValue;
+        rec.account.personal.reg_fee = newRegFee;
+        rec.account.personal.personal = newPersonal;
+        rec.account.personal.openBalance = newOpenBalance;
+        rec.account.personal.pendingBalance = newPendingBalance;
+
+        if (!rec.transactions) rec.transactions = [];
+        rec.transactions.push({
+          reference: reference || "SETTLE-PENDING",
+          time: now,
+          openingBalance: prevOpenBalance,
+          amount: settleAmount,
+          type: "received",
+          from: { name: "Pending Holding", number: phone },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: newOpenBalance,
+          environment: paymentMethod,
+          notes: notes || "Pending holding → Personal account (registration completed)",
+          status: "completed",
+        });
+        rec.updatedAt = now;
+
+        savedDoc = rec;
+        return rec;
+      },
     );
-    return { success: true, account: doc };
+
+    if (savedDoc) {
+      const flat = await findPersonalAccountByPhone(phone);
+      const pendingValue =
+        (flat && flat.account && flat.account.pending) ? flat.account.pending.value : 0;
+      const openBal = flat?.account?.personal?.openBalance || 0;
+      const pendBal = flat?.account?.personal?.pendingBalance || 0;
+      console.log(
+        `[trans] settlePendingToPersonal: moved ${settleAmount} from pending.value to personal for ${phone} ` +
+          `— pending.value=${pendingValue}, personal.openBalance=${openBal}, ` +
+          `personal.pendingBalance=${pendBal}`,
+      );
+      return { success: true, account: flat };
+    }
+    return { success: false, reason: "ACCOUNT_NOT_FOUND" };
   } catch (err) {
     console.error("[trans] Error in settlePendingToPersonal:", err.message);
     return { success: false, reason: "DB_ERROR", error: err.message };
   }
 }
 
-// ---------------------------------------------------------------------------
-// Legacy: creditPendingToPersonalAccount (used by /complete-registration)
-// ---------------------------------------------------------------------------
 /**
- * Credits `amount` into a member's PersonalAccount, keyed by phone number.
- * Adds to openBalance immediately and logs a "pending" transaction that
- * also adds to pendingBalance.
+ * Legacy / direct path. Credits amount into account.personal.openBalance and
+ * a pending transaction + pendingBalance. Used where the holding-bucket
+ * pattern is bypassed entirely.
  *
  * Looks up the phone in the County collection first — if the number isn't
  * a registered member there, the credit is refused (NOT_REGISTERED).
- *
- * @param {Object} params
- * @param {string} params.phone
- * @param {number} params.amount
- * @param {string} [params.reference]
- * @param {string} [params.paymentMethod]  e.g. "mpesa" | "pesapal" | "passkey"
- * @param {string} [params.notes]
- * @returns {Promise<{success: boolean, reason?: string, account?: object}>}
  */
 async function creditPendingToPersonalAccount({
   phone,
@@ -299,97 +366,131 @@ async function creditPendingToPersonalAccount({
   notes = "",
 }) {
   const creditAmount = Number(amount || 0);
-  if (!phone) {
-    return { success: false, reason: "NO_PHONE" };
-  }
+  if (!phone) return { success: false, reason: "NO_PHONE" };
   if (!creditAmount || creditAmount <= 0) {
     return { success: false, reason: "INVALID_AMOUNT" };
   }
 
-  // 1. Verify the phone number is a registered member in the County collection.
   const membership = await verifyPhoneInCounty(phone);
   if (!membership.found) {
     console.warn(`[trans] Refusing credit — phone not found in County collection: ${phone}`);
     return { success: false, reason: "NOT_REGISTERED" };
   }
 
-  // 2. Locate (or lazily create) the PersonalAccount for this phone.
-  const existing = await PersonalAccount.findOne({ phone }).lean();
-  const prevOpenBalance = existing?.account?.personal?.openBalance || 0;
-  const prevPendingBalance = existing?.account?.personal?.pendingBalance || 0;
-  const prevRegFee = existing?.account?.personal?.reg_fee || 0;
-  const prevPersonal = existing?.account?.personal?.personal || 0;
-
-  const newOpenBalance = prevOpenBalance + creditAmount;
-  const newPendingBalance = prevPendingBalance + creditAmount;
-  const newRegFee = prevRegFee + creditAmount;
-  const newPersonal = prevPersonal + creditAmount;
   const now = new Date();
-
-  const update = {
-    $setOnInsert: {
-      phone,
-      county: membership.county,
-      constituency: membership.constituency,
-      ward: membership.ward,
-      createdAt: now,
-      "account.business": { name: "", "total-bal": 0, float: 0, benefit: 0 },
-    },
-    $set: {
-      updatedAt: now,
-      "account.personal.reg_fee": newRegFee,
-      "account.personal.personal": newPersonal,
-      "account.personal.openBalance": newOpenBalance,
-      "account.personal.pendingBalance": newPendingBalance,
-    },
-    $push: {
-      transactions: {
-        reference,
-        time: now,
-        openingBalance: prevOpenBalance,
-        amount: creditAmount,
-        type: "received",
-        from: {
-          name: "Registrar",
-          number: "REGISTRAR-HOLDING",
-        },
-        to: { name: "Personal Account", number: phone },
-        closingBalance: newOpenBalance,
-        environment: paymentMethod,
-        notes: notes || "Registrar → Personal (registration credit)",
-        status: "pending",
-      },
-    },
-  };
+  let savedDoc = null;
 
   try {
-    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
-      upsert: true,
-      new: true,
-      runValidators: true,
-      setDefaultsOnInsert: true,
-    });
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === normalizePhone(phone),
+      (rec) => {
+        const prevOpenBalance = rec.account?.personal?.openBalance || 0;
+        const prevPendingBalance = rec.account?.personal?.pendingBalance || 0;
+        const prevRegFee = rec.account?.personal?.reg_fee || 0;
+        const prevPersonal = rec.account?.personal?.personal || 0;
+
+        const newOpenBalance = prevOpenBalance + creditAmount;
+        const newPendingBalance = prevPendingBalance + creditAmount;
+        const newRegFee = prevRegFee + creditAmount;
+        const newPersonal = prevPersonal + creditAmount;
+
+        if (!rec.account) rec.account = {};
+        if (!rec.account.business) {
+          rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+        }
+        if (!rec.account.personal) rec.account.personal = {};
+        if (!rec.account.pending) rec.account.pending = { value: 0 };
+
+        rec.account.personal.reg_fee = newRegFee;
+        rec.account.personal.personal = newPersonal;
+        rec.account.personal.openBalance = newOpenBalance;
+        rec.account.personal.pendingBalance = newPendingBalance;
+
+        if (!rec.transactions) rec.transactions = [];
+        rec.transactions.push({
+          reference,
+          time: now,
+          openingBalance: prevOpenBalance,
+          amount: creditAmount,
+          type: "received",
+          from: { name: "Registrar", number: "REGISTRAR-HOLDING" },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: newOpenBalance,
+          environment: paymentMethod,
+          notes: notes || "Registrar → Personal (registration credit)",
+          status: "pending",
+        });
+        rec.updatedAt = now;
+
+        savedDoc = rec;
+        return rec;
+      },
+    );
+
+    if (!savedDoc) {
+      const leaf = {
+        phone,
+        account: {
+          business: { name: "", "total-bal": 0, float: 0, benefit: 0 },
+          pending: { value: 0 },
+          personal: {
+            reg_fee: creditAmount,
+            personal: creditAmount,
+            openBalance: creditAmount,
+            pendingBalance: creditAmount,
+          },
+        },
+        transactions: [{
+          reference,
+          time: now,
+          openingBalance: 0,
+          amount: creditAmount,
+          type: "received",
+          from: { name: "Registrar", number: "REGISTRAR-HOLDING" },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: creditAmount,
+          environment: paymentMethod,
+          notes: notes || "Registrar → Personal (registration credit)",
+          status: "pending",
+        }],
+        createdAt: now,
+        updatedAt: now,
+      };
+      savedDoc = await savePersonalAccountToMongo({
+        county: membership.county,
+        constituency: membership.constituency,
+        ward: membership.ward,
+        ...leaf,
+      });
+    } else {
+      savedDoc = await findPersonalAccountByPhone(phone);
+    }
+
+    const newRegFee = savedDoc?.account?.personal?.reg_fee || creditAmount;
+    const newPersonal = savedDoc?.account?.personal?.personal || creditAmount;
+    const newOpenBalance = savedDoc?.account?.personal?.openBalance || creditAmount;
+    const newPendingBalance = savedDoc?.account?.personal?.pendingBalance || creditAmount;
     console.log(
       `[trans] Credited ${creditAmount} to ${phone} ` +
         `— reg_fee=${newRegFee}, personal=${newPersonal}, ` +
         `openBalance=${newOpenBalance}, pendingBalance=${newPendingBalance}`,
     );
-    return { success: true, account: doc };
+    return { success: true, account: savedDoc };
   } catch (err) {
     console.error("[trans] Error crediting PersonalAccount:", err.message);
     return { success: false, reason: "DB_ERROR", error: err.message };
   }
 }
 
-// ---------------------------------------------------------------------------
-// Legacy: transferRegistrarFeeToPersonal (used by direct POST /register)
-// ---------------------------------------------------------------------------
 /**
  * Records a registration-fee bookkeeping transfer FROM the "Registrar"
  * holding account TO a newly activated personal account.
  *
- * Used when a member registers directly via POST /register (passkey,
- * Pesapal inline, or M-Pesa) — bypassing the PendingAccount stage entirely.
+ * This is the FALLBACK for when settlePendingToPersonal fails, or the
+ * holding-bucket Phase 1 was never run at all. It does NOT debit
+ * account.pending.value. Instead it directly bumps all four personal
+ * counters and records a transaction with an explicit `from: Registrar`
+ * counterparty so the audit trail is clear this bypassed the holding bucket.
  *
  * @param {Object} params
  * @param {string} params.phone
@@ -398,7 +499,7 @@ async function creditPendingToPersonalAccount({
  * @param {string} params.ward
  * @param {number} params.amount
  * @param {string} [params.reference]
- * @param {string} [params.paymentMethod]  "mpesa" | "pesapal" | "passkey" etc
+ * @param {string} [params.paymentMethod]
  * @param {string} [params.notes]
  * @returns {Promise<{success: boolean, reason?: string, account?: object}>}
  */
@@ -422,70 +523,101 @@ async function transferRegistrarFeeToPersonal({
   }
 
   const now = new Date();
-  const existing = await PersonalAccount.findOne({ phone }).lean();
-
-  const prevOpenBalance = existing?.account?.personal?.openBalance || 0;
-  const prevPendingBalance = existing?.account?.personal?.pendingBalance || 0;
-  const prevRegFee = existing?.account?.personal?.reg_fee || 0;
-  const prevPersonal = existing?.account?.personal?.personal || 0;
-
-  const newOpenBalance = prevOpenBalance + transferAmount;
-  const newPendingBalance = prevPendingBalance + transferAmount;
-  const newRegFee = prevRegFee + transferAmount;
-  const newPersonal = prevPersonal + transferAmount;
-
-  const update = {
-    $setOnInsert: {
-      phone,
-      county,
-      constituency,
-      ward,
-      createdAt: now,
-      "account.business": { name: "", "total-bal": 0, float: 0, benefit: 0 },
-    },
-    $set: {
-      updatedAt: now,
-      "account.personal.reg_fee": newRegFee,
-      "account.personal.personal": newPersonal,
-      "account.personal.openBalance": newOpenBalance,
-      "account.personal.pendingBalance": newPendingBalance,
-    },
-    $push: {
-      transactions: {
-        reference: reference || "REGISTRAR-TRANSFER",
-        time: now,
-        openingBalance: prevOpenBalance,
-        amount: transferAmount,
-        type: "received",
-        from: {
-          name: "Registrar",
-          number: "REGISTRAR-HOLDING",
-        },
-        to: {
-          name: "Personal Account",
-          number: phone,
-        },
-        closingBalance: newOpenBalance,
-        environment: paymentMethod,
-        notes: notes || "Registrar → Personal (registration fee)",
-        status: "pending",
-      },
-    },
-  };
+  let savedDoc = null;
 
   try {
-    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
-      upsert: true,
-      new: true,
-      runValidators: true,
-      setDefaultsOnInsert: true,
-    });
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === normalizePhone(phone),
+      (rec) => {
+        const prevOpenBalance = rec.account?.personal?.openBalance || 0;
+        const prevPendingBalance = rec.account?.personal?.pendingBalance || 0;
+        const prevRegFee = rec.account?.personal?.reg_fee || 0;
+        const prevPersonal = rec.account?.personal?.personal || 0;
+
+        const newOpenBalance = prevOpenBalance + transferAmount;
+        const newPendingBalance = prevPendingBalance + transferAmount;
+        const newRegFee = prevRegFee + transferAmount;
+        const newPersonal = prevPersonal + transferAmount;
+
+        if (!rec.account) rec.account = {};
+        if (!rec.account.business) {
+          rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+        }
+        if (!rec.account.personal) rec.account.personal = {};
+        if (!rec.account.pending) rec.account.pending = { value: 0 };
+
+        rec.account.personal.reg_fee = newRegFee;
+        rec.account.personal.personal = newPersonal;
+        rec.account.personal.openBalance = newOpenBalance;
+        rec.account.personal.pendingBalance = newPendingBalance;
+
+        if (!rec.transactions) rec.transactions = [];
+        rec.transactions.push({
+          reference: reference || "REGISTRAR-TRANSFER",
+          time: now,
+          openingBalance: prevOpenBalance,
+          amount: transferAmount,
+          type: "received",
+          from: { name: "Registrar", number: "REGISTRAR-HOLDING" },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: newOpenBalance,
+          environment: paymentMethod,
+          notes: notes || "Registrar → Personal (registration fee)",
+          status: "pending",
+        });
+        rec.updatedAt = now;
+
+        savedDoc = rec;
+        return rec;
+      },
+    );
+
+    if (!savedDoc) {
+      const leaf = {
+        phone,
+        account: {
+          business: { name: "", "total-bal": 0, float: 0, benefit: 0 },
+          pending: { value: 0 },
+          personal: {
+            reg_fee: transferAmount,
+            personal: transferAmount,
+            openBalance: transferAmount,
+            pendingBalance: transferAmount,
+          },
+        },
+        transactions: [{
+          reference: reference || "REGISTRAR-TRANSFER",
+          time: now,
+          openingBalance: 0,
+          amount: transferAmount,
+          type: "received",
+          from: { name: "Registrar", number: "REGISTRAR-HOLDING" },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: transferAmount,
+          environment: paymentMethod,
+          notes: notes || "Registrar → Personal (registration fee)",
+          status: "pending",
+        }],
+        createdAt: now,
+        updatedAt: now,
+      };
+      savedDoc = await savePersonalAccountToMongo({
+        county, constituency, ward, ...leaf,
+      });
+    } else {
+      savedDoc = await findPersonalAccountByPhone(phone);
+    }
+
+    const newRegFee = savedDoc?.account?.personal?.reg_fee || transferAmount;
+    const newPersonal = savedDoc?.account?.personal?.personal || transferAmount;
+    const newOpenBalance = savedDoc?.account?.personal?.openBalance || transferAmount;
+    const newPendingBalance = savedDoc?.account?.personal?.pendingBalance || transferAmount;
     console.log(
       `[trans] Registrar transfer ${transferAmount} → ${phone} ` +
         `— reg_fee=${newRegFee}, personal=${newPersonal}, ` +
         `openBalance=${newOpenBalance}, pendingBalance=${newPendingBalance}`,
     );
-    return { success: true, account: doc };
+    return { success: true, account: savedDoc };
   } catch (err) {
     console.error(
       "[trans] Error in transferRegistrarFeeToPersonal:",

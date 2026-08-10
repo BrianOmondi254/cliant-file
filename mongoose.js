@@ -1743,70 +1743,314 @@ const saveMemberDataToMongo = async (memberData) => {
 };
 
 /**
- * Personal Account Schema - Mirrors p_account/personal.json per-user snapshot
+ * Personal Account Leaf Record — one per user, stored inside ward.data[].
+ * Mirrors the old flat personalAccountSchema fields EXCEPT that county,
+ * constituency, and ward are removed from the leaf because they are carried
+ * by the document hierarchy (county doc → constituencies[] → wards[] → data[]).
  */
-const personalAccountSchema = new mongoose.Schema({
-  county: { type: String, required: true },
-  constituency: { type: String, required: true },
-  ward: { type: String, required: true },
-  phone: { type: String, required: true, unique: true },
-  account: {
-    business: {
-      name: { type: String, default: "" },
-      "total-bal": { type: Number, default: 0 },
-      float: { type: Number, default: 0 },
-      benefit: { type: Number, default: 0 },
-    },
-    // Funds held in the pending stage (payment received but registration not yet
-    // completed). When the member completes registration, this is debited and the
-    // same amount is credited to account.personal.
-    pending: {
-      value: { type: Number, default: 0 },
-    },
-    personal: {
-      reg_fee: { type: Number, default: 0 },
-      personal: { type: Number, default: 0 },
-      // Confirmed/available funds (openBalance) and funds still awaiting
-      // reconciliation (pendingBalance).
-      openBalance: { type: Number, default: 0 },
-      pendingBalance: { type: Number, default: 0 },
-    },
-  },
-  transactions: [
-    new mongoose.Schema(
-      {
-        cord: { type: String },
-        reference: { type: String },
-        time: { type: Date },
-        openingBalance: { type: Number, default: 0 },
-        amount: { type: Number, default: 0 },
-        type: { type: String, enum: ["received", "sent"], default: "received" },
-        from: {
-          name: { type: String },
-          number: { type: String },
-        },
-        to: {
-          name: { type: String },
-          number: { type: String },
-        },
-        closingBalance: { type: Number, default: 0 },
-        environment: { type: String, default: "unknown" },
-        notes: { type: String },
-        // "pending" until reconciled elsewhere, then flipped to "completed".
-        status: { type: String, enum: ["pending", "completed"], default: "completed" },
+const personalAccountLeafSchema = new mongoose.Schema(
+  {
+    phone: { type: String, required: true },
+    account: {
+      business: {
+        name: { type: String, default: "" },
+        "total-bal": { type: Number, default: 0 },
+        float: { type: Number, default: 0 },
+        benefit: { type: Number, default: 0 },
       },
-      { _id: false },
-    ),
-  ],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+      pending: {
+        value: { type: Number, default: 0 },
+      },
+      personal: {
+        reg_fee: { type: Number, default: 0 },
+        personal: { type: Number, default: 0 },
+        openBalance: { type: Number, default: 0 },
+        pendingBalance: { type: Number, default: 0 },
+      },
+    },
+    transactions: [
+      new mongoose.Schema(
+        {
+          cord: { type: String },
+          reference: { type: String },
+          time: { type: Date },
+          openingBalance: { type: Number, default: 0 },
+          amount: { type: Number, default: 0 },
+          type: { type: String, enum: ["received", "sent"], default: "received" },
+          from: { name: { type: String }, number: { type: String } },
+          to: { name: { type: String }, number: { type: String } },
+          closingBalance: { type: Number, default: 0 },
+          environment: { type: String, default: "unknown" },
+          notes: { type: String },
+          status: { type: String, enum: ["pending", "completed"], default: "completed" },
+        },
+        { _id: false },
+      ),
+    ],
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { _id: true, timestamps: false }
+);
+
+const personalAccountWardSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  data: [personalAccountLeafSchema],
 });
 
-personalAccountSchema.index({ county: 1, constituency: 1, ward: 1 });
+const personalAccountConstituencySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  wards: [personalAccountWardSchema],
+});
+
+const personalAccountSchema = new mongoose.Schema(
+  {
+    county: { type: String, required: true, unique: true },
+    constituencies: [personalAccountConstituencySchema],
+  },
+  { timestamps: true }
+);
 
 const PersonalAccount =
   mongoose.models.PersonalAccount ||
-  mongoose.model("PersonalAccount", personalAccountSchema);
+  mongoose.model("PersonalAccount", personalAccountSchema, "personalaccounts");
+
+const flattenPersonalAccountDoc = (doc) => {
+  const flat = [];
+  if (!doc) return flat;
+  const county = doc.county;
+  for (const cons of doc.constituencies || []) {
+    const constituency = cons.name;
+    for (const ward of cons.wards || []) {
+      const wardName = ward.name;
+      for (const rec of ward.data || []) {
+        const obj = rec.toObject ? rec.toObject() : { ...rec };
+        flat.push({
+          ...obj,
+          county,
+          constituency,
+          ward: wardName,
+        });
+      }
+    }
+  }
+  return flat;
+};
+
+const getAllPersonalFlattened = async (opts = {}) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return [];
+    const cursor = PersonalAccount.find({}).cursor();
+    const results = [];
+    for await (const doc of cursor) {
+      const flatRecs = flattenPersonalAccountDoc(doc);
+      for (const rec of flatRecs) {
+        if (typeof opts.filter === "function" && !opts.filter(rec)) continue;
+        results.push(rec);
+      }
+    }
+    return results;
+  } catch (e) {
+    console.error("[getAllPersonalFlattened] error:", e.message);
+    return [];
+  }
+};
+
+const findPersonalAccountByPhone = async (phone) => {
+  try {
+    const target = normalizePhone(phone);
+    if (!target) return null;
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+    const cursor = PersonalAccount.find({}).cursor();
+    for await (const doc of cursor) {
+      const flat = flattenPersonalAccountDoc(doc);
+      for (const rec of flat) {
+        if (normalizePhone(rec.phone) === target) return rec;
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error("[findPersonalAccountByPhone] error:", e.message);
+    return null;
+  }
+};
+
+const savePersonalAccountToMongo = async (accountData) => {
+  const { county, constituency, ward, ...leafFields } = accountData;
+  if (!county) throw new Error("savePersonalAccountToMongo: county is required");
+  if (!constituency) throw new Error("savePersonalAccountToMongo: constituency is required");
+  if (!ward) throw new Error("savePersonalAccountToMongo: ward is required");
+
+  let countyDoc = await PersonalAccount.findOne({ county });
+  if (!countyDoc) {
+    countyDoc = new PersonalAccount({ county, constituencies: [] });
+  }
+
+  let consIdx = countyDoc.constituencies.findIndex((c) => c.name === constituency);
+  if (consIdx === -1) {
+    countyDoc.constituencies.push({ name: constituency, wards: [] });
+    consIdx = countyDoc.constituencies.length - 1;
+  }
+
+  let wardIdx = countyDoc.constituencies[consIdx].wards.findIndex((w) => w.name === ward);
+  if (wardIdx === -1) {
+    countyDoc.constituencies[consIdx].wards.push({ name: ward, data: [] });
+    wardIdx = countyDoc.constituencies[consIdx].wards.length - 1;
+  }
+
+  const wardRef = countyDoc.constituencies[consIdx].wards[wardIdx];
+  const phone = leafFields.phone ? String(leafFields.phone) : "";
+  const leaf = { ...leafFields };
+  if (!leaf.createdAt) leaf.createdAt = new Date();
+
+  let matchIdx = -1;
+  if (phone) {
+    matchIdx = wardRef.data.findIndex((r) => normalizePhone(r.phone) === normalizePhone(phone));
+  }
+  if (matchIdx !== -1) {
+    const existing = wardRef.data[matchIdx];
+    const existingId = existing._id;
+    const existingCreated = existing.createdAt;
+    wardRef.data[matchIdx] = {
+      ...(existing.toObject ? existing.toObject() : existing),
+      ...leaf,
+      _id: existingId,
+      createdAt: existingCreated || leaf.createdAt,
+      updatedAt: new Date(),
+    };
+  } else {
+    wardRef.data.push(leaf);
+  }
+
+  await countyDoc.save();
+  const flat = flattenPersonalAccountDoc(countyDoc);
+  if (phone) {
+    return flat.find((r) => normalizePhone(r.phone) === normalizePhone(phone)) || null;
+  }
+  const last = wardRef.data[wardRef.data.length - 1];
+  return last ? {
+    ...(last.toObject ? last.toObject() : last),
+    county, constituency, ward,
+  } : null;
+};
+
+const mutatePersonalLeaves = async (predicate, mutator) => {
+  const ready = await ensureMongoReady();
+  if (!ready) return null;
+  const docs = await PersonalAccount.find({});
+  let totalMutated = 0;
+  for (const countyDoc of docs) {
+    let changed = false;
+    for (const cons of countyDoc.constituencies || []) {
+      for (const ward of cons.wards || []) {
+        for (let i = 0; i < (ward.data || []).length; i++) {
+          const rec = ward.data[i];
+          const flatRec = {
+            ...(rec.toObject ? rec.toObject() : rec),
+            county: countyDoc.county,
+            constituency: cons.name,
+            ward: ward.name,
+          };
+          if (predicate(flatRec)) {
+            const updated = mutator(rec, {
+              county: countyDoc.county,
+              constituency: cons.name,
+              ward: ward.name,
+            });
+            if (updated !== undefined) {
+              ward.data[i] = updated;
+              ward.data[i].updatedAt = new Date();
+            } else {
+              rec.updatedAt = new Date();
+            }
+            changed = true;
+            totalMutated++;
+          }
+        }
+      }
+    }
+    if (changed) await countyDoc.save();
+  }
+  return totalMutated;
+};
+
+const findPersonalRecord = async (predicate) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+    const cursor = PersonalAccount.find({}).cursor();
+    for await (const doc of cursor) {
+      const flat = flattenPersonalAccountDoc(doc);
+      for (const rec of flat) {
+        try { if (predicate(rec)) return rec; } catch (_) {}
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error("[findPersonalRecord] error:", e.message);
+    return null;
+  }
+};
+
+const updatePersonalRecord = async (predicate, setFields = {}) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+    const docs = await PersonalAccount.find({});
+    for (const countyDoc of docs) {
+      let matchedFlat = null;
+      let changed = false;
+      for (const cons of countyDoc.constituencies || []) {
+        for (const ward of cons.wards || []) {
+          for (let i = 0; i < (ward.data || []).length; i++) {
+            const r = ward.data[i];
+            const flat = {
+              ...(r.toObject ? r.toObject() : r),
+              county: countyDoc.county,
+              constituency: cons.name,
+              ward: ward.name,
+            };
+            if (predicate(flat)) {
+              Object.keys(setFields).forEach((k) => { r[k] = setFields[k]; });
+              r.updatedAt = new Date();
+              matchedFlat = {
+                ...(r.toObject ? r.toObject() : { ...r }),
+                county: countyDoc.county,
+                constituency: cons.name,
+                ward: ward.name,
+              };
+              changed = true;
+              break;
+            }
+          }
+          if (matchedFlat) break;
+        }
+        if (matchedFlat) break;
+      }
+      if (changed) await countyDoc.save();
+      if (matchedFlat) return matchedFlat;
+    }
+    return null;
+  } catch (e) {
+    console.error("[updatePersonalRecord] error:", e.message);
+    return null;
+  }
+};
+
+const upsertPersonalAccount = async (data) => {
+  const county = String(data.county || "").trim() || "Unknown";
+  const constituency = String(data.constituency || "").trim() || "Unknown";
+  const ward = String(data.ward || "").trim() || "Unknown Ward";
+  const payload = { ...data };
+  delete payload.county;
+  delete payload.constituency;
+  delete payload.ward;
+  return await savePersonalAccountToMongo({
+    county, constituency, ward, ...payload,
+  });
+};
 
 /**
  * Agent Schema - backed by the `agents` MongoDB collection
@@ -2552,4 +2796,12 @@ module.exports = {
   updatePendingRecord,
   upsertPendingAccount,
   mutatePendingLeaves,
+  flattenPersonalAccountDoc,
+  getAllPersonalFlattened,
+  findPersonalAccountByPhone,
+  savePersonalAccountToMongo,
+  mutatePersonalLeaves,
+  findPersonalRecord,
+  updatePersonalRecord,
+  upsertPersonalAccount,
 };

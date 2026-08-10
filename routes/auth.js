@@ -24,6 +24,10 @@ const {
   findPendingRecord,
   updatePendingRecord,
   deletePendingRecord,
+  findPersonalAccountByPhone,
+  savePersonalAccountToMongo,
+  mutatePersonalLeaves,
+  upsertPersonalAccount,
 } = require("../mongoose");
 const {
   consumeVerifiedRegistration,
@@ -76,17 +80,10 @@ const normRegionKey = (v) => String(v || "").trim();
 /**
  * Creates or updates the MongoDB PersonalAccount document for a phone number.
  *
- * This is the ONLY place a PersonalAccount is written from registration —
- * the old parallel write to p_account/personal.json has been removed. That
- * file write ran before the Mongo save and threw on Render's filesystem,
- * which meant the outer catch swallowed the error and the MongoDB
- * PersonalAccount.save() below it never executed. That's the "database
- * error" that was silently dropping personal accounts.
- *
- * Uses findOneAndUpdate + upsert instead of `new PersonalAccount().save()`
- * so re-submitting /complete-registration (e.g. from the resume-payment
- * popup) updates the existing doc instead of throwing an E11000 duplicate
- * key error on the unique `phone` index.
+ * PersonalAccount is now stored in the SAME county→constituencies→wards→data[]
+ * nesting as PendingAccount and County. The county / constituency / ward
+ * fields exist ONLY on the document hierarchy — they are NOT duplicated
+ * inside the leaf record (this function removes them from the leaf payload).
  *
  * If a registration fee was actually paid (amount > 0), it is added to
  * account.personal.reg_fee and account.personal.personal, and a matching
@@ -106,56 +103,88 @@ const upsertPersonalAccountMongo = async ({
   const wardKey = normRegionKey(ward);
   const paidAmount = Number(amount || 0);
   const now = new Date();
-
-  const existing = await PersonalAccount.findOne({ phone }).lean();
-  const prevPersonal = existing?.account?.personal?.personal || 0;
-  const prevRegFee = existing?.account?.personal?.reg_fee || 0;
-  const newPersonal = prevPersonal + paidAmount;
-  const newRegFee = prevRegFee + paidAmount;
-
-  const setFields = {
-    county: countyKey,
-    constituency: constituencyKey,
-    ward: wardKey,
-    updatedAt: now,
-    "account.personal.reg_fee": newRegFee,
-    "account.personal.personal": newPersonal
-  };
-
-  const update = {
-    $setOnInsert: {
-      phone,
-      createdAt: now,
-      "account.business": { name: "", "total-bal": 0, float: 0, benefit: 0 }
-    },
-    $set: setFields
-  };
-
-  if (paidAmount > 0) {
-    update.$push = {
-      transactions: {
-        reference: reference || "",
-        time: now,
-        openingBalance: prevPersonal,
-        amount: paidAmount,
-        type: "received",
-        to: { name: "Personal Account", number: phone },
-        closingBalance: newPersonal,
-        environment: paymentMethod || "unknown",
-        notes: "Registration fee"
-      }
-    };
-  }
+  let savedDoc = null;
 
   try {
-    const doc = await PersonalAccount.findOneAndUpdate({ phone }, update, {
-      upsert: true,
-      new: true,
-      runValidators: true,
-      setDefaultsOnInsert: true
-    });
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === normalizePhone(phone),
+      (rec) => {
+        const prevPersonal = rec.account?.personal?.personal || 0;
+        const prevRegFee = rec.account?.personal?.reg_fee || 0;
+        const newPersonal = prevPersonal + paidAmount;
+        const newRegFee = prevRegFee + paidAmount;
+
+        if (!rec.account) rec.account = {};
+        if (!rec.account.business) {
+          rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+        }
+        if (!rec.account.personal) rec.account.personal = {};
+        if (!rec.account.pending) rec.account.pending = { value: 0 };
+
+        rec.account.personal.reg_fee = newRegFee;
+        rec.account.personal.personal = newPersonal;
+        rec.updatedAt = now;
+
+        if (paidAmount > 0) {
+          if (!rec.transactions) rec.transactions = [];
+          rec.transactions.push({
+            reference: reference || "",
+            time: now,
+            openingBalance: prevPersonal,
+            amount: paidAmount,
+            type: "received",
+            to: { name: "Personal Account", number: phone },
+            closingBalance: newPersonal,
+            environment: paymentMethod || "unknown",
+            notes: "Registration fee",
+            status: "completed",
+          });
+        }
+
+        savedDoc = rec;
+        return rec;
+      },
+    );
+
+    if (!savedDoc) {
+      const leaf = {
+        phone,
+        account: {
+          business: { name: "", "total-bal": 0, float: 0, benefit: 0 },
+          pending: { value: 0 },
+          personal: {
+            reg_fee: paidAmount,
+            personal: paidAmount,
+            openBalance: 0,
+            pendingBalance: 0,
+          },
+        },
+        transactions: paidAmount > 0 ? [{
+          reference: reference || "",
+          time: now,
+          openingBalance: 0,
+          amount: paidAmount,
+          type: "received",
+          to: { name: "Personal Account", number: phone },
+          closingBalance: paidAmount,
+          environment: paymentMethod || "unknown",
+          notes: "Registration fee",
+          status: "completed",
+        }] : [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      savedDoc = await savePersonalAccountToMongo({
+        county: countyKey,
+        constituency: constituencyKey,
+        ward: wardKey,
+        ...leaf,
+      });
+    } else {
+      savedDoc = await findPersonalAccountByPhone(phone);
+    }
     console.log(`[REGISTER] Personal account upserted in MongoDB for ${phone} (fee=${paidAmount})`);
-    return doc;
+    return savedDoc;
   } catch (mongoPersonalErr) {
     console.error("Error upserting personal account in MongoDB:", mongoPersonalErr.message);
     return null;
@@ -1513,20 +1542,6 @@ router.post("/complete-registration", async (req, res) => {
       });
     }
 
-    try {
-      await upsertPersonalAccountMongo({
-        phone: normPhone,
-        county,
-        constituency,
-        ward,
-        amount: paidFeeAmount,
-        paymentMethod: paidFeeMethod,
-        reference: paidFeeReference
-      });
-    } catch (personalErr) {
-      console.error("Error creating personal account during completion:", personalErr.message);
-    }
-
     // trans.js: settles the pending holding (if any) from account.pending.value
     // INTO account.personal, and logs a "completed" settlement transaction.
     // Falls back to transferRegistrarFeeToPersonal if no pending holding exists.
@@ -1536,6 +1551,9 @@ router.post("/complete-registration", async (req, res) => {
       try {
         const settleResult = await settlePendingToPersonal({
           phone: normPhone,
+          county,
+          constituency,
+          ward,
           amount: paidFeeAmount,
           reference: paidFeeReference || "SETTLE-PENDING",
           paymentMethod: paidFeeMethod || "unknown",
