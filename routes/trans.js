@@ -627,10 +627,149 @@ async function transferRegistrarFeeToPersonal({
   }
 }
 
+/**
+ * Wallet Add-Fund / top-up. Credits account.personal (personal + openBalance)
+ * and appends a completed "received" ledger transaction. Does NOT touch reg_fee.
+ *
+ * @param {Object} params
+ * @param {string} params.phone - PersonalAccount leaf phone to credit
+ * @param {number} params.amount
+ * @param {string} [params.reference]
+ * @param {string} [params.paymentMethod] - pesapal | mpesa | …
+ * @param {string} [params.payerPhone] - phone that paid (STK / Pesapal)
+ * @param {string} [params.notes]
+ * @returns {Promise<{success: boolean, reason?: string, account?: object, balance?: number}>}
+ */
+async function creditWalletTopUp({
+  phone,
+  amount,
+  reference = "",
+  paymentMethod = "unknown",
+  payerPhone = "",
+  notes = "",
+}) {
+  const creditAmount = Number(amount || 0);
+  if (!phone) return { success: false, reason: "NO_PHONE" };
+  if (!creditAmount || creditAmount <= 0) {
+    return { success: false, reason: "INVALID_AMOUNT" };
+  }
+
+  const membership = await verifyPhoneInCounty(phone);
+  if (!membership.found) {
+    console.warn(`[trans] Refusing wallet top-up — phone not in County: ${phone}`);
+    return { success: false, reason: "NOT_REGISTERED" };
+  }
+
+  const now = new Date();
+  let savedDoc = null;
+  let newOpenBalance = 0;
+
+  try {
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === normalizePhone(phone),
+      (rec) => {
+        if (!rec.account) rec.account = {};
+        if (!rec.account.business) {
+          rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+        }
+        if (!rec.account.pending) rec.account.pending = { value: 0 };
+        if (!rec.account.personal) {
+          rec.account.personal = {
+            reg_fee: 0, personal: 0, openBalance: 0, pendingBalance: 0,
+          };
+        }
+
+        const prevOpen = Number(rec.account.personal.openBalance || 0);
+        const prevPersonal = Number(rec.account.personal.personal || 0);
+        newOpenBalance = prevOpen + creditAmount;
+        const newPersonal = prevPersonal + creditAmount;
+
+        rec.account.personal.openBalance = newOpenBalance;
+        rec.account.personal.personal = newPersonal;
+
+        if (!rec.transactions) rec.transactions = [];
+        rec.transactions.push({
+          reference: reference || `TOPUP-${Date.now()}`,
+          time: now,
+          openingBalance: prevOpen,
+          amount: creditAmount,
+          type: "received",
+          from: {
+            name: paymentMethod === "mpesa" ? "M-Pesa" : (paymentMethod === "pesapal" ? "Pesapal" : "Wallet Top-up"),
+            number: payerPhone || "PAYER",
+          },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: newOpenBalance,
+          environment: paymentMethod,
+          notes: notes || "Wallet Add Fund",
+          status: "completed",
+        });
+        rec.updatedAt = now;
+        savedDoc = rec;
+        return rec;
+      },
+    );
+
+    if (!savedDoc) {
+      const leaf = {
+        phone,
+        account: {
+          business: { name: "", "total-bal": 0, float: 0, benefit: 0 },
+          pending: { value: 0 },
+          personal: {
+            reg_fee: 0,
+            personal: creditAmount,
+            openBalance: creditAmount,
+            pendingBalance: 0,
+          },
+        },
+        transactions: [{
+          reference: reference || `TOPUP-${Date.now()}`,
+          time: now,
+          openingBalance: 0,
+          amount: creditAmount,
+          type: "received",
+          from: {
+            name: paymentMethod === "mpesa" ? "M-Pesa" : (paymentMethod === "pesapal" ? "Pesapal" : "Wallet Top-up"),
+            number: payerPhone || "PAYER",
+          },
+          to: { name: "Personal Account", number: phone },
+          closingBalance: creditAmount,
+          environment: paymentMethod,
+          notes: notes || "Wallet Add Fund",
+          status: "completed",
+        }],
+        createdAt: now,
+        updatedAt: now,
+      };
+      savedDoc = await savePersonalAccountToMongo({
+        county: membership.county,
+        constituency: membership.constituency,
+        ward: membership.ward,
+        ...leaf,
+      });
+      newOpenBalance = creditAmount;
+    } else {
+      savedDoc = await findPersonalAccountByPhone(phone);
+      newOpenBalance = savedDoc?.account?.personal?.openBalance || newOpenBalance;
+    }
+
+    console.log(
+      `[trans] Wallet top-up ${creditAmount} → ${phone} via ${paymentMethod} ` +
+        `openBalance=${newOpenBalance}`,
+    );
+    return { success: true, account: savedDoc, balance: newOpenBalance };
+  } catch (err) {
+    console.error("[trans] Error in creditWalletTopUp:", err.message);
+    return { success: false, reason: "DB_ERROR", error: err.message };
+  }
+}
+
 module.exports = {
   verifyPhoneInCounty,
   creditPendingHolding,
   settlePendingToPersonal,
   creditPendingToPersonalAccount,
   transferRegistrarFeeToPersonal,
+  creditWalletTopUp,
 };

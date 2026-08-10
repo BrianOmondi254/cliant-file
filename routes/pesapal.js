@@ -1,4 +1,4 @@
-const { creditPendingHolding } = require("./trans");
+const { creditPendingHolding, creditWalletTopUp } = require("./trans");
 
 const express = require("express");
 const crypto = require("crypto");
@@ -7,6 +7,7 @@ const path = require("path");
 const child_process = require("child_process");
 const {
   submitOrderRequest,
+  requestPayment,
   getTransactionStatus,
   registerIpnUrl,
   getIpnList,
@@ -244,6 +245,9 @@ const getPendingPayment = async (req) => {
             registrationData: doc.registrationData,
             status: doc.status,
             initiatedAtMs: doc.createdAt ? new Date(doc.createdAt).getTime() : Date.now(),
+            purpose: (doc.registrationData && doc.registrationData.purpose) || undefined,
+            creditPhone: (doc.registrationData && doc.registrationData.creditPhone) || undefined,
+            payerPhone: (doc.registrationData && (doc.registrationData.payerPhone || doc.registrationData.phoneNumber)) || undefined,
           };
         }
       }
@@ -759,6 +763,138 @@ router.post("/initiate", async (req, res) => {
   }
 });
 
+/**
+ * POST /request-payment
+ * Wallet Add Fund via Pesapal. Honours tbank.compliance.personal_account_registration.paymentMethod.
+ * Amount is client-chosen (top-up). On successful callback, credits PersonalAccount.account.personal.
+ */
+router.post("/request-payment", async (req, res) => {
+  try {
+    const sessionUser = (req.session && req.session.user) || null;
+    if (!sessionUser || !sessionUser.phoneNumber) {
+      return res.status(401).json({ success: false, message: "Please log in to add funds." });
+    }
+
+    const { settings: feeSettings, source } = await loadRegistrationFeeSettings();
+    const method = String(feeSettings?.paymentMethod || "").toLowerCase();
+    if (method !== "pesapal") {
+      return res.status(400).json({
+        success: false,
+        message: `Pesapal is not the active payment method (source=${source}, method=${method || "none"}).`,
+        paymentMethod: method || "none",
+      });
+    }
+
+    const amount = Number(req.body.amount);
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid amount provided." });
+    }
+
+    const creditPhone = String(sessionUser.phoneNumber).trim();
+    const payerPhone = String(req.body.phone || req.body.payerPhone || creditPhone).trim();
+    if (!payerPhone) {
+      return res.status(400).json({ success: false, message: "Payer phone number is required." });
+    }
+
+    const orderId = crypto.randomBytes(16).toString("hex");
+    const baseUrl = getBaseUrl(req);
+    const callbackUrl = envCallbackUrl || `${baseUrl}/api/payment/pesapal/callback`;
+    const notificationId = envIpnId || "";
+
+    const firstName = sessionUser.FirstName || sessionUser.firstName || sessionUser.name || "";
+    const middleName = sessionUser.MiddleName || sessionUser.middleName || "";
+    const lastName = sessionUser.LastName || sessionUser.lastName || "";
+    const email = sessionUser.email || "";
+
+    const registrationData = {
+      purpose: "wallet_topup",
+      creditPhone,
+      payerPhone,
+      phoneNumber: payerPhone,
+      FirstName: firstName,
+      MiddleName: middleName,
+      LastName: lastName,
+      email,
+      county: sessionUser.county || "",
+      constituency: sessionUser.constituency || "",
+      ward: sessionUser.ward || "",
+    };
+
+    let orderResult = null;
+    let usedFallback = false;
+    const orderPayload = {
+      id: orderId,
+      amount,
+      currency: "KES",
+      description: "Cliant Wallet Add Fund",
+      callbackUrl,
+      notificationId,
+      firstName,
+      middleName,
+      lastName,
+      email,
+      phoneNumber: payerPhone,
+    };
+
+    try {
+      orderResult = await requestPayment(orderPayload, { skipNotificationId: false });
+    } catch (primaryErr) {
+      if (isPesapalIpnInvalid(primaryErr)) {
+        usedFallback = true;
+        orderResult = await requestPayment(
+          { ...orderPayload, notificationId: "" },
+          { skipNotificationId: true }
+        );
+      } else {
+        throw primaryErr;
+      }
+    }
+
+    if (!orderResult || !orderResult.redirect_url) {
+      return res.status(500).json({
+        success: false,
+        message:
+          orderResult?.error?.message ||
+          "Failed to initiate Pesapal wallet payment.",
+      });
+    }
+
+    const now = Date.now();
+    await setPendingPayment(req, orderId, {
+      purpose: "wallet_topup",
+      creditPhone,
+      payerPhone,
+      amount,
+      expectedAmount: amount,
+      registrationData: JSON.stringify(registrationData),
+      orderTrackingId: orderResult.order_tracking_id || null,
+      merchantReference: orderResult.merchant_reference || orderId,
+      createdAt: new Date().toISOString(),
+      initiatedAtMs: now,
+      status: "INITIATED",
+      ipnUsed: !usedFallback && !!notificationId,
+    });
+
+    return res.json({
+      success: true,
+      paymentMethod: "pesapal",
+      redirect_url: orderResult.redirect_url,
+      orderId,
+      warning: usedFallback
+        ? "Pesapal IPN ID may be invalid; payment will complete via browser callback."
+        : null,
+    });
+  } catch (err) {
+    console.error("Pesapal request-payment error:", err.message, err.response?.data);
+    return res.status(500).json({
+      success: false,
+      message:
+        err.response?.data?.error?.message ||
+        "Server error initiating Pesapal wallet payment.",
+    });
+  }
+});
+
 async function handlePesapalCallback(req, res) {
   const {
     OrderTrackingId,
@@ -862,6 +998,60 @@ async function handlePesapalCallback(req, res) {
           `[Pesapal Callback] No user input phone available — falling back to callback paymentAccount=${paymentAccount}`
         );
         resolvedPhone = String(paymentAccount).trim();
+      }
+
+      const purpose = String(pending.purpose || userData.purpose || "").toLowerCase();
+      if (purpose === "wallet_topup") {
+        const creditPhone = String(
+          pending.creditPhone || userData.creditPhone || resolvedPhone || ""
+        ).trim();
+        const payerPhone = String(
+          pending.payerPhone || userData.payerPhone || resolvedPhone || paymentAccount || ""
+        ).trim();
+        try {
+          const topUp = await creditWalletTopUp({
+            phone: creditPhone,
+            amount: expectedAmount,
+            reference: confirmationCode || strOrderTrackingId || OrderMerchantReference || "",
+            paymentMethod: "pesapal",
+            payerPhone,
+            notes: "Wallet Add Fund via Pesapal",
+          });
+          console.log(
+            `[Pesapal Callback] Wallet top-up result for ${creditPhone}:`,
+            topUp.success ? `OK balance=${topUp.balance}` : topUp.reason
+          );
+        } catch (topErr) {
+          console.error("[Pesapal Callback] creditWalletTopUp error:", topErr.message);
+        }
+
+        return res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Wallet Top-up Successful</title>
+            <style>
+              body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+                background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);font-family:system-ui,sans-serif;padding:16px;}
+              .card{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:28px 22px;text-align:center;
+                box-shadow:0 20px 50px rgba(0,0,0,.3);}
+              h1{font-size:20px;margin:0 0 8px;color:#166534;}
+              p{font-size:14px;color:#475569;line-height:1.5;margin:0 0 18px;}
+              a{display:inline-block;padding:12px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);
+                color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;}
+            </style>
+            <script>setTimeout(function(){ window.location.replace('/personal'); }, 2500);</script>
+          </head>
+          <body>
+            <div class="card">
+              <h1>Payment Successful</h1>
+              <p>KSh ${Number(expectedAmount).toLocaleString()} has been added to your personal wallet.</p>
+              <a href="/personal">Back to Wallet</a>
+            </div>
+          </body>
+        </html>`);
       }
 
       if (PendingAccount && upsertPendingAccount) {

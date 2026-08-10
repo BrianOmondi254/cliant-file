@@ -426,6 +426,24 @@
         .m-submit-btn.danger {
             background: linear-gradient(135deg, #dc2626, #f87171);
         }
+        /* ── PHONE TARGET SELECT (Add Fund) ── */
+        .m-choice-row {
+            display: flex; gap: 8px; margin-bottom: 14px;
+        }
+        .m-choice-btn {
+            flex: 1; padding: 12px 10px;
+            background: #fff; border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', 'Outfit', sans-serif;
+            font-size: 12px; font-weight: 700; color: var(--text-dark);
+            cursor: pointer; text-align: center;
+            transition: border-color .2s, background .2s, color .2s, box-shadow .2s;
+        }
+        .m-choice-btn.active {
+            background: #f0fdf4; border-color: var(--primary); color: var(--primary);
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+        .m-choice-btn i { display: block; font-size: 16px; margin-bottom: 4px; }
         /* ── DIVIDER ── */
         .m-divider { height: 1px; background: var(--border); margin: 16px 0; }
         /* ── STAT GRID (for payment summary etc.) ── */
@@ -609,7 +627,7 @@ const app = {
         dealerIsVerified: <%- JSON.stringify(dealerIsVerified) %>,
         personalIsVerified: <%- JSON.stringify(typeof personalIsVerified !== 'undefined' ? personalIsVerified : false) %>,
         role: 'Personal',
-        balance: 1500.00,
+        balance: 0,
         transactions: [],
         unread: 0,
         batch: [],
@@ -713,37 +731,60 @@ const app = {
             if (data.success) {
                 this.data.balance = Number(data.balance) || 0;
                 this.data.transactions = data.transactions || [];
+                this.updateWalletBalanceUI();
                 this.refreshPersonalDashboardIfVisible();
+            } else {
+                this.data.balance = 0;
+                this.data.transactions = [];
+                this.updateWalletBalanceUI();
             }
         } catch (e) {
             console.error('Error fetching wallet:', e);
             this.data.balance = 0;
             this.data.transactions = [];
+            this.updateWalletBalanceUI();
             this.refreshPersonalDashboardIfVisible();
         }
     },
+    updateWalletBalanceUI() {
+        const bal = Number(this.data.balance) || 0;
+        const formatted = bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const walletText = document.getElementById('walletBalanceText');
+        if (walletText) walletText.textContent = `KSh ${formatted}`;
+        const headerVal = document.getElementById('headerBalanceValue');
+        if (headerVal && headerVal.style.display !== 'none' && headerVal.textContent) {
+            headerVal.textContent = `KSh ${formatted}`;
+        }
+        const sheetBal = document.getElementById('sheetWalletBalance');
+        if (sheetBal) sheetBal.textContent = `KSh ${formatted}`;
+    },
     /* ─── DIRECT BALANCE DISPLAY ─── */
-    showBalanceDirectly() {
+    async showBalanceDirectly() {
+        await this.fetchWalletData();
         const balanceAmount = Number(this.data.balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         const originalTxns = this.data.transactions || [];
-        // Clone and sort chronologically (oldest first) to calculate real-time running balances
+        // Prefer opening/closing stored on PersonalAccount transactions; fall back to ledger rebuild
         const txns = [...originalTxns].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-        // Calculate historical running balances going backwards from current balance
         let runningVal = Number(this.data.balance);
         const ledgerItems = [];
         for (let i = txns.length - 1; i >= 0; i--) {
             const tx = txns[i];
             const amt = Number(tx.amt || 0);
-            const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'credit';
-            const closing = runningVal;
-            const opening = isCredit ? (runningVal - amt) : (runningVal + amt);
+            const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
+            const hasStored =
+                tx.opening !== undefined && tx.opening !== null &&
+                tx.closing !== undefined && tx.closing !== null;
+            const closing = hasStored ? Number(tx.closing) : runningVal;
+            const opening = hasStored
+                ? Number(tx.opening)
+                : (isCredit ? (runningVal - amt) : (runningVal + amt));
             ledgerItems[i] = {
                 ...tx,
-                opening: opening,
-                closing: closing,
-                isCredit: isCredit
+                opening,
+                closing,
+                isCredit
             };
-            runningVal = opening; // Update the running value for the next oldest transaction
+            runningVal = opening;
         }
         let ledgerCardsHTML = '';
         if (ledgerItems.length > 0) {
@@ -759,13 +800,10 @@ const app = {
                 const amtColor = tx.isCredit ? '#16a34a' : '#dc2626';
                 const amtPrefix = tx.isCredit ? '+' : '-';
                 const bgLight = tx.isCredit ? '#f0fdf4' : '#fef2f2';
-                // Generate realistic codes & account numbers deterministically based on amount and index
                 const txCode = tx.code || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
-                const txAccNo = tx.accountNumber || (tx.type === 'deposit' ? '07' + String(10 + (i * 7) % 89) + ' *** ' + String(100 + (i * 23) % 900) : 'Acc: 4040' + String(100 + (i * 19) % 900));
-                const txVia = tx.processedBy || (tx.acc === 'M-Pesa Deposit' ? 'M-PESA Paybill' : 'T-BANK API Gateway');
+                const txAccNo = tx.accountNumber || '—';
                 ledgerCardsHTML += `
                     <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
-                        <!-- Date & Transaction Details Row (Card Header) -->
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
                             <div>
                                 <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${tx.acc || 'Personal Account'}</h4>
@@ -774,7 +812,6 @@ const app = {
                                 ${txDate}
                             </span>
                         </div>
-                        <!-- Ref Code and Processed To Row (Directly below Card Header) -->
                         <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 10px; color: #64748b;">
                             <div>
                                 <span style="font-weight: 700; color: #475569;">Ref Code:</span>
@@ -785,31 +822,26 @@ const app = {
                                 <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txAccNo}</span>
                             </div>
                         </div>
-                        <!-- Ledger Accounting Balance Flow (Opening -> Amount -> Closing) -->
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px dashed #f1f5f9;">
-                            <!-- Opening Balance Column -->
                             <div style="flex: 1; text-align: left;">
                                 <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
                                 <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
-                                    KSh ${tx.opening.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                    KSh ${Number(tx.opening).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
-                            <!-- Amount Flow Column -->
                             <div style="flex: 1.2; text-align: center; background: ${bgLight}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${tx.isCredit ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
                                 <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
                                 <span style="font-size: 11.5px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
                                     ${amtPrefix} KSh ${Number(tx.amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
-                            <!-- Closing Balance Column -->
                             <div style="flex: 1; text-align: right;">
                                 <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
                                 <span style="font-size: 11.5px; font-family: monospace; font-weight: 800; color: var(--primary); white-space: nowrap;">
-                                    KSh ${tx.closing.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                    KSh ${Number(tx.closing).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
                         </div>
-                        <!-- Status Footer Row -->
                         <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; opacity: 0.9;">
                             <span>Status: <strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Completed</strong></span>
                         </div>
@@ -829,19 +861,24 @@ const app = {
                 <!-- Header Row: Back button and Far-Right Wallet Balance -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 6px 4px;">
                     <!-- Back Nav -->
-                    <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="app.renderPersonalView(document.getElementById('mainContainer'))">
+                    <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="app.fetchWalletData().then(function(){ app.renderPersonalView(document.getElementById('mainContainer')); })">
                         <i class="fa-solid fa-arrow-left" style="font-size: 15px; color: var(--text-dark);"></i>
                         <span style="font-size: 14px; font-weight: 700; color: var(--text-dark);">Back</span>
                     </div>
-                    <!-- Wallet Balance -->
+                    <!-- Wallet Balance (PersonalAccount openBalance / latest closing) -->
                     <div style="text-align: right;">
                         <span style="font-size: 9px; text-transform: uppercase; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Wallet Balance</span>
-                        <span style="font-size: 14px; font-weight: 800; color: var(--primary); font-family: monospace;">KSh ${balanceAmount}</span>
+                        <span id="sheetWalletBalance" style="font-size: 14px; font-weight: 800; color: var(--primary); font-family: monospace;">KSh ${balanceAmount}</span>
                     </div>
                 </div>
-                <!-- Transaction Ledger Label -->
-                <div class="section-label" style="margin-left: 0; margin-right: 0; margin-bottom: 12px; font-size: 13px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px;">
-                    📜 Transaction Sheet
+                <!-- Transaction Ledger Label + Add Fund (far right) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px;">
+                    <div class="section-label" style="margin: 0; font-size: 13px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px;">
+                        📜 Transaction Sheet
+                    </div>
+                    <button type="button" onclick="app.flowAddFund()" style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(12,143,68,.25);">
+                        <i class="fa-solid fa-plus"></i> Add Fund
+                    </button>
                 </div>
                 <!-- Ledger Cards Container -->
                 <div>
@@ -852,6 +889,202 @@ const app = {
         const container = document.getElementById('mainContainer');
         container.innerHTML = balanceHTML;
         window.scrollTo(0, 0);
+    },
+    /* ─── ADD FUND ─── */
+    flowAddFund() {
+        const myPhone = (this.data.user && this.data.user.phoneNumber) || '';
+        const html = `
+        <div class="m-info-banner green"><i class="fa-solid fa-wallet"></i><span>Top up your wallet via M-Pesa. Choose whose phone will receive the STK push.</span></div>
+        <div class="m-field">
+            <label>Amount (KSh)</label>
+            <input type="number" id="addFundAmount" class="form-input" placeholder="e.g. 500" inputmode="numeric" min="1">
+        </div>
+        <div class="m-section-label" style="margin-top:4px;">Pay From</div>
+        <div class="m-choice-row">
+            <button type="button" class="m-choice-btn active" id="addFundChoiceMine" onclick="app.setAddFundPhoneTarget('mine')">
+                <i class="fa-solid fa-mobile-screen"></i> My Number
+            </button>
+            <button type="button" class="m-choice-btn" id="addFundChoiceOther" onclick="app.setAddFundPhoneTarget('other')">
+                <i class="fa-solid fa-phone"></i> Other Number
+            </button>
+        </div>
+        <div class="m-field" id="addFundMyPhoneWrap">
+            <label>My Phone Number</label>
+            <input type="tel" id="addFundMyPhone" class="form-input" value="${myPhone}" readonly style="background-color:#f1f5f9;color:#64748b;cursor:not-allowed;font-weight:600;">
+        </div>
+        <div class="m-field hidden" id="addFundOtherPhoneWrap">
+            <label>Other Phone Number</label>
+            <input type="tel" id="addFundOtherPhone" class="form-input" placeholder="07XX XXX XXX" inputmode="tel">
+        </div>
+        <button type="button" class="m-submit-btn" id="addFundSubmitBtn" onclick="app.processAddFund()">
+            <i class="fa-solid fa-circle-check"></i> Submit
+        </button>`;
+        this.updateModalContent('Add Fund', html, null, 'fa-plus-circle');
+        this.openModal();
+    },
+    setAddFundPhoneTarget(target) {
+        const mineBtn = document.getElementById('addFundChoiceMine');
+        const otherBtn = document.getElementById('addFundChoiceOther');
+        const myWrap = document.getElementById('addFundMyPhoneWrap');
+        const otherWrap = document.getElementById('addFundOtherPhoneWrap');
+        if (!mineBtn || !otherBtn || !myWrap || !otherWrap) return;
+        const isOther = target === 'other';
+        mineBtn.classList.toggle('active', !isOther);
+        otherBtn.classList.toggle('active', isOther);
+        myWrap.classList.toggle('hidden', isOther);
+        otherWrap.classList.toggle('hidden', !isOther);
+        if (isOther) {
+            const otherInput = document.getElementById('addFundOtherPhone');
+            if (otherInput) otherInput.focus();
+        }
+    },
+    processAddFund() {
+        const amountEl = document.getElementById('addFundAmount');
+        const isOther = document.getElementById('addFundChoiceOther')?.classList.contains('active');
+        const amount = parseFloat(amountEl && amountEl.value);
+        const phone = isOther
+            ? (document.getElementById('addFundOtherPhone')?.value || '').trim()
+            : (document.getElementById('addFundMyPhone')?.value || '').trim();
+        if (!amount || amount <= 0) {
+            this.showToast('Enter a valid amount.', 'error');
+            return;
+        }
+        if (!phone) {
+            this.showToast(isOther ? 'Enter the other phone number.' : 'Your phone number is missing.', 'error');
+            return;
+        }
+        const submitBtn = document.getElementById('addFundSubmitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        }
+        this.initiateAddFundPayment(amount, phone, submitBtn);
+    },
+    async initiateAddFundPayment(amount, phone, submitBtn) {
+        const restoreBtn = () => {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Submit';
+            }
+        };
+        try {
+            const methodRes = await fetch('/personal/wallet-payment-method');
+            const methodData = await methodRes.json();
+            if (!methodData.success) {
+                this.showToast(methodData.message || 'Could not load payment method.', 'error');
+                restoreBtn();
+                return;
+            }
+            const method = String(methodData.paymentMethod || '').toLowerCase();
+            if (method === 'pesapal') {
+                const res = await fetch('/api/payment/pesapal/request-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, phone, payerPhone: phone }),
+                });
+                const data = await res.json();
+                if (data.success && data.redirect_url) {
+                    this.showToast('Redirecting to Pesapal…', 'info');
+                    window.location.href = data.redirect_url;
+                    return;
+                }
+                this.showToast(data.message || 'Failed to start Pesapal payment.', 'error');
+                restoreBtn();
+                return;
+            }
+            if (method === 'mpesa') {
+                const creditPhone = (this.data.user && this.data.user.phoneNumber) || phone;
+                const res = await fetch('/api/mpesa/stk-push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone,
+                        amount,
+                        purpose: 'wallet_topup',
+                        accountPhone: creditPhone,
+                        reference: 'Wallet Top-up',
+                        description: 'Cliant Wallet Add Fund',
+                    }),
+                });
+                const data = await res.json();
+                if (data.success && data.CheckoutRequestID) {
+                    this.showAddFundMpesaWaiting(amount, phone, data.CheckoutRequestID, data.CustomerMessage);
+                    return;
+                }
+                this.showToast(data.message || 'Failed to send M-Pesa STK push.', 'error');
+                restoreBtn();
+                return;
+            }
+            this.showToast('No active payment method configured (expected pesapal or mpesa).', 'error');
+            restoreBtn();
+        } catch (e) {
+            console.error('Add Fund error:', e);
+            this.showToast('Network error starting payment.', 'error');
+            restoreBtn();
+        }
+    },
+    showAddFundMpesaWaiting(amount, phone, checkoutId, customerMessage) {
+        const html = `
+        <div class="m-info-banner green"><i class="fa-solid fa-mobile-screen"></i>
+            <span>${customerMessage || 'STK push sent. Enter your M-Pesa PIN on your phone to complete payment.'}</span>
+        </div>
+        <div class="m-stat-grid">
+            <div class="m-stat-cell"><div class="m-stat-cell-label">Amount</div><div class="m-stat-cell-value">KSh ${Number(amount).toLocaleString()}</div></div>
+            <div class="m-stat-cell"><div class="m-stat-cell-label">Phone</div><div class="m-stat-cell-value" style="font-size:12px;">${phone}</div></div>
+        </div>
+        <div id="addFundMpesaStatus" class="m-info-banner blue" style="margin-top:4px;">
+            <i class="fa-solid fa-spinner fa-spin"></i><span>Waiting for payment confirmation…</span>
+        </div>
+        <button type="button" class="m-submit-btn secondary" onclick="app.closeModal()">Close</button>`;
+        this.updateModalContent('Confirm on Phone', html, null, 'fa-mobile-screen-button');
+        this._addFundPollCount = 0;
+        if (this._addFundPollTimer) clearInterval(this._addFundPollTimer);
+        this._addFundPollTimer = setInterval(() => this.pollAddFundMpesa(checkoutId), 4000);
+    },
+    async pollAddFundMpesa(checkoutId) {
+        this._addFundPollCount = (this._addFundPollCount || 0) + 1;
+        if (this._addFundPollCount > 45) {
+            if (this._addFundPollTimer) clearInterval(this._addFundPollTimer);
+            const statusEl = document.getElementById('addFundMpesaStatus');
+            if (statusEl) {
+                statusEl.className = 'm-info-banner amber';
+                statusEl.innerHTML = '<i class="fa-solid fa-clock"></i><span>Still waiting. If you paid, refresh your wallet shortly.</span>';
+            }
+            return;
+        }
+        try {
+            const res = await fetch('/api/mpesa/status/' + encodeURIComponent(checkoutId));
+            const data = await res.json();
+            const code = data.ResultCode !== undefined ? Number(data.ResultCode) : null;
+            if (code === 0 || (data._walletTopUp && data._walletTopUp.success)) {
+                if (this._addFundPollTimer) clearInterval(this._addFundPollTimer);
+                await this.fetchWalletData();
+                const bal = Number(this.data.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const html = `
+                <div class="m-info-banner green"><i class="fa-solid fa-circle-check"></i><span>Payment received. Your wallet has been updated.</span></div>
+                <div style="text-align:center;padding:10px 0 16px;">
+                    <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;">New Balance</div>
+                    <div style="font-size:22px;font-weight:800;color:var(--primary);font-family:monospace;">KSh ${bal}</div>
+                </div>
+                <button class="m-submit-btn" onclick="app.closeModal(); app.showBalanceDirectly();"><i class="fa-solid fa-wallet"></i> View Transaction Sheet</button>`;
+                this.updateModalContent('Top-up Successful', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                return;
+            }
+            if (code !== null && code !== 0 && data.ResultDesc) {
+                // 1032 = request cancelled, etc. Keep polling until definitive fail codes commonly used
+                const failCodes = new Set([1032, 1037, 1, 2001]);
+                if (failCodes.has(code)) {
+                    if (this._addFundPollTimer) clearInterval(this._addFundPollTimer);
+                    const statusEl = document.getElementById('addFundMpesaStatus');
+                    if (statusEl) {
+                        statusEl.className = 'm-info-banner red';
+                        statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><span>${data.ResultDesc || 'Payment failed or cancelled.'}</span>`;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Add Fund M-Pesa poll error:', e);
+        }
     },
     flowWithdrawMpesa() {
         const u = this.data.user;
@@ -1682,14 +1915,6 @@ const app = {
         }
     },
     closeModal() { document.getElementById('modalOverlay').classList.remove('open'); },
-    seedHistory() {
-        this.data.transactions = [
-            { type: 'deposit',  acc: 'M-Pesa Deposit',   amt: 1200, date: '10:00 AM' },
-            { type: 'withdraw', acc: 'Send Money',        amt: 350,  date: '09:30 AM' },
-            { type: 'deposit',  acc: 'Receive Payment',  amt: 800,  date: '09:00 AM' },
-            { type: 'withdraw', acc: 'Withdrawal',       amt: 500,  date: '08:45 AM' }
-        ];
-    },
     render() {
         const container = document.getElementById('mainContainer');
         const role = this.data.role;
@@ -1729,7 +1954,7 @@ const app = {
                     <span style="font-size:16px;background:#efebe9;color:#5d4037;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-wallet"></i></span>
                     <div style="text-align:left;">
                         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">My Wallet</span>
-                        ${parseFloat(balanceAmount) > 0 ? `<span style="display:block;font-size:10.5px;color:#64748b;margin-top:1px;">Available balance: <strong id="walletBalanceText" style="color:var(--primary);">KSh ${balanceAmount}</strong></span>` : ''}
+                        <span style="display:block;font-size:10.5px;color:#64748b;margin-top:1px;">Available balance: <strong id="walletBalanceText" style="color:var(--primary);">KSh ${balanceAmount}</strong></span>
                     </div>
                 </div>
                 <span onclick="app.toggleHeaderBalance()" style="font-size: 13px; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: white; padding: 4px 8px; border-radius: 20px; border: 1px solid #e2e8f0;">

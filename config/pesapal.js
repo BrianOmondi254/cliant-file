@@ -113,6 +113,14 @@ async function getIpnList() {
   }
 }
 
+/**
+ * requestPayment — alias used by wallet Add Fund / collection flows.
+ * Wraps Pesapal SubmitOrderRequest.
+ */
+async function requestPayment(orderData, options = {}) {
+  return submitOrderRequest(orderData, options);
+}
+
 async function submitOrderRequest(orderData, options = {}) {
   try {
     const auth = await getAccessToken();
@@ -206,5 +214,6 @@ module.exports = {
   registerIpnUrl,
   getIpnList,
   submitOrderRequest,
+  requestPayment,
   getTransactionStatus,
 };

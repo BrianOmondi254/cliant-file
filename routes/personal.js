@@ -8,7 +8,8 @@ const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameBy
   Message,
   normalizePhone,
   findAgentByPhone,
-  findDealerByPhone } = require("../mongoose");
+  findDealerByPhone,
+  findPersonalAccountByPhone } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -937,53 +938,106 @@ router.get("/myaccount", (req, res) => {
   }
 });
 
-/* 💰 Wallet - Get user's wallet balance and transactions */
-router.get("/wallet", (req, res) => {
+/* 💰 Wallet - PersonalAccount openBalance / latest closingBalance only */
+router.get("/wallet", async (req, res) => {
   try {
     const phone = req.session.user?.phoneNumber;
     if (!phone) return res.status(401).json({ success: false, error: "Not authenticated" });
 
-    const pAccountDir = path.join(__dirname, "../p_account");
-    const personalFile = path.join(pAccountDir, "personal.json");
-    const personalData = readJSON(personalFile, { personalAccounts: {} });
-
-    const normalizedPhone = norm(phone);
-    const accountKey = Object.keys(personalData.personalAccounts || {}).find(key =>
-      norm(personalData.personalAccounts[key].phone) === normalizedPhone
-    );
-
-    if (!accountKey) return res.json({ success: true, balance: 0, transactions: [], accountExists: false });
-
-    const account = personalData.personalAccounts[accountKey];
-    // Handle both old format (transactions on account) and new format (accounts.xxx.transactions)
-    const accountTxns = account.transactions || [];
-    const nestedTxns = [];
-    if (account.accounts && typeof account.accounts === 'object') {
-      Object.values(account.accounts).forEach(acc => {
-        if (acc.transactions && Array.isArray(acc.transactions)) {
-          nestedTxns.push(...acc.transactions);
-        }
+    const mongoAcc = await findPersonalAccountByPhone(phone);
+    if (!mongoAcc) {
+      return res.json({
+        success: true,
+        balance: 0,
+        transactions: [],
+        accountExists: false,
+        source: "mongodb",
       });
     }
-    const allTxns = [...accountTxns, ...nestedTxns];
 
-    const transactions = allTxns.map(t => ({
-      type: t.type || t.transactionType || 'received',
-      acc: (t.from?.name || t.to?.name || 'Personal Account'),
-      amt: parseFloat(t.amount || 0),
-      date: t.time || t.date,
-      accountNumber: t.to?.number || t.from?.number || account.phone,
-      notes: t.notes || ''
-    }));
+    const txns = Array.isArray(mongoAcc.transactions) ? [...mongoAcc.transactions] : [];
+    txns.sort((a, b) => new Date(a.time || 0) - new Date(b.time || 0));
 
-    const balance = transactions.length > 0
-      ? transactions.reduce((sum, t) => sum + (t.type === 'received' || t.type === 'deposit' ? t.amt : -t.amt), 0)
-      : 0;
+    const openBal = Number(mongoAcc.account?.personal?.openBalance ?? 0);
+    const personalBal = Number(mongoAcc.account?.personal?.personal ?? 0);
+    const latestClosing = txns.length
+      ? Number(txns[txns.length - 1].closingBalance)
+      : null;
+    // Current wallet balance = latest closing when present, else openBalance / personal
+    const balance = Number.isFinite(latestClosing)
+      ? latestClosing
+      : (Number.isFinite(openBal) ? openBal : personalBal);
 
-    res.json({ success: true, balance, transactions, accountExists: true });
+    const transactions = txns.map((t) => {
+      const rawType = String(t.type || "received").toLowerCase();
+      const isIn =
+        rawType === "received" ||
+        rawType === "deposit" ||
+        rawType === "credit" ||
+        rawType === "receive";
+      return {
+        type: isIn ? "deposit" : "withdraw",
+        acc: t.from?.name || t.to?.name || "Personal Account",
+        amt: parseFloat(t.amount || 0),
+        date: t.time || t.date,
+        accountNumber: t.to?.number || t.from?.number || mongoAcc.phone,
+        notes: t.notes || "",
+        code: t.reference || "",
+        processedBy: t.environment || "",
+        opening: Number(t.openingBalance ?? 0),
+        closing: Number(t.closingBalance ?? 0),
+        status: t.status || "completed",
+      };
+    });
+
+    return res.json({
+      success: true,
+      balance: Number(balance) || 0,
+      openBalance: openBal,
+      personal: personalBal,
+      transactions,
+      accountExists: true,
+      source: "mongodb",
+    });
   } catch (err) {
     console.error("Error fetching wallet:", err);
     res.status(500).json({ success: false, error: "Failed to load wallet" });
+  }
+});
+
+/* Active collection payment method for wallet Add Fund */
+router.get("/wallet-payment-method", async (req, res) => {
+  try {
+    if (!req.session.user?.phoneNumber) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+    let paymentMethod = "none";
+    let source = "none";
+    try {
+      const tbankSettings = await getTbankSettings();
+      const reg = tbankSettings?.compliance?.personal_account_registration;
+      if (reg?.paymentMethod) {
+        paymentMethod = String(reg.paymentMethod).toLowerCase();
+        source = "mongodb";
+      }
+    } catch (_e) { /* fall through */ }
+    if (paymentMethod === "none") {
+      try {
+        const tbankFile = path.join(__dirname, "../tbank.json");
+        if (fs.existsSync(tbankFile)) {
+          const raw = JSON.parse(fs.readFileSync(tbankFile, "utf8"));
+          const reg = raw?.compliance?.personal_account_registration;
+          if (reg?.paymentMethod) {
+            paymentMethod = String(reg.paymentMethod).toLowerCase();
+            source = "tbank.json";
+          }
+        }
+      } catch (_e) { /* ignore */ }
+    }
+    return res.json({ success: true, paymentMethod, source });
+  } catch (err) {
+    console.error("[wallet-payment-method]", err.message);
+    return res.status(500).json({ success: false, message: "Failed to load payment method" });
   }
 });
 
