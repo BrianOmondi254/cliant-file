@@ -475,6 +475,35 @@
     let passkeySecondsLeft = 0;
     const PASSKEY_TTL_SECONDS = 3 * 60;
 
+    function showToast(message, variant) {
+        const text = String(message || '').trim();
+        if (!text) return;
+        const safe = text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        let host = document.getElementById('toastHost');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'toastHost';
+            host.setAttribute('aria-live', 'polite');
+            host.setAttribute('role', 'status');
+            document.body.appendChild(host);
+        }
+        const el = document.createElement('div');
+        el.className = 'toast toast-' + (variant === 'success' ? 'success' : variant === 'info' ? 'info' : 'error');
+        el.innerHTML = safe;
+        host.appendChild(el);
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () { el.classList.add('toast-in'); });
+        });
+        el.addEventListener('click', function () { el.remove(); });
+        window.setTimeout(function () {
+            el.classList.remove('toast-in');
+            el.classList.add('toast-out');
+            window.setTimeout(function () { el.remove(); }, 300);
+        }, 4500);
+    }
+
     function togglePass(id, el) {
         const input = document.getElementById(id);
         if (input.type === "password") {
@@ -594,52 +623,64 @@
             <p class="rp-subtitle">
               We found a pending registration linked to this phone number with verified payment. Review the details below and confirm to activate your account.
             </p>
-            <div class="rp-details">
-              <div class="rp-row">
+            <div class="rp-details" id="paDetails">
+              <div class="rp-row" data-show-if="fullName">
                 <span class="rp-label">Full Name</span>
                 <span class="rp-value" id="paFullName"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="email">
                 <span class="rp-label">Email</span>
                 <span class="rp-value" id="paEmail" style="font-size:12px;"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="phoneNumber">
+                <span class="rp-label">Phone Number</span>
+                <span class="rp-value" id="paPhone"></span>
+              </div>
+              <div class="rp-row" data-show-if="paymentAccount">
+                <span class="rp-label">Paying Account (M-Pesa)</span>
+                <span class="rp-value green" id="paPaymentAccount"></span>
+              </div>
+              <div class="rp-row" data-show-if="idNumber">
                 <span class="rp-label">ID Number</span>
                 <span class="rp-value" id="paIdNumber"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="gender">
                 <span class="rp-label">Gender</span>
                 <span class="rp-value" id="paGender"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="ageBracket">
                 <span class="rp-label">Age Bracket</span>
                 <span class="rp-value" id="paAgeBracket"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="county">
                 <span class="rp-label">County</span>
                 <span class="rp-value" id="paCounty"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="constituency">
                 <span class="rp-label">Constituency</span>
                 <span class="rp-value" id="paConstituency"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="ward">
                 <span class="rp-label">Ward</span>
                 <span class="rp-value" id="paWard"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="amount">
                 <span class="rp-label">Amount Paid</span>
                 <span class="rp-value green" id="paAmount"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="paymentMethodLabel">
                 <span class="rp-label">Payment Method</span>
                 <span class="rp-value" id="paPaymentMethod"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="reference">
                 <span class="rp-label">Reference ID</span>
                 <span class="rp-value" style="font-size:11px;" id="paReference"></span>
               </div>
-              <div class="rp-row">
+              <div class="rp-row" data-show-if="confirmationCode">
+                <span class="rp-label">M-Pesa Confirmation</span>
+                <span class="rp-value green" style="font-size:11px;" id="paConfirmationCode"></span>
+              </div>
+              <div class="rp-row" data-show-if="status">
                 <span class="rp-label">Payment Status</span>
                 <span class="rp-value green" id="paStatus"></span>
               </div>
@@ -661,22 +702,59 @@
         `;
         document.body.appendChild(overlay);
 
-        const fullName = [data.FirstName, data.MiddleName, data.LastName].filter(Boolean).join(' ');
-        document.getElementById('paFullName').textContent = fullName || '';
+        const fullName = [data.FirstName, data.MiddleName, data.LastName].filter(Boolean).join(' ').trim();
+        const paymentMethodLabel = (function () {
+          const raw = String(data.paymentMethod || '').toLowerCase();
+          if (raw === 'pesapal' || raw === 'mpesa') return raw === 'mpesa' ? 'M-Pesa' : 'Pesapal';
+          if (data.paymentAccount || data.confirmationCode) return 'M-Pesa';
+          if (data.verificationNonce || data.orderTrackingId) return 'Pesapal';
+          return '';
+        })();
+        const amountText = data.amount
+          ? (Number(data.amount).toFixed(2).replace(/\.00$/, '') + ' ' + (data.currency || 'KES'))
+          : '';
+        const reference = data.orderTrackingId || data.merchantReference || '';
+
+        document.getElementById('paFullName').textContent = fullName;
         document.getElementById('paEmail').textContent = data.email || '';
-        document.getElementById('paIdNumber').textContent = data.idNumber || '-';
-        document.getElementById('paGender').textContent = data.gender || '-';
-        document.getElementById('paAgeBracket').textContent = data.ageBracket || '-';
-        document.getElementById('paCounty').textContent = data.county || '-';
-        document.getElementById('paConstituency').textContent = data.constituency || '-';
-        document.getElementById('paWard').textContent = data.ward || '-';
-        document.getElementById('paAmount').textContent = (data.amount || '0') + ' ' + (data.currency || 'KES');
-        document.getElementById('paPaymentMethod').textContent = data.paymentMethod || data.verificationNonce ? 'Pesapal' : '-';
-        document.getElementById('paReference').textContent = data.orderTrackingId || data.merchantReference || '-';
-        document.getElementById('paStatus').textContent = data.status || 'VERIFIED';
+        document.getElementById('paPhone').textContent = data.phoneNumber || '';
+        document.getElementById('paPaymentAccount').textContent = data.paymentAccount || '';
+        document.getElementById('paIdNumber').textContent = data.idNumber || '';
+        document.getElementById('paGender').textContent = data.gender || '';
+        document.getElementById('paAgeBracket').textContent = data.ageBracket || '';
+        document.getElementById('paCounty').textContent = data.county || '';
+        document.getElementById('paConstituency').textContent = data.constituency || '';
+        document.getElementById('paWard').textContent = data.ward || '';
+        document.getElementById('paAmount').textContent = amountText;
+        document.getElementById('paPaymentMethod').textContent = paymentMethodLabel;
+        document.getElementById('paReference').textContent = reference;
+        document.getElementById('paConfirmationCode').textContent = data.confirmationCode || '';
+        document.getElementById('paStatus').textContent =
+          (data.status && data.status.toUpperCase() !== 'INITIATED') ? data.status :
+          (data.paymentStatusDescription || (amountText ? 'VERIFIED' : ''));
         document.getElementById('paPendingAccountId').value = data._id || '';
         document.getElementById('paOrderTrackingId').value = data.orderTrackingId || '';
-        document.getElementById('paPhoneNumber').value = data.phoneNumber || '';
+        document.getElementById('paPhoneNumber').value = data.paymentAccount || data.phoneNumber || '';
+
+        const values = {
+          fullName, email: data.email, phoneNumber: data.phoneNumber,
+          paymentAccount: data.paymentAccount, idNumber: data.idNumber,
+          gender: data.gender, ageBracket: data.ageBracket,
+          county: data.county, constituency: data.constituency, ward: data.ward,
+          amount: amountText, paymentMethodLabel, reference,
+          confirmationCode: data.confirmationCode,
+          status: (data.status && data.status.toUpperCase() !== 'INITIATED') ? data.status :
+                  (data.paymentStatusDescription || (amountText ? 'VERIFIED' : '')),
+        };
+        Array.prototype.forEach.call(
+          document.getElementById('paDetails').querySelectorAll('.rp-row'),
+          function (row) {
+            const key = row.getAttribute('data-show-if');
+            if (!key) return;
+            const v = values[key];
+            if (!v || String(v).trim() === '') row.style.display = 'none';
+          }
+        );
 
         document.getElementById('pendingDismissBtn').addEventListener('click', () => overlay.remove());
         const btn = document.getElementById('pendingConfirmBtn');
@@ -698,14 +776,14 @@
                 if (result.success) {
                     window.location.href = '/login?message=Registration successful. Login now.';
                 } else {
-                    alert(result.message || 'Failed to complete registration. Please try again.');
+                    showToast(result.message || 'Failed to complete registration. Please try again.', 'error');
                     btn.classList.remove('loading');
                     btn.disabled = false;
                 }
             })
             .catch(err => {
                 console.error('[register] complete-from-pendingaccount error:', err);
-                alert('Network error. Please try again.');
+                showToast('Network error. Please try again.', 'error');
                 btn.classList.remove('loading');
                 btn.disabled = false;
             });
@@ -785,11 +863,11 @@
         const phoneBtn = document.getElementById('sendPasskeyPhoneBtn');
 
         if (channel === 'email' && !email) {
-            alert('Email address is required.');
+            showToast('Email address is required.', 'error');
             return;
         }
         if (channel === 'phone' && !phoneNumber) {
-            alert('Phone number is required.');
+            showToast('Phone number is required.', 'error');
             return;
         }
 
@@ -813,7 +891,7 @@
                     sendMsg.style.color = '#dc2626';
                     sendMsg.textContent = data.message || 'Failed to send verification code.';
                 } else {
-                    alert(data.message || 'Failed to send verification code.');
+                    showToast(data.message || 'Failed to send verification code.', 'error');
                 }
                 return;
             }
@@ -841,7 +919,7 @@
                 sendMsg.style.color = '#dc2626';
                 sendMsg.textContent = 'Network error. Please try again.';
             } else {
-                alert('Network error. Please try again.');
+                showToast('Network error. Please try again.', 'error');
             }
         } finally {
             if (emailBtn) emailBtn.disabled = false;
@@ -871,18 +949,18 @@
             }
 
             if (!name || !email || !pass || !confirm || !phone || !gender) {
-                alert("Please fill all required fields");
+                showToast("Please fill all required fields", 'error');
                 return;
             }
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
-                alert("Please enter a valid email address (e.g., user@example.com)");
+                showToast("Please enter a valid email address (e.g., user@example.com)", 'error');
                 return;
             }
 
             if (pass !== confirm) {
-                alert("Passwords do not match");
+                showToast("Passwords do not match", 'error');
                 return;
             }
 
@@ -906,8 +984,8 @@
                 });
                 const countyData = await countyRes.json();
                 if (countyData && countyData.found) {
-                    alert('Phone number already registered. Redirecting to login...');
-                    window.location.href = '/login';
+                    showToast('Phone number already registered. Redirecting to login...', 'info');
+                    window.setTimeout(function () { window.location.href = '/login'; }, 1000);
                     return;
                 }
             } catch (err) {
@@ -958,7 +1036,7 @@
             const ageBracket = document.querySelector('input[name="ageBracket"]:checked');
 
             if (!county || !constituency || !ward || !ageBracket) {
-                alert("Please complete all location and age bracket fields.");
+                showToast("Please complete all location and age bracket fields.", 'error');
                 return;
             }
 
@@ -972,7 +1050,7 @@
             const data = await res.json();
 
             if (!data.success || !data.data) {
-                alert("Unable to verify registration settings. Please try again.");
+                showToast("Unable to verify registration settings. Please try again.", 'error');
                 return;
             }
 
@@ -1003,27 +1081,27 @@
                     'Registration fee is currently set to ' + reg.amount + ' KES via ' + methodLabel +
                     '. This fee may change based on Finance updates. Click Pay to continue.';
             } else {
-                alert("Unknown payment method configured. Please contact support.");
+                showToast("Unknown payment method configured. Please contact support.", 'error');
                 return;
             }
 
             showStep(3);
         } catch (err) {
             console.error("Error checking registration settings:", err);
-            alert("Unable to load registration settings. Please try again.");
+            showToast("Unable to load registration settings. Please try again.", 'error');
         }
     }
 
     async function submitWithPasskey() {
         if (passkeySecondsLeft <= 0) {
-            alert("Verification code expired. Please resend a new code.");
+            showToast("Verification code expired. Please resend a new code.", 'error');
             showPasskeySubstep('expired');
             return;
         }
 
         const passkey = document.getElementById('passkeyInput').value.trim();
         if (!passkey) {
-            alert("Please enter the passkey");
+            showToast("Please enter the passkey", 'error');
             return;
         }
 
@@ -1043,7 +1121,7 @@
 
     function startRegistrationPayment() {
         if (!currentRegistration) {
-            alert("Registration fee settings not loaded.");
+            showToast("Registration fee settings not loaded.", 'error');
             return;
         }
         const method = String(currentRegistration.paymentMethod || '').toLowerCase();
@@ -1058,7 +1136,7 @@
 
         const form = document.getElementById('registerForm');
         if (!form) {
-            alert("Registration form not found. Please try again.");
+            showToast("Registration form not found. Please try again.", 'error');
             if (payBtn) { payBtn.disabled = false; payBtn.textContent = originalText; }
             return;
         }
@@ -1083,14 +1161,14 @@
                     if (data && data.success && data.redirect_url) {
                         window.location.href = data.redirect_url;
                     } else {
-                        alert(data?.message || 'Failed to initiate Pesapal payment. Falling back to confirmation page...');
-                        form.submit();
+                        showToast(data?.message || 'Failed to initiate Pesapal payment. Falling back to confirmation page...', 'error');
+                        window.setTimeout(function () { form.submit(); }, 1500);
                     }
                 })
                 .catch(err => {
                     console.error('[register] Pesapal initiate error:', err);
-                    alert('Network error initiating Pesapal. Falling back to confirmation page.');
-                    form.submit();
+                    showToast('Network error initiating Pesapal. Falling back to confirmation page.', 'error');
+                    window.setTimeout(function () { form.submit(); }, 1500);
                 })
                 .finally(() => {
                     if (payBtn) { payBtn.disabled = false; payBtn.textContent = 'Pay'; }
@@ -1407,6 +1485,55 @@
   })();
 </script>
 <% } %>
+
+<style>
+  #toastHost {
+    position: fixed; top: 16px; right: 16px; z-index: 10000;
+    display: flex; flex-direction: column; gap: 10px; max-width: 420px; width: calc(100% - 32px);
+    pointer-events: none;
+  }
+  .toast {
+    pointer-events: auto;
+    padding: 12px 16px 12px 44px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: #1e293b;
+    background: #ffffff;
+    box-shadow: 0 16px 48px rgba(15,23,42,0.18), 0 0 0 1px rgba(15,23,42,0.06);
+    position: relative;
+    transform: translateY(-10px) scale(0.98);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    cursor: pointer;
+    word-break: break-word;
+  }
+  .toast::before {
+    content: '';
+    position: absolute; left: 14px; top: 50%; margin-top: -8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background-repeat: no-repeat; background-position: center; background-size: 12px 12px;
+  }
+  .toast-error { background: #fef2f2; border: 1px solid #fecaca; color: #7f1d1d; }
+  .toast-error::before {
+    background-color: #dc2626;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>");
+  }
+  .toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .toast-success::before {
+    background-color: #16a34a;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
+  }
+  .toast-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+  .toast-info::before {
+    background-color: #2563eb;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='16' x2='12' y2='12'/><line x1='12' y1='8' x2='12.01' y2='8'/></svg>");
+  }
+  .toast.toast-in { transform: translateY(0) scale(1); opacity: 1; }
+  .toast.toast-out { transform: translateY(-6px) scale(0.98); opacity: 0; }
+</style>
+<div id="toastHost" aria-live="polite" role="status"></div>
 
 </body>
 </html>

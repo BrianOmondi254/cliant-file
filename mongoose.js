@@ -276,13 +276,13 @@ const TbankSettings =
 
 
 /**
- * PendingAccount Schema - Stores Pesapal callback data and registration inquiries
- * before full account creation. Replaces the old pesapal_pending_payments collection.
+ * PendingAccount leaf record (stored inside ward.data[]). Contains all
+ * payment/user fields that the old flat PendingAccount documents had.
  */
-const pendingAccountSchema = new mongoose.Schema(
+const pendingAccountRecordSchema = new mongoose.Schema(
   {
-    orderId: { type: String, index: true },
-    orderTrackingId: { type: String, index: true },
+    orderId: { type: String },
+    orderTrackingId: { type: String },
     merchantReference: { type: String },
     amount: { type: Number },
     chargedAmount: { type: Number },
@@ -292,8 +292,8 @@ const pendingAccountSchema = new mongoose.Schema(
     paymentMethod: { type: String },
     paymentAccount: { type: String },
     confirmationCode: { type: String },
-    verificationNonce: { type: String, index: true },
-    phoneNumber: { type: String, index: true },
+    verificationNonce: { type: String },
+    phoneNumber: { type: String },
     FirstName: { type: String },
     MiddleName: { type: String },
     LastName: { type: String },
@@ -301,9 +301,6 @@ const pendingAccountSchema = new mongoose.Schema(
     gender: { type: String },
     ageBracket: { type: String },
     idNumber: { type: String },
-    county: { type: String },
-    constituency: { type: String },
-    ward: { type: String },
     password: { type: String },
     passkey: { type: String },
     startky: { type: String },
@@ -312,12 +309,471 @@ const pendingAccountSchema = new mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
     completedAt: { type: Date },
   },
+  { _id: true, timestamps: false }
+);
+
+/**
+ * PendingAccount Ward sub-document — matches County wardSchema shape.
+ * name = ward name (e.g. "Kangemi"), data = array of pending registration records
+ */
+const pendingAccountWardSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  data: [pendingAccountRecordSchema],
+});
+
+/**
+ * PendingAccount Constituency sub-document — matches County constituencySchema.
+ * name = constituency name (e.g. "Westlands"), wards = array of ward sub-docs
+ */
+const pendingAccountConstituencySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  wards: [pendingAccountWardSchema],
+});
+
+/**
+ * PendingAccount Schema — County-level nesting, identical to County structure:
+ *   County doc → constituencies[] → wards[] → data[] (pending payment records)
+ *
+ * The top-level PendingAccount document = one county (unique name). All pending
+ * registrations for users in that county are stored inside the hierarchy.
+ */
+const pendingAccountSchema = new mongoose.Schema(
+  {
+    county: { type: String, required: true, unique: true },
+    constituencies: [pendingAccountConstituencySchema],
+  },
   { timestamps: true }
 );
 
 const PendingAccount =
   mongoose.models.PendingAccount ||
   mongoose.model("PendingAccount", pendingAccountSchema, "pendingaccount");
+
+/**
+ * Flatten a single PendingAccount (county-level) doc into an array of
+ * leaf records, each injected with county / constituency / ward names.
+ * Mirrors flattenMongoCountyDoc + getAllUsersFlattened patterns.
+ */
+const flattenPendingAccountDoc = (doc) => {
+  const flat = [];
+  if (!doc) return flat;
+  const county = doc.county;
+  for (const cons of doc.constituencies || []) {
+    const constituency = cons.name;
+    for (const ward of cons.wards || []) {
+      const wardName = ward.name;
+      for (const rec of ward.data || []) {
+        const obj = rec.toObject ? rec.toObject() : { ...rec };
+        flat.push({
+          ...obj,
+          county,
+          constituency,
+          ward: wardName,
+        });
+      }
+    }
+  }
+  return flat;
+};
+
+/**
+ * Flatten ALL PendingAccount county documents (optionally filtered by a
+ * per-record predicate + per-record status/datetime filters). Used by
+ * read-path helpers that need to scan across the collection.
+ *
+ * opts: { filter?: (flatRecord) => boolean, newerThanMs?: number }
+ */
+const getAllPendingFlattened = async (opts = {}) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return [];
+    const cursor = PendingAccount.find({}).cursor();
+    const results = [];
+    for await (const doc of cursor) {
+      const flatRecs = flattenPendingAccountDoc(doc);
+      for (const rec of flatRecs) {
+        if (typeof opts.newerThanMs === "number") {
+          const t = rec.createdAt ? new Date(rec.createdAt).getTime() : 0;
+          if (Date.now() - t > opts.newerThanMs) continue;
+        }
+        if (typeof opts.filter === "function" && !opts.filter(rec)) continue;
+        results.push(rec);
+      }
+    }
+    return results;
+  } catch (e) {
+    console.error("[getAllPendingFlattened] error:", e.message);
+    return [];
+  }
+};
+
+/**
+ * Save / upsert a pending registration record into the nested County-style
+ * PendingAccount structure. Works just like saveUserToMongoDB: if the county/
+ * constituency/ward path doesn't exist it is created; if an existing record
+ * matches by a provided uniqueness predicate, it is updated in place; otherwise
+ * a new leaf record is pushed into ward.data[].
+ *
+ * pendingData must contain county/constituency/ward strings plus the leaf
+ * record fields (orderId, phoneNumber, amount, status, etc.).
+ *
+ * opts.match: a predicate(record) => boolean used to detect existing record
+ *             to update instead of inserting a new one. Common: match by
+ *             orderId or orderTrackingId.
+ */
+const savePendingAccountToMongo = async (pendingData, opts = {}) => {
+  const { county, constituency, ward, ...leafFields } = pendingData;
+  if (!county) {
+    throw new Error("savePendingAccountToMongo: county is required");
+  }
+  if (!constituency) {
+    throw new Error("savePendingAccountToMongo: constituency is required");
+  }
+  if (!ward) {
+    throw new Error("savePendingAccountToMongo: ward is required");
+  }
+
+  let countyDoc = await PendingAccount.findOne({ county });
+  if (!countyDoc) {
+    countyDoc = new PendingAccount({ county, constituencies: [] });
+  }
+
+  let consIdx = countyDoc.constituencies.findIndex(
+    (c) => c.name === constituency,
+  );
+  if (consIdx === -1) {
+    countyDoc.constituencies.push({ name: constituency, wards: [] });
+    consIdx = countyDoc.constituencies.length - 1;
+  }
+
+  let wardIdx = countyDoc.constituencies[consIdx].wards.findIndex(
+    (w) => w.name === ward,
+  );
+  if (wardIdx === -1) {
+    countyDoc.constituencies[consIdx].wards.push({ name: ward, data: [] });
+    wardIdx = countyDoc.constituencies[consIdx].wards.length - 1;
+  }
+
+  const wardRef = countyDoc.constituencies[consIdx].wards[wardIdx];
+  const leaf = { ...leafFields };
+  if (!leaf.createdAt) leaf.createdAt = new Date();
+
+  let matchIdx = -1;
+  if (typeof opts.match === "function") {
+    matchIdx = wardRef.data.findIndex((r) => {
+      try {
+        return opts.match(r);
+      } catch (_) {
+        return false;
+      }
+    });
+  }
+  if (matchIdx !== -1) {
+    const existing = wardRef.data[matchIdx];
+    const existingId = existing._id;
+    const existingCreated = existing.createdAt;
+    wardRef.data[matchIdx] = {
+      ...(existing.toObject ? existing.toObject() : existing),
+      ...leaf,
+      _id: existingId,
+      createdAt: existingCreated || leaf.createdAt,
+    };
+  } else {
+    wardRef.data.push(leaf);
+  }
+
+  await countyDoc.save();
+  const flattened = matchIdx !== -1
+    ? flattenPendingAccountDoc(countyDoc).find((r) =>
+        (matchIdx !== -1) && opts.match && opts.match(r),
+      )
+    : null;
+  return flattened || {
+    ...(wardRef.data[wardRef.data.length - 1].toObject
+      ? wardRef.data[wardRef.data.length - 1].toObject()
+      : wardRef.data[wardRef.data.length - 1]),
+    county,
+    constituency,
+    ward,
+  };
+};
+
+/**
+ * Internal helper: navigate the PendingAccount nested structure on a
+ * Mongoose doc and apply a mutator to any leaf record matching the predicate.
+ * Returns [countyDoc, mutatedCount] so the caller can save() if needed.
+ */
+const mutatePendingLeaves = async (predicate, mutator) => {
+  const ready = await ensureMongoReady();
+  if (!ready) return null;
+  const docs = await PendingAccount.find({});
+  let totalMutated = 0;
+  for (const countyDoc of docs) {
+    let changed = false;
+    for (const cons of countyDoc.constituencies || []) {
+      for (const ward of cons.wards || []) {
+        for (let i = 0; i < (ward.data || []).length; i++) {
+          let rec = ward.data[i];
+          const flatRec = {
+            ...(rec.toObject ? rec.toObject() : rec),
+            county: countyDoc.county,
+            constituency: cons.name,
+            ward: ward.name,
+          };
+          if (predicate(flatRec)) {
+            const updated = mutator(rec, { county: countyDoc.county, constituency: cons.name, ward: ward.name });
+            if (updated !== undefined) ward.data[i] = updated;
+            changed = true;
+            totalMutated++;
+          }
+        }
+      }
+    }
+    if (changed) await countyDoc.save();
+  }
+  return totalMutated;
+};
+
+/**
+ * Find FIRST pending record across all counties matching a predicate,
+ * returned flat with county/constituency/ward attached (or null).
+ *
+ * opts: { newerThanMs?: number, filterStatuses?: string[] }
+ */
+const findPendingRecord = async (predicate, opts = {}) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+    const cursor = PendingAccount.find({}).cursor();
+    for await (const doc of cursor) {
+      const flat = flattenPendingAccountDoc(doc);
+      for (const rec of flat) {
+        if (Array.isArray(opts.filterStatuses) && opts.filterStatuses.length > 0) {
+          if (!opts.filterStatuses.includes(String(rec.status || ""))) continue;
+        }
+        if (typeof opts.newerThanMs === "number") {
+          const t = rec.createdAt ? new Date(rec.createdAt).getTime() : 0;
+          if (Date.now() - t > opts.newerThanMs) continue;
+        }
+        try {
+          if (predicate(rec)) return rec;
+        } catch (_) {
+          // predicate threw for this record — skip
+        }
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error("[findPendingRecord] error:", e.message);
+    return null;
+  }
+};
+
+/**
+ * Delete FIRST pending record matching the predicate (returns true if
+ * anything was removed). Used when consuming a pending registration.
+ */
+const deletePendingRecord = async (predicate) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return false;
+    const docs = await PendingAccount.find({});
+    for (const countyDoc of docs) {
+      let changed = false;
+      for (const cons of countyDoc.constituencies || []) {
+        for (const ward of cons.wards || []) {
+          const dataArr = ward.data || [];
+          for (let i = dataArr.length - 1; i >= 0; i--) {
+            const r = dataArr[i];
+            const flat = {
+              ...(r.toObject ? r.toObject() : r),
+              county: countyDoc.county,
+              constituency: cons.name,
+              ward: ward.name,
+            };
+            if (predicate(flat)) {
+              dataArr.splice(i, 1);
+              changed = true;
+            }
+          }
+        }
+      }
+      if (changed) {
+        await countyDoc.save();
+        return true;
+      }
+    }
+    return false;
+  } catch (e) {
+    console.error("[deletePendingRecord] error:", e.message);
+    return false;
+  }
+};
+
+/**
+ * Delete ALL pending records matching a predicate (cleanup old INITIATED).
+ * Returns count of deleted records.
+ */
+const deleteAllPendingRecords = async (predicate) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return 0;
+    const docs = await PendingAccount.find({});
+    let total = 0;
+    for (const countyDoc of docs) {
+      let changed = false;
+      for (const cons of countyDoc.constituencies || []) {
+        for (const ward of cons.wards || []) {
+          const dataArr = ward.data || [];
+          for (let i = dataArr.length - 1; i >= 0; i--) {
+            const r = dataArr[i];
+            const flat = {
+              ...(r.toObject ? r.toObject() : r),
+              county: countyDoc.county,
+              constituency: cons.name,
+              ward: ward.name,
+            };
+            if (predicate(flat)) {
+              dataArr.splice(i, 1);
+              total++;
+              changed = true;
+            }
+          }
+        }
+      }
+      if (changed) await countyDoc.save();
+    }
+    return total;
+  } catch (e) {
+    console.error("[deleteAllPendingRecords] error:", e.message);
+    return 0;
+  }
+};
+
+/**
+ * Update in place the FIRST pending record matching predicate with $set-style
+ * fields. Returns the updated flat record or null.
+ */
+const updatePendingRecord = async (predicate, setFields = {}) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+    const docs = await PendingAccount.find({});
+    for (const countyDoc of docs) {
+      let matchedFlat = null;
+      let changed = false;
+      for (const cons of countyDoc.constituencies || []) {
+        for (const ward of cons.wards || []) {
+          for (let i = 0; i < (ward.data || []).length; i++) {
+            const r = ward.data[i];
+            const flat = {
+              ...(r.toObject ? r.toObject() : r),
+              county: countyDoc.county,
+              constituency: cons.name,
+              ward: ward.name,
+            };
+            if (predicate(flat)) {
+              Object.keys(setFields).forEach((k) => {
+                r[k] = setFields[k];
+              });
+              matchedFlat = {
+                ...(r.toObject ? r.toObject() : { ...r }),
+                county: countyDoc.county,
+                constituency: cons.name,
+                ward: ward.name,
+              };
+              changed = true;
+              break;
+            }
+          }
+          if (matchedFlat) break;
+        }
+        if (matchedFlat) break;
+      }
+      if (changed) await countyDoc.save();
+      if (matchedFlat) return matchedFlat;
+    }
+    return null;
+  } catch (e) {
+    console.error("[updatePendingRecord] error:", e.message);
+    return null;
+  }
+};
+
+/**
+ * Save a pending record by ANY of the common keys — automatically derives
+ * county/constituency/ward from (a) passed explicit values or (b) the
+ * registrationData blob. This is the single entry-point used by pesapal.js
+ * for both setPendingPayment (INITIATED) and callback (VERIFIED_PENDING_).
+ *
+ * On upsert match-order: 1. orderId 2. orderTrackingId 3. verificationNonce
+ * — whichever is present in `data` first, the existing record is found.
+ */
+const upsertPendingAccount = async (data) => {
+  const regData =
+    data && typeof data.registrationData === "string"
+      ? (() => {
+          try { return JSON.parse(data.registrationData); } catch (_) { return {}; }
+        })()
+      : (data?.registrationData || {});
+
+  const county =
+    String(data.county || regData.county || "").trim() || "Unknown";
+  const constituency =
+    String(data.constituency || regData.constituency || "").trim() || "Unknown";
+  const ward =
+    String(data.ward || regData.ward || "").trim() || "Unknown Ward";
+
+  const phoneNumber =
+    String(data.phoneNumber || regData.phoneNumber || regData.PhoneNumber || regData.phone || "").trim();
+
+  const matchKeys = [];
+  if (data.orderId) matchKeys.push((r) => r.orderId === data.orderId);
+  if (data.orderTrackingId) matchKeys.push((r) => r.orderTrackingId === data.orderTrackingId);
+  if (data.verificationNonce) matchKeys.push((r) => r.verificationNonce === data.verificationNonce);
+  const combinedMatch = (r) => matchKeys.some((fn) => fn(r));
+
+  const payload = {
+    county,
+    constituency,
+    ward,
+    orderId: data.orderId || undefined,
+    orderTrackingId: data.orderTrackingId || undefined,
+    merchantReference: data.merchantReference || undefined,
+    amount: typeof data.amount === "number" ? data.amount : undefined,
+    chargedAmount: typeof data.chargedAmount === "number" ? data.chargedAmount : undefined,
+    currency: data.currency || "KES",
+    statusCode: data.statusCode !== undefined ? data.statusCode : undefined,
+    paymentStatusDescription: data.paymentStatusDescription || undefined,
+    paymentMethod: data.paymentMethod || undefined,
+    paymentAccount: data.paymentAccount || undefined,
+    confirmationCode: data.confirmationCode || undefined,
+    verificationNonce: data.verificationNonce || undefined,
+    phoneNumber,
+    FirstName: data.FirstName || regData.FirstName || regData.firstName || undefined,
+    MiddleName: data.MiddleName || regData.MiddleName || regData.middleName || undefined,
+    LastName: data.LastName || regData.LastName || regData.lastName || undefined,
+    email: data.email || regData.email || undefined,
+    gender: data.gender || regData.gender || undefined,
+    ageBracket: data.ageBracket || regData.ageBracket || undefined,
+    idNumber: data.idNumber || regData.idNumber || undefined,
+    password: data.password || regData.password || undefined,
+    passkey: data.passkey || regData.passkey || undefined,
+    startky: data.startky || regData.startky || undefined,
+    registrationData: data.registrationData !== undefined ? (typeof data.registrationData === "string" ? regData : data.registrationData) : undefined,
+    status: data.status || "INITIATED",
+    createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
+    completedAt: data.completedAt ? new Date(data.completedAt) : undefined,
+  };
+
+  Object.keys(payload).forEach((k) => {
+    if (payload[k] === undefined) delete payload[k];
+  });
+
+  return savePendingAccountToMongo(payload, {
+    match: matchKeys.length ? combinedMatch : undefined,
+  });
+};
 
 /**
  * Message Schema - For storing group notifications and constitution keys
@@ -2050,4 +2506,13 @@ module.exports = {
   saveTbankSettings,
   getTbankSettings,
   PendingAccount,
+  flattenPendingAccountDoc,
+  getAllPendingFlattened,
+  savePendingAccountToMongo,
+  findPendingRecord,
+  deletePendingRecord,
+  deleteAllPendingRecords,
+  updatePendingRecord,
+  upsertPendingAccount,
+  mutatePendingLeaves,
 };

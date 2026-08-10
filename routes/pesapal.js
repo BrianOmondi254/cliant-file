@@ -15,11 +15,19 @@ const {
 } = require("../config/pesapal");
 
 let PendingAccount = null;
+let upsertPendingAccount = null;
+let getAllPendingFlattened = null;
+let deleteAllPendingRecords = null;
+let findPendingRecord = null;
 try {
   const mongoose = require("../mongoose");
   PendingAccount = mongoose.PendingAccount;
+  upsertPendingAccount = mongoose.upsertPendingAccount;
+  getAllPendingFlattened = mongoose.getAllPendingFlattened;
+  deleteAllPendingRecords = mongoose.deleteAllPendingRecords;
+  findPendingRecord = mongoose.findPendingRecord;
 } catch (e) {
-  console.warn("[Pesapal] Could not load PendingAccount model:", e.message);
+  console.warn("[Pesapal] Could not load PendingAccount model/helpers:", e.message);
 }
 
 const router = express.Router();
@@ -196,10 +204,11 @@ setInterval(() => {
       globalVerifiedRegistrations.delete(key);
     }
   }
-  if (PendingAccount) {
-    PendingAccount.deleteMany({
-      status: "INITIATED",
-      createdAt: { $lt: new Date(Date.now() - 2 * 60 * 60 * 1000) }
+  if (PendingAccount && deleteAllPendingRecords) {
+    deleteAllPendingRecords((r) => {
+      const cutoffMs = 2 * 60 * 60 * 1000;
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+      return r.status === "INITIATED" && (Date.now() - t > cutoffMs);
     }).catch((e) => {
       console.error("[Pesapal] Failed to clean up expired pending accounts from MongoDB:", e.message);
     });
@@ -214,12 +223,12 @@ const getPendingPayment = async (req) => {
       merged[key] = val;
     }
   }
-  if (PendingAccount) {
+  if (PendingAccount && getAllPendingFlattened) {
     try {
-      const dbPayments = await PendingAccount.find({
-        status: "INITIATED",
-        createdAt: { $gt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
-      }).lean();
+      const dbPayments = await getAllPendingFlattened({
+        newerThanMs: 2 * 60 * 60 * 1000,
+        filter: (r) => r.status === "INITIATED",
+      });
       for (const doc of dbPayments) {
         const key = doc.orderId;
         if (key && !merged[key]) {
@@ -257,40 +266,36 @@ const setPendingPayment = async (req, orderId, data) => {
   if (data && data.merchantReference) {
     globalPendingPayments.set(data.merchantReference, data);
   }
-  if (PendingAccount) {
+  if (PendingAccount && upsertPendingAccount) {
     try {
       let regData = data.registrationData || {};
       if (typeof regData === "string") {
         try { regData = JSON.parse(regData); } catch (_) { regData = {}; }
       }
-      await PendingAccount.findOneAndUpdate(
-        { orderId },
-        {
-          orderId,
-          orderTrackingId: data.orderTrackingId || null,
-          merchantReference: data.merchantReference || null,
-          amount: data.amount,
-          currency: data.currency || "KES",
-          phoneNumber: regData.phoneNumber || regData.PhoneNumber || regData.phone || "",
-          FirstName: regData.FirstName || regData.firstName || "",
-          MiddleName: regData.MiddleName || regData.middleName || "",
-          LastName: regData.LastName || regData.lastName || "",
-          email: regData.email || "",
-          gender: regData.gender || "",
-          ageBracket: regData.ageBracket || "",
-          idNumber: regData.idNumber || "",
-          county: regData.county || "",
-          constituency: regData.constituency || "",
-          ward: regData.ward || "",
-          password: regData.password || "",
-          passkey: regData.passkey || "",
-          startky: regData.startky || "",
-          registrationData: regData,
-          status: "INITIATED",
-          createdAt: new Date(data.initiatedAtMs || Date.now()),
-        },
-        { upsert: true, new: true }
-      );
+      await upsertPendingAccount({
+        orderId,
+        orderTrackingId: data.orderTrackingId || null,
+        merchantReference: data.merchantReference || null,
+        amount: data.amount,
+        currency: data.currency || "KES",
+        phoneNumber: regData.phoneNumber || regData.PhoneNumber || regData.phone || "",
+        FirstName: regData.FirstName || regData.firstName || "",
+        MiddleName: regData.MiddleName || regData.middleName || "",
+        LastName: regData.LastName || regData.lastName || "",
+        email: regData.email || "",
+        gender: regData.gender || "",
+        ageBracket: regData.ageBracket || "",
+        idNumber: regData.idNumber || "",
+        county: regData.county || "",
+        constituency: regData.constituency || "",
+        ward: regData.ward || "",
+        password: regData.password || "",
+        passkey: regData.passkey || "",
+        startky: regData.startky || "",
+        registrationData: regData,
+        status: "INITIATED",
+        createdAt: new Date(data.initiatedAtMs || Date.now()),
+      });
     } catch (e) {
       console.error("[Pesapal] Failed to persist pending payment to MongoDB (pendingaccount):", e.message);
     }
@@ -351,23 +356,40 @@ const consumeVerifiedRegistration = (req, verificationNonce) => {
 
 const normPhoneDigits = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
 
+const getLast5Digits = (s) => {
+  const digits = String(s || "").replace(/\D/g, "");
+  return digits.length >= 5 ? digits.slice(-5) : "";
+};
+
+const phoneMatchesLast5 = (a, b) => {
+  const la = getLast5Digits(a);
+  const lb = getLast5Digits(b);
+  return !!la && !!lb && la === lb;
+};
+
 const findVerifiedRegistrationByPhone = async (req, inputPhone) => {
   if (!inputPhone) return null;
   const target = normPhoneDigits(inputPhone);
-  if (!target) return null;
+  const targetLast5 = getLast5Digits(inputPhone);
+  if (!target && !targetLast5) return null;
 
-  if (PendingAccount) {
+  if (PendingAccount && getAllPendingFlattened) {
     try {
-      const docs = await PendingAccount.find({
-        status: "VERIFIED_PENDING_COMPLETION",
-        createdAt: { $gt: new Date(Date.now() - 20 * 60 * 1000) }
-      }).lean();
+      const docs = await getAllPendingFlattened({
+        newerThanMs: 20 * 60 * 1000,
+        filter: (r) => r.status === "VERIFIED_PENDING_COMPLETION",
+      });
       for (const doc of docs) {
         const phoneInDoc = normPhoneDigits(doc.phoneNumber || "");
-        if (phoneInDoc && phoneInDoc === target) {
+        const exactMatch = phoneInDoc && target && phoneInDoc === target;
+        const last5Match = targetLast5 && phoneMatchesLast5(doc.phoneNumber || "", inputPhone);
+        if (exactMatch || last5Match) {
           let regData = doc.registrationData || {};
           if (typeof regData === "string") {
             try { regData = JSON.parse(regData); } catch (_) { regData = {}; }
+          }
+          if (last5Match && !exactMatch) {
+            console.log(`[findVerifiedRegistrationByPhone] Matched by last-5-digits: input=${inputPhone} vs doc.phone=${doc.phoneNumber}. Will prefer user's input format.`);
           }
           return {
             nonce: doc.verificationNonce || doc.orderTrackingId,
@@ -397,7 +419,12 @@ const findVerifiedRegistrationByPhone = async (req, inputPhone) => {
     if (data.expiresAt && data.expiresAt < Date.now()) continue;
 
     const phoneInPayload = normPhoneDigits(data.phoneNumber || "");
-    if (phoneInPayload && phoneInPayload === target) {
+    const exactMatch = phoneInPayload && target && phoneInPayload === target;
+    const last5Match = targetLast5 && phoneMatchesLast5(data.phoneNumber || "", inputPhone);
+    if (exactMatch || last5Match) {
+      if (last5Match && !exactMatch) {
+        console.log(`[findVerifiedRegistrationByPhone] In-memory matched by last-5-digits: input=${inputPhone} vs data.phone=${data.phoneNumber}`);
+      }
       return { nonce, ...data };
     }
   }
@@ -406,13 +433,15 @@ const findVerifiedRegistrationByPhone = async (req, inputPhone) => {
 
 const findVerifiedRegistrationByOrderTrackingId = async (orderTrackingId) => {
   if (!orderTrackingId) return null;
-  if (!PendingAccount) return null;
+  if (!PendingAccount || !findPendingRecord) return null;
   try {
-    const doc = await PendingAccount.findOne({
-      orderTrackingId,
-      status: "VERIFIED_PENDING_COMPLETION",
-      createdAt: { $gt: new Date(Date.now() - 20 * 60 * 1000) }
-    }).lean();
+    const doc = await findPendingRecord(
+      (r) => r.orderTrackingId === orderTrackingId,
+      {
+        filterStatuses: ["VERIFIED_PENDING_COMPLETION"],
+        newerThanMs: 20 * 60 * 1000,
+      }
+    );
     if (!doc) return null;
     let regData = doc.registrationData || {};
     if (typeof regData === "string") {
@@ -810,43 +839,62 @@ async function handlePesapalCallback(req, res) {
         userData.phone ||
         "";
 
-      if (PendingAccount) {
-        try {
-          await PendingAccount.findOneAndUpdate(
-            { orderTrackingId: strOrderTrackingId },
-            {
-              orderId: matchedOrderId,
-              orderTrackingId: strOrderTrackingId,
-              merchantReference: OrderMerchantReference || pending.merchantReference || matchedOrderId,
-              amount: expectedAmount,
-              chargedAmount,
-              currency,
-              statusCode,
-              paymentStatusDescription,
-              paymentMethod,
-              paymentAccount,
-              confirmationCode,
-              verificationNonce: strOrderTrackingId,
-              phoneNumber: String(paymentAccount || phoneNumber || ""),
-              FirstName: userData.FirstName || userData.firstName || "",
-              MiddleName: userData.MiddleName || userData.middleName || "",
-              LastName: userData.LastName || userData.lastName || "",
-              email: userData.email || "",
-              gender: userData.gender || "",
-              ageBracket: userData.ageBracket || "",
-              idNumber: userData.idNumber || "",
-              county: userData.county || "",
-              constituency: userData.constituency || "",
-              ward: userData.ward || "",
-              password: userData.password || "",
-              passkey: userData.passkey || "",
-              startky: userData.startky || "",
-              registrationData: userData,
-              status: "VERIFIED_PENDING_COMPLETION",
-              createdAt: new Date(createdAt),
-            },
-            { upsert: true, new: true }
+      let resolvedPhone = String(phoneNumber || paymentAccount || "");
+      if (paymentAccount && phoneNumber) {
+        if (phoneMatchesLast5(paymentAccount, phoneNumber)) {
+          resolvedPhone = String(phoneNumber).trim();
+          console.log(
+            `[Pesapal Callback] LAST-5 MATCH OK: callback(${paymentAccount}) vs input(${phoneNumber}). ` +
+              `Using USER INPUT phone as canonical for PendingAccount.`
           );
+        } else {
+          console.warn(
+            `[Pesapal Callback] LAST-5 MISMATCH: callback(${paymentAccount} last5=${getLast5Digits(paymentAccount)}) ` +
+              `vs input(${phoneNumber} last5=${getLast5Digits(phoneNumber)}). ` +
+              `Using USER INPUT phone anyway (user's format preferred).`
+          );
+          resolvedPhone = String(phoneNumber).trim();
+        }
+      } else if (paymentAccount && !phoneNumber) {
+        console.warn(
+          `[Pesapal Callback] No user input phone available — falling back to callback paymentAccount=${paymentAccount}`
+        );
+        resolvedPhone = String(paymentAccount).trim();
+      }
+
+      if (PendingAccount && upsertPendingAccount) {
+        try {
+          await upsertPendingAccount({
+            orderId: matchedOrderId,
+            orderTrackingId: strOrderTrackingId,
+            merchantReference: OrderMerchantReference || pending.merchantReference || matchedOrderId,
+            amount: expectedAmount,
+            chargedAmount,
+            currency,
+            statusCode,
+            paymentStatusDescription,
+            paymentMethod,
+            paymentAccount,
+            confirmationCode,
+            verificationNonce: strOrderTrackingId,
+            phoneNumber: resolvedPhone,
+            FirstName: userData.FirstName || userData.firstName || "",
+            MiddleName: userData.MiddleName || userData.middleName || "",
+            LastName: userData.LastName || userData.lastName || "",
+            email: userData.email || "",
+            gender: userData.gender || "",
+            ageBracket: userData.ageBracket || "",
+            idNumber: userData.idNumber || "",
+            county: userData.county || "",
+            constituency: userData.constituency || "",
+            ward: userData.ward || "",
+            password: userData.password || "",
+            passkey: userData.passkey || "",
+            startky: userData.startky || "",
+            registrationData: userData,
+            status: "VERIFIED_PENDING_COMPLETION",
+            createdAt: new Date(createdAt),
+          });
           console.log(`[Pesapal Callback] Saved callback info to Mongoose 'pendingaccount' collection (OrderTrackingId: ${strOrderTrackingId})`);
         } catch (dbErr) {
           console.error("[Pesapal Callback] Error saving to pendingaccount collection:", dbErr.message);
@@ -1252,6 +1300,9 @@ module.exports.consumeVerifiedRegistration = consumeVerifiedRegistration;
 module.exports.findVerifiedRegistrationByPhone = findVerifiedRegistrationByPhone;
 module.exports.findVerifiedRegistrationByOrderTrackingId = findVerifiedRegistrationByOrderTrackingId;
 module.exports.requireAdminOrInternalSecret = requireAdminOrInternalSecret;
+module.exports.normPhoneDigits = normPhoneDigits;
+module.exports.getLast5Digits = getLast5Digits;
+module.exports.phoneMatchesLast5 = phoneMatchesLast5;
 
 async function runCliSetup() {
   try {

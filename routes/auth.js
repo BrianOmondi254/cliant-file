@@ -20,12 +20,19 @@ const {
   findAgentByPhone,
   findDealerByPhone,
   PendingAccount,
+  getAllPendingFlattened,
+  findPendingRecord,
+  updatePendingRecord,
+  deletePendingRecord,
 } = require("../mongoose");
 const {
   consumeVerifiedRegistration,
   handlePesapalCallback,
   findVerifiedRegistrationByPhone,
   findVerifiedRegistrationByOrderTrackingId,
+  getLast5Digits,
+  phoneMatchesLast5,
+  normPhoneDigits,
 } = require("./pesapal");
 const { creditPendingToPersonalAccount } = require("./trans");
 
@@ -344,26 +351,42 @@ router.post("/api/check-phone-pendingaccount", async (req, res) => {
   if (!phone) return res.json({ found: false });
 
   try {
-    if (!(await ensureMongoReady()) || !PendingAccount) {
+    if (!(await ensureMongoReady()) || !PendingAccount || !getAllPendingFlattened) {
       return res.json({ found: false });
     }
 
     const { normalizePhone } = require("../mongoose");
     const target = normalizePhone(phone);
+    const targetLast5 = getLast5Digits(phone);
 
-    const pending = await PendingAccount.findOne({
-      $or: [{ phoneNumber: phone }, { phoneNumber: target }],
-      status: {
-        $in: [
-          "VERIFIED_PENDING_COMPLETION",
-          "COMPLETED",
-          "INITIATED",
-          "PAID",
-        ],
-      },
-    })
-      .sort({ createdAt: -1 })
-      .lean();
+    const statuses = [
+      "VERIFIED_PENDING_COMPLETION",
+      "COMPLETED",
+      "INITIATED",
+      "PAID",
+    ];
+
+    let pending = null;
+
+    const allRecent = await getAllPendingFlattened({
+      newerThanMs: 20 * 60 * 1000,
+      filter: (r) => statuses.includes(String(r.status || "")),
+    });
+
+    const firstExact = allRecent.find((r) => {
+      const pRaw = r.phoneNumber || "";
+      return String(pRaw) === phone || normalizePhone(String(pRaw)) === target;
+    });
+    pending = firstExact || null;
+
+    if (!pending && targetLast5) {
+      pending = allRecent.find((r) => phoneMatchesLast5(r.phoneNumber || "", phone)) || null;
+      if (pending) {
+        console.log(
+          `[api/check-phone-pendingaccount] Matched via LAST-5: input=${phone} vs db.phone=${pending.phoneNumber}`
+        );
+      }
+    }
 
     if (!pending) {
       return res.json({ found: false });
@@ -496,19 +519,56 @@ router.post("/api/complete-from-pendingaccount", async (req, res) => {
     // ---- Step 1a: load candidate PendingAccount by each provided key ----
     async function loadPendingBy(key, value) {
       if (!value) return null;
-      let q;
+      if (!getAllPendingFlattened || !findPendingRecord) return null;
+
+      const statusArr = Array.from(validStatuses);
       if (key === "_id") {
-        try { q = { _id: new ObjectId(String(value).trim()) }; } catch { return null; }
-      } else if (key === "orderTrackingId") {
-        q = { orderTrackingId: String(value).trim() };
-      } else if (key === "phoneNumber") {
+        let oidStr;
+        try { oidStr = String(new ObjectId(String(value).trim())); } catch { return null; }
+        const rec = await findPendingRecord(
+          (r) => r._id && String(r._id) === oidStr,
+          { filterStatuses: statusArr }
+        );
+        return rec || null;
+      }
+      if (key === "orderTrackingId") {
+        return await findPendingRecord(
+          (r) => r.orderTrackingId === String(value).trim(),
+          { filterStatuses: statusArr }
+        ) || null;
+      }
+      if (key === "phoneNumber") {
         const raw = String(value).trim();
         const n = normalizePhone(raw);
-        q = { $or: [{ phoneNumber: raw }, { phoneNumber: n }] };
-      } else {
-        return null;
+        let found = null;
+        const all = await getAllPendingFlattened({
+          newerThanMs: 20 * 60 * 1000,
+          filter: (r) => statusArr.includes(String(r.status || "")),
+        });
+        all.sort((a, b) => {
+          const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return tb - ta;
+        });
+        const exact = all.find((r) => {
+          const pRaw = String(r.phoneNumber || "");
+          return pRaw === raw || normalizePhone(pRaw) === n;
+        });
+        found = exact || null;
+        if (!found && getLast5Digits(raw)) {
+          for (const doc of all) {
+            if (phoneMatchesLast5(doc.phoneNumber || "", raw)) {
+              found = doc;
+              console.log(
+                `[api/complete-from-pendingaccount] loadPendingBy(phone) matched via LAST-5: input=${raw} vs db.phone=${doc.phoneNumber}`
+              );
+              break;
+            }
+          }
+        }
+        return found;
       }
-      return PendingAccount.findOne(q).sort({ createdAt: -1 }).lean();
+      return null;
     }
 
     const byId = pendingAccountId ? await loadPendingBy("_id", pendingAccountId) : null;
@@ -629,7 +689,9 @@ router.post("/api/complete-from-pendingaccount", async (req, res) => {
     const existingUser = await findUserByPhone(finalPhone);
     if (existingUser) {
       // Already registered → clean up pending doc and succeed (idempotent).
-      try { await PendingAccount.deleteOne({ _id: pending._id }); } catch (_) {}
+      try {
+        if (deletePendingRecord) await deletePendingRecord((r) => r._id && String(r._id) === String(pending._id));
+      } catch (_) {}
       return res.json({
         success: true,
         message: "Already registered. Redirecting to login.",
@@ -693,7 +755,9 @@ router.post("/api/complete-from-pendingaccount", async (req, res) => {
 
     // ---- Step 6: DELETE PendingAccount (prevents replay / double-consume) ----
     try {
-      await PendingAccount.deleteOne({ _id: pending._id });
+      if (deletePendingRecord) {
+        await deletePendingRecord((r) => r._id && String(r._id) === String(pending._id));
+      }
     } catch (pendErr) {
       console.error(
         "[complete-from-pendingaccount] PendingAccount delete error:",
@@ -1012,19 +1076,28 @@ router.post("/register", async (req, res) => {
         });
       }
 
-      const normPhone = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
-      if (
-        verifiedPayload.phoneNumber &&
-        phoneNumber &&
-        normPhone(verifiedPayload.phoneNumber) !== normPhone(phoneNumber)
-      ) {
+      const callbackPhone = String(verifiedPayload.phoneNumber || "").trim();
+      const userInputPhone = String(phoneNumber || "").trim();
+      if (callbackPhone && userInputPhone) {
+        if (phoneMatchesLast5(callbackPhone, userInputPhone)) {
+          console.log(
+            `[register] LAST-5 MATCH OK: callback(${callbackPhone}) vs input(${userInputPhone}). ` +
+              `Using USER INPUT phone as canonical for County + transactions.`
+          );
+          phoneNumber = userInputPhone;
+        } else {
+          console.warn(
+            `[register] LAST-5 MISMATCH: callback(${callbackPhone} last5=${getLast5Digits(callbackPhone)}) ` +
+              `vs input(${userInputPhone} last5=${getLast5Digits(userInputPhone)}). ` +
+              `Using USER INPUT phone (user's preferred format takes precedence).`
+          );
+          phoneNumber = userInputPhone;
+        }
+      } else if (callbackPhone && !userInputPhone) {
         console.warn(
-          `[register] PESAPAL PHONE OVERRIDE: form phone ${phoneNumber} vs. payment source ${verifiedPayload.phoneNumber}. ` +
-            `Using payment source phone (callback paymentAccount) as canonical for County + transactions.`
+          `[register] No user input phone — using callback phone ${callbackPhone} as fallback.`
         );
-      }
-      if (verifiedPayload.phoneNumber) {
-        phoneNumber = String(verifiedPayload.phoneNumber).trim();
+        phoneNumber = callbackPhone;
       }
 
       paidFeeAmount = Number(verifiedPayload.amount || amount);
@@ -1076,19 +1149,31 @@ router.post("/register", async (req, res) => {
 
   try {
     await saveUserToMongoDB(newUser);
-    if (PendingAccount) {
+    if (PendingAccount && updatePendingRecord && getAllPendingFlattened) {
       try {
         const queryNonce = req.body.__verification_nonce;
         if (queryNonce) {
-          await PendingAccount.updateOne(
-            { verificationNonce: queryNonce },
-            { $set: { status: "COMPLETED", completedAt: new Date() } }
+          await updatePendingRecord(
+            (r) => r.verificationNonce === String(queryNonce),
+            { status: "COMPLETED", completedAt: new Date() }
           );
         } else if (phoneNumber) {
-          await PendingAccount.updateMany(
-            { phoneNumber, status: "VERIFIED_PENDING_COMPLETION" },
-            { $set: { status: "COMPLETED", completedAt: new Date() } }
-          );
+          const toUpdate = await getAllPendingFlattened({
+            filter: (r) => {
+              const p = String(r.phoneNumber || "");
+              const target = String(phoneNumber || "");
+              return r.status === "VERIFIED_PENDING_COMPLETION" &&
+                (p === target || normalizePhone(p) === normalizePhone(target));
+            },
+          });
+          for (const r of toUpdate) {
+            if (r._id) {
+              await updatePendingRecord(
+                (rr) => rr._id && String(rr._id) === String(r._id),
+                { status: "COMPLETED", completedAt: new Date() }
+              );
+            }
+          }
         }
       } catch (pendingErr) {
         console.error("Error updating pendingaccount status upon registration:", pendingErr.message);
@@ -1255,19 +1340,28 @@ router.post("/complete-registration", async (req, res) => {
           });
         }
 
-        const normPhoneCmp = (s) => String(s || "").replace(/\D/g, "").replace(/^254/, "");
-        if (
-          verifiedPayload.phoneNumber &&
-          userData.phoneNumber &&
-          normPhoneCmp(verifiedPayload.phoneNumber) !== normPhoneCmp(userData.phoneNumber)
-        ) {
+        const cbPhone = String(verifiedPayload.phoneNumber || "").trim();
+        const uInputPhone = String(userData.phoneNumber || "").trim();
+        if (cbPhone && uInputPhone) {
+          if (phoneMatchesLast5(cbPhone, uInputPhone)) {
+            console.log(
+              `[complete-registration] LAST-5 MATCH OK: callback(${cbPhone}) vs input(${uInputPhone}). ` +
+                `Using USER INPUT phone as canonical for County + transactions.`
+            );
+            userData.phoneNumber = uInputPhone;
+          } else {
+            console.warn(
+              `[complete-registration] LAST-5 MISMATCH: callback(${cbPhone} last5=${getLast5Digits(cbPhone)}) ` +
+                `vs input(${uInputPhone} last5=${getLast5Digits(uInputPhone)}). ` +
+                `Using USER INPUT phone (user's preferred format takes precedence).`
+            );
+            userData.phoneNumber = uInputPhone;
+          }
+        } else if (cbPhone && !uInputPhone) {
           console.warn(
-            `[complete-registration] PESAPAL PHONE OVERRIDE: form phone ${userData.phoneNumber} vs. payment source ${verifiedPayload.phoneNumber}. ` +
-              `Using payment source phone (callback paymentAccount) as canonical for County + transactions.`
+            `[complete-registration] No user input phone — using callback phone ${cbPhone} as fallback.`
           );
-        }
-        if (verifiedPayload.phoneNumber) {
-          userData.phoneNumber = String(verifiedPayload.phoneNumber).trim();
+          userData.phoneNumber = cbPhone;
         }
 
         paidFeeAmount = Number(verifiedPayload.amount || expectedAmount);
@@ -1331,19 +1425,31 @@ router.post("/complete-registration", async (req, res) => {
     // Save to MongoDB
     try {
       await saveUserToMongoDB(newUser);
-      if (PendingAccount) {
+      if (PendingAccount && updatePendingRecord && getAllPendingFlattened) {
         try {
           const queryNonce = req.body.__verification_nonce || providedNonce;
           if (queryNonce) {
-            await PendingAccount.updateOne(
-              { verificationNonce: queryNonce },
-              { $set: { status: "COMPLETED", completedAt: new Date() } }
+            await updatePendingRecord(
+              (r) => r.verificationNonce === String(queryNonce),
+              { status: "COMPLETED", completedAt: new Date() }
             );
           } else if (normPhone) {
-            await PendingAccount.updateMany(
-              { phoneNumber: normPhone, status: "VERIFIED_PENDING_COMPLETION" },
-              { $set: { status: "COMPLETED", completedAt: new Date() } }
-            );
+            const toUpdate = await getAllPendingFlattened({
+              filter: (r) => {
+                const p = String(r.phoneNumber || "");
+                const target = String(normPhone || "");
+                return r.status === "VERIFIED_PENDING_COMPLETION" &&
+                  (p === target || normalizePhone(p) === normalizePhone(target));
+              },
+            });
+            for (const r of toUpdate) {
+              if (r._id) {
+                await updatePendingRecord(
+                  (rr) => rr._id && String(rr._id) === String(r._id),
+                  { status: "COMPLETED", completedAt: new Date() }
+                );
+              }
+            }
           }
         } catch (pendingErr) {
           console.error("Error updating pendingaccount status upon completion:", pendingErr.message);
