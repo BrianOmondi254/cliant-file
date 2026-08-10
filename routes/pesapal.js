@@ -907,106 +907,149 @@ async function handlePesapalCallback(req, res) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
 
+      const uName = userData.name || [userData.FirstName || userData.firstName, userData.MiddleName || userData.middleName, userData.LastName || userData.lastName].filter(Boolean).join(' ') || fullName || '';
+      const uEmail = userData.email || '';
+      const uPhone = resolvedPhone || userData.phoneNumber || userData.phone || '';
+      const uIdNumber = userData.idNumber || '';
+      const uGender = userData.gender || '';
+      const uAgeBracket = userData.ageBracket || '';
+      const uCounty = pending.county || userData.county || '';
+      const uConstituency = pending.constituency || userData.constituency || '';
+      const uWard = pending.ward || userData.ward || '';
+
       res.send(`
         <!DOCTYPE html>
         <html lang="en">
           <head>
             <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-            <title>Complete Your Registration</title>
-            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+            <title>Tbank Investment - Complete Your Registration</title>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
             <style>
               * {
-                box-sizing: border-box;
                 margin: 0;
                 padding: 0;
+                box-sizing: border-box;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
               }
               body {
-                font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                display: flex;
-                align-items: center;
-                justify-content: center;
                 min-height: 100vh;
                 min-height: -webkit-fill-available;
-                margin: 0;
-                background: linear-gradient(135deg, #0b1c33 0%, #060e1a 100%);
-                color: #e2e8f0;
-                padding: 16px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+                padding: 12px;
               }
               html {
                 height: -webkit-fill-available;
               }
-              .card {
-                background: rgba(255, 255, 255, 0.04);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                padding: 32px 20px;
-                border-radius: 20px;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-                text-align: center;
-                max-width: 380px;
+              .container {
                 width: 100%;
+                max-width: 480px;
               }
-              .icon-container {
-                width: 64px;
-                height: 64px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border-radius: 50%;
+              .card {
+                background: #ffffff;
+                border-radius: 8px;
+                box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+                overflow: hidden;
+              }
+              .header {
+                text-align: center;
+                background: linear-gradient(135deg, #0f9d58, #34d399);
+                padding: 30px 20px;
+                color: white;
+              }
+              .header h1 {
+                font-size: 24px;
+                font-weight: 800;
+                color: white;
+                margin: 0;
+                letter-spacing: -0.5px;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              .header p {
+                font-size: 11px;
+                color: rgba(255,255,255,0.95);
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                font-weight: 700;
+                margin-top: 4px;
+              }
+              .card-body {
+                padding: 24px 20px;
+              }
+              .status-badge {
+                background: #f0fdf4;
+                border: 1px solid #bbf7d0;
+                color: #15803d;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                text-align: center;
+                margin-bottom: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 20px;
-                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+                gap: 6px;
               }
-              .icon-container svg {
-                width: 32px;
-                height: 32px;
-                fill: none;
-                stroke: white;
-                stroke-width: 3;
-                stroke-linecap: round;
-                stroke-linejoin: round;
+              .details-grid {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                padding: 12px 16px;
+                margin-bottom: 20px;
               }
-              h2 {
-                font-size: 22px;
-                font-weight: 700;
-                margin: 0 0 10px;
-                background: linear-gradient(to right, #ffffff, #cbd5e1);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
+              .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 0;
+                border-bottom: 1px solid #e2e8f0;
               }
-              .description {
+              .detail-row:last-child {
+                border-bottom: none;
+              }
+              .detail-label {
+                font-size: 12px;
+                font-weight: 600;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              .detail-value {
                 font-size: 14px;
-                color: #94a3b8;
-                line-height: 1.5;
-                margin: 0 0 24px;
+                font-weight: 600;
+                color: #0f172a;
+                text-align: right;
+                word-break: break-word;
+                max-width: 65%;
               }
               .btn {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                width: 100%;
+                padding: 15px;
+                background: linear-gradient(135deg, #0f9d58, #34d399);
                 color: white;
                 border: none;
-                min-height: 50px;
-                padding: 14px 24px;
-                border-radius: 12px;
+                border-radius: 6px;
                 font-size: 16px;
-                font-weight: 600;
+                font-weight: 700;
                 cursor: pointer;
-                width: 100%;
-                transition: all 0.2s ease;
-                box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+                transition: 0.3s;
+                box-shadow: 0 4px 15px rgba(15, 157, 88, 0.3);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 10px;
+                gap: 8px;
                 -webkit-tap-highlight-color: transparent;
               }
-              .btn:hover, .btn:focus {
-                transform: translateY(-1px);
-                box-shadow: 0 12px 25px rgba(16, 185, 129, 0.45);
+              .btn:hover {
+                background: linear-gradient(135deg, #0b8046, #2ebd85);
+                box-shadow: 0 6px 20px rgba(15, 157, 88, 0.45);
               }
               .btn:active {
-                transform: translateY(1px);
+                transform: scale(0.98);
               }
               .btn-spinner {
                 display: none;
@@ -1033,26 +1076,41 @@ async function handlePesapalCallback(req, res) {
             </style>
           </head>
           <body>
-            <div class="card">
-              <div class="icon-container">
-                <svg viewBox="0 0 24 24">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-              <h2>Complete Your Registration</h2>
-              <p class="description">Your payment was successful! Tap the button below to complete setting up your account.</p>
+            <div class="container">
+              <div class="card">
+                <div class="header">
+                  <h1>TBANK INVESTMENT</h1>
+                  <p>Complete Your Registration</p>
+                </div>
+                <div class="card-body">
+                  <div class="status-badge">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Payment Successful & Account Ready
+                  </div>
 
-              <form id="completeForm" action="/complete-registration" method="POST">
-                <input type="hidden" name="registrationData" value="${rdEscaped}">
-                <input type="hidden" name="paymentConfirmed" value="true">
-                <input type="hidden" name="paymentProvider" value="pesapal">
-                <input type="hidden" name="__order_tracking_id" value="${strOrderTrackingId}">
-                <input type="hidden" name="passkey" value="">
-                <button type="submit" class="btn" id="submitBtn">
-                  <span class="btn-spinner"></span>
-                  <span class="btn-text">Complete Registration</span>
-                </button>
-              </form>
+                  <div class="details-grid">
+                    ${uName ? `<div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${uName}</span></div>` : ''}
+                    ${uPhone ? `<div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${uPhone}</span></div>` : ''}
+                    ${uEmail ? `<div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${uEmail}</span></div>` : ''}
+                    ${uIdNumber ? `<div class="detail-row"><span class="detail-label">ID Number</span><span class="detail-value">${uIdNumber}</span></div>` : ''}
+                    ${uGender ? `<div class="detail-row"><span class="detail-label">Gender</span><span class="detail-value">${uGender}</span></div>` : ''}
+                    ${uAgeBracket ? `<div class="detail-row"><span class="detail-label">Age Bracket</span><span class="detail-value">${uAgeBracket}</span></div>` : ''}
+                    ${(uCounty || uConstituency || uWard) ? `<div class="detail-row"><span class="detail-label">Location</span><span class="detail-value">${[uWard, uConstituency, uCounty].filter(Boolean).join(', ')}</span></div>` : ''}
+                  </div>
+
+                  <form id="completeForm" action="/complete-registration" method="POST">
+                    <input type="hidden" name="registrationData" value="${rdEscaped}">
+                    <input type="hidden" name="paymentConfirmed" value="true">
+                    <input type="hidden" name="paymentProvider" value="pesapal">
+                    <input type="hidden" name="__order_tracking_id" value="${strOrderTrackingId}">
+                    <input type="hidden" name="passkey" value="">
+                    <button type="submit" class="btn" id="submitBtn">
+                      <span class="btn-spinner"></span>
+                      <span class="btn-text">Complete Registration</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
             </div>
 
             <script>
