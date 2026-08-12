@@ -975,14 +975,28 @@ router.get("/wallet", async (req, res) => {
         rawType === "deposit" ||
         rawType === "credit" ||
         rawType === "receive";
+
+      const fromObj = typeof t.from === "object" && t.from ? t.from : {};
+      const toObj = typeof t.to === "object" && t.to ? t.to : {};
+
+      const fromName = fromObj.name || (typeof t.from === "string" ? t.from : "");
+      const fromNum = fromObj.number || (typeof t.from === "string" && !isNaN(t.from) ? t.from : "");
+
+      const toName = toObj.name || (typeof t.to === "string" ? t.to : "");
+      const toNum = toObj.number || (typeof t.to === "string" && !isNaN(t.to) ? t.to : mongoAcc.phone);
+
       return {
         type: isIn ? "deposit" : "withdraw",
-        acc: t.from?.name || t.to?.name || "Personal Account",
+        acc: fromName || toName || "Personal Account",
         amt: parseFloat(t.amount || 0),
         date: t.time || t.date,
-        accountNumber: t.to?.number || t.from?.number || mongoAcc.phone,
+        accountNumber: toNum || fromNum || mongoAcc.phone,
+        from: fromName || fromNum || (isIn ? "External Source" : "Personal Account"),
+        fromNumber: fromNum,
+        to: toName || toNum || (isIn ? "Personal Account" : mongoAcc.phone),
+        toNumber: toNum,
         notes: t.notes || "",
-        code: t.reference || "",
+        code: t.reference || t.code || "",
         processedBy: t.environment || "",
         opening: Number(t.openingBalance ?? 0),
         closing: Number(t.closingBalance ?? 0),

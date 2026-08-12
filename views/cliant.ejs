@@ -800,26 +800,36 @@ const app = {
                 const amtColor = tx.isCredit ? '#16a34a' : '#dc2626';
                 const amtPrefix = tx.isCredit ? '+' : '-';
                 const bgLight = tx.isCredit ? '#f0fdf4' : '#fef2f2';
-                const txCode = tx.code || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
-                const txAccNo = tx.accountNumber || '—';
+                const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
+                const rawAcc = tx.acc || 'Personal Account';
+                const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const rawFrom = tx.from || (tx.isCredit ? 'External Source' : 'Personal Account');
+                const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const cleanFrom = tx.fromNumber || fromNameClean;
+                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (tx.isCredit ? 'Personal Account' : 'External Wallet');
+                const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 ledgerCardsHTML += `
                     <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
                             <div>
-                                <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${tx.acc || 'Personal Account'}</h4>
+                                <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${cleanAcc}</h4>
                             </div>
                             <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap;">
                                 ${txDate}
                             </span>
                         </div>
-                        <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 10px; color: #64748b;">
-                            <div>
+                        <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; text-align: center; gap: 8px; font-size: 10px; color: #64748b;">
+                            <div style="flex: 1; text-align: left;">
+                                <span style="font-weight: 700; color: #475569;">From:</span>
+                                <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanFrom}</span>
+                            </div>
+                            <div style="flex: 1; text-align: center;">
                                 <span style="font-weight: 700; color: #475569;">Ref Code:</span>
                                 <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txCode}</span>
                             </div>
-                            <div>
+                            <div style="flex: 1; text-align: right;">
                                 <span style="font-weight: 700; color: #475569;">Processed To:</span>
-                                <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txAccNo}</span>
+                                <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanTo}</span>
                             </div>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px dashed #f1f5f9;">
@@ -874,7 +884,7 @@ const app = {
                 <!-- Transaction Ledger Label + Add Fund (far right) -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px;">
                     <div class="section-label" style="margin: 0; font-size: 13px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px;">
-                        📜 Transaction Sheet
+                        📜 Transaction Statement
                     </div>
                     <button type="button" onclick="app.flowAddFund()" style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(12,143,68,.25);">
                         <i class="fa-solid fa-plus"></i> Add Fund
@@ -1873,7 +1883,7 @@ const app = {
                 </div>
                 <button class="m-submit-btn" onclick="app.flowLongStatement()"><i class="fa-solid fa-file-export"></i> Get Statement</button>
             </div>`;
-            this.updateModalContent('Account Statement', html, null, 'fa-chart-bar');
+            this.updateModalContent('Transaction Statement', html, null, 'fa-chart-bar');
         /* ── Create Group ── */
         } else if (action === 'Create Group') {
             const html = `<div style="max-height:70vh;overflow-y:auto;padding-right:5px;">
@@ -1954,7 +1964,6 @@ const app = {
                     <span style="font-size:16px;background:#efebe9;color:#5d4037;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-wallet"></i></span>
                     <div style="text-align:left;">
                         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">My Wallet</span>
-                        <span style="display:block;font-size:10.5px;color:#64748b;margin-top:1px;">Available balance: <strong id="walletBalanceText" style="color:var(--primary);">KSh ${balanceAmount}</strong></span>
                     </div>
                 </div>
                 <span onclick="app.toggleHeaderBalance()" style="font-size: 13px; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: white; padding: 4px 8px; border-radius: 20px; border: 1px solid #e2e8f0;">
@@ -3203,10 +3212,100 @@ const app = {
             if (chevron) chevron.style.transform = hidden ? 'rotate(180deg)' : 'rotate(0deg)';
         }
     },
-    flowLongStatement() {
+    async flowMiniStatement() {
+        await this.fetchWalletData();
+        const txns = [...(this.data.transactions || [])].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
+        let itemsHTML = '';
+        if (txns.length > 0) {
+            txns.forEach((tx, idx) => {
+                const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
+                const amtColor = isCredit ? '#16a34a' : '#dc2626';
+                const amtPrefix = isCredit ? '+' : '-';
+                const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Today';
+                const rawAcc = tx.acc || 'Personal Account';
+                const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const rawFrom = tx.from || (isCredit ? 'External Source' : 'Personal Account');
+                const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const cleanFrom = tx.fromNumber || fromNameClean;
+                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? 'Personal Account' : 'External Wallet');
+                const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt || 0) * 3 + idx * 71) % 900000).toUpperCase() + 'B');
+                itemsHTML += `
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-weight:700;font-size:13px;color:#1e293b;">${cleanAcc}</span>
+                            <span style="font-size:11px;color:#64748b;">${txDate}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;text-align:center;gap:6px;font-size:10px;color:#64748b;margin-bottom:8px;">
+                            <span style="flex:1;text-align:left;"><strong style="color:#475569;">From:</strong> <span style="font-family:monospace;color:#1e293b;">${cleanFrom}</span></span>
+                            <span style="flex:1;text-align:center;"><strong style="color:#475569;">Ref Code:</strong> <span style="font-family:monospace;color:#1e293b;">${txCode}</span></span>
+                            <span style="flex:1;text-align:right;"><strong style="color:#475569;">Processed To:</strong> <span style="font-family:monospace;color:#1e293b;">${cleanTo}</span></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding-top:6px;border-top:1px dashed #e2e8f0;">
+                            <span style="font-size:10px;color:#94a3b8;">Amount</span>
+                            <span style="font-weight:700;color:${amtColor};font-family:monospace;">${amtPrefix} KSh ${Number(tx.amt || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            itemsHTML = `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">No recent transactions found.</div>`;
+        }
+        const html = `
+            <div style="margin-bottom:14px;font-weight:700;font-size:13px;color:var(--primary);text-align:center;padding:8px;background:#f0fdf4;border-radius:8px;">
+                📜 Mini Statement (Recent Transactions)
+            </div>
+            ${itemsHTML}
+            <button class="m-submit-btn secondary" style="margin-top:10px;" onclick="app.openModal('Statement')">Back to Options</button>
+        `;
+        this.updateModalContent('Transaction Statement', html, () => this.openModal('Statement'), 'fa-list-ul');
+    },
+    async flowLongStatement() {
         const months = document.getElementById('statementDuration')?.value || '1';
-        this.showToast(`Requesting ${months} month(s) statement...`, 'success');
-        setTimeout(() => this.showToast('Full statement available in your Inbox soon.', 'success'), 1500);
+        await this.fetchWalletData();
+        const txns = [...(this.data.transactions || [])].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        let itemsHTML = '';
+        if (txns.length > 0) {
+            txns.forEach((tx, idx) => {
+                const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
+                const amtColor = isCredit ? '#16a34a' : '#dc2626';
+                const amtPrefix = isCredit ? '+' : '-';
+                const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Today';
+                const rawAcc = tx.acc || 'Personal Account';
+                const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const rawFrom = tx.from || (isCredit ? 'External Source' : 'Personal Account');
+                const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const cleanFrom = tx.fromNumber || fromNameClean;
+                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? 'Personal Account' : 'External Wallet');
+                const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt || 0) * 3 + idx * 71) % 900000).toUpperCase() + 'B');
+                itemsHTML += `
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-weight:700;font-size:13px;color:#1e293b;">${cleanAcc}</span>
+                            <span style="font-size:11px;color:#64748b;">${txDate}</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;text-align:center;gap:6px;font-size:10px;color:#64748b;margin-bottom:8px;">
+                            <span style="flex:1;text-align:left;"><strong style="color:#475569;">From:</strong> <span style="font-family:monospace;color:#1e293b;">${cleanFrom}</span></span>
+                            <span style="flex:1;text-align:center;"><strong style="color:#475569;">Ref Code:</strong> <span style="font-family:monospace;color:#1e293b;">${txCode}</span></span>
+                            <span style="flex:1;text-align:right;"><strong style="color:#475569;">Processed To:</strong> <span style="font-family:monospace;color:#1e293b;">${cleanTo}</span></span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding-top:6px;border-top:1px dashed #e2e8f0;">
+                            <span style="font-size:10px;color:#94a3b8;">Amount</span>
+                            <span style="font-weight:700;color:${amtColor};font-family:monospace;">${amtPrefix} KSh ${Number(tx.amt || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            itemsHTML = `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">No transaction records found for the past ${months} month(s).</div>`;
+        }
+        const html = `
+            <div style="margin-bottom:14px;font-weight:700;font-size:13px;color:var(--primary);text-align:center;padding:8px;background:#e0f2fe;border-radius:8px;">
+                📜 Long Statement (${months} Month${months > 1 ? 's' : ''})
+            </div>
+            ${itemsHTML}
+            <button class="m-submit-btn secondary" style="margin-top:10px;" onclick="app.openModal('Statement')">Back to Options</button>
+        `;
+        this.updateModalContent('Transaction Statement', html, () => this.openModal('Statement'), 'fa-file-contract');
     },
     /* ─── GENERAL VIEW ─── */
     renderGeneralView(container) {
