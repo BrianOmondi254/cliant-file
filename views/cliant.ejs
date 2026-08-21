@@ -688,6 +688,55 @@ const app = {
         this._inboxPollInterval = setInterval(() => {
             this.fetchInboxData();
         }, 30000);
+        // Dynamically ensure Agent nav button is visible if the server-side check missed it
+        this.ensureAgentNav();
+    },
+    async ensureAgentNav() {
+        if (this.data.isAgent) return;
+        const topNav = document.querySelector('.top-nav');
+        if (!topNav) return;
+        const existingBtn = topNav.querySelector('.nav-btn-agent');
+        if (existingBtn) return;
+        try {
+            const res = await fetch('/personal/is-agent');
+            const data = await res.json();
+            if (data.isAgent) {
+                this.data.isAgent = true;
+                this.data.navLinks = this.data.navLinks || [];
+                if (!this.data.navLinks.includes('Agent')) {
+                    const insertIdx = Math.max(0, this.data.navLinks.indexOf('Personal'));
+                    this.data.navLinks.splice(insertIdx, 0, 'Agent');
+                }
+                const navIndicator = document.getElementById('navIndicator');
+                const personalBtn = Array.from(topNav.querySelectorAll('.nav-btn')).find(b => b.textContent.trim() === 'Personal');
+                const agentBtn = document.createElement('div');
+                agentBtn.className = 'nav-btn nav-btn-agent';
+                agentBtn.innerHTML = 'Agent';
+                agentBtn.onclick = function(e) {
+                    const btns = topNav.querySelectorAll('.nav-btn');
+                    const total = btns.length;
+                    const idx = Array.from(btns).indexOf(this);
+                    if (navIndicator) {
+                        navIndicator.style.width = (100 / total) + '%';
+                        navIndicator.style.left = (idx * (100 / total)) + '%';
+                    }
+                    btns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    window.location.href = '/agent';
+                };
+                if (personalBtn) {
+                    topNav.insertBefore(agentBtn, personalBtn);
+                } else {
+                    topNav.appendChild(agentBtn);
+                }
+                if (navIndicator) {
+                    navIndicator.style.width = (100 / topNav.querySelectorAll('.nav-btn').length) + '%';
+                }
+                this.showToast('🔄 Agent access enabled.', 'success');
+            }
+        } catch (e) {
+            console.error('[ensureAgentNav] error:', e.message);
+        }
     },
     refreshPersonalDashboardIfVisible() {
         const container = document.getElementById('mainContainer');
@@ -695,6 +744,7 @@ const app = {
         const currentHTML = container.innerHTML || '';
         if (currentHTML.includes('My Wallet') && currentHTML.includes('My Groups')) {
             this.renderPersonalView(container);
+            this.updateWalletBalanceUI();
         }
     },
     async fetchInboxData() {
@@ -729,7 +779,7 @@ const app = {
             const res = await fetch('/personal/wallet');
             const data = await res.json();
             if (data.success) {
-                this.data.balance = Number(data.balance) || 0;
+                this.data.balance = Number(data.balance) || Number(data.openBalance) || 0;
                 this.data.transactions = data.transactions || [];
                 this.data.groupTransactions = data.groupTransactions || [];
                 this.updateWalletBalanceUI();
@@ -1354,16 +1404,20 @@ const app = {
     toggleHeaderBalance() {
         const valSpan = document.getElementById('headerBalanceValue');
         const eyeIcon = document.getElementById('headerBalanceEye');
+        const walletText = document.getElementById('walletBalanceText');
         if (!valSpan || !eyeIcon) return;
+        const formatted = Number(this.data.balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         const isHidden = valSpan.style.display === 'none' || valSpan.textContent === '';
         if (isHidden) {
             valSpan.style.display = 'inline';
-            valSpan.textContent = `KSh ${Number(this.data.balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            valSpan.textContent = `KSh ${formatted}`;
             eyeIcon.className = 'fa-solid fa-eye';
+            if (walletText) walletText.textContent = `KSh ${formatted}`;
         } else {
             valSpan.style.display = 'none';
             valSpan.textContent = '';
             eyeIcon.className = 'fa-solid fa-eye-slash';
+            if (walletText) walletText.textContent = 'KSh ••••••';
         }
     },
     requirePersonalPin() {
@@ -2108,6 +2162,7 @@ const app = {
                     <span style="font-size:16px;background:#efebe9;color:#5d4037;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-wallet"></i></span>
                     <div style="text-align:left;">
                         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-dark);">My Wallet</span>
+                        <span id="walletBalanceText" style="display:block;font-size:12px;font-weight:600;color:var(--primary);margin-top:2px;font-family:monospace;">KSh ${balanceAmount}</span>
                     </div>
                 </div>
                 <span onclick="app.toggleHeaderBalance()" style="font-size: 13px; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: white; padding: 4px 8px; border-radius: 20px; border: 1px solid #e2e8f0;">
@@ -2696,39 +2751,72 @@ const app = {
     },
     openGroupStatementModal(groupName) {
         document.getElementById('modalOverlay').classList.add('open');
+        const normName = String(groupName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        // Aggregate matching group transactions
+        const allGroupTxns = [...(this.data.groupTransactions || []), ...(this.data.transactions || [])];
+        const seenCodes = new Set();
+        const groupRecords = [];
+        
+        allGroupTxns.forEach(tx => {
+            if (!tx) return;
+            const txGName = String(tx.groupName || tx.acc || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const isMatch = txGName.includes(normName) || normName.includes(txGName) || tx.purpose === 'group_contribution' || tx.type === 'group_deposit';
+            if (isMatch) {
+                const key = tx.code || `${tx.groupName}_${tx.amt}_${tx.date}`;
+                if (!seenCodes.has(key)) {
+                    seenCodes.add(key);
+                    groupRecords.push(tx);
+                }
+            }
+        });
+
+        groupRecords.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+        let rowsHTML = '';
+        let totalAmount = 0;
+
+        if (groupRecords.length > 0) {
+            groupRecords.forEach(tx => {
+                const amt = Number(tx.amt || tx.amount || 0);
+                totalAmount += amt;
+                const txDate = tx.date ? new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                const accLabel = tx.accountName || (tx.accountId === '001' ? 'Savings' : (tx.accountId === '002' ? 'Registration' : (tx.accountId === '003' ? 'Fine/Lateness' : (tx.accountId === '004' ? 'Welfare' : 'Contribution'))));
+                const refCode = tx.code || tx.reference || 'TXN-CONFIRMED';
+                const roundText = tx.circleRound ? `Round ${tx.circleRound}` : 'Cycle Verified';
+
+                rowsHTML += `
+                <div class="m-pay-row" style="border-bottom:1px solid #f1f5f9;padding:12px 0;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-weight:700;font-size:13px;color:#1e293b;">${accLabel} Deposit</div>
+                        <div style="font-size:10.5px;color:#64748b;margin-top:2px;">
+                            <span style="font-family:monospace;color:#0f172a;font-weight:600;">${refCode}</span> • <span style="color:#059669;font-weight:600;">${roundText}</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:800;font-size:13.5px;color:#16a34a;font-family:monospace;">+KSh ${amt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${txDate}</div>
+                    </div>
+                </div>`;
+            });
+        } else {
+            rowsHTML = `
+            <div style="text-align:center;padding:32px 14px;color:#94a3b8;">
+                <i class="fa-solid fa-receipt" style="font-size:32px;margin-bottom:10px;color:#cbd5e1;display:block;"></i>
+                <div style="font-size:13px;font-weight:600;color:#64748b;">No contributions recorded yet</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Contributions will automatically appear here once confirmed.</div>
+            </div>`;
+        }
+
         const html = `
-        <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Recent Contribution Ledger for <b>${groupName}</b></span></div>
-        <div style="max-height: 300px; overflow-y: auto; padding: 0 10px;">
-            <div class="m-pay-row" style="border-bottom:1px solid #f1f5f9;padding:12px 0;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-weight:700;font-size:13px;color:#1e293b;">Savings Deposit</div>
-                    <div style="font-size:11px;color:#94a3b8;">Deterministic Ledger • Completed</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:700;font-size:13px;color:#16a34a;">+KSh 1,200</div>
-                    <div style="font-size:10px;color:#94a3b8;">14 May, 2026</div>
-                </div>
-            </div>
-            <div class="m-pay-row" style="border-bottom:1px solid #f1f5f9;padding:12px 0;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-weight:700;font-size:13px;color:#1e293b;">Registration Fee</div>
-                    <div style="font-size:11px;color:#94a3b8;">Deterministic Ledger • Completed</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:700;font-size:13px;color:#16a34a;">+KSh 500</div>
-                    <div style="font-size:10px;color:#94a3b8;">12 May, 2026</div>
-                </div>
-            </div>
-            <div class="m-pay-row" style="padding:12px 0;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div style="font-weight:700;font-size:13px;color:#1e293b;">Welfare Contribution</div>
-                    <div style="font-size:11px;color:#94a3b8;">Deterministic Ledger • Completed</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-weight:700;font-size:13px;color:#16a34a;">+KSh 300</div>
-                    <div style="font-size:10px;color:#94a3b8;">10 May, 2026</div>
-                </div>
-            </div>
+        <div class="m-info-banner blue" style="margin-bottom:12px;"><i class="fa-solid fa-circle-info"></i><span>Contribution Statement for <b>${groupName}</b></span></div>
+        ${totalAmount > 0 ? `
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11.5px;font-weight:700;color:#166534;text-transform:uppercase;">Total Verified</span>
+            <span style="font-size:15px;font-weight:800;color:#16a34a;font-family:monospace;">KSh ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+        </div>` : ''}
+        <div style="max-height: 320px; overflow-y: auto; padding: 0 4px;">
+            ${rowsHTML}
         </div>
         <button class="m-submit-btn" style="margin-top:16px;" onclick="app.closeModal()">Close</button>
         `;
@@ -3358,20 +3446,30 @@ const app = {
     },
     async flowMiniStatement() {
         await this.fetchWalletData();
-        const txns = [...(this.data.transactions || [])].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
+        const allTxns = [...(this.data.transactions || []), ...(this.data.groupTransactions || [])];
+        const seen = new Set();
+        const uniqueTxns = [];
+        allTxns.forEach(t => {
+            const key = t.code || `${t.groupName || t.acc}_${t.amt}_${t.date}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueTxns.push(t);
+            }
+        });
+        const txns = uniqueTxns.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10);
         let itemsHTML = '';
         if (txns.length > 0) {
             txns.forEach((tx, idx) => {
-                const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
+                const isCredit = tx.type === 'deposit' || tx.type === 'group_deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
                 const amtColor = isCredit ? '#16a34a' : '#dc2626';
                 const amtPrefix = isCredit ? '+' : '-';
                 const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Today';
-                const rawAcc = tx.acc || 'Personal Account';
+                const rawAcc = tx.acc || (tx.groupName ? `${tx.groupName} Account` : 'Personal Account');
                 const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const rawFrom = tx.from || (isCredit ? 'External Source' : 'Personal Account');
                 const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const cleanFrom = tx.fromNumber || fromNameClean;
-                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? 'Personal Account' : 'External Wallet');
+                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? (tx.groupName || 'Personal Account') : 'External Wallet');
                 const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt || 0) * 3 + idx * 71) % 900000).toUpperCase() + 'B');
                 itemsHTML += `
@@ -3406,20 +3504,30 @@ const app = {
     async flowLongStatement() {
         const months = document.getElementById('statementDuration')?.value || '1';
         await this.fetchWalletData();
-        const txns = [...(this.data.transactions || [])].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        const allTxns = [...(this.data.transactions || []), ...(this.data.groupTransactions || [])];
+        const seen = new Set();
+        const uniqueTxns = [];
+        allTxns.forEach(t => {
+            const key = t.code || `${t.groupName || t.acc}_${t.amt}_${t.date}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueTxns.push(t);
+            }
+        });
+        const txns = uniqueTxns.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
         let itemsHTML = '';
         if (txns.length > 0) {
             txns.forEach((tx, idx) => {
-                const isCredit = tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
+                const isCredit = tx.type === 'deposit' || tx.type === 'group_deposit' || tx.type === 'receive' || tx.type === 'received' || tx.type === 'credit';
                 const amtColor = isCredit ? '#16a34a' : '#dc2626';
                 const amtPrefix = isCredit ? '+' : '-';
                 const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Today';
-                const rawAcc = tx.acc || 'Personal Account';
+                const rawAcc = tx.acc || (tx.groupName ? `${tx.groupName} Account` : 'Personal Account');
                 const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const rawFrom = tx.from || (isCredit ? 'External Source' : 'Personal Account');
                 const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const cleanFrom = tx.fromNumber || fromNameClean;
-                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? 'Personal Account' : 'External Wallet');
+                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? (tx.groupName || 'Personal Account') : 'External Wallet');
                 const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt || 0) * 3 + idx * 71) % 900000).toUpperCase() + 'B');
                 itemsHTML += `
@@ -4006,6 +4114,7 @@ const app = {
         const groupName = this.data.selectedGroupName || (this.data.group && this.data.group.groupName) || '';
         const phone = (this.data.user && this.data.user.phoneNumber) || '';
         const firstAccId = (addedAccounts[0] && (addedAccounts[0].accountNumber || addedAccounts[0].accountId)) || "001";
+        const firstAccName = (addedAccounts[0] && addedAccounts[0].accountName) || '';
 
         this.showToast('Initiating payment request…', 'info');
 
@@ -4024,7 +4133,8 @@ const app = {
                         payerPhone: phone,
                         purpose: 'group_contribution',
                         groupName: groupName,
-                        accountId: firstAccId
+                        accountId: firstAccId,
+                        accountName: firstAccName
                     }),
                 });
                 const data = await res.json();
@@ -4047,6 +4157,7 @@ const app = {
                     purpose: 'group_contribution',
                     groupName: groupName,
                     accountId: firstAccId,
+                    accountName: firstAccName,
                     accountPhone: phone,
                     reference: 'Group Deposit',
                     description: 'Group Contribution via M-Pesa'

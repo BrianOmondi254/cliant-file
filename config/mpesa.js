@@ -46,6 +46,7 @@ async function applyWalletTopUpFromPending(checkoutId, overrides = {}) {
         groupName: pending.groupName,
         memberPhone: pending.creditPhone,
         accountId: pending.accountId || "001",
+        accountName: pending.accountName || "",
         amount: overrides.amount != null ? overrides.amount : pending.amount,
         reference: overrides.reference || id,
         paymentMethod: "mpesa",
@@ -196,7 +197,7 @@ router.post("/stk-push", async (req, res) => {
         MerchantRequestID: data.MerchantRequestID || null,
       });
     } else if (isSuccess && isGroupContribution && data.CheckoutRequestID) {
-      const { groupName, accountId, memberPhone } = req.body;
+      const { groupName, accountId, accountName, memberPhone } = req.body;
       const creditPhone = String(
         memberPhone ||
         accountPhone ||
@@ -207,6 +208,7 @@ router.post("/stk-push", async (req, res) => {
         purpose: "group_contribution",
         groupName: groupName || "",
         accountId: accountId || "001",
+        accountName: accountName || "",
         creditPhone,
         payerPhone: mpesaPhone,
         amount: payAmount,

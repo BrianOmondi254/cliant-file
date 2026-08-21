@@ -500,7 +500,7 @@ router.post("/compliance/save-agent", async (req, res) => {
     );
 
     // 4. Update hq.json (Registry of plain events for backup/other uses?)
-     // Agent records are now stored in the MongoDB Agent collection instead of agent.json.
+    // Agent records are stored in the MongoDB Agent collection.
     // We will keep hq.json as a simple log for now to be safe.
     let hqData = [];
     if (fs.existsSync(HQ_JSON)) {

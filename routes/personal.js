@@ -490,8 +490,17 @@ router.get("/", async (req, res) => {
 
     // Use session flags for showDealer, showAgent, agent, and hasAgentPin
     // To be robust, re-check against MongoDB collections if flags are missing or stale
-    const isDealerInFile = !!(await findDealerByPhone(phone));
-    const isAgentInFile = !!(await findAgentByPhone(phone));
+    let isAgentInFile = false;
+    let isDealerInFile = false;
+    try {
+      const dbReady = await ensureMongoReady();
+      if (dbReady) {
+        isAgentInFile = !!(await findAgentByPhone(phone));
+        isDealerInFile = !!(await findDealerByPhone(phone));
+      }
+    } catch (e) {
+      console.error("[personal] agent/dealer lookup error:", e.message);
+    }
 
     const showDealer = !!(req.session.isDealer || isDealerInFile);
     const showAgent = !!(req.session.isAgent || isAgentInFile);
@@ -935,35 +944,117 @@ router.get("/wallet", async (req, res) => {
     const phone = req.session.user?.phoneNumber;
     if (!phone) return res.status(401).json({ success: false, error: "Not authenticated" });
 
+    console.log(`[/wallet] Fetching for phone: ${phone}`);
+
     const groupTxns = await findGroupMemberTransactions(phone);
 
     if (req.session.user) {
       req.session.user.verifiedGroupTransactions = groupTxns;
     }
 
+    // --- Try fast direct nested query first (avoids full cursor scan) ---
+    let mongoAcc = null;
+    try {
+      const db = require("mongoose").connection.db;
+      if (db) {
+        const phoneVariants = [
+          phone,
+          phone.startsWith("0") ? phone.substring(1) : phone,
+          phone.startsWith("+254") ? phone.substring(4) : phone,
+          phone.startsWith("254") && phone.length > 9 ? phone.substring(3) : phone,
+          `0${phone.replace(/^(\+?254|0)/, "")}`,
+          `+254${phone.replace(/^(\+?254|0)/, "")}`,
+          `254${phone.replace(/^(\+?254|0)/, "")}`,
+        ].filter((v, i, arr) => v && arr.indexOf(v) === i);
+
+        const countyDoc = await db.collection("personalaccounts").findOne({
+          "constituencies.wards.data": {
+            $elemMatch: { phone: { $in: phoneVariants } }
+          }
+        });
+
+        if (countyDoc) {
+          for (const cons of countyDoc.constituencies || []) {
+            for (const ward of cons.wards || []) {
+              const leaf = (ward.data || []).find(r => phoneVariants.includes(r.phone));
+              if (leaf) {
+                mongoAcc = { ...leaf, county: countyDoc.county, constituency: cons.name, ward: ward.name };
+                console.log(`[/wallet] Found via $elemMatch for phone: ${phone}, openBalance: ${leaf.account?.personal?.openBalance}`);
+                break;
+              }
+            }
+            if (mongoAcc) break;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[/wallet] Fast lookup failed, falling back:", e.message);
+    }
+
+    // --- Fallback to existing findPersonalAccountByPhone ---
     if (!mongoAcc) {
+      mongoAcc = await findPersonalAccountByPhone(phone);
+      if (mongoAcc) {
+        console.log(`[/wallet] Found via findPersonalAccountByPhone, openBalance: ${mongoAcc.account?.personal?.openBalance}`);
+      } else {
+        console.warn(`[/wallet] No account found for phone: ${phone}`);
+      }
+    }
+
+    if (!mongoAcc) {
+      // Fall back to session-cached balance if available
+      const cachedBalance = req.session.walletBalance || 0;
+      console.log(`[/wallet] No account found, returning cached balance: ${cachedBalance}`);
       return res.json({
         success: true,
-        balance: 0,
+        balance: cachedBalance,
         transactions: [],
         groupTransactions: groupTxns,
         accountExists: false,
-        source: "mongodb",
+        source: "session_cache",
       });
     }
 
     const txns = Array.isArray(mongoAcc.transactions) ? [...mongoAcc.transactions] : [];
-    txns.sort((a, b) => new Date(a.time || 0) - new Date(b.time || 0));
+    txns.sort((a, b) => new Date(a.time || a.date || 0) - new Date(b.time || b.date || 0));
 
     const openBal = Number(mongoAcc.account?.personal?.openBalance ?? 0);
     const personalBal = Number(mongoAcc.account?.personal?.personal ?? 0);
-    const latestClosing = txns.length
-      ? Number(txns[txns.length - 1].closingBalance)
-      : null;
-    // Current wallet balance = latest closing when present, else openBalance / personal
-    const balance = Number.isFinite(latestClosing)
-      ? latestClosing
-      : (Number.isFinite(openBal) ? openBal : personalBal);
+    const totalBal = Number(mongoAcc.account?.business?.["total-bal"] ?? mongoAcc.account?.personal?.totalBal ?? 0);
+    const directBal = Number(mongoAcc.balance ?? NaN);
+
+    let latestClosing = null;
+    if (txns.length > 0) {
+      for (let i = txns.length - 1; i >= 0; i--) {
+        const c = Number(txns[i].closingBalance);
+        if (Number.isFinite(c)) {
+          latestClosing = c;
+          break;
+        }
+      }
+    }
+
+    // Prefer openBalance from PersonalAccount collection as the primary source;
+    // fall back to latest closing balance from verified transactions, then other balances
+    let balance = 0;
+    if (Number.isFinite(openBal) && openBal > 0) {
+      balance = openBal;
+    } else if (Number.isFinite(latestClosing) && latestClosing > 0) {
+      balance = latestClosing;
+    } else if (Number.isFinite(personalBal) && personalBal > 0) {
+      balance = personalBal;
+    } else if (Number.isFinite(totalBal) && totalBal > 0) {
+      balance = totalBal;
+    } else if (Number.isFinite(directBal) && directBal > 0) {
+      balance = directBal;
+    }
+
+    console.log(`[/wallet] Balance resolved: ${balance} (latestClosing=${latestClosing}, openBal=${openBal}, personalBal=${personalBal})`);
+
+    // Cache balance in session for fast fallback
+    if (req.session) {
+      req.session.walletBalance = balance;
+    }
 
     const transactions = txns.map((t) => {
       const rawType = String(t.type || "received").toLowerCase();
@@ -971,7 +1062,9 @@ router.get("/wallet", async (req, res) => {
         rawType === "received" ||
         rawType === "deposit" ||
         rawType === "credit" ||
-        rawType === "receive";
+        rawType === "receive" ||
+        rawType === "group_deposit" ||
+        rawType === "topup";
 
       const fromObj = typeof t.from === "object" && t.from ? t.from : {};
       const toObj = typeof t.to === "object" && t.to ? t.to : {};
@@ -982,16 +1075,33 @@ router.get("/wallet", async (req, res) => {
       const toName = toObj.name || (typeof t.to === "string" ? t.to : "");
       const toNum = toObj.number || (typeof t.to === "string" && !isNaN(t.to) ? t.to : mongoAcc.phone);
 
+      const isGroup = Boolean(
+        t.groupName ||
+        t.purpose === "group_contribution" ||
+        rawType === "group_deposit" ||
+        (t.notes && t.notes.toLowerCase().includes("contribution to"))
+      );
+
+      const accTitle = isGroup
+        ? `${t.groupName || 'Group'} (Acc ${t.accountId || '001'} - ${t.accountName || 'Saving'})`
+        : (fromName || toName || "Personal Account");
+
       return {
         type: isIn ? "deposit" : "withdraw",
-        acc: fromName || toName || "Personal Account",
+        rawType: t.type || (isIn ? "deposit" : "withdraw"),
+        groupName: t.groupName || (isGroup ? "Group Account" : ""),
+        accountId: t.accountId || "",
+        accountName: t.accountName || "",
+        circleRound: t.circleRound || 1,
+        purpose: t.purpose || (isGroup ? "group_contribution" : "wallet_transfer"),
+        acc: accTitle,
         amt: parseFloat(t.amount || 0),
-        date: t.time || t.date,
+        date: t.time || t.date || new Date().toISOString(),
         accountNumber: toNum || fromNum || mongoAcc.phone,
         from: fromName || fromNum || (isIn ? "External Source" : "Personal Account"),
-        fromNumber: fromNum,
-        to: toName || toNum || (isIn ? "Personal Account" : mongoAcc.phone),
-        toNumber: toNum,
+        fromNumber: fromNum || (isIn ? "" : mongoAcc.phone),
+        to: toName || toNum || (isGroup ? (t.groupName || "Group Account") : (isIn ? "Personal Account" : mongoAcc.phone)),
+        toNumber: toNum || mongoAcc.phone,
         notes: t.notes || "",
         code: t.reference || t.code || "",
         processedBy: t.environment || "",
@@ -1016,6 +1126,7 @@ router.get("/wallet", async (req, res) => {
     res.status(500).json({ success: false, error: "Failed to load wallet" });
   }
 });
+
 
 /* Active collection payment method for wallet Add Fund */
 router.get("/wallet-payment-method", async (req, res) => {
@@ -1583,6 +1694,29 @@ router.post("/accept-agent-invite", async (req, res) => {
   } catch (e) {
     console.error("[accept-agent-invite] error:", e.message);
     res.json({ success: false, message: e.message });
+  }
+});
+
+// GET /personal/is-agent — client-side check for Agent nav button visibility
+router.get("/is-agent", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user || !req.session.user.phoneNumber) {
+      return res.json({ isAgent: false });
+    }
+    const phone = req.session.user.phoneNumber;
+    let isAgent = !!req.session.isAgent;
+    if (!isAgent) {
+      try {
+        const dbReady = await ensureMongoReady();
+        if (dbReady) isAgent = !!(await findAgentByPhone(phone));
+      } catch (e) {
+        console.error("[is-agent] MongoDB lookup error:", e.message);
+      }
+    }
+    res.json({ isAgent: !!isAgent });
+  } catch (e) {
+    console.error("[is-agent] error:", e.message);
+    res.json({ isAgent: false });
   }
 });
 
