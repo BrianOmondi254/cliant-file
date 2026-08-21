@@ -105,28 +105,89 @@
             <form action="/personal/send-money/submit" method="POST">
                 <input type="hidden" name="groupName" value="<%= groupName %>">
                 <div class="form-group">
+                    <label>Select Target Account</label>
+                    <select name="accountId" required>
+                        <option value="001" selected>Saving Account (001)</option>
+                        <option value="002">Registration Account (002)</option>
+                        <option value="003">Lateness Account (003)</option>
+                        <option value="004">Welfare Account (004)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Amount (KES)</label>
-                    <input type="number" name="amount" placeholder="0.00" required>
+                    <input type="number" name="amount" placeholder="0.00" required min="1">
                 </div>
                 <button type="submit">Verify Amount <i class="fas fa-check"></i></button>
             </form>
         <% } else if (step === 'confirm') { %>
             <div style="text-align: center;">
-                <p>Transfer to: <strong><%= groupName %></strong></p>
+                <p>Transfer to: <strong><%= groupName %></strong> (Account: <strong><%= accountId || '001' %></strong>)</p>
                 <h3 style="font-size: 2rem; color: var(--primary); margin: 10px 0;"><%= amount %></h3>
                 <form action="/personal/send-money/complete" method="POST">
                     <input type="hidden" name="groupName" value="<%= groupName %>">
+                    <input type="hidden" name="accountId" value="<%= accountId || '001' %>">
                     <input type="hidden" name="amount" value="<%= amount %>">
                     <button type="submit">Confirm Transfer</button>
                     <button type="button" class="btn-secondary" onclick="history.back()">Cancel</button>
                 </form>
             </div>
         <% } else if (step === 'success') { %>
-            <div class="result-box">
-                <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--primary); margin-bottom: 15px;"></i>
-                <h3>Transfer Successful!</h3>
-                <p>Deposited <strong><%= amount %></strong> to group <strong><%= groupName %></strong>.</p>
-                <button onclick="window.location.href='/personal'">Return Home</button>
+            <div class="result-box" style="text-align: left; padding: 20px; border-radius: 16px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                <% if (typeof result !== 'undefined' && result && result.fallback) { %>
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <i class="fas fa-wallet" style="font-size: 2.5rem; color: #f59e0b;"></i>
+                        <h3 style="color: #92400e; margin: 10px 0 5px 0;">Credited to Personal Wallet</h3>
+                        <p style="color: #64748b; font-size: 0.88rem; margin: 0;">Group roster verification was unverified. Funds were securely preserved in your Personal Wallet.</p>
+                    </div>
+                <% } else { %>
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <i class="fas fa-check-circle" style="font-size: 2.5rem; color: var(--primary);"></i>
+                        <h3 style="color: #065f46; margin: 10px 0 5px 0;">Transaction Complete</h3>
+                        <p style="color: #64748b; font-size: 0.88rem; margin: 0;">Group contribution recorded successfully.</p>
+                    </div>
+                <% } %>
+
+                <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin: 15px 0; font-size: 0.88rem; border: 1px solid #edf2f7;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #64748b;">Amount:</span>
+                        <strong style="color: #0f172a;"><%= amount %></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: #64748b;">Target Group:</span>
+                        <strong style="color: #0f172a;"><%= groupName %></strong>
+                    </div>
+                    <% if (typeof result !== 'undefined' && result) { %>
+                        <% if (result.statement?.accountName) { %>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: #64748b;">Account:</span>
+                                <strong style="color: #0f172a;"><%= result.statement.accountName %> (<%= result.accountId || '001' %>)</strong>
+                            </div>
+                        <% } %>
+                        <% if (result.circleRound) { %>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: #64748b;">Active Round:</span>
+                                <strong style="color: #059669;">Round #<%= result.circleRound %></strong>
+                            </div>
+                        <% } %>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #64748b;">Reference:</span>
+                            <strong style="color: #334155; font-family: monospace;"><%= result.statement?.reference || result.txId || 'TX-COMPLETED' %></strong>
+                        </div>
+                        <% if (result.statement?.closingBalance !== undefined) { %>
+                            <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px dashed #cbd5e1; margin-top: 6px;">
+                                <span style="color: #64748b;">Wallet Balance:</span>
+                                <strong style="color: var(--primary);">KSh <%= Number(result.statement.closingBalance).toLocaleString('en-KE', { minimumFractionDigits: 2 }) %></strong>
+                            </div>
+                        <% } else if (result.topUp?.balance !== undefined) { %>
+                            <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px dashed #cbd5e1; margin-top: 6px;">
+                                <span style="color: #64748b;">Wallet Balance:</span>
+                                <strong style="color: var(--primary);">KSh <%= Number(result.topUp.balance).toLocaleString('en-KE', { minimumFractionDigits: 2 }) %></strong>
+                            </div>
+                        <% } %>
+                    <% } %>
+                </div>
+
+                <button onclick="window.location.href='/personal'" style="margin-top: 5px;">Return to Dashboard</button>
             </div>
         <% } %>
     </div>

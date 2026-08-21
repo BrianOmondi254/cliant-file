@@ -731,11 +731,13 @@ const app = {
             if (data.success) {
                 this.data.balance = Number(data.balance) || 0;
                 this.data.transactions = data.transactions || [];
+                this.data.groupTransactions = data.groupTransactions || [];
                 this.updateWalletBalanceUI();
                 this.refreshPersonalDashboardIfVisible();
             } else {
                 this.data.balance = 0;
                 this.data.transactions = [];
+                this.data.groupTransactions = [];
                 this.updateWalletBalanceUI();
             }
         } catch (e) {
@@ -786,86 +788,122 @@ const app = {
             };
             runningVal = opening;
         }
-        let ledgerCardsHTML = '';
-        if (ledgerItems.length > 0) {
-            // Render ledger items (newest first)
-            for (let i = ledgerItems.length - 1; i >= 0; i--) {
-                const tx = ledgerItems[i];
-                const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }) : 'Today';
-                const amtColor = tx.isCredit ? '#16a34a' : '#dc2626';
-                const amtPrefix = tx.isCredit ? '+' : '-';
-                const bgLight = tx.isCredit ? '#f0fdf4' : '#fef2f2';
-                const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
-                const rawAcc = tx.acc || 'Personal Account';
-                const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
-                const rawFrom = tx.from || (tx.isCredit ? 'External Source' : 'Personal Account');
-                const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
-                const cleanFrom = tx.fromNumber || fromNameClean;
-                const rawTo = tx.toNumber || tx.to || tx.accountNumber || (tx.isCredit ? 'Personal Account' : 'External Wallet');
-                const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
-                ledgerCardsHTML += `
-                    <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
-                            <div>
-                                <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${cleanAcc}</h4>
-                            </div>
-                            <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap;">
-                                ${txDate}
-                            </span>
+        let walletCardsHTML = '';
+        let groupCardsHTML = '';
+
+        const createCardHTML = (tx, i) => {
+            const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'Today';
+            const amtColor = tx.isCredit ? '#16a34a' : '#dc2626';
+            const amtPrefix = tx.isCredit ? '+' : '-';
+            const bgLight = tx.isCredit ? '#f0fdf4' : '#fef2f2';
+            const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
+            const rawAcc = tx.acc || (tx.groupName ? `${tx.groupName} Account` : 'Personal Wallet');
+            const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+            const rawFrom = tx.from || (tx.isCredit ? 'External Source' : 'Personal Wallet');
+            const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+            const cleanFrom = tx.fromNumber || fromNameClean;
+            const rawTo = tx.toNumber || tx.to || tx.accountNumber || (tx.isCredit ? 'Personal Wallet' : 'External Recipient');
+            const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+            return `
+                <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
+                        <div>
+                            <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${cleanAcc}</h4>
                         </div>
-                        <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; text-align: center; gap: 8px; font-size: 10px; color: #64748b;">
-                            <div style="flex: 1; text-align: left;">
-                                <span style="font-weight: 700; color: #475569;">From:</span>
-                                <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanFrom}</span>
-                            </div>
-                            <div style="flex: 1; text-align: center;">
-                                <span style="font-weight: 700; color: #475569;">Ref Code:</span>
-                                <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txCode}</span>
-                            </div>
-                            <div style="flex: 1; text-align: right;">
-                                <span style="font-weight: 700; color: #475569;">Processed To:</span>
-                                <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanTo}</span>
-                            </div>
+                        <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap;">
+                            ${txDate}
+                        </span>
+                    </div>
+                    <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; text-align: center; gap: 8px; font-size: 10px; color: #64748b;">
+                        <div style="flex: 1; text-align: left;">
+                            <span style="font-weight: 700; color: #475569;">From:</span>
+                            <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanFrom}</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px dashed #f1f5f9;">
-                            <div style="flex: 1; text-align: left;">
-                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
-                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
-                                    KSh ${Number(tx.opening).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                                </span>
-                            </div>
-                            <div style="flex: 1.2; text-align: center; background: ${bgLight}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${tx.isCredit ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
-                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
-                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
-                                    ${amtPrefix} KSh ${Number(tx.amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                                </span>
-                            </div>
-                            <div style="flex: 1; text-align: right;">
-                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
-                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 800; color: var(--primary); white-space: nowrap;">
-                                    KSh ${Number(tx.closing).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                                </span>
-                            </div>
+                        <div style="flex: 1; text-align: center;">
+                            <span style="font-weight: 700; color: #475569;">Ref Code:</span>
+                            <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txCode}</span>
                         </div>
-                        <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; opacity: 0.9;">
-                            <span>Status: <strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Completed</strong></span>
+                        <div style="flex: 1; text-align: right;">
+                            <span style="font-weight: 700; color: #475569;">Processed To:</span>
+                            <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanTo}</span>
                         </div>
                     </div>
-                `;
-            }
-        } else {
-            ledgerCardsHTML = `
-                <div style="text-align: center; padding: 40px 20px; background: white; border-radius: 16px; color: var(--text-light); font-size: 13px; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0;">
-                    <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
-                    No records found in this general ledger sheet.
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px dashed #f1f5f9;">
+                        <div style="flex: 1; text-align: left;">
+                            <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
+                            <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
+                                KSh ${Number(tx.opening).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            </span>
+                        </div>
+                        <div style="flex: 1.2; text-align: center; background: ${bgLight}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${tx.isCredit ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
+                            <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
+                            <span style="font-size: 11.5px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
+                                ${amtPrefix} KSh ${Number(tx.amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            </span>
+                        </div>
+                        <div style="flex: 1; text-align: right;">
+                            <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
+                            <span style="font-size: 11.5px; font-family: monospace; font-weight: 800; color: var(--primary); white-space: nowrap;">
+                                KSh ${Number(tx.closing).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; opacity: 0.9;">
+                        <span>Status: <strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Completed</strong></span>
+                    </div>
                 </div>
             `;
+        };
+
+        const verifiedGroupList = this.data.groupTransactions || [];
+        const seenTxKeys = new Set();
+
+        if (ledgerItems.length > 0) {
+            for (let i = ledgerItems.length - 1; i >= 0; i--) {
+                const tx = ledgerItems[i];
+                const isGroupTx = Boolean(
+                    tx.groupName ||
+                    tx.purpose === 'group_contribution' ||
+                    tx.type === 'group_deposit' ||
+                    tx.type === 'send_money' ||
+                    (tx.acc && (tx.acc.toLowerCase().includes('group') || tx.acc.toLowerCase().includes('saving') || tx.acc.toLowerCase().includes('welfare') || tx.acc.toLowerCase().includes('latenes') || tx.acc.toLowerCase().includes('registration')))
+                );
+                if (isGroupTx) {
+                    const key = tx.code || `${tx.groupName}_${tx.amt}_${tx.date}`;
+                    seenTxKeys.add(key);
+                    groupCardsHTML += createCardHTML(tx, i);
+                } else {
+                    walletCardsHTML += createCardHTML(tx, i);
+                }
+            }
         }
+
+        // Add verified transactions from groups-members collection if not already included
+        verifiedGroupList.forEach((gt, idx) => {
+            const key = gt.code || `${gt.groupName}_${gt.amt}_${gt.date}`;
+            if (!seenTxKeys.has(key)) {
+                seenTxKeys.add(key);
+                groupCardsHTML += createCardHTML({
+                    ...gt,
+                    opening: gt.opening !== undefined ? gt.opening : 0,
+                    closing: gt.closing !== undefined ? gt.closing : gt.amt,
+                    isCredit: true
+                }, idx + 500);
+            }
+        });
+
+        if (!walletCardsHTML) {
+            walletCardsHTML = `<div style="text-align: center; padding: 20px 14px; background: white; border-radius: 12px; color: #94a3b8; font-size: 12px; border: 1px solid #e2e8f0;">No wallet transactions recorded yet.</div>`;
+        }
+        if (!groupCardsHTML) {
+            groupCardsHTML = `<div style="text-align: center; padding: 20px 14px; background: white; border-radius: 12px; color: #94a3b8; font-size: 12px; border: 1px solid #e2e8f0;">No group transactions recorded yet.</div>`;
+        }
+
         const balanceHTML = `
             <div style="padding: 14px 14px 100px;">
                 <!-- Header Row: Back button and Far-Right Wallet Balance -->
@@ -875,14 +913,14 @@ const app = {
                         <i class="fa-solid fa-arrow-left" style="font-size: 15px; color: var(--text-dark);"></i>
                         <span style="font-size: 14px; font-weight: 700; color: var(--text-dark);">Back</span>
                     </div>
-                    <!-- Wallet Balance (PersonalAccount openBalance / latest closing) -->
+                    <!-- Wallet Balance -->
                     <div style="text-align: right;">
                         <span style="font-size: 9px; text-transform: uppercase; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Wallet Balance</span>
                         <span id="sheetWalletBalance" style="font-size: 14px; font-weight: 800; color: var(--primary); font-family: monospace;">KSh ${balanceAmount}</span>
                     </div>
                 </div>
-                <!-- Transaction Ledger Label + Add Fund (far right) -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px;">
+                <!-- Transaction Ledger Title + Add Fund Button -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px;">
                     <div class="section-label" style="margin: 0; font-size: 13px; font-weight: 700; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px;">
                         📜 Transaction Statement
                     </div>
@@ -890,9 +928,25 @@ const app = {
                         <i class="fa-solid fa-plus"></i> Add Fund
                     </button>
                 </div>
-                <!-- Ledger Cards Container -->
+
+                <!-- Div 1: Wallet Transactions -->
+                <div style="margin-bottom: 24px;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-wallet"></i> Wallet Transactions
+                    </div>
+                    <div>
+                        ${walletCardsHTML}
+                    </div>
+                </div>
+
+                <!-- Div 2: Group Transactions -->
                 <div>
-                    ${ledgerCardsHTML}
+                    <div style="font-size: 12px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-users-gear"></i> Group Transactions
+                    </div>
+                    <div>
+                        ${groupCardsHTML}
+                    </div>
                 </div>
             </div>
         `;
@@ -993,9 +1047,9 @@ const app = {
                     body: JSON.stringify({ amount, phone, payerPhone: phone }),
                 });
                 const data = await res.json();
-                if (data.success && data.redirect_url) {
-                    this.showToast('Redirecting to Pesapal…', 'info');
-                    window.location.href = data.redirect_url;
+                if (data.success) {
+                    const trackingId = data.order_tracking_id || data.orderId || data.orderId;
+                    this.showPesapalWaiting(amount, trackingId, data.redirect_url);
                     return;
                 }
                 this.showToast(data.message || 'Failed to start Pesapal payment.', 'error');
@@ -1348,24 +1402,60 @@ const app = {
         const constitutionKeys = this.data.constitutionKeys || [];
         const groupMessages = this.data.groupMessages || [];
         const inbox = (this.data.user && this.data.user.inbox) || [];
-        const visibleKeys = constitutionKeys.filter(k => !isDismissed('constitutionKeys', k)).length;
-        const visibleGroupMsgs = groupMessages.filter(m => !isDismissed('groupMessages', m)).length;
-        const visibleInbox = inbox.filter(m => m.unread && !isDismissed('inbox', m)).length;
-        let officerCount = 0;
+        
+        const seen = new Set();
+        let total = 0;
+
         if (this.data.pendingOfficerMessage) {
-            if (!dismissed.includes('regionalOfficerMessage')) officerCount = 1;
+            if (!dismissed.includes('regionalOfficerMessage')) {
+                const sig = `officer:::${this.data.pendingOfficerMessage.timestamp || ''}`;
+                seen.add(sig);
+                total++;
+            }
         } else {
             try {
                 const stored = localStorage.getItem("regionalOfficerMessage");
                 if (stored) {
                     const msg = JSON.parse(stored);
-                    if (Date.now() - msg.timestamp < 86400000) {
-                        if (!dismissed.includes('regionalOfficerMessage')) officerCount = 1;
+                    if (Date.now() - msg.timestamp < 86400000 && !dismissed.includes('regionalOfficerMessage')) {
+                        const sig = `officer:::${msg.timestamp || ''}`;
+                        seen.add(sig);
+                        total++;
                     }
                 }
             } catch (e) {}
         }
-        const total = (this.data.unread || 0) + visibleKeys + visibleGroupMsgs + visibleInbox + officerCount;
+
+        groupMessages.forEach(m => {
+            if (!isDismissed('groupMessages', m)) {
+                const sig = `${(m.title || '').trim().toLowerCase()}:::${(m.content || '').trim().toLowerCase()}`;
+                if (!seen.has(sig)) {
+                    seen.add(sig);
+                    total++;
+                }
+            }
+        });
+
+        constitutionKeys.forEach(k => {
+            if (!isDismissed('constitutionKeys', k)) {
+                const sig = `${(k.groupName || '').trim().toLowerCase()}:::${(k.key || k.content || '').trim().toLowerCase()}`;
+                if (!seen.has(sig)) {
+                    seen.add(sig);
+                    total++;
+                }
+            }
+        });
+
+        inbox.forEach(m => {
+            if (!isDismissed('inbox', m)) {
+                const sig = `${(m.title || '').trim().toLowerCase()}:::${(m.content || '').trim().toLowerCase()}`;
+                if (!seen.has(sig)) {
+                    seen.add(sig);
+                    total++;
+                }
+            }
+        });
+
         if (badge)       { badge.textContent = total; badge.classList.toggle('hidden', total === 0); }
         if (badgeHeader) { badgeHeader.textContent = total; badgeHeader.classList.toggle('hidden', total === 0); }
     },
@@ -1395,158 +1485,176 @@ const app = {
             }
             return dismissed.includes(source + '|' + id);
         };
-        let allMessages = [];
+        let rawMessages = [];
         const serverMsg = this.data.pendingOfficerMessage;
         const stored = localStorage.getItem("regionalOfficerMessage");
         const pendingPhone = localStorage.getItem("pendingAdminPhone");
+
         try {
-        if (serverMsg) {
-            const isProcessor = this.data.user && norm(this.data.user.phoneNumber) === norm(serverMsg.processorPhone);
-            allMessages.push({
-                _source: 'regionalOfficerMessage',
-                title: isProcessor ? 'Pending Account Processed' : 'TBank Department Assignment',
-                contentHtml: isProcessor ? `
-                    <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                        You have successfully processed creation of pending account of <strong>${serverMsg.name || ''}</strong> (${serverMsg.phone || ''}) with passkey: <strong style="color:#1e4080;">${serverMsg.passkey || ''}</strong>.<br><br>
-                        Department: <strong>${serverMsg.dept || 'Regions'}</strong>
-                    </div>
-                ` : `
-                     <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                        You have been assigned to TBank department: <strong style="color:#1e4080;">${serverMsg.dept || 'Regions'}</strong>.<br><br>
-                        Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br><br>
-                        Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
-                    </div>
-                    <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
-                    <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
-                            <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+            if (serverMsg) {
+                const isProcessor = this.data.user && norm(this.data.user.phoneNumber) === norm(serverMsg.processorPhone);
+                rawMessages.push({
+                    _source: 'regionalOfficerMessage',
+                    category: isProcessor ? 'System' : 'Appointment',
+                    type: 'regional_officer',
+                    title: isProcessor ? 'Pending Account Processed' : 'TBank Department Assignment',
+                    contentHtml: isProcessor ? `
+                        <div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;">
+                            You have successfully processed creation of pending account for <strong>${serverMsg.name || ''}</strong> (${serverMsg.phone || ''}) with passkey: <strong style="color:#1e4080;font-family:monospace;font-size:14px;">${serverMsg.passkey || ''}</strong>.<br><br>
+                            Department: <strong>${serverMsg.dept || 'Regions'}</strong>
                         </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">New PIN</label>
-                            <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                    ` : `
+                        <div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;">
+                            You have been assigned to TBank department: <strong style="color:#1e40af;">${serverMsg.dept || 'Regions'}</strong>.<br><br>
+                            Processed by: <strong>Admin ${serverMsg.processorName || ''}</strong> (${(serverMsg.processorPhone || '').toString().startsWith('0') ? serverMsg.processorPhone : ('0' + (serverMsg.processorPhone || ''))})<br><br>
+                            Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
                         </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
-                            <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
+                        <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:9px 18px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+                        <div style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
+                                <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">New PIN</label>
+                                <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
+                                <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                            </div>
+                            <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:10px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Submit</button>
+                            <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
                         </div>
-                        <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
-                        <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
-                    </div>
-                `,
-                date: new Date(serverMsg.timestamp || Date.now()),
-                icon: 'fa-user-tie',
-                iconColor: '#1e4080',
-                bgColor: '#eff6ff',
-                borderColor: '#bfdbfe',
-                titleColor: '#1e40af'
-            });
-        } else if (stored) {
-            try {
-                const msg = JSON.parse(stored);
-                const now = Date.now();
-                if (now - msg.timestamp < 86400000) {
-                    const isProcessor = this.data.user && norm(this.data.user.phoneNumber) === norm(msg.processorPhone);
-                    allMessages.push({
-                        _source: 'regionalOfficerMessage',
-                        title: isProcessor ? 'Pending Account Processed' : 'TBank Department Assignment',
-                        contentHtml: isProcessor ? `
-                            <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                                 You have successfully processed creation of pending account of <strong>${msg.name || ''}</strong> (${msg.phone || ''}) with passkey: <strong style="color:#1e4080;">${msg.passkey || ''}</strong>.<br><br>
-                                 Department: <strong>${msg.dept || 'Regions'}</strong>
-                             </div>
-                        ` : `
-                              <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                                  You have been assigned to TBank department: <strong style="color:#1e4080;">${msg.dept || 'Regions'}</strong>.<br><br>
-                                  Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br><br>
-                                  Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
-                              </div>
-                      <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
-                      <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
-                            <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">New PIN</label>
-                            <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-                        </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
-                            <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-                        </div>
-                        <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
-                        <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
-                      </div>
-                         `,
-                         date: new Date(msg.timestamp),
-                        icon: 'fa-user-tie',
-                        iconColor: '#1e4080',
-                        bgColor: '#eff6ff',
-                        borderColor: '#bfdbfe',
-                        titleColor: '#1e40af'
-                    });
+                    `,
+                    date: new Date(serverMsg.timestamp || Date.now()),
+                    icon: 'fa-user-tie',
+                    iconColor: '#2563eb',
+                    bgColor: '#eff6ff',
+                    borderColor: '#bfdbfe',
+                    badgeBg: '#dbeafe',
+                    badgeColor: '#1e40af'
+                });
+            } else if (stored) {
+                try {
+                    const msg = JSON.parse(stored);
+                    const now = Date.now();
+                    if (now - msg.timestamp < 86400000) {
+                        const isProcessor = this.data.user && norm(this.data.user.phoneNumber) === norm(msg.processorPhone);
+                        rawMessages.push({
+                            _source: 'regionalOfficerMessage',
+                            category: isProcessor ? 'System' : 'Appointment',
+                            type: 'regional_officer',
+                            title: isProcessor ? 'Pending Account Processed' : 'TBank Department Assignment',
+                            contentHtml: isProcessor ? `
+                                <div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;">
+                                    You have successfully processed creation of pending account for <strong>${msg.name || ''}</strong> (${msg.phone || ''}) with passkey: <strong style="color:#1e4080;font-family:monospace;font-size:14px;">${msg.passkey || ''}</strong>.<br><br>
+                                    Department: <strong>${msg.dept || 'Regions'}</strong>
+                                </div>
+                            ` : `
+                                <div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;">
+                                    You have been assigned to TBank department: <strong style="color:#1e40af;">${msg.dept || 'Regions'}</strong>.<br><br>
+                                    Processed by: <strong>Admin ${msg.processorName || ''}</strong> (${(msg.processorPhone || '').toString().startsWith('0') ? msg.processorPhone : ('0' + (msg.processorPhone || ''))})<br><br>
+                                    Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
+                                </div>
+                                <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:9px 18px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+                                <div style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                                    <div style="margin-bottom:10px;">
+                                        <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
+                                        <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                                    </div>
+                                    <div style="margin-bottom:10px;">
+                                        <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">New PIN</label>
+                                        <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                                    </div>
+                                    <div style="margin-bottom:12px;">
+                                        <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
+                                        <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                                    </div>
+                                    <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:10px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Submit</button>
+                                    <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+                                </div>
+                            `,
+                            date: new Date(msg.timestamp),
+                            icon: 'fa-user-tie',
+                            iconColor: '#2563eb',
+                            bgColor: '#eff6ff',
+                            borderColor: '#bfdbfe',
+                            badgeBg: '#dbeafe',
+                            badgeColor: '#1e40af'
+                        });
+                    }
+                } catch (e) {
+                    console.error('Skipping malformed stored officer message:', e);
                 }
-            } catch (e) {
-                console.error('Skipping malformed stored officer message:', e);
+            } else if (pendingPhone) {
+                rawMessages.push({
+                    _source: 'regionalOfficerMessage',
+                    category: 'Appointment',
+                    type: 'regional_officer',
+                    title: 'TBank Department Assignment',
+                    contentHtml: `
+                        <div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;">
+                            You have been assigned to TBank department: <strong style="color:#1e40af;">Regions</strong>.<br><br>
+                            Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
+                        </div>
+                        <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:9px 18px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
+                        <div style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
+                                <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">New PIN</label>
+                                <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                <label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
+                                <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;letter-spacing:4px;text-align:center;box-sizing:border-box;">
+                            </div>
+                            <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:10px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Submit</button>
+                            <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
+                        </div>
+                    `,
+                    date: new Date(),
+                    icon: 'fa-user-tie',
+                    iconColor: '#2563eb',
+                    bgColor: '#eff6ff',
+                    borderColor: '#bfdbfe',
+                    badgeBg: '#dbeafe',
+                    badgeColor: '#1e40af'
+                });
             }
-        } else if (pendingPhone) {
-            allMessages.push({
-                _source: 'regionalOfficerMessage',
-                title: 'TBank Department Assignment',
-                contentHtml: `
-                    <div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;">
-                        You have been assigned to TBank department: <strong style="color:#1e4080;">Regions</strong>.<br><br>
-                        Welcome! Please ask the processing admin for your secure Passkey, then enter it below with your new PIN to activate your account.
-                    </div>
-                     <button onclick="this.nextElementSibling.style.display='block'; this.style.display='none'" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#1e4080,#1f5cbf);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Create PIN</button>
-                    <div style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #e2e8f0;">
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Secure Passkey</label>
-                            <input type="text" class="officer-passkey-input" placeholder="Enter 6-digit Passkey" maxlength="6" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">New PIN</label>
-                            <input type="password" class="officer-pin-input" placeholder="Enter PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-                        </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:11px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:4px;text-align:left;">Confirm PIN</label>
-                            <input type="password" class="officer-pin-confirm" placeholder="Confirm PIN" maxlength="4" inputmode="numeric" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;letter-spacing:3px;text-align:center;box-sizing:border-box;">
-                        </div>
-                        <button class="officer-pin-submit" onclick="app.submitOfficerPin(this.parentElement)" style="width:100%;padding:9px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">Submit</button>
-                        <div class="officer-pin-result" style="margin-top:6px;text-align:center;min-height:16px;font-size:11px;"></div>
-                    </div>
-                `,
-                date: new Date(),
-                icon: 'fa-user-tie',
-                iconColor: '#1e4080',
-                bgColor: '#eff6ff',
-                borderColor: '#bfdbfe',
-                titleColor: '#1e40af'
-            });
-        }
         } catch (e) {
             console.error('Skipping malformed regional officer message:', e);
         }
+
         groupMsgs.forEach((m, idx) => {
             try {
                 if (isDismissed('groupMessages', m)) return;
-                allMessages.push({
+                const isWallet = m.type === 'wallet_credit_fallback' || m.type === 'group_contribution_success';
+                const isSecurity = m.type === 'security_alert';
+                rawMessages.push({
                     _source: 'groupMessages',
+                    _id: m._id || null,
                     _origIndex: idx,
-                    title: m.title || 'Group Update',
+                    category: isWallet ? 'Transaction' : (isSecurity ? 'Security' : 'Group Update'),
+                    type: m.type,
+                    title: m.title || (m.groupName ? `${m.groupName}` : 'Notification'),
                     content: m.content,
                     date: new Date(m.createdAt || Date.now()),
-                    icon: 'fa-users',
-                    iconColor: '#10b981',
-                    bgColor: '#f0fdf4',
-                    borderColor: '#dcfce7',
-                    titleColor: '#065f46'
+                    icon: isWallet ? 'fa-wallet' : (isSecurity ? 'fa-triangle-exclamation' : 'fa-users'),
+                    iconColor: isWallet ? '#059669' : (isSecurity ? '#d97706' : '#0284c7'),
+                    bgColor: isWallet ? '#f0fdf4' : (isSecurity ? '#fffbeb' : '#f0f9ff'),
+                    borderColor: isWallet ? '#bbf7d0' : (isSecurity ? '#fde68a' : '#bae6fd'),
+                    badgeBg: isWallet ? '#dcfce7' : (isSecurity ? '#fef3c7' : '#e0f2fe'),
+                    badgeColor: isWallet ? '#166534' : (isSecurity ? '#92400e' : '#0369a1')
                 });
             } catch (e) {
                 console.error('Skipping malformed group message:', e, m);
             }
         });
+
         keys.forEach((k, idx) => {
             try {
                 if (isDismissed('constitutionKeys', k)) return;
@@ -1556,86 +1664,122 @@ const app = {
                 let contentHtml = '';
                 if (k.type === 'dealer_invitation') {
                     const metaPayload = JSON.stringify(k.meta || {}).replace(/"/g, '&quot;');
-                    contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
-                    contentHtml += `<button onclick="app.acceptDealerInvite('${k._id}', '${metaPayload}')" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Accept Appointment</button>`;
+                    contentHtml = `<div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                    contentHtml += `<button onclick="app.acceptDealerInvite('${k._id}', '${metaPayload}')" style="margin-top:8px;padding:9px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Accept Appointment</button>`;
                 } else if (isConstitutionKey) {
-                    contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
-                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+                    contentHtml = `<p style="font-size:11px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Key:</p>
+                    <div style="background:#fff;padding:12px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:3px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
                 } else if (isLegacy) {
-                    contentHtml = `<p style="font-size:10px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
-                    <div style="background:#fff;padding:10px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:2px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
+                    contentHtml = `<p style="font-size:11px;color:#64748b;margin-bottom:4px;font-weight:700;">Constitution Start Key:</p>
+                    <div style="background:#fff;padding:12px;border:1px dashed #cbd5e1;border-radius:8px;font-family:monospace;font-weight:700;color:#0f172a;text-align:center;letter-spacing:3px;user-select:all;font-size:16px;margin-bottom:8px;">${k.key}</div>`;
                 } else if (k.type === 'agent_invitation') {
-                    contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
-                    contentHtml += `<button onclick="app.acceptAgentInvite('${k._id}')" style="margin-top:8px;padding:8px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Approve Request</button>`;
+                    contentHtml = `<div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                    contentHtml += `<button onclick="app.acceptAgentInvite('${k._id}')" style="margin-top:8px;padding:9px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Approve Request</button>`;
                 } else {
-                    contentHtml = `<div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content}</div>`;
+                    contentHtml = `<div style="font-size:13px;color:#334155;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${k.content || ''}</div>`;
                 }
                 if (k.redirect) {
                      contentHtml += `<button onclick="window.location.href='${k.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
                 }
-                allMessages.push({
+                rawMessages.push({
                     _source: 'constitutionKeys',
                     _origIndex: idx,
-                    title: k.groupName,
+                    category: isAlert ? 'Security' : (isConstitutionKey || isLegacy ? 'Key' : 'Appointment'),
+                    type: k.type,
+                    title: k.groupName || 'Constitution Alert',
                     contentHtml: contentHtml,
                     date: new Date(k.date || Date.now()),
                     icon: isAlert ? 'fa-triangle-exclamation' : 'fa-shield-halved',
-                    iconColor: isAlert ? '#f59e0b' : '#0c8f44',
-                    bgColor: '#f8fafc',
-                    borderColor: '#e2e8f0',
-                    titleColor: '#1e293b'
+                    iconColor: isAlert ? '#d97706' : '#059669',
+                    bgColor: isAlert ? '#fffbeb' : '#f8fafc',
+                    borderColor: isAlert ? '#fde68a' : '#e2e8f0',
+                    badgeBg: isAlert ? '#fef3c7' : '#e2e8f0',
+                    badgeColor: isAlert ? '#92400e' : '#334155'
                 });
             } catch (e) {
                 console.error('Skipping malformed constitution key message:', e, k);
             }
         });
+
         [...inbox].forEach((msg, loopIndex) => {
             try {
                 if (isDismissed('inbox', msg)) return;
                 const isSecurity = msg.type === 'security_alert';
-                allMessages.push({
+                rawMessages.push({
                     _source: 'inbox',
                     _id: msg.id || null,
                     _origIndex: loopIndex,
+                    category: isSecurity ? 'Security' : 'Direct Message',
+                    type: msg.type,
                     title: msg.title || 'Message',
                     content: msg.content,
                     redirect: msg.redirect,
                     date: new Date(msg.date || Date.now()),
                     icon: isSecurity ? 'fa-triangle-exclamation' : 'fa-envelope',
-                    iconColor: isSecurity ? '#f59e0b' : '#10b981',
-                    bgColor: isSecurity ? '#fef3c7' : '#f0fdf4',
-                    borderColor: isSecurity ? '#f59e0b' : '#bbf7d0',
-                    titleColor: isSecurity ? '#92400e' : '#065f46'
+                    iconColor: isSecurity ? '#d97706' : '#10b981',
+                    bgColor: isSecurity ? '#fffbeb' : '#f0fdf4',
+                    borderColor: isSecurity ? '#fde68a' : '#bbf7d0',
+                    badgeBg: isSecurity ? '#fef3c7' : '#dcfce7',
+                    badgeColor: isSecurity ? '#92400e' : '#166534'
                 });
             } catch (e) {
                 console.error('Skipping malformed inbox message:', e, msg);
             }
         });
+
+        // ── DEDUPLICATION LOGIC ──
+        const seenSignatures = new Set();
+        let allMessages = [];
+        for (const m of rawMessages) {
+            const rawBody = (m.content || m.contentHtml || '').toString().replace(/<[^>]*>/g, '').trim().toLowerCase();
+            const rawTitle = (m.title || '').trim().toLowerCase();
+            const sig = `${rawTitle}:::${rawBody}`;
+            if (!seenSignatures.has(sig)) {
+                seenSignatures.add(sig);
+                allMessages.push(m);
+            }
+        }
+
         allMessages.sort((a, b) => b.date - a.date);
+
         if (allMessages.length === 0) {
-            html += `<div class="m-empty-state"><i class="fa-solid fa-envelope-open"></i><p>Your inbox is empty.</p></div>`;
+            html += `<div class="m-empty-state" style="text-align:center;padding:40px 20px;color:#94a3b8;"><i class="fa-solid fa-envelope-open" style="font-size:40px;margin-bottom:12px;color:#cbd5e1;"></i><p style="font-size:14px;font-weight:500;">Your inbox is empty.</p></div>`;
         } else {
-            html += `<div class="m-section-label"><i class="fa-solid fa-bell" style="margin-right:5px;color:#059669;"></i>All Notifications</div>`;
-            allMessages.forEach((m, mi) => {
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:0 2px;">
+                <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;"><i class="fa-solid fa-bell" style="margin-right:6px;color:#059669;"></i>Recent Notifications (${allMessages.length})</span>
+            </div>`;
+            
+            allMessages.forEach((m) => {
                 const dataId   = m._id     ? ` data-id="${m._id}"` : '';
                 const dataIdx  = ` data-index="${m._origIndex}"`;
                 const dataSrc  = ` data-source="${m._source}"`;
-                html += `<div style="background:${m.bgColor};padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid ${m.borderColor};border-left:4px solid ${m.iconColor};">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-                        <h4 style="color:${m.titleColor};margin-bottom:0;font-size:13px;font-weight:700;"><i class="fa-solid ${m.icon}" style="color:${m.iconColor};margin-right:7px;"></i>${m.title}</h4>
-                        <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:10px;color:#059669;font-weight:600;">${m.date.toLocaleDateString()}</span>
-                            <button class="inbox-del-btn" ${dataId}${dataIdx}${dataSrc} style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px 6px;font-size:18px;line-height:1;" title="Dismiss message"><i class="fa-solid fa-xmark"></i></button>
+                
+                html += `
+                <div style="background:${m.bgColor};padding:16px;border-radius:14px;margin-bottom:12px;border:1px solid ${m.borderColor};box-shadow:0 2px 8px rgba(0,0,0,0.02);position:relative;transition:all 0.2s ease;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:6px;background:${m.badgeBg};color:${m.badgeColor};text-transform:uppercase;letter-spacing:0.3px;">
+                                <i class="fa-solid ${m.icon}"></i> ${m.category || 'Notification'}
+                            </span>
+                            <h4 style="color:#0f172a;margin:0;font-size:13.5px;font-weight:700;">${m.title}</h4>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                            <span style="font-size:10.5px;color:#64748b;font-weight:500;">${m.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+                            <button class="inbox-del-btn" ${dataId}${dataIdx}${dataSrc} style="background:none;border:none;cursor:pointer;color:#94a3b8;padding:4px;border-radius:4px;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;transition:color 0.2s;" title="Dismiss notification" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#94a3b8'">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
                         </div>
                     </div>`;
+
                 if (m.contentHtml) {
                     html += m.contentHtml;
                 } else {
-                    html += `<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;">${m.content}</div>`;
+                    html += `<div style="font-size:13px;color:#334155;line-height:1.55;margin-bottom:6px;white-space:pre-wrap;">${m.content}</div>`;
                     if (m.redirect) {
-                        html += `<button onclick="window.location.href='${m.redirect}'" style="margin-top:8px;padding:8px 14px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
+                        html += `<button onclick="window.location.href='${m.redirect}'" style="margin-top:8px;padding:9px 16px;background:linear-gradient(135deg,#0c8f44,#34d399);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Enter Passkey</button>`;
                     }
                 }
+
                 html += `</div>`;
             });
         }
@@ -3595,6 +3739,7 @@ const app = {
     /* ─── SEND MONEY FLOWS ─── */
     selectGroupForSend(groupName) {
         const dn = decodeURIComponent(groupName);
+        this.data.selectedGroupName = dn;
         this.data.errorMessage = '';
         const html = `
         <div class="m-info-banner green"><i class="fa-solid fa-circle-info"></i><span>Choose where to send money within <b>${dn}</b>.</span></div>
@@ -3840,17 +3985,143 @@ const app = {
         </div>`;
         this.updateModalContent('Payment Summary', html, () => this.showSeveralMembersSummary(dn, this.data.verifiedMembersList), 'fa-receipt');
     },
-    processPayment(method) {
-        const name = method === 'tbank' ? 'tBank' : 'M-Pesa';
-        const html = `<div style="text-align:center;padding:36px 20px;">
-            <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                <i class="fa-solid fa-hard-hat" style="font-size:28px;color:var(--primary);"></i>
-            </div>
-            <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Under Construction</h3>
-            <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Payment via ${name} is currently being developed.</p>
-            <button class="m-submit-btn secondary" onclick="app.closeModal()">Close</button>
-        </div>`;
-        this.updateModalContent('Coming Soon', html, null, 'fa-wrench');
+    async processPayment(method) {
+        let total = 0;
+        const addedAccounts = this.data.addedAccounts || [];
+        addedAccounts.forEach(acc => total += parseFloat(acc.inputAmount) || 0);
+
+        if (this.data.isMultiMemberFlow && this.data.settledMembersData) {
+            total = 0;
+            for (const idx in this.data.settledMembersData) {
+                const m = this.data.settledMembersData[idx];
+                m.accounts.forEach(a => total += parseFloat(a.inputAmount) || 0);
+            }
+        }
+
+        if (!total || total <= 0) {
+            this.showToast('Invalid total payment amount.', 'error');
+            return;
+        }
+
+        const groupName = this.data.selectedGroupName || (this.data.group && this.data.group.groupName) || '';
+        const phone = (this.data.user && this.data.user.phoneNumber) || '';
+        const firstAccId = (addedAccounts[0] && (addedAccounts[0].accountNumber || addedAccounts[0].accountId)) || "001";
+
+        this.showToast('Initiating payment request…', 'info');
+
+        try {
+            const methodRes = await fetch('/personal/wallet-payment-method');
+            const methodData = await methodRes.json();
+            const activeMethod = String(methodData.paymentMethod || method || 'mpesa').toLowerCase();
+
+            if (activeMethod === 'pesapal') {
+                const res = await fetch('/api/payment/pesapal/request-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount: total,
+                        phone: phone,
+                        payerPhone: phone,
+                        purpose: 'group_contribution',
+                        groupName: groupName,
+                        accountId: firstAccId
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const trackingId = data.order_tracking_id || data.orderId;
+                    this.showPesapalWaiting(total, trackingId, data.redirect_url);
+                    return;
+                }
+                this.showToast(data.message || 'Failed to start Pesapal payment.', 'error');
+                return;
+            }
+
+            // Default M-Pesa STK Push
+            const res = await fetch('/api/mpesa/stk-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phone,
+                    amount: total,
+                    purpose: 'group_contribution',
+                    groupName: groupName,
+                    accountId: firstAccId,
+                    accountPhone: phone,
+                    reference: 'Group Deposit',
+                    description: 'Group Contribution via M-Pesa'
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.CheckoutRequestID) {
+                this.showAddFundMpesaWaiting(total, phone, data.CheckoutRequestID, data.CustomerMessage);
+                return;
+            }
+            this.showToast(data.message || 'Failed to send M-Pesa STK push.', 'error');
+        } catch (e) {
+            console.error('Group payment error:', e);
+            this.showToast('Network error starting payment.', 'error');
+        }
+    },
+    showPesapalWaiting(amount, trackingId, redirectUrl) {
+        let iframeHtml = '';
+        if (redirectUrl) {
+            iframeHtml = `<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;height:380px;">
+                <iframe src="${redirectUrl}" style="width:100%;height:100%;border:none;"></iframe>
+            </div>`;
+        }
+        const html = `
+        <div class="m-info-banner green"><i class="fa-solid fa-credit-card"></i>
+            <span>Complete payment below. Waiting for confirmation…</span>
+        </div>
+        <div class="m-stat-grid">
+            <div class="m-stat-cell"><div class="m-stat-cell-label">Amount</div><div class="m-stat-cell-value">KSh ${Number(amount).toLocaleString()}</div></div>
+            <div class="m-stat-cell"><div class="m-stat-cell-label">Reference</div><div class="m-stat-cell-value" style="font-size:11px;">${trackingId || 'Pesapal'}</div></div>
+        </div>
+        <div id="pesapalStatusBanner" class="m-info-banner blue" style="margin-top:8px;">
+            <i class="fa-solid fa-spinner fa-spin"></i><span>Waiting for payment confirmation…</span>
+        </div>
+        ${iframeHtml}
+        <button type="button" class="m-submit-btn secondary" style="margin-top:12px;" onclick="app.closeModal()">Close</button>`;
+
+        this.updateModalContent('Payment Confirmation', html, null, 'fa-credit-card');
+        this._pesapalPollCount = 0;
+        if (this._pesapalPollTimer) clearInterval(this._pesapalPollTimer);
+        if (trackingId) {
+            this._pesapalPollTimer = setInterval(() => this.pollPesapalStatus(trackingId, amount), 4000);
+        }
+    },
+    async pollPesapalStatus(trackingId, amount) {
+        this._pesapalPollCount = (this._pesapalPollCount || 0) + 1;
+        if (this._pesapalPollCount > 45) {
+            if (this._pesapalPollTimer) clearInterval(this._pesapalPollTimer);
+            const statusEl = document.getElementById('pesapalStatusBanner');
+            if (statusEl) {
+                statusEl.className = 'm-info-banner amber';
+                statusEl.innerHTML = '<i class="fa-solid fa-clock"></i><span>Still waiting. If paid, your wallet balance will update shortly.</span>';
+            }
+            return;
+        }
+        try {
+            if (!trackingId) return;
+            const res = await fetch('/api/payment/pesapal/status/' + encodeURIComponent(trackingId));
+            const data = await res.json();
+            if (data && (data.isCompleted || data.statusCode === 1 || data.statusCode === 200)) {
+                if (this._pesapalPollTimer) clearInterval(this._pesapalPollTimer);
+                await this.fetchWalletData();
+                const bal = Number(this.data.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const html = `
+                <div class="m-info-banner green"><i class="fa-solid fa-circle-check"></i><span>Payment received & confirmed! Your wallet balance has been updated.</span></div>
+                <div style="text-align:center;padding:14px 0 18px;">
+                    <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;">New Balance</div>
+                    <div style="font-size:24px;font-weight:800;color:var(--primary);font-family:monospace;">KSh ${bal}</div>
+                </div>
+                <button class="m-submit-btn" onclick="app.closeModal(); app.showBalanceDirectly();"><i class="fa-solid fa-wallet"></i> View Wallet</button>`;
+                this.updateModalContent('Payment Successful', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+            }
+        } catch (e) {
+            console.warn('Pesapal poll error:', e);
+        }
     },
     sendToOtherMember(groupName) {
         const dn   = decodeURIComponent(groupName);

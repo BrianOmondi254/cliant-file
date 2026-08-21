@@ -9,7 +9,8 @@ const { findUserByPhone, getAllUsersFlattened, updateUserPassword, getUserNameBy
   normalizePhone,
   findAgentByPhone,
   findDealerByPhone,
-  findPersonalAccountByPhone } = require("../mongoose");
+  findPersonalAccountByPhone,
+  findGroupMemberTransactions } = require("../mongoose");
 
 // Flatten hierarchical users for searching
 const flattenUsers = (hierarchicalData) => {
@@ -530,22 +531,6 @@ router.get("/", async (req, res) => {
       if (group.messages && Array.isArray(group.messages)) {
         group.messages.forEach(msg => {
           if (msg.to && norm(msg.to) === norm(phone)) {
-            groupMessages.push({
-              groupName: group.groupName,
-              title: msg.title,
-              content: msg.content,
-              type: msg.type,
-              createdAt: msg.createdAt,
-              isNew: msg.isNew !== false
-            });
-          }
-        });
-      }
-
-      if (group.messages && Array.isArray(group.messages)) {
-        group.messages.forEach(msg => {
-          if (msg.to && norm(msg.to) === norm(phone)) {
-            // Check if this is a constitution key notification
             if (msg.type === 'security_alert' && msg.title === 'Constitution Key') {
               constitutionKeys.push({
                 groupName: msg.title || group.groupName,
@@ -553,32 +538,36 @@ router.get("/", async (req, res) => {
                 type: 'security_alert'
               });
             } else {
-              constitutionKeys.push({
-                groupName: msg.title || group.groupName,
-                type: msg.type,
+              groupMessages.push({
+                groupName: group.groupName,
+                title: msg.title || 'Group Notification',
                 content: msg.content,
-                isNew: true
+                type: msg.type || 'general',
+                createdAt: msg.createdAt,
+                isNew: msg.isNew !== false
               });
             }
           } else if (msg.broadcast && msg.roles && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
-            constitutionKeys.push({
-              groupName: msg.title || group.groupName,
-              type: msg.type,
+            groupMessages.push({
+              groupName: group.groupName,
+              title: msg.title || 'Trustee Notification',
+              type: msg.type || 'general',
               content: msg.content,
+              createdAt: msg.createdAt,
               isNew: true
             });
           }
         });
       }
 
-if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
-         constitutionKeys.push({
-           groupName: group.groupName,
-           key: group.constitutionStartKey,
-           type: 'legacy'
-         });
-       }
-     });
+      if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') && userIsTrusteeInThisGroup) {
+        constitutionKeys.push({
+          groupName: group.groupName,
+          key: group.constitutionStartKey,
+          type: 'legacy'
+        });
+      }
+    });
 
     // Fetch messages from MongoDB messages collection
     try {
@@ -591,13 +580,15 @@ if (group.constitutionStartKey && !group.constitutionStartKey.startsWith('$2') &
             type: 'security_alert'
           });
         } else if (msg.to && norm(msg.to) === norm(phone)) {
-          constitutionKeys.push({
+          groupMessages.push({
             _id: msg._id,
-            groupName: msg.title || 'Notification',
-            type: msg.type,
+            groupName: msg.groupName || 'Notification',
+            title: msg.title || 'Notification',
+            type: msg.type || 'general',
             content: msg.content,
             meta: msg.meta,
-            isNew: true
+            createdAt: msg.createdAt,
+            isNew: msg.isNew !== false
           });
         }
       });
@@ -944,12 +935,18 @@ router.get("/wallet", async (req, res) => {
     const phone = req.session.user?.phoneNumber;
     if (!phone) return res.status(401).json({ success: false, error: "Not authenticated" });
 
-    const mongoAcc = await findPersonalAccountByPhone(phone);
+    const groupTxns = await findGroupMemberTransactions(phone);
+
+    if (req.session.user) {
+      req.session.user.verifiedGroupTransactions = groupTxns;
+    }
+
     if (!mongoAcc) {
       return res.json({
         success: true,
         balance: 0,
         transactions: [],
+        groupTransactions: groupTxns,
         accountExists: false,
         source: "mongodb",
       });
@@ -1010,6 +1007,7 @@ router.get("/wallet", async (req, res) => {
       openBalance: openBal,
       personal: personalBal,
       transactions,
+      groupTransactions: groupTxns,
       accountExists: true,
       source: "mongodb",
     });
@@ -1416,29 +1414,53 @@ router.post("/send-money/details", (req, res) => {
 });
 
 router.post("/send-money/submit", (req, res) => {
-  const { groupName, amount } = req.body;
+  const { groupName, amount, accountId } = req.body;
   
-  // 1. Clean input: remove any characters that are not numbers or decimals (removes $ and ,)
+  // 1. Clean input: remove any characters that are not numbers or decimals
   const cleanAmount = String(amount).replace(/[^0-9.]/g, '');
   const val = parseFloat(cleanAmount) || 0;
 
   // 2. Format strictly as KSh
   const formattedAmount = `KSh ${val.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   
-  // 3. Render Confirm Transfer screen (Popup Content)
+  // 3. Render Confirm Transfer screen
   res.render("send-money", { 
-    user: req.session.user, step: "confirm", amount: formattedAmount, groupName 
+    user: req.session.user, step: "confirm", amount: formattedAmount, groupName, accountId: accountId || "001" 
   });
 });
 
-router.post("/send-money/complete", (req, res) => {
-  const { groupName, amount } = req.body;
-  // Ensure amount is formatted correctly for the success screen
+router.post("/send-money/complete", async (req, res) => {
+  const { groupName, amount, accountId } = req.body;
   const cleanAmount = String(amount).replace(/[^0-9.]/g, '');
   const val = parseFloat(cleanAmount) || 0;
+  const phone = req.session.user?.phoneNumber;
+
+  const { applyAtomicGroupMemberContribution } = require("../mongoose");
+  let txResult = null;
+  try {
+    if (phone && groupName && val > 0) {
+      txResult = await applyAtomicGroupMemberContribution({
+        groupName,
+        memberPhone: phone,
+        accountId: accountId || "001",
+        amount: val,
+        reference: `SEND_MONEY_${Date.now()}`,
+        paymentMethod: "wallet_direct",
+        payerPhone: phone,
+        notes: `Direct Send Money to ${groupName}`
+      });
+    }
+  } catch (e) {
+    console.error("[send-money/complete] error:", e.message);
+  }
+
   const formattedAmount = `KSh ${val.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   res.render("send-money", { 
-    user: req.session.user, step: "success", amount: formattedAmount, groupName 
+    user: req.session.user, 
+    step: "success", 
+    amount: formattedAmount, 
+    groupName,
+    result: txResult
   });
 });
 
@@ -1462,21 +1484,6 @@ router.get("/inbox-status", async (req, res) => {
       if (group.messages && Array.isArray(group.messages)) {
         group.messages.forEach(msg => {
           if (msg.to && norm(msg.to) === norm(phone)) {
-            groupMessages.push({
-              groupName: group.groupName,
-              title: msg.title,
-              content: msg.content,
-              type: msg.type,
-              createdAt: msg.createdAt,
-              isNew: msg.isNew !== false
-            });
-          }
-        });
-      }
-
-      if (group.messages && Array.isArray(group.messages)) {
-        group.messages.forEach(msg => {
-          if (msg.to && norm(msg.to) === norm(phone)) {
             if (msg.type === 'security_alert' && msg.title === 'Constitution Key') {
               constitutionKeys.push({
                 groupName: msg.title || group.groupName,
@@ -1484,18 +1491,22 @@ router.get("/inbox-status", async (req, res) => {
                 type: 'security_alert'
               });
             } else {
-              constitutionKeys.push({
-                groupName: msg.title || group.groupName,
-                type: msg.type,
+              groupMessages.push({
+                groupName: group.groupName,
+                title: msg.title || 'Group Notification',
                 content: msg.content,
-                isNew: true
+                type: msg.type || 'general',
+                createdAt: msg.createdAt,
+                isNew: msg.isNew !== false
               });
             }
           } else if (msg.broadcast && msg.roles && msg.roles.includes('trustee') && userIsTrusteeInThisGroup) {
-            constitutionKeys.push({
-              groupName: msg.title || group.groupName,
-              type: msg.type,
+            groupMessages.push({
+              groupName: group.groupName,
+              title: msg.title || 'Trustee Notification',
+              type: msg.type || 'general',
               content: msg.content,
+              createdAt: msg.createdAt,
               isNew: true
             });
           }
@@ -1522,13 +1533,15 @@ router.get("/inbox-status", async (req, res) => {
             type: 'security_alert'
           });
         } else if (msg.to && norm(msg.to) === norm(phone)) {
-          constitutionKeys.push({
+          groupMessages.push({
             _id: msg._id,
-            groupName: msg.title || 'Notification',
-            type: msg.type,
+            groupName: msg.groupName || 'Notification',
+            title: msg.title || 'Notification',
+            type: msg.type || 'general',
             content: msg.content,
             meta: msg.meta,
-            isNew: true
+            createdAt: msg.createdAt,
+            isNew: msg.isNew !== false
           });
         }
       });

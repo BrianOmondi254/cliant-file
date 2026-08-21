@@ -1165,8 +1165,9 @@
                 })
                 .then(r => r.json())
                 .then(data => {
-                    if (data && data.success && data.redirect_url) {
-                        window.location.href = data.redirect_url;
+                    if (data && data.success) {
+                        const trackingId = data.order_tracking_id || data.orderId;
+                        showRegisterPesapalWaitingModal(currentRegistration.amount, trackingId, data.redirect_url, form);
                     } else {
                         showToast(data?.message || 'Failed to initiate Pesapal payment. Falling back to confirmation page...', 'error');
                         window.setTimeout(function () { form.submit(); }, 1500);
@@ -1190,6 +1191,76 @@
         }
 
         form.submit();
+    }
+
+    function showRegisterPesapalWaitingModal(amount, trackingId, redirectUrl, form) {
+        let modal = document.getElementById('regPesapalModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'regPesapalModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.85);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+            document.body.appendChild(modal);
+        }
+
+        let iframeHtml = '';
+        if (redirectUrl) {
+            iframeHtml = `<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;height:380px;">
+                <iframe src="${redirectUrl}" style="width:100%;height:100%;border:none;"></iframe>
+            </div>`;
+        }
+
+        modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.4);font-family:system-ui,sans-serif;">
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                <i class="fas fa-credit-card"></i> Complete payment below. Waiting for confirmation…
+            </div>
+            <div style="display:flex;justify-content:space-between;background:#f8fafc;padding:10px 14px;border-radius:8px;font-size:12px;font-weight:700;color:#475569;margin-bottom:10px;">
+                <span>Registration Fee</span>
+                <span style="color:#0f9d58;font-size:14px;">KSh ${Number(amount || 0).toLocaleString()}</span>
+            </div>
+            <div id="regPesapalBanner" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;padding:10px 14px;border-radius:8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-spinner fa-spin"></i><span>Waiting for payment confirmation…</span>
+            </div>
+            ${iframeHtml}
+            <button type="button" onclick="document.getElementById('regPesapalModal').style.display='none';" style="width:100%;margin-top:14px;padding:12px;background:#e2e8f0;color:#475569;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Close</button>
+        </div>`;
+
+        modal.style.display = 'flex';
+
+        if (window._regPesapalTimer) clearInterval(window._regPesapalTimer);
+        let pollCount = 0;
+        window._regPesapalTimer = setInterval(async () => {
+            pollCount++;
+            if (pollCount > 45) {
+                clearInterval(window._regPesapalTimer);
+                const banner = document.getElementById('regPesapalBanner');
+                if (banner) {
+                    banner.style.background = '#fffbeb';
+                    banner.style.borderColor = '#fde68a';
+                    banner.style.color = '#b45309';
+                    banner.innerHTML = '<i class="fas fa-clock"></i><span>Still waiting. Proceeding with registration shortly…</span>';
+                }
+                return;
+            }
+            try {
+                if (!trackingId) return;
+                const res = await fetch('/api/payment/pesapal/status/' + encodeURIComponent(trackingId));
+                const data = await res.json();
+                if (data && (data.isCompleted || data.statusCode === 1 || data.statusCode === 200)) {
+                    clearInterval(window._regPesapalTimer);
+                    const banner = document.getElementById('regPesapalBanner');
+                    if (banner) {
+                        banner.style.background = '#f0fdf4';
+                        banner.style.borderColor = '#bbf7d0';
+                        banner.style.color = '#15803d';
+                        banner.innerHTML = '<i class="fas fa-check-circle"></i><span>Payment confirmed! Completing registration…</span>';
+                    }
+                    setTimeout(() => { form.submit(); }, 1200);
+                }
+            } catch (e) {
+                console.warn('[register] status poll error:', e);
+            }
+        }, 4000);
     }
 
     function goBackToStep1() {

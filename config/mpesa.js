@@ -4,6 +4,7 @@ const path = require("path");
 const router = express.Router();
 
 const { creditWalletTopUp } = require("../routes/trans");
+const { applyAtomicGroupMemberContribution } = require("../mongoose");
 
 const mpesaConfig = {
   consumerKey: process.env.MPESA_CONSUMER_KEY || "",
@@ -33,7 +34,30 @@ async function applyWalletTopUpFromPending(checkoutId, overrides = {}) {
     return { success: false, reason: "ALREADY_CREDITED_OR_MISSING" };
   }
   const pending = pendingWalletTopups.get(id);
-  if (!pending || pending.purpose !== "wallet_topup") {
+  if (!pending) {
+    return { success: false, reason: "NO_PENDING" };
+  }
+
+  if (pending.purpose === "group_contribution") {
+    creditedCheckoutIds.add(id);
+    pendingWalletTopups.delete(id);
+    try {
+      return await applyAtomicGroupMemberContribution({
+        groupName: pending.groupName,
+        memberPhone: pending.creditPhone,
+        accountId: pending.accountId || "001",
+        amount: overrides.amount != null ? overrides.amount : pending.amount,
+        reference: overrides.reference || id,
+        paymentMethod: "mpesa",
+        payerPhone: pending.payerPhone,
+      });
+    } catch (e) {
+      creditedCheckoutIds.delete(id);
+      throw e;
+    }
+  }
+
+  if (pending.purpose !== "wallet_topup") {
     return { success: false, reason: "NO_PENDING" };
   }
   creditedCheckoutIds.add(id);
@@ -155,6 +179,8 @@ router.post("/stk-push", async (req, res) => {
 
     const isSuccess = data && data.ResponseCode === "0";
 
+    const isGroupContribution = String(purpose || "").toLowerCase() === "group_contribution";
+
     if (isSuccess && isWalletTopup && data.CheckoutRequestID) {
       const creditPhone = String(
         accountPhone ||
@@ -163,6 +189,24 @@ router.post("/stk-push", async (req, res) => {
       ).trim();
       pendingWalletTopups.set(String(data.CheckoutRequestID), {
         purpose: "wallet_topup",
+        creditPhone,
+        payerPhone: mpesaPhone,
+        amount: payAmount,
+        initiatedAtMs: Date.now(),
+        MerchantRequestID: data.MerchantRequestID || null,
+      });
+    } else if (isSuccess && isGroupContribution && data.CheckoutRequestID) {
+      const { groupName, accountId, memberPhone } = req.body;
+      const creditPhone = String(
+        memberPhone ||
+        accountPhone ||
+        (req.session && req.session.user && req.session.user.phoneNumber) ||
+        phone
+      ).trim();
+      pendingWalletTopups.set(String(data.CheckoutRequestID), {
+        purpose: "group_contribution",
+        groupName: groupName || "",
+        accountId: accountId || "001",
         creditPhone,
         payerPhone: mpesaPhone,
         amount: payAmount,
@@ -206,7 +250,7 @@ router.post("/callback", async (req, res) => {
       const resultCode = Number(body.ResultCode);
       const pending = checkoutId ? pendingWalletTopups.get(checkoutId) : null;
 
-      if (pending && pending.purpose === "wallet_topup" && resultCode === 0) {
+      if (pending && resultCode === 0) {
         let paidAmount = pending.amount;
         let mpesaReceipt = "";
         const items = (body.CallbackMetadata && body.CallbackMetadata.Item) || [];
@@ -215,17 +259,17 @@ router.post("/callback", async (req, res) => {
           if (item.Name === "MpesaReceiptNumber") mpesaReceipt = String(item.Value || "");
         }
 
-        const topUp = await applyWalletTopUpFromPending(checkoutId, {
+        const txRes = await applyWalletTopUpFromPending(checkoutId, {
           amount: paidAmount,
           reference: mpesaReceipt || checkoutId,
-          notes: "Wallet Add Fund via M-Pesa STK",
+          notes: `M-Pesa STK payment (${pending.purpose || "transaction"})`,
         });
         console.log(
-          `[M-Pesa Callback] Wallet top-up ${pending.creditPhone}:`,
-          topUp.success ? `OK balance=${topUp.balance}` : topUp.reason
+          `[M-Pesa Callback] Processed ${pending.purpose} for ${pending.creditPhone}:`,
+          txRes.success ? `OK` : txRes.reason
         );
       } else if (pending && resultCode !== 0) {
-        console.warn(`[M-Pesa Callback] Wallet top-up failed ResultCode=${resultCode} Desc=${body.ResultDesc}`);
+        console.warn(`[M-Pesa Callback] Payment failed ResultCode=${resultCode} Desc=${body.ResultDesc}`);
         pendingWalletTopups.delete(checkoutId);
       }
     }
@@ -263,16 +307,15 @@ router.get("/status/:checkoutId", async (req, res) => {
     const data = await response.json();
 
     // If STK query reports success and we still have a pending top-up, credit now
-    // (covers cases where the webhook callback was missed).
     const resultCode = data && (data.ResultCode !== undefined ? Number(data.ResultCode) : null);
     if (resultCode === 0) {
       try {
-        const topUp = await applyWalletTopUpFromPending(checkoutId, {
-          notes: "Wallet Add Fund via M-Pesa STK (status poll)",
+        const txRes = await applyWalletTopUpFromPending(checkoutId, {
+          notes: "M-Pesa STK (status poll)",
         });
-        if (topUp && topUp.success) data._walletTopUp = topUp;
+        if (txRes && txRes.success) data._txResult = txRes;
       } catch (e) {
-        console.error("[M-Pesa status] creditWalletTopUp error:", e.message);
+        console.error("[M-Pesa status] processing error:", e.message);
       }
     }
 

@@ -806,8 +806,12 @@ router.post("/request-payment", async (req, res) => {
     const lastName = sessionUser.LastName || sessionUser.lastName || "";
     const email = sessionUser.email || "";
 
+    const reqPurpose = String(req.body.purpose || "wallet_topup").toLowerCase();
+
     const registrationData = {
-      purpose: "wallet_topup",
+      purpose: reqPurpose,
+      groupName: req.body.groupName || "",
+      accountId: req.body.accountId || "001",
       creditPhone,
       payerPhone,
       phoneNumber: payerPhone,
@@ -1001,6 +1005,61 @@ async function handlePesapalCallback(req, res) {
       }
 
       const purpose = String(pending.purpose || userData.purpose || "").toLowerCase();
+      if (purpose === "group_contribution") {
+        const creditPhone = String(
+          pending.creditPhone || userData.creditPhone || resolvedPhone || ""
+        ).trim();
+        const payerPhone = String(
+          pending.payerPhone || userData.payerPhone || resolvedPhone || paymentAccount || ""
+        ).trim();
+        const { applyAtomicGroupMemberContribution } = require("../mongoose");
+        try {
+          const result = await applyAtomicGroupMemberContribution({
+            groupName: pending.groupName || userData.groupName,
+            memberPhone: creditPhone,
+            accountId: pending.accountId || userData.accountId || "001",
+            amount: expectedAmount,
+            reference: confirmationCode || strOrderTrackingId || OrderMerchantReference || "",
+            paymentMethod: "pesapal",
+            payerPhone,
+          });
+          console.log(
+            `[Pesapal Callback] Group contribution result for ${creditPhone}:`,
+            result.success ? `OK round=${result.circleRound}` : result.reason
+          );
+        } catch (topErr) {
+          console.error("[Pesapal Callback] applyAtomicGroupMemberContribution error:", topErr.message);
+        }
+
+        return res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Group Contribution Successful</title>
+            <style>
+              body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+                background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);font-family:system-ui,sans-serif;padding:16px;}
+              .card{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:28px 22px;text-align:center;
+                box-shadow:0 20px 50px rgba(0,0,0,.3);}
+              h1{font-size:20px;margin:0 0 8px;color:#166534;}
+              p{font-size:14px;color:#475569;line-height:1.5;margin:0 0 18px;}
+              a{display:inline-block;padding:12px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);
+                color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;}
+            </style>
+            <script>setTimeout(function(){ window.location.replace('/personal/send-money'); }, 2500);</script>
+          </head>
+          <body>
+            <div class="card">
+              <h1>Payment Successful</h1>
+              <p>KSh ${Number(expectedAmount).toLocaleString()} has been added to ${pending.groupName || userData.groupName || 'your group'}.</p>
+              <a href="/personal/send-money">Back to Send Money</a>
+            </div>
+          </body>
+        </html>`);
+      }
+
       if (purpose === "wallet_topup") {
         const creditPhone = String(
           pending.creditPhone || userData.creditPhone || resolvedPhone || ""
@@ -1458,6 +1517,51 @@ router.get("/register/pesapal-callback", handlePesapalCallback);
 router.get("/ipn", handlePesapalIpnGet);
 
 router.post("/ipn", handlePesapalIpnPost);
+
+router.get("/status/:orderTrackingId", async (req, res) => {
+  try {
+    const { orderTrackingId } = req.params;
+    if (!orderTrackingId) {
+      return res.json({ success: false, isCompleted: false, message: "Missing order tracking ID." });
+    }
+    const status = await getTransactionStatus(orderTrackingId);
+    const statusCode = status?.status_code;
+    const isCompleted = isSuccessStatus(statusCode);
+
+    if (isCompleted) {
+      const pending = (await getPendingPayment(req))?.[orderTrackingId] || null;
+      if (pending && pending.purpose === "group_contribution") {
+        const { applyAtomicGroupMemberContribution } = require("../mongoose");
+        await applyAtomicGroupMemberContribution({
+          groupName: pending.groupName,
+          memberPhone: pending.creditPhone || pending.phoneNumber,
+          accountId: pending.accountId || "001",
+          amount: pending.amount,
+          reference: orderTrackingId,
+          paymentMethod: "pesapal",
+          payerPhone: pending.payerPhone,
+        }).catch(e => console.error("[Pesapal status poll credit error]", e.message));
+      }
+    }
+
+    return res.json({
+      success: true,
+      statusCode,
+      isCompleted,
+      description: status?.payment_status_description || "Pending",
+      statusData: status
+    });
+  } catch (err) {
+    console.warn("[Pesapal status query protected fallback]", err.message);
+    return res.json({
+      success: false,
+      isCompleted: false,
+      statusCode: null,
+      message: "Verification in progress...",
+      error: err.message
+    });
+  }
+});
 
 router.post("/register-ipn", requireAdminOrInternalSecret, async (req, res) => {
   try {

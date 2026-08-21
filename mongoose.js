@@ -2731,6 +2731,370 @@ const findDealerByPhone = async (phone) => {
   }
 };
 
+const processedGroupTxIds = new Set();
+setInterval(() => {
+  if (processedGroupTxIds.size > 10000) processedGroupTxIds.clear();
+}, 2 * 60 * 60 * 1000);
+
+const calculateActiveCircle = (principlesSetAt, intervalConfig = {}) => {
+  const frequency = String(intervalConfig?.frequency || '').toLowerCase() || 'weekly';
+  const startRaw = principlesSetAt || new Date().toISOString();
+  const startDate = new Date(startRaw);
+  const now = new Date();
+
+  const diffMs = Math.max(0, now.getTime() - startDate.getTime());
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+  let roundIndex = 0;
+  if (frequency === 'daily') {
+    roundIndex = diffDays;
+  } else if (frequency === 'weekly') {
+    roundIndex = Math.floor(diffDays / 7);
+  } else if (frequency === 'monthly') {
+    const months = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
+    roundIndex = Math.max(0, months);
+  } else if (frequency === 'yearly') {
+    roundIndex = Math.max(0, now.getFullYear() - startDate.getFullYear());
+  } else {
+    roundIndex = Math.floor(diffDays / 7);
+  }
+  return {
+    roundIndex,
+    roundNumber: roundIndex + 1,
+    frequency,
+    startDate: startDate.toISOString().split('T')[0],
+  };
+};
+
+const applyAtomicGroupMemberContribution = async ({
+  groupName,
+  memberPhone,
+  accountId = "001",
+  accountName = "Saving",
+  amount,
+  reference,
+  paymentMethod = "mpesa",
+  payerPhone,
+  notes = "",
+}) => {
+  const payAmount = Number(amount || 0);
+  if (!memberPhone || payAmount <= 0) {
+    return { success: false, reason: "INVALID_INPUT" };
+  }
+
+  const mPhone = normalizePhone(memberPhone) || String(memberPhone).trim();
+  const pPhone = payerPhone ? normalizePhone(payerPhone) || String(payerPhone).trim() : mPhone;
+  const txRef = String(reference || `TX_${Date.now()}`).trim();
+
+  if (txRef && processedGroupTxIds.has(txRef)) {
+    return { success: false, reason: "ALREADY_PROCESSED" };
+  }
+  if (txRef) processedGroupTxIds.add(txRef);
+
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready || mongoose.connection.readyState !== 1) {
+      if (txRef) processedGroupTxIds.delete(txRef);
+      return { success: false, reason: "MONGO_NOT_READY" };
+    }
+
+    const db = mongoose.connection.db;
+    const targetGroupNorm = normalizeGroupName(groupName);
+    const membersCol = db.collection("groups-members");
+    const groupsCol = db.collection("groups");
+
+    // 1. Locate group in groups & groups-members
+    let groupDoc = await groupsCol.findOne({
+      $or: [
+        { groupName: groupName },
+        { groupKey: targetGroupNorm },
+        { groupId: groupName }
+      ]
+    });
+
+    let directMemberGroupDoc = await membersCol.findOne({
+      $or: [
+        { groupName: groupName },
+        { groupKey: targetGroupNorm },
+        { groupId: groupName }
+      ]
+    });
+
+    let isNested = false;
+    let nestedLocation = null;
+
+    if (!directMemberGroupDoc) {
+      const cursor = membersCol.find({ "constituencies.wards.data": { $exists: true } });
+      for await (const countyDoc of cursor) {
+        if (!countyDoc || !Array.isArray(countyDoc.constituencies)) continue;
+        for (let i = 0; i < countyDoc.constituencies.length; i++) {
+          const cons = countyDoc.constituencies[i];
+          if (!cons || !Array.isArray(cons.wards)) continue;
+          for (let j = 0; j < cons.wards.length; j++) {
+            const ward = cons.wards[j];
+            if (!ward || !Array.isArray(ward.data)) continue;
+            for (let k = 0; k < ward.data.length; k++) {
+              const g = ward.data[k];
+              const gName = normalizeGroupName(g?.groupName);
+              const gId = normalizeGroupName(g?.groupId);
+              if (g && (gName === targetGroupNorm || gId === targetGroupNorm)) {
+                directMemberGroupDoc = countyDoc;
+                isNested = true;
+                nestedLocation = { cIdx: i, wIdx: j, gIdx: k, groupData: g };
+                break;
+              }
+            }
+            if (isNested) break;
+          }
+          if (isNested) break;
+        }
+        if (isNested) break;
+      }
+    }
+
+    // 2. Verification: check if target group exists and member is registered
+    const targetGroupData = isNested ? nestedLocation.groupData : directMemberGroupDoc;
+    const memberRecord = targetGroupData?.members?.[mPhone];
+    const isVerified = Boolean(targetGroupData && memberRecord);
+
+    if (!isVerified) {
+      // =========================================================================
+      // FALLBACK WORKFLOW: Auto-credit via Add-Fund to PersonalAccount
+      // =========================================================================
+      console.warn(
+        `[applyAtomicGroupMemberContribution] Verification failed for group "${groupName}" and member "${mPhone}". Routing to Add-Fund personal wallet.`
+      );
+
+      let newWalletBalance = 0;
+      await mutatePersonalLeaves(
+        (r) => normalizePhone(r.phone) === mPhone,
+        (rec) => {
+          if (!rec.account) rec.account = {};
+          if (!rec.account.business) {
+            rec.account.business = { name: "", "total-bal": 0, float: 0, benefit: 0 };
+          }
+          if (!rec.account.pending) rec.account.pending = { value: 0 };
+          if (!rec.account.personal) {
+            rec.account.personal = { reg_fee: 0, personal: 0, openBalance: 0, pendingBalance: 0 };
+          }
+
+          const prevOpen = Number(rec.account.personal.openBalance || 0);
+          const prevPersonal = Number(rec.account.personal.personal || 0);
+          newWalletBalance = prevOpen + payAmount;
+
+          rec.account.personal.openBalance = newWalletBalance;
+          rec.account.personal.personal = prevPersonal + payAmount;
+
+          if (!rec.transactions) rec.transactions = [];
+          rec.transactions.push({
+            reference: txRef,
+            time: new Date(),
+            openingBalance: prevOpen,
+            amount: payAmount,
+            type: "received",
+            from: {
+              name: paymentMethod === "mpesa" ? "M-Pesa (Add-Fund Fallback)" : "Wallet Add-Fund",
+              number: pPhone,
+            },
+            to: { name: "Personal Account", number: mPhone },
+            closingBalance: newWalletBalance,
+            environment: paymentMethod,
+            notes: `Add Fund (Fallback from unverified group: ${groupName || "Unknown"})`,
+            status: "completed",
+          });
+          rec.updatedAt = new Date();
+          return rec;
+        }
+      );
+
+      // Send User Message/Notification regarding the fallback
+      await saveMessageToMongo({
+        to: mPhone,
+        groupName: groupName || "Personal Wallet",
+        type: "wallet_credit_fallback",
+        title: "Deposit Credited to Personal Wallet",
+        content: `Your transaction of KES ${payAmount.toLocaleString()} intended for group "${groupName || 'Unknown'}" could not be verified on the group roster and was safely credited to your Personal Wallet balance. Ref: ${txRef}.`,
+        createdAt: new Date().toISOString(),
+        isNew: true,
+        meta: {
+          reference: txRef,
+          amount: payAmount,
+          fallbackReason: !targetGroupData ? "GROUP_NOT_FOUND" : "MEMBER_NOT_IN_GROUP",
+          closingBalance: newWalletBalance,
+        }
+      });
+
+      return {
+        success: true,
+        fallback: true,
+        reason: "GROUP_OR_MEMBER_NOT_VERIFIED",
+        groupName: groupName || "Personal Wallet",
+        memberPhone: mPhone,
+        amount: payAmount,
+        topUp: { success: true, balance: newWalletBalance },
+        statement: {
+          reference: txRef,
+          type: "wallet_deposit_fallback",
+          amount: payAmount,
+          closingBalance: newWalletBalance,
+          date: new Date().toISOString(),
+          status: "completed"
+        }
+      };
+    }
+
+    // 3. Verified Path: Calculate active circle & interval rounds
+    const principlesSetAt = targetGroupData.principlesSetAt || groupDoc?.principlesSetAt || targetGroupData.createdAt || new Date().toISOString();
+    const intervals = targetGroupData.principles?.intervals || groupDoc?.principles?.intervals || {};
+    const circleInfo = calculateActiveCircle(principlesSetAt, intervals);
+
+    const nowIso = new Date().toISOString();
+    const resolvedAccountName =
+      targetGroupData.accountSchema?.[accountId]?.accountName ||
+      (targetGroupData.principles?.otherContributions || []).find(a => String(a.accountNumber) === String(accountId))?.accountName ||
+      accountName;
+
+    const txObject = {
+      txId: txRef,
+      reference: txRef,
+      groupName: targetGroupData.groupName || groupName,
+      accountId,
+      accountName: resolvedAccountName,
+      amount: payAmount,
+      date: nowIso,
+      paymentMethod,
+      payerPhone: pPhone,
+      memberPhone: mPhone,
+      circleRound: circleInfo.roundNumber,
+      type: "credit",
+      status: "completed"
+    };
+
+    // 4. Update groups-members collection (financials, active circle round, member cycle)
+    if (!isNested) {
+      const updatePayload = {
+        $inc: {
+          [`members.${mPhone}.accounts.${accountId}.financials.amountIn`]: payAmount,
+          [`members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: payAmount,
+          [`members.${mPhone}.memberFinancials.amountIn`]: payAmount,
+          [`members.${mPhone}.memberFinancials.closingBalance`]: payAmount,
+          [`groupFinancials.accountWise.${accountId}.totalAmountIn`]: payAmount,
+          [`groupFinancials.accountWise.${accountId}.totalClosingBalance`]: payAmount,
+          [`groupFinancials.totalAmountIn`]: payAmount,
+          [`groupFinancials.totalClosingBalance`]: payAmount,
+        },
+        $push: {
+          [`members.${mPhone}.accounts.${accountId}.transactionHistory`]: txObject,
+          [`members.${mPhone}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
+        },
+        $set: {
+          updatedAt: nowIso
+        }
+      };
+
+      await membersCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
+    } else {
+      const { cIdx, wIdx, gIdx } = nestedLocation;
+      const prefix = `constituencies.${cIdx}.wards.${wIdx}.data.${gIdx}`;
+      const updatePayload = {
+        $inc: {
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.amountIn`]: payAmount,
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: payAmount,
+          [`${prefix}.members.${mPhone}.memberFinancials.amountIn`]: payAmount,
+          [`${prefix}.members.${mPhone}.memberFinancials.closingBalance`]: payAmount,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.totalAmountIn`]: payAmount,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.totalClosingBalance`]: payAmount,
+          [`${prefix}.groupFinancials.totalAmountIn`]: payAmount,
+          [`${prefix}.groupFinancials.totalClosingBalance`]: payAmount,
+        },
+        $push: {
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.transactionHistory`]: txObject,
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
+        },
+        $set: {
+          syncedAt: nowIso
+        }
+      };
+
+      await membersCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
+    }
+
+    // 5. Update PersonalAccount collection statement/balance
+    let personalClosingBalance = 0;
+    await mutatePersonalLeaves(
+      (r) => normalizePhone(r.phone) === mPhone,
+      (rec) => {
+        if (!rec.account) rec.account = {};
+        if (!rec.account.personal) {
+          rec.account.personal = { personal: 0, openBalance: 0, pendingBalance: 0, reg_fee: 0 };
+        }
+        personalClosingBalance = Number(rec.account.personal.openBalance || 0);
+
+        if (!rec.transactions) rec.transactions = [];
+        rec.transactions.push({
+          reference: txRef,
+          time: new Date(),
+          openingBalance: personalClosingBalance,
+          amount: payAmount,
+          type: "group_contribution",
+          from: { name: "Personal Account", number: mPhone },
+          to: { name: targetGroupData.groupName || groupName, number: accountId },
+          closingBalance: personalClosingBalance,
+          environment: paymentMethod,
+          notes: notes || `Group contribution to ${targetGroupData.groupName || groupName} (${resolvedAccountName})`,
+          status: "completed",
+        });
+        rec.updatedAt = new Date();
+        return rec;
+      }
+    );
+
+    // 6. Send user confirmation notification message
+    await saveMessageToMongo({
+      to: mPhone,
+      groupName: targetGroupData.groupName || groupName,
+      type: "group_contribution_success",
+      title: "Group Contribution Received",
+      content: `Received KES ${payAmount.toLocaleString()} for ${targetGroupData.groupName || groupName} (${resolvedAccountName}, Round #${circleInfo.roundNumber}). Ref: ${txRef}.`,
+      createdAt: nowIso,
+      isNew: true,
+      meta: {
+        reference: txRef,
+        amount: payAmount,
+        groupName: targetGroupData.groupName || groupName,
+        accountId,
+        accountName: resolvedAccountName,
+        circleRound: circleInfo.roundNumber,
+      }
+    });
+
+    return {
+      success: true,
+      fallback: false,
+      groupName: targetGroupData.groupName || groupName,
+      memberPhone: mPhone,
+      accountId,
+      accountName: resolvedAccountName,
+      amount: payAmount,
+      circleRound: circleInfo.roundNumber,
+      txId: txObject.txId,
+      statement: {
+        reference: txRef,
+        amount: payAmount,
+        groupName: targetGroupData.groupName || groupName,
+        accountName: resolvedAccountName,
+        date: nowIso,
+        closingBalance: personalClosingBalance,
+        status: "completed"
+      }
+    };
+  } catch (err) {
+    if (txRef) processedGroupTxIds.delete(txRef);
+    console.error("[applyAtomicGroupMemberContribution] Error:", err.message);
+    return { success: false, reason: err.message };
+  }
+};
+
 module.exports = {
   connectDB,
   ensureMongoReady,
@@ -2804,4 +3168,95 @@ module.exports = {
   findPersonalRecord,
   updatePersonalRecord,
   upsertPersonalAccount,
+  calculateActiveCircle,
+  applyAtomicGroupMemberContribution,
 };
+
+const findGroupMemberTransactions = async (phone) => {
+  const ready = await ensureMongoReady();
+  if (!ready || mongoose.connection.readyState !== 1) return [];
+
+  try {
+    const db = mongoose.connection.db;
+    const membersCol = db.collection("groups-members");
+    const mPhone = normalizePhone(phone) || String(phone).trim();
+
+    const docs = await membersCol.find({
+      $or: [
+        { [`members.${mPhone}`]: { $exists: true } },
+        { "transactionHistory.memberPhone": mPhone },
+        { "transactionHistory.payerPhone": mPhone }
+      ]
+    }).toArray();
+
+    const txns = [];
+
+    docs.forEach(doc => {
+      const gName = doc.groupName || doc.groupId || "Group Account";
+
+      if (Array.isArray(doc.transactionHistory)) {
+        doc.transactionHistory.forEach(tx => {
+          if (tx.memberPhone === mPhone || tx.payerPhone === mPhone) {
+            txns.push({
+              code: tx.txId || tx.reference || "",
+              amt: Number(tx.amount || 0),
+              date: tx.date || new Date().toISOString(),
+              type: "deposit",
+              groupName: gName,
+              acc: `Group ${gName} (Account ${tx.accountId || '001'})`,
+              accountId: tx.accountId || "001",
+              from: tx.payerPhone || mPhone,
+              fromNumber: tx.payerPhone || mPhone,
+              to: gName,
+              toNumber: gName,
+              circleRound: tx.circleRound || 1,
+              source: "groups-members"
+            });
+          }
+        });
+      }
+
+      let memberObj = null;
+      if (doc.members && doc.members[mPhone]) {
+        memberObj = doc.members[mPhone];
+      }
+
+      if (memberObj && Array.isArray(memberObj.transactions)) {
+        memberObj.transactions.forEach(tx => {
+          txns.push({
+            code: tx.txId || tx.reference || "",
+            amt: Number(tx.amount || 0),
+            date: tx.date || new Date().toISOString(),
+            type: "deposit",
+            groupName: gName,
+            acc: `Group ${gName} (Account ${tx.accountId || '001'})`,
+            accountId: tx.accountId || "001",
+            from: mPhone,
+            fromNumber: mPhone,
+            to: gName,
+            toNumber: gName,
+            circleRound: tx.circleRound || 1,
+            source: "groups-members"
+          });
+        });
+      }
+    });
+
+    const seen = new Set();
+    const uniqueTxns = [];
+    txns.forEach(t => {
+      const key = t.code || `${t.groupName}_${t.amt}_${t.date}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueTxns.push(t);
+      }
+    });
+
+    return uniqueTxns.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  } catch (e) {
+    console.error("[findGroupMemberTransactions error]", e.message);
+    return [];
+  }
+};
+
+module.exports.findGroupMemberTransactions = findGroupMemberTransactions;
