@@ -2927,38 +2927,25 @@ const applyAtomicGroupMemberContribution = async ({
     };
 
     // =========================================================================
-    // STAGE 1 — verify the group name exists in the `groups` collection.
-    // Not found → credit PersonalAccount as before, nothing else is checked.
+    // STAGE 1 — locate the member-group document (groupName/members/accountSchema
+    // all live on ONE document). saveMemberGroupToMongo() writes this as a FLAT
+    // doc (top-level groupName/groupKey) into the `groups` collection via the
+    // MemberGroup model — `groups` is therefore the primary, required source.
+    // `groups-members` has no writer anywhere in this codebase (only an index
+    // is ever created on it), so it is checked only as a legacy fallback in
+    // case something populates it later; it must not be relied on as primary.
     // =========================================================================
-    let groupDoc = await groupsCol.findOne({
-      $or: [
-        { groupName: groupName },
-        { groupKey: targetGroupNorm },
-        { groupId: groupName }
-      ]
-    });
+    const locateGroupDoc = async (col) => {
+      const direct = await col.findOne({
+        $or: [
+          { groupName: groupName },
+          { groupKey: targetGroupNorm },
+          { groupId: groupName }
+        ]
+      });
+      if (direct) return { doc: direct, isNested: false, nestedLocation: null };
 
-    if (!groupDoc) {
-      return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_COLLECTION");
-    }
-
-    // =========================================================================
-    // STAGE 2 — group confirmed in `groups`; now verify the member roster in
-    // the `groups-members` collection (direct doc, or nested county->ward doc).
-    // =========================================================================
-    let directMemberGroupDoc = await membersCol.findOne({
-      $or: [
-        { groupName: groupName },
-        { groupKey: targetGroupNorm },
-        { groupId: groupName }
-      ]
-    });
-
-    let isNested = false;
-    let nestedLocation = null;
-
-    if (!directMemberGroupDoc) {
-      const cursor = membersCol.find({ "constituencies.wards.data": { $exists: true } });
+      const cursor = col.find({ "constituencies.wards.data": { $exists: true } });
       for await (const countyDoc of cursor) {
         if (!countyDoc || !Array.isArray(countyDoc.constituencies)) continue;
         for (let i = 0; i < countyDoc.constituencies.length; i++) {
@@ -2972,28 +2959,41 @@ const applyAtomicGroupMemberContribution = async ({
               const gName = normalizeGroupName(g?.groupName);
               const gId = normalizeGroupName(g?.groupId);
               if (g && (gName === targetGroupNorm || gId === targetGroupNorm)) {
-                directMemberGroupDoc = countyDoc;
-                isNested = true;
-                nestedLocation = { cIdx: i, wIdx: j, gIdx: k, groupData: g };
-                break;
+                return { doc: countyDoc, isNested: true, nestedLocation: { cIdx: i, wIdx: j, gIdx: k, groupData: g } };
               }
             }
-            if (isNested) break;
           }
-          if (isNested) break;
         }
-        if (isNested) break;
       }
+      return null;
+    };
+
+    let located = await locateGroupDoc(groupsCol);
+    let sourceCol = groupsCol;
+    if (!located) {
+      // Legacy fallback only — groups-members is not populated by any writer
+      // in this codebase today, kept here in case that changes later.
+      located = await locateGroupDoc(membersCol);
+      sourceCol = membersCol;
     }
 
+    if (!located) {
+      return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_OR_GROUPS_MEMBERS");
+    }
+
+    const { isNested, nestedLocation } = located;
+    const directMemberGroupDoc = located.doc;
+    const groupDoc = directMemberGroupDoc;
     const targetGroupData = isNested ? nestedLocation.groupData : directMemberGroupDoc;
+
+    // =========================================================================
+    // STAGE 2 — group document located; verify the member roster within it.
+    // =========================================================================
     const memberRecord = targetGroupData?.members?.[mPhone];
     const isMemberVerified = Boolean(targetGroupData && memberRecord);
 
     if (!isMemberVerified) {
-      return await fallbackToPersonalWallet(
-        !targetGroupData ? "GROUP_NOT_FOUND_IN_GROUPS_MEMBERS" : "MEMBER_NOT_IN_GROUP"
-      );
+      return await fallbackToPersonalWallet("MEMBER_NOT_IN_GROUP");
     }
 
     // =========================================================================
@@ -3075,7 +3075,7 @@ const applyAtomicGroupMemberContribution = async ({
       status: "completed"
     };
 
-    // 4. Update groups-members collection (financials, active circle round, member cycle)
+    // 4. Update the located group document (financials, active circle round, member cycle)
     if (!isNested) {
       const updatePayload = {
         $set: {
@@ -3102,7 +3102,7 @@ const applyAtomicGroupMemberContribution = async ({
         }
       };
 
-      await membersCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
+      await sourceCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
     } else {
       const { cIdx, wIdx, gIdx } = nestedLocation;
       const prefix = `constituencies.${cIdx}.wards.${wIdx}.data.${gIdx}`;
@@ -3131,7 +3131,7 @@ const applyAtomicGroupMemberContribution = async ({
         }
       };
 
-      await membersCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
+      await sourceCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
     }
 
     // 5. Update PersonalAccount collection statement/balance
