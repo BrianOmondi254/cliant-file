@@ -2805,6 +2805,7 @@ const calculateActiveCircle = (principlesSetAt, intervalConfig = {}) => {
 const applyAtomicGroupMemberContribution = async ({
   groupName,
   memberPhone,
+  memberId,
   accountId = "001",
   accountName = "",
   amount,
@@ -2927,13 +2928,8 @@ const applyAtomicGroupMemberContribution = async ({
     };
 
     // =========================================================================
-    // STAGE 1 — locate the member-group document (groupName/members/accountSchema
-    // all live on ONE document). saveMemberGroupToMongo() writes this as a FLAT
-    // doc (top-level groupName/groupKey) into the `groups` collection via the
-    // MemberGroup model — `groups` is therefore the primary, required source.
-    // `groups-members` has no writer anywhere in this codebase (only an index
-    // is ever created on it), so it is checked only as a legacy fallback in
-    // case something populates it later; it must not be relied on as primary.
+    // STAGE 1 — verify the selected group exists in the `groups` collection
+    // by exact groupName. `groups` is the primary, required source.
     // =========================================================================
     const locateGroupDoc = async (col) => {
       const direct = await col.findOne({
@@ -2971,14 +2967,7 @@ const applyAtomicGroupMemberContribution = async ({
     let located = await locateGroupDoc(groupsCol);
     let sourceCol = groupsCol;
     if (!located) {
-      // Legacy fallback only — groups-members is not populated by any writer
-      // in this codebase today, kept here in case that changes later.
-      located = await locateGroupDoc(membersCol);
-      sourceCol = membersCol;
-    }
-
-    if (!located) {
-      return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_OR_GROUPS_MEMBERS");
+      return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_COLLECTION");
     }
 
     const { isNested, nestedLocation } = located;
@@ -2986,10 +2975,32 @@ const applyAtomicGroupMemberContribution = async ({
     const groupDoc = directMemberGroupDoc;
     const targetGroupData = isNested ? nestedLocation.groupData : directMemberGroupDoc;
 
+    const verifiedGroupName = targetGroupData.groupName || groupDoc.groupName || "";
+    if (!verifiedGroupName || normalizeGroupName(verifiedGroupName) !== targetGroupNorm) {
+      return await fallbackToPersonalWallet("GROUP_NAME_MISMATCH");
+    }
+
     // =========================================================================
-    // STAGE 2 — group document located; verify the member roster within it.
+    // STAGE 2 — identify the login phone against the group's memberId roster.
+    // The members map is keyed by memberId. We try direct key lookup with
+    // both raw and normalized phone, then fall back to iterating entries
+    // and matching the memberId field explicitly.
     // =========================================================================
-    const memberRecord = targetGroupData?.members?.[mPhone];
+    let memberRecord = targetGroupData?.members?.[mPhone]
+      || targetGroupData?.members?.[String(memberPhone).trim()];
+    let memberKey = mPhone;
+
+    if (!memberRecord) {
+      for (const [key, member] of Object.entries(targetGroupData.members || {})) {
+        const memberKeyRaw = String(member?.memberId || key);
+        if (memberKeyRaw === String(memberPhone).trim() || normalizePhone(memberKeyRaw) === mPhone) {
+          memberRecord = member;
+          memberKey = key;
+          break;
+        }
+      }
+    }
+
     const isMemberVerified = Boolean(targetGroupData && memberRecord);
 
     if (!isMemberVerified) {
@@ -2997,9 +3008,18 @@ const applyAtomicGroupMemberContribution = async ({
     }
 
     // =========================================================================
-    // STAGE 3 — member confirmed; verify the target account BY NAME against
-    // the group's known account schema before any balance is touched.
+    // STAGE 3 — verify the member's account data structure exists within the
+    // group, then verify the selected accountId/accountName against the
+    // group's known account schema. Any missing or mismatched account falls
+    // back to the personal wallet; valid accounts proceed to update.
     // =========================================================================
+    const memberAccounts = memberRecord?.accounts || {};
+    const hasAccountStructure = memberAccounts && typeof memberAccounts === 'object';
+
+    if (!hasAccountStructure) {
+      return await fallbackToPersonalWallet("MEMBER_ACCOUNT_STRUCTURE_MISSING");
+    }
+
     const accountSchemaMap = { ...(groupDoc.accountSchema || {}), ...(targetGroupData.accountSchema || {}) };
     const otherContribList = targetGroupData.principles?.otherContributions || groupDoc.principles?.otherContributions || [];
 
@@ -3029,8 +3049,8 @@ const applyAtomicGroupMemberContribution = async ({
     // to that previous closing value. ----
     const numOr0 = (v) => (typeof v === "number" && !Number.isNaN(v)) ? v : 0;
 
-    const prevAccountFin = targetGroupData.members?.[mPhone]?.accounts?.[accountId]?.financials || {};
-    const prevMemberFin = targetGroupData.members?.[mPhone]?.memberFinancials || {};
+    const prevAccountFin = targetGroupData.members?.[memberKey]?.accounts?.[accountId]?.financials || {};
+    const prevMemberFin = targetGroupData.members?.[memberKey]?.memberFinancials || {};
     const prevAccountWise = targetGroupData.groupFinancials?.accountWise?.[accountId] || {};
     const prevGroupFin = targetGroupData.groupFinancials || {};
 
@@ -3079,13 +3099,13 @@ const applyAtomicGroupMemberContribution = async ({
     if (!isNested) {
       const updatePayload = {
         $set: {
-          [`members.${mPhone}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
-          [`members.${mPhone}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
-          [`members.${mPhone}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
-          [`members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
-          [`members.${mPhone}.memberFinancials.openingBalance`]: memberOpening,
-          [`members.${mPhone}.memberFinancials.amountIn`]: memberAmountIn,
-          [`members.${mPhone}.memberFinancials.closingBalance`]: memberClosing,
+          [`members.${memberKey}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
+          [`members.${memberKey}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
+          [`members.${memberKey}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
+          [`members.${memberKey}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
+          [`members.${memberKey}.memberFinancials.openingBalance`]: memberOpening,
+          [`members.${memberKey}.memberFinancials.amountIn`]: memberAmountIn,
+          [`members.${memberKey}.memberFinancials.closingBalance`]: memberClosing,
           [`groupFinancials.accountWise.${accountId}.openingBalance`]: acctWiseOpening,
           [`groupFinancials.accountWise.${accountId}.amountIn`]: acctWiseAmountIn,
           [`groupFinancials.accountWise.${accountId}.totalAmountIn`]: acctWiseTotalAmountIn,
@@ -3097,8 +3117,8 @@ const applyAtomicGroupMemberContribution = async ({
           updatedAt: nowIso
         },
         $push: {
-          [`members.${mPhone}.accounts.${accountId}.transactionHistory`]: txObject,
-          [`members.${mPhone}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
+          [`members.${memberKey}.accounts.${accountId}.transactionHistory`]: txObject,
+          [`members.${memberKey}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
         }
       };
 
@@ -3108,13 +3128,13 @@ const applyAtomicGroupMemberContribution = async ({
       const prefix = `constituencies.${cIdx}.wards.${wIdx}.data.${gIdx}`;
       const updatePayload = {
         $set: {
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
-          [`${prefix}.members.${mPhone}.memberFinancials.openingBalance`]: memberOpening,
-          [`${prefix}.members.${mPhone}.memberFinancials.amountIn`]: memberAmountIn,
-          [`${prefix}.members.${mPhone}.memberFinancials.closingBalance`]: memberClosing,
+          [`${prefix}.members.${memberKey}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
+          [`${prefix}.members.${memberKey}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
+          [`${prefix}.members.${memberKey}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
+          [`${prefix}.members.${memberKey}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
+          [`${prefix}.members.${memberKey}.memberFinancials.openingBalance`]: memberOpening,
+          [`${prefix}.members.${memberKey}.memberFinancials.amountIn`]: memberAmountIn,
+          [`${prefix}.members.${memberKey}.memberFinancials.closingBalance`]: memberClosing,
           [`${prefix}.groupFinancials.accountWise.${accountId}.openingBalance`]: acctWiseOpening,
           [`${prefix}.groupFinancials.accountWise.${accountId}.amountIn`]: acctWiseAmountIn,
           [`${prefix}.groupFinancials.accountWise.${accountId}.totalAmountIn`]: acctWiseTotalAmountIn,
@@ -3126,8 +3146,8 @@ const applyAtomicGroupMemberContribution = async ({
           syncedAt: nowIso
         },
         $push: {
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.transactionHistory`]: txObject,
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
+          [`${prefix}.members.${memberKey}.accounts.${accountId}.transactionHistory`]: txObject,
+          [`${prefix}.members.${memberKey}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
         }
       };
 
