@@ -2334,11 +2334,10 @@ const getMongoConfigHint = () => {
 
 const normalizePhone = (p) => {
   if (!p) return "";
-  let s = String(p).trim();
-  if (s.startsWith("0")) s = s.substring(1);
-  if (s.startsWith("+254")) s = s.substring(4);
-  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
-  return s;
+  const digits = String(p).trim().replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length >= 9) return digits.slice(-9);
+  return digits;
 };
 
 const phoneMatches = (a, b) => normalizePhone(a) === normalizePhone(b);
@@ -2851,13 +2850,15 @@ const applyAtomicGroupMemberContribution = async ({
 
   const mPhone = normalizePhone(memberPhone) || String(memberPhone).trim();
   const pPhone = payerPhone ? normalizePhone(payerPhone) || String(payerPhone).trim() : mPhone;
-  const txRef = String(reference || `TX_${Date.now()}`).trim();
+  const rawRef = String(reference || "").trim();
+  const isGenericRef = !rawRef || rawRef.toLowerCase() === "group deposit" || rawRef.toLowerCase() === "tbank agent" || rawRef.toLowerCase() === "wallet top-up";
+  const txRef = isGenericRef ? `TX_${Date.now()}_${Math.floor(Math.random() * 10000)}` : rawRef;
   const targetGroupNorm = normalizeGroupName(groupName);
 
-  if (txRef && processedGroupTxIds.has(txRef)) {
+  if (txRef && !isGenericRef && processedGroupTxIds.has(txRef)) {
     return { success: false, reason: "ALREADY_PROCESSED" };
   }
-  if (txRef) processedGroupTxIds.add(txRef);
+  if (txRef && !isGenericRef) processedGroupTxIds.add(txRef);
 
   const lockKey = `${targetGroupNorm || "grp"}_${mPhone}`;
 
@@ -2865,7 +2866,7 @@ const applyAtomicGroupMemberContribution = async ({
     try {
       const ready = await ensureMongoReady();
       if (!ready || mongoose.connection.readyState !== 1) {
-        if (txRef) processedGroupTxIds.delete(txRef);
+        if (txRef && !isGenericRef) processedGroupTxIds.delete(txRef);
         return { success: false, reason: "MONGO_NOT_READY" };
       }
 
@@ -2875,10 +2876,6 @@ const applyAtomicGroupMemberContribution = async ({
 
       // =========================================================================
       // Shared fallback: Auto-credit via Add-Fund to PersonalAccount.
-      // Takes an explicit amount (and optional accountId/accountName context) so
-      // it can fall back the WHOLE payment (group/member not found) or just ONE
-      // line within a multi-account payment (that one account failed
-      // name-verification while the others on the same payment succeeded).
       // =========================================================================
       const fallbackToPersonalWallet = async (fallbackReason, fbAmount, fbAccountId, fbAccountName) => {
         const amt = Number(fbAmount != null ? fbAmount : payAmount);
@@ -3013,6 +3010,7 @@ const applyAtomicGroupMemberContribution = async ({
                   (gName === targetGroupNorm ||
                    gId === targetGroupNorm ||
                    gAcc === targetGroupNorm ||
+                   gName.replace(/\s*\d+$/, "") === targetGroupNorm.replace(/\s*\d+$/, "") ||
                    String(g.groupName || "").trim().toLowerCase() === String(groupName || "").trim().toLowerCase())
                 ) {
                   return {
@@ -3047,6 +3045,7 @@ const applyAtomicGroupMemberContribution = async ({
                   gName === targetGroupNorm ||
                   gId === targetGroupNorm ||
                   gAcc === targetGroupNorm ||
+                  gName.replace(/\s*\d+$/, "") === targetGroupNorm.replace(/\s*\d+$/, "") ||
                   String(item.groupName || "").trim().toLowerCase() === String(groupName || "").trim().toLowerCase()
                 ) {
                   return {
@@ -3084,7 +3083,10 @@ const applyAtomicGroupMemberContribution = async ({
       const targetGroupData = locatedInMembersCol.groupData || locatedInGroups.groupData;
       const groupDoc = locatedInMembersCol.doc || locatedInGroups.doc;
 
-      const membersMap = targetGroupData.members || {};
+      const membersMap = {
+        ...(locatedInGroups.groupData?.members || {}),
+        ...(locatedInMembersCol.groupData?.members || {})
+      };
       let memberKey = null;
       let memberRecord = null;
 
@@ -3120,7 +3122,9 @@ const applyAtomicGroupMemberContribution = async ({
       // STAGE 3 — verify EACH selected account BY NAME against the group's known
       // account schema (`groupaccoutverify`), independently.
       // =========================================================================
+      const memberAccounts = memberRecord?.accounts || targetGroupData.members?.[memberKey]?.accounts || {};
       const accountSchemaMap = {
+        ...(memberAccounts || {}),
         ...(locatedInMembersCol.groupData?.accountSchema || {}),
         ...(locatedInGroups.groupData?.accountSchema || {}),
         ...(groupDoc.accountSchema || {})
@@ -3130,21 +3134,44 @@ const applyAtomicGroupMemberContribution = async ({
         locatedInGroups.groupData?.principles?.otherContributions ||
         groupDoc.principles?.otherContributions ||
         [];
-      const normStr = (s) => String(s || "").trim().toLowerCase();
+      const normStr = (s) => String(s || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
       const verifiedLines = [];
       const fallbackResults = [];
 
       for (const line of lines) {
-        const schemaEntry = accountSchemaMap[line.accountId];
-        const listEntry = otherContribList.find(a => String(a.accountNumber) === String(line.accountId));
+        const rawAccId = String(line.accountId || "001");
+        const accIdTrim = rawAccId.replace(/^0+/, "") || "0";
+        const accIdPadded = rawAccId.padStart(3, "0");
+
+        const schemaEntry =
+          accountSchemaMap[rawAccId] ||
+          accountSchemaMap[accIdTrim] ||
+          accountSchemaMap[accIdPadded];
+
+        const listEntry = otherContribList.find(a => {
+          const aNum = String(a.accountNumber || a.accountId || "");
+          return aNum === rawAccId ||
+                 aNum.replace(/^0+/, "") === accIdTrim ||
+                 aNum.padStart(3, "0") === accIdPadded;
+        });
+
         const registeredAccountName = schemaEntry?.accountName || listEntry?.accountName || null;
 
         if (!schemaEntry && !listEntry) {
           fallbackResults.push(await fallbackToPersonalWallet("ACCOUNT_NOT_FOUND_IN_GROUP", line.amount, line.accountId, line.accountName));
           continue;
         }
-        if (line.accountName && registeredAccountName && normStr(line.accountName) !== normStr(registeredAccountName)) {
+
+        // Validate account name flexibly if supplied
+        const clientNameNorm = normStr(line.accountName);
+        const regNameNorm = normStr(registeredAccountName);
+        const nameMatches = !clientNameNorm || !regNameNorm ||
+                            clientNameNorm === regNameNorm ||
+                            clientNameNorm.includes(regNameNorm) ||
+                            regNameNorm.includes(clientNameNorm);
+
+        if (!nameMatches) {
           fallbackResults.push(await fallbackToPersonalWallet("ACCOUNT_NAME_MISMATCH", line.amount, line.accountId, line.accountName));
           continue;
         }
