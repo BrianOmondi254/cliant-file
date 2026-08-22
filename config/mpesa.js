@@ -47,6 +47,7 @@ async function applyWalletTopUpFromPending(checkoutId, overrides = {}) {
         memberPhone: pending.creditPhone,
         accountId: pending.accountId || "001",
         accountName: pending.accountName || "",
+        accounts: Array.isArray(pending.accounts) && pending.accounts.length > 0 ? pending.accounts : undefined,
         amount: overrides.amount != null ? overrides.amount : pending.amount,
         reference: overrides.reference || id,
         paymentMethod: "mpesa",
@@ -121,7 +122,7 @@ async function getAccessToken() {
 
 router.post("/stk-push", async (req, res) => {
   try {
-    const { phone, amount, reference, description, purpose, accountPhone } = req.body;
+    const { phone, amount, reference, description, purpose, accountPhone, accounts } = req.body;
     const accessToken = await getAccessToken();
 
     const isWalletTopup = String(purpose || "").toLowerCase() === "wallet_topup";
@@ -204,11 +205,21 @@ router.post("/stk-push", async (req, res) => {
         (req.session && req.session.user && req.session.user.phoneNumber) ||
         phone
       ).trim();
+      const normalizedAccounts = Array.isArray(accounts)
+        ? accounts
+            .map(a => ({
+              accountId: String(a.accountId || a.accountNumber || "001"),
+              accountName: String(a.accountName || "").trim(),
+              amount: Number(a.amount || a.inputAmount || 0),
+            }))
+            .filter(a => a.amount > 0)
+        : [];
       pendingWalletTopups.set(String(data.CheckoutRequestID), {
         purpose: "group_contribution",
         groupName: groupName || "",
         accountId: accountId || "001",
         accountName: accountName || "",
+        accounts: normalizedAccounts,
         creditPhone,
         payerPhone: mpesaPhone,
         amount: payAmount,

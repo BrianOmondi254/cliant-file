@@ -2805,17 +2805,30 @@ const calculateActiveCircle = (principlesSetAt, intervalConfig = {}) => {
 const applyAtomicGroupMemberContribution = async ({
   groupName,
   memberPhone,
-  memberId,
   accountId = "001",
   accountName = "",
   amount,
+  accounts, // NEW optional: [{accountId, accountName, amount}, ...] for multi-account contributions.
+            // When omitted, falls back to the single accountId/accountName/amount trio below.
   reference,
   paymentMethod = "mpesa",
   payerPhone,
   notes = "",
 }) => {
-  const payAmount = Number(amount || 0);
-  if (!memberPhone || payAmount <= 0) {
+  const rawLines = Array.isArray(accounts) && accounts.length > 0
+    ? accounts
+    : [{ accountId, accountName, amount }];
+
+  const lines = rawLines
+    .map((a) => ({
+      accountId: String(a.accountId || a.accountNumber || "001"),
+      accountName: String(a.accountName || "").trim(),
+      amount: Number(a.amount || a.inputAmount || 0),
+    }))
+    .filter((l) => l.amount > 0);
+
+  const payAmount = lines.reduce((s, l) => s + l.amount, 0);
+  if (!memberPhone || !lines.length || payAmount <= 0) {
     return { success: false, reason: "INVALID_INPUT" };
   }
 
@@ -2841,15 +2854,21 @@ const applyAtomicGroupMemberContribution = async ({
     const groupsCol = db.collection("groups");
 
     // =========================================================================
-    // Shared fallback: Auto-credit via Add-Fund to PersonalAccount
-    // Used any time group / member / account cannot be verified.
+    // Shared fallback: Auto-credit via Add-Fund to PersonalAccount.
+    // Takes an explicit amount (and optional accountId/accountName context) so
+    // it can fall back the WHOLE payment (group/member not found) or just ONE
+    // line within a multi-account payment (that one account failed
+    // name-verification while the others on the same payment succeeded).
     // =========================================================================
-    const fallbackToPersonalWallet = async (fallbackReason) => {
+    const fallbackToPersonalWallet = async (fallbackReason, fbAmount, fbAccountId, fbAccountName) => {
+      const amt = Number(fbAmount != null ? fbAmount : payAmount);
       console.warn(
-        `[applyAtomicGroupMemberContribution] ${fallbackReason} — group "${groupName}", member "${mPhone}". Routing to Add-Fund personal wallet.`
+        `[applyAtomicGroupMemberContribution] ${fallbackReason} — group "${groupName}", member "${mPhone}", amount ${amt}` +
+        `${fbAccountId ? `, account ${fbAccountId}` : ""}. Routing to Add-Fund personal wallet.`
       );
 
       let newWalletBalance = 0;
+      let prevOpen = 0;
       await mutatePersonalLeaves(
         (r) => normalizePhone(r.phone) === mPhone,
         (rec) => {
@@ -2862,19 +2881,19 @@ const applyAtomicGroupMemberContribution = async ({
             rec.account.personal = { reg_fee: 0, personal: 0, openBalance: 0, pendingBalance: 0 };
           }
 
-          const prevOpen = Number(rec.account.personal.openBalance || 0);
+          prevOpen = Number(rec.account.personal.openBalance || 0);
           const prevPersonal = Number(rec.account.personal.personal || 0);
-          newWalletBalance = prevOpen + payAmount;
+          newWalletBalance = prevOpen + amt;
 
           rec.account.personal.openBalance = newWalletBalance;
-          rec.account.personal.personal = prevPersonal + payAmount;
+          rec.account.personal.personal = prevPersonal + amt;
 
           if (!rec.transactions) rec.transactions = [];
           rec.transactions.push({
-            reference: txRef,
+            reference: fbAccountId ? `${txRef}_${fbAccountId}` : txRef,
             time: new Date(),
             openingBalance: prevOpen,
-            amount: payAmount,
+            amount: amt,
             type: "received",
             from: {
               name: paymentMethod === "mpesa" ? "M-Pesa (Add-Fund Fallback)" : "Wallet Add-Fund",
@@ -2883,7 +2902,7 @@ const applyAtomicGroupMemberContribution = async ({
             to: { name: "Personal Account", number: mPhone },
             closingBalance: newWalletBalance,
             environment: paymentMethod,
-            notes: `Add Fund (Fallback from unverified group: ${groupName || "Unknown"} — ${fallbackReason})`,
+            notes: `Add Fund (Fallback from unverified ${fbAccountId ? `account "${fbAccountName || fbAccountId}" in ` : ""}group: ${groupName || "Unknown"} — ${fallbackReason})`,
             status: "completed",
           });
           rec.updatedAt = new Date();
@@ -2891,18 +2910,19 @@ const applyAtomicGroupMemberContribution = async ({
         }
       );
 
-      // Send User Message/Notification regarding the fallback
       await saveMessageToMongo({
         to: mPhone,
         groupName: groupName || "Personal Wallet",
         type: "wallet_credit_fallback",
         title: "Deposit Credited to Personal Wallet",
-        content: `Your transaction of KES ${payAmount.toLocaleString()} intended for group "${groupName || 'Unknown'}" could not be verified on the group roster and was safely credited to your Personal Wallet balance. Ref: ${txRef}.`,
+        content: `Your transaction of KES ${amt.toLocaleString()} intended for ${fbAccountId ? `account "${fbAccountName || fbAccountId}" in ` : ""}group "${groupName || 'Unknown'}" could not be verified and was safely credited to your Personal Wallet balance. Ref: ${txRef}.`,
         createdAt: new Date().toISOString(),
         isNew: true,
         meta: {
           reference: txRef,
-          amount: payAmount,
+          amount: amt,
+          accountId: fbAccountId || null,
+          accountName: fbAccountName || null,
           fallbackReason,
           closingBalance: newWalletBalance,
         }
@@ -2914,12 +2934,14 @@ const applyAtomicGroupMemberContribution = async ({
         reason: fallbackReason,
         groupName: groupName || "Personal Wallet",
         memberPhone: mPhone,
-        amount: payAmount,
+        accountId: fbAccountId || null,
+        accountName: fbAccountName || null,
+        amount: amt,
         topUp: { success: true, balance: newWalletBalance },
         statement: {
           reference: txRef,
           type: "wallet_deposit_fallback",
-          amount: payAmount,
+          amount: amt,
           closingBalance: newWalletBalance,
           date: new Date().toISOString(),
           status: "completed"
@@ -2928,8 +2950,13 @@ const applyAtomicGroupMemberContribution = async ({
     };
 
     // =========================================================================
-    // STAGE 1 — verify the selected group exists in the `groups` collection
-    // by exact groupName. `groups` is the primary, required source.
+    // STAGE 1 — locate the member-group document (groupName/members/accountSchema
+    // all live on ONE document). saveMemberGroupToMongo() writes this as a FLAT
+    // doc (top-level groupName/groupKey) into the `groups` collection via the
+    // MemberGroup model — `groups` is therefore the primary, required source.
+    // `groups-members` has no writer anywhere in this codebase (only an index
+    // is ever created on it), so it is checked only as a legacy fallback in
+    // case something populates it later; it must not be relied on as primary.
     // =========================================================================
     const locateGroupDoc = async (col) => {
       const direct = await col.findOne({
@@ -2967,7 +2994,14 @@ const applyAtomicGroupMemberContribution = async ({
     let located = await locateGroupDoc(groupsCol);
     let sourceCol = groupsCol;
     if (!located) {
-      return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_COLLECTION");
+      // Legacy fallback only — groups-members is not populated by any writer
+      // in this codebase today, kept here in case that changes later.
+      located = await locateGroupDoc(membersCol);
+      sourceCol = membersCol;
+    }
+
+    if (!located) {
+      return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_OR_GROUPS_MEMBERS", payAmount);
     }
 
     const { isNested, nestedLocation } = located;
@@ -2975,188 +3009,212 @@ const applyAtomicGroupMemberContribution = async ({
     const groupDoc = directMemberGroupDoc;
     const targetGroupData = isNested ? nestedLocation.groupData : directMemberGroupDoc;
 
-    const verifiedGroupName = targetGroupData.groupName || groupDoc.groupName || "";
-    if (!verifiedGroupName || normalizeGroupName(verifiedGroupName) !== targetGroupNorm) {
-      return await fallbackToPersonalWallet("GROUP_NAME_MISMATCH");
-    }
-
     // =========================================================================
-    // STAGE 2 — identify the login phone against the group's memberId roster.
-    // The members map is keyed by memberId. We try direct key lookup with
-    // both raw and normalized phone, then fall back to iterating entries
-    // and matching the memberId field explicitly.
+    // STAGE 2 — identify the member by phone. addMemberToMemberGroup() keys the
+    // `members` map by whatever `memberId` string was supplied at join time
+    // (e.g. raw local format "0740415992"), which will NOT equal a direct
+    // object-key lookup using the normalized login phone. So instead of
+    // `members[mPhone]`, scan the entries and match by comparing normalized
+    // values against both the map key and the record's own `memberId` field.
     // =========================================================================
-    let memberRecord = targetGroupData?.members?.[mPhone]
-      || targetGroupData?.members?.[String(memberPhone).trim()];
-    let memberKey = mPhone;
-
-    if (!memberRecord) {
-      for (const [key, member] of Object.entries(targetGroupData.members || {})) {
-        const memberKeyRaw = String(member?.memberId || key);
-        if (memberKeyRaw === String(memberPhone).trim() || normalizePhone(memberKeyRaw) === mPhone) {
-          memberRecord = member;
-          memberKey = key;
-          break;
-        }
+    const membersMap = targetGroupData?.members || {};
+    let memberKey = null;
+    let memberRecord = null;
+    for (const [key, mem] of Object.entries(membersMap)) {
+      const keyNorm = normalizePhone(key);
+      const idNorm = normalizePhone(mem?.memberId);
+      if (keyNorm === mPhone || idNorm === mPhone) {
+        memberKey = key;
+        memberRecord = mem;
+        break;
       }
     }
-
-    const isMemberVerified = Boolean(targetGroupData && memberRecord);
+    const isMemberVerified = Boolean(memberRecord);
 
     if (!isMemberVerified) {
-      return await fallbackToPersonalWallet("MEMBER_NOT_IN_GROUP");
+      return await fallbackToPersonalWallet("MEMBER_NOT_IN_GROUP", payAmount);
     }
 
     // =========================================================================
-    // STAGE 3 — verify the member's account data structure exists within the
-    // group, then verify the selected accountId/accountName against the
-    // group's known account schema. Any missing or mismatched account falls
-    // back to the personal wallet; valid accounts proceed to update.
+    // STAGE 3 — verify EACH selected account BY NAME against the group's known
+    // account schema, independently. A line that fails verification falls back
+    // to the Personal Wallet on its own; lines that pass are credited to the
+    // group. One bad account no longer blocks the rest of the payment.
     // =========================================================================
-    const memberAccounts = memberRecord?.accounts || {};
-    const hasAccountStructure = memberAccounts && typeof memberAccounts === 'object';
-
-    if (!hasAccountStructure) {
-      return await fallbackToPersonalWallet("MEMBER_ACCOUNT_STRUCTURE_MISSING");
-    }
-
     const accountSchemaMap = { ...(groupDoc.accountSchema || {}), ...(targetGroupData.accountSchema || {}) };
     const otherContribList = targetGroupData.principles?.otherContributions || groupDoc.principles?.otherContributions || [];
-
-    const schemaEntry = accountSchemaMap[accountId];
-    const listEntry = otherContribList.find(a => String(a.accountNumber) === String(accountId));
-    const registeredAccountName = schemaEntry?.accountName || listEntry?.accountName || null;
     const normStr = (s) => String(s || "").trim().toLowerCase();
 
-    if (!schemaEntry && !listEntry) {
-      return await fallbackToPersonalWallet("ACCOUNT_NOT_FOUND_IN_GROUP");
-    }
-    if (accountName && registeredAccountName && normStr(accountName) !== normStr(registeredAccountName)) {
-      return await fallbackToPersonalWallet("ACCOUNT_NAME_MISMATCH");
+    const verifiedLines = [];
+    const fallbackResults = [];
+
+    for (const line of lines) {
+      const schemaEntry = accountSchemaMap[line.accountId];
+      const listEntry = otherContribList.find(a => String(a.accountNumber) === String(line.accountId));
+      const registeredAccountName = schemaEntry?.accountName || listEntry?.accountName || null;
+
+      if (!schemaEntry && !listEntry) {
+        fallbackResults.push(await fallbackToPersonalWallet("ACCOUNT_NOT_FOUND_IN_GROUP", line.amount, line.accountId, line.accountName));
+        continue;
+      }
+      if (line.accountName && registeredAccountName && normStr(line.accountName) !== normStr(registeredAccountName)) {
+        fallbackResults.push(await fallbackToPersonalWallet("ACCOUNT_NAME_MISMATCH", line.amount, line.accountId, line.accountName));
+        continue;
+      }
+
+      verifiedLines.push({
+        ...line,
+        resolvedAccountName: registeredAccountName || line.accountName || "Saving",
+      });
     }
 
-    // Verified path: Calculate active circle & interval rounds
+    // Every account on this payment failed verification — nothing left to
+    // credit to the group; each line has already been routed to the wallet.
+    if (!verifiedLines.length) {
+      return {
+        success: true,
+        fallback: true,
+        reason: "ALL_ACCOUNTS_FAILED_VERIFICATION",
+        groupName: targetGroupData.groupName || groupName,
+        memberPhone: mPhone,
+        amount: payAmount,
+        lines: fallbackResults,
+      };
+    }
+
+    // =========================================================================
+    // Verified path — Calculate active circle & interval rounds (shared across
+    // all verified lines for this member/group), then apply each line's
+    // opening→closing balance chain at account, member, and group level.
+    // closingBalance is always recomputed as (previous closingBalance) +
+    // this line's amount — never blindly incremented.
+    // =========================================================================
     const principlesSetAt = targetGroupData.principlesSetAt || groupDoc?.principlesSetAt || targetGroupData.createdAt || new Date().toISOString();
     const intervals = targetGroupData.principles?.intervals || groupDoc?.principles?.intervals || {};
     const circleInfo = calculateActiveCircle(principlesSetAt, intervals);
-
     const nowIso = new Date().toISOString();
-    const resolvedAccountName = registeredAccountName || accountName || "Saving";
-
-    // ---- Read PREVIOUS balances before computing new ones. closingBalance
-    // must never be blindly incremented — it is always recomputed as
-    // (previous closingBalance) + payAmount, with openingBalance stamped
-    // to that previous closing value. ----
     const numOr0 = (v) => (typeof v === "number" && !Number.isNaN(v)) ? v : 0;
+    const prefix = isNested
+      ? `constituencies.${nestedLocation.cIdx}.wards.${nestedLocation.wIdx}.data.${nestedLocation.gIdx}.`
+      : "";
 
-    const prevAccountFin = targetGroupData.members?.[memberKey]?.accounts?.[accountId]?.financials || {};
-    const prevMemberFin = targetGroupData.members?.[memberKey]?.memberFinancials || {};
-    const prevAccountWise = targetGroupData.groupFinancials?.accountWise?.[accountId] || {};
-    const prevGroupFin = targetGroupData.groupFinancials || {};
-
-    // Account level
-    const accountOpening = numOr0(prevAccountFin.closingBalance);
-    const accountAmountIn = numOr0(prevAccountFin.amountIn) + payAmount;
-    const accountClosing = accountOpening + payAmount;
-
-    // Member level
-    const memberOpening = numOr0(prevMemberFin.closingBalance);
-    const memberAmountIn = numOr0(prevMemberFin.amountIn) + payAmount;
-    const memberClosing = memberOpening + payAmount;
-
-    // Group level — per account
-    const acctWiseOpening = numOr0(
-      prevAccountWise.closingBalance != null ? prevAccountWise.closingBalance : prevAccountWise.totalClosingBalance
-    );
-    const acctWiseAmountIn = numOr0(prevAccountWise.amountIn) + payAmount;
-    const acctWiseTotalAmountIn = numOr0(prevAccountWise.totalAmountIn) + payAmount;
-    const acctWiseClosing = acctWiseOpening + payAmount;
-
-    // Group level — overall total
-    const groupOpening = numOr0(prevGroupFin.totalClosingBalance);
-    const groupAmountIn = numOr0(prevGroupFin.totalAmountIn) + payAmount;
-    const groupClosing = groupOpening + payAmount;
-
-    const txObject = {
-      txId: txRef,
-      reference: txRef,
-      groupName: targetGroupData.groupName || groupName,
-      accountId,
-      accountName: resolvedAccountName,
-      amount: payAmount,
-      openingBalance: accountOpening,
-      closingBalance: accountClosing,
-      date: nowIso,
-      paymentMethod,
-      payerPhone: pPhone,
-      memberPhone: mPhone,
-      circleRound: circleInfo.roundNumber,
-      type: "credit",
-      status: "completed"
+    const acctState = {};
+    const getAcctState = (accId) => {
+      if (!acctState[accId]) {
+        const prev = targetGroupData.members?.[memberKey]?.accounts?.[accId]?.financials || {};
+        const c = numOr0(prev.closingBalance);
+        acctState[accId] = { openingInitial: c, amountInRunning: numOr0(prev.amountIn), closingRunning: c };
+      }
+      return acctState[accId];
     };
 
-    // 4. Update the located group document (financials, active circle round, member cycle)
-    if (!isNested) {
-      const updatePayload = {
-        $set: {
-          [`members.${memberKey}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
-          [`members.${memberKey}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
-          [`members.${memberKey}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
-          [`members.${memberKey}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
-          [`members.${memberKey}.memberFinancials.openingBalance`]: memberOpening,
-          [`members.${memberKey}.memberFinancials.amountIn`]: memberAmountIn,
-          [`members.${memberKey}.memberFinancials.closingBalance`]: memberClosing,
-          [`groupFinancials.accountWise.${accountId}.openingBalance`]: acctWiseOpening,
-          [`groupFinancials.accountWise.${accountId}.amountIn`]: acctWiseAmountIn,
-          [`groupFinancials.accountWise.${accountId}.totalAmountIn`]: acctWiseTotalAmountIn,
-          [`groupFinancials.accountWise.${accountId}.closingBalance`]: acctWiseClosing,
-          [`groupFinancials.accountWise.${accountId}.totalClosingBalance`]: acctWiseClosing,
-          [`groupFinancials.totalOpeningBalance`]: groupOpening,
-          [`groupFinancials.totalAmountIn`]: groupAmountIn,
-          [`groupFinancials.totalClosingBalance`]: groupClosing,
-          updatedAt: nowIso
-        },
-        $push: {
-          [`members.${memberKey}.accounts.${accountId}.transactionHistory`]: txObject,
-          [`members.${memberKey}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
-        }
-      };
+    const acctWiseState = {};
+    const getAcctWiseState = (accId) => {
+      if (!acctWiseState[accId]) {
+        const prev = targetGroupData.groupFinancials?.accountWise?.[accId] || {};
+        const c = numOr0(prev.closingBalance != null ? prev.closingBalance : prev.totalClosingBalance);
+        acctWiseState[accId] = { openingInitial: c, amountInRunning: numOr0(prev.amountIn), totalAmountInRunning: numOr0(prev.totalAmountIn), closingRunning: c };
+      }
+      return acctWiseState[accId];
+    };
 
-      await sourceCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
-    } else {
-      const { cIdx, wIdx, gIdx } = nestedLocation;
-      const prefix = `constituencies.${cIdx}.wards.${wIdx}.data.${gIdx}`;
-      const updatePayload = {
-        $set: {
-          [`${prefix}.members.${memberKey}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
-          [`${prefix}.members.${memberKey}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
-          [`${prefix}.members.${memberKey}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
-          [`${prefix}.members.${memberKey}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
-          [`${prefix}.members.${memberKey}.memberFinancials.openingBalance`]: memberOpening,
-          [`${prefix}.members.${memberKey}.memberFinancials.amountIn`]: memberAmountIn,
-          [`${prefix}.members.${memberKey}.memberFinancials.closingBalance`]: memberClosing,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.openingBalance`]: acctWiseOpening,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.amountIn`]: acctWiseAmountIn,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.totalAmountIn`]: acctWiseTotalAmountIn,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.closingBalance`]: acctWiseClosing,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.totalClosingBalance`]: acctWiseClosing,
-          [`${prefix}.groupFinancials.totalOpeningBalance`]: groupOpening,
-          [`${prefix}.groupFinancials.totalAmountIn`]: groupAmountIn,
-          [`${prefix}.groupFinancials.totalClosingBalance`]: groupClosing,
-          syncedAt: nowIso
-        },
-        $push: {
-          [`${prefix}.members.${memberKey}.accounts.${accountId}.transactionHistory`]: txObject,
-          [`${prefix}.members.${memberKey}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
-        }
-      };
+    const memberPrevFin = targetGroupData.members?.[memberKey]?.memberFinancials || {};
+    const memberOpeningInitial = numOr0(memberPrevFin.closingBalance);
+    let memberAmountInRunning = numOr0(memberPrevFin.amountIn);
+    let memberClosingRunning = memberOpeningInitial;
 
-      await sourceCol.updateOne({ _id: directMemberGroupDoc._id }, updatePayload);
+    const groupPrevFin = targetGroupData.groupFinancials || {};
+    const groupOpeningInitial = numOr0(groupPrevFin.totalClosingBalance);
+    let groupAmountInRunning = numOr0(groupPrevFin.totalAmountIn);
+    let groupClosingRunning = groupOpeningInitial;
+
+    const accIdToName = {};
+    const pushByAccount = {};
+    const txObjects = [];
+
+    for (const line of verifiedLines) {
+      const { accountId: accId, resolvedAccountName, amount: lineAmt } = line;
+      accIdToName[accId] = resolvedAccountName;
+
+      const as = getAcctState(accId);
+      const lineOpening = as.closingRunning;
+      as.amountInRunning += lineAmt;
+      as.closingRunning = lineOpening + lineAmt;
+
+      const memberLineOpening = memberClosingRunning;
+      memberAmountInRunning += lineAmt;
+      memberClosingRunning = memberLineOpening + lineAmt;
+
+      const aw = getAcctWiseState(accId);
+      aw.amountInRunning += lineAmt;
+      aw.totalAmountInRunning += lineAmt;
+      aw.closingRunning += lineAmt;
+
+      groupAmountInRunning += lineAmt;
+      groupClosingRunning += lineAmt;
+
+      const txObject = {
+        txId: verifiedLines.length > 1 ? `${txRef}_${accId}` : txRef,
+        reference: txRef,
+        groupName: targetGroupData.groupName || groupName,
+        accountId: accId,
+        accountName: resolvedAccountName,
+        amount: lineAmt,
+        openingBalance: lineOpening,
+        closingBalance: as.closingRunning,
+        date: nowIso,
+        paymentMethod,
+        payerPhone: pPhone,
+        memberPhone: mPhone,
+        circleRound: circleInfo.roundNumber,
+        type: "credit",
+        status: "completed"
+      };
+      txObjects.push(txObject);
+
+      if (!pushByAccount[accId]) pushByAccount[accId] = [];
+      pushByAccount[accId].push(txObject);
     }
 
-    // 5. Update PersonalAccount collection statement/balance
-    let personalOpeningBalance = 0;
-    let personalClosingBalance = 0;
+    // 4. Update the located group document (financials, active circle round,
+    // member cycle) — a single write covering every verified account.
+    const setFields = {};
+    const pushFields = {};
+
+    for (const [accId, as] of Object.entries(acctState)) {
+      setFields[`${prefix}members.${memberKey}.accounts.${accId}.accountVerified`] = accIdToName[accId];
+      setFields[`${prefix}members.${memberKey}.accounts.${accId}.financials.openingBalance`] = as.openingInitial;
+      setFields[`${prefix}members.${memberKey}.accounts.${accId}.financials.amountIn`] = as.amountInRunning;
+      setFields[`${prefix}members.${memberKey}.accounts.${accId}.financials.closingBalance`] = as.closingRunning;
+    }
+    for (const [accId, aw] of Object.entries(acctWiseState)) {
+      setFields[`${prefix}groupFinancials.accountWise.${accId}.openingBalance`] = aw.openingInitial;
+      setFields[`${prefix}groupFinancials.accountWise.${accId}.amountIn`] = aw.amountInRunning;
+      setFields[`${prefix}groupFinancials.accountWise.${accId}.totalAmountIn`] = aw.totalAmountInRunning;
+      setFields[`${prefix}groupFinancials.accountWise.${accId}.closingBalance`] = aw.closingRunning;
+      setFields[`${prefix}groupFinancials.accountWise.${accId}.totalClosingBalance`] = aw.closingRunning;
+    }
+    setFields[`${prefix}members.${memberKey}.memberFinancials.openingBalance`] = memberOpeningInitial;
+    setFields[`${prefix}members.${memberKey}.memberFinancials.amountIn`] = memberAmountInRunning;
+    setFields[`${prefix}members.${memberKey}.memberFinancials.closingBalance`] = memberClosingRunning;
+    setFields[`${prefix}groupFinancials.totalOpeningBalance`] = groupOpeningInitial;
+    setFields[`${prefix}groupFinancials.totalAmountIn`] = groupAmountInRunning;
+    setFields[`${prefix}groupFinancials.totalClosingBalance`] = groupClosingRunning;
+    setFields[isNested ? "syncedAt" : "updatedAt"] = nowIso;
+
+    for (const [accId, txArr] of Object.entries(pushByAccount)) {
+      const historyPath = `${prefix}members.${memberKey}.accounts.${accId}.transactionHistory`;
+      pushFields[historyPath] = txArr.length > 1 ? { $each: txArr } : txArr[0];
+      pushFields[`${prefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`] = mPhone;
+    }
+
+    await sourceCol.updateOne({ _id: directMemberGroupDoc._id }, { $set: setFields, $push: pushFields });
+
+    // 5. Update PersonalAccount collection statement — one ledger line per
+    // verified account, chained so opening/closing reads correctly even
+    // when several accounts are credited in the same payment.
+    let personalRunning = 0;
+    const personalStatements = [];
     await mutatePersonalLeaves(
       (r) => normalizePhone(r.phone) === mPhone,
       (rec) => {
@@ -3164,66 +3222,70 @@ const applyAtomicGroupMemberContribution = async ({
         if (!rec.account.personal) {
           rec.account.personal = { personal: 0, openBalance: 0, pendingBalance: 0, reg_fee: 0 };
         }
-        personalOpeningBalance = Number(rec.account.personal.openBalance || 0);
-        personalClosingBalance = personalOpeningBalance + payAmount;
-
+        personalRunning = Number(rec.account.personal.openBalance || 0);
         if (!rec.transactions) rec.transactions = [];
-        rec.transactions.push({
-          reference: txRef,
-          time: new Date(),
-          openingBalance: personalOpeningBalance,
-          amount: payAmount,
-          type: "group_contribution",
-          from: { name: "Personal Account", number: mPhone },
-          to: { name: targetGroupData.groupName || groupName, number: accountId },
-          closingBalance: personalClosingBalance,
-          environment: paymentMethod,
-          notes: notes || `Group contribution to ${targetGroupData.groupName || groupName} (${resolvedAccountName})`,
-          status: "completed",
-        });
+
+        for (const line of verifiedLines) {
+          const opening = personalRunning;
+          const closing = opening + line.amount;
+          personalRunning = closing;
+          const entry = {
+            reference: verifiedLines.length > 1 ? `${txRef}_${line.accountId}` : txRef,
+            time: new Date(),
+            openingBalance: opening,
+            amount: line.amount,
+            type: "group_contribution",
+            from: { name: "Personal Account", number: mPhone },
+            to: { name: targetGroupData.groupName || groupName, number: line.accountId },
+            closingBalance: closing,
+            environment: paymentMethod,
+            notes: notes || `Group contribution to ${targetGroupData.groupName || groupName} (${line.resolvedAccountName})`,
+            status: "completed",
+          };
+          rec.transactions.push(entry);
+          personalStatements.push(entry);
+        }
         rec.updatedAt = new Date();
         return rec;
       }
     );
 
-    // 6. Send user confirmation notification message
+    // 6. Send user confirmation notification message (verified portion only —
+    // any fallback lines already triggered their own notification above).
+    const verifiedTotal = verifiedLines.reduce((s, l) => s + l.amount, 0);
+    const accountsSummary = verifiedLines.map(l => l.resolvedAccountName).join(", ");
     await saveMessageToMongo({
       to: mPhone,
       groupName: targetGroupData.groupName || groupName,
       type: "group_contribution_success",
       title: "Group Contribution Received",
-      content: `Received KES ${payAmount.toLocaleString()} for ${targetGroupData.groupName || groupName} (${resolvedAccountName}, Round #${circleInfo.roundNumber}). Ref: ${txRef}.`,
+      content: `Received KES ${verifiedTotal.toLocaleString()} for ${targetGroupData.groupName || groupName} (${accountsSummary}, Round #${circleInfo.roundNumber}). Ref: ${txRef}.`,
       createdAt: nowIso,
       isNew: true,
       meta: {
         reference: txRef,
-        amount: payAmount,
+        amount: verifiedTotal,
         groupName: targetGroupData.groupName || groupName,
-        accountId,
-        accountName: resolvedAccountName,
+        accounts: verifiedLines.map(l => ({ accountId: l.accountId, accountName: l.resolvedAccountName, amount: l.amount })),
         circleRound: circleInfo.roundNumber,
       }
     });
 
     return {
       success: true,
-      fallback: false,
+      fallback: fallbackResults.length > 0,
+      partial: fallbackResults.length > 0 && verifiedLines.length > 0,
       groupName: targetGroupData.groupName || groupName,
       memberPhone: mPhone,
-      accountId,
-      accountName: resolvedAccountName,
       amount: payAmount,
+      verifiedAmount: verifiedTotal,
+      fallbackAmount: payAmount - verifiedTotal,
       circleRound: circleInfo.roundNumber,
-      txId: txObject.txId,
-      statement: {
-        reference: txRef,
-        amount: payAmount,
-        groupName: targetGroupData.groupName || groupName,
-        accountName: resolvedAccountName,
-        date: nowIso,
-        closingBalance: personalClosingBalance,
-        status: "completed"
-      }
+      lines: {
+        verified: txObjects.map(t => ({ accountId: t.accountId, accountName: t.accountName, amount: t.amount, txId: t.txId })),
+        fallback: fallbackResults,
+      },
+      statement: personalStatements.length === 1 ? personalStatements[0] : personalStatements,
     };
   } catch (err) {
     if (txRef) processedGroupTxIds.delete(txRef);

@@ -4115,6 +4115,11 @@ const app = {
         const phone = (this.data.user && this.data.user.phoneNumber) || '';
         const firstAccId = (addedAccounts[0] && (addedAccounts[0].accountNumber || addedAccounts[0].accountId)) || "001";
         const firstAccName = (addedAccounts[0] && addedAccounts[0].accountName) || '';
+        const accountsPayload = addedAccounts.map(acc => ({
+            accountId: acc.accountNumber || acc.accountId || "001",
+            accountName: acc.accountName || '',
+            amount: parseFloat(acc.inputAmount) || 0
+        })).filter(a => a.amount > 0);
 
         this.showToast('Initiating payment request…', 'info');
 
@@ -4134,7 +4139,8 @@ const app = {
                         purpose: 'group_contribution',
                         groupName: groupName,
                         accountId: firstAccId,
-                        accountName: firstAccName
+                        accountName: firstAccName,
+                        accounts: accountsPayload
                     }),
                 });
                 const data = await res.json();
@@ -4158,6 +4164,7 @@ const app = {
                     groupName: groupName,
                     accountId: firstAccId,
                     accountName: firstAccName,
+                    accounts: accountsPayload,
                     accountPhone: phone,
                     reference: 'Group Deposit',
                     description: 'Group Contribution via M-Pesa'
