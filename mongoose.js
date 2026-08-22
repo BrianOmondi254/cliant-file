@@ -2976,22 +2976,26 @@ const applyAtomicGroupMemberContribution = async ({
       };
 
       // =========================================================================
-      // STAGE 1 — locate the member-group document in `groups` collection ONLY.
-      // If NOT available in `groups`, immediately fallback payment to personal
-      // account — DO NOT check `groups-members` collection!
+      // STAGE 1 — locate the group across all DB shapes (Flat, Structured
+      // Hierarchy, and Dynamic Constituency Array [doc.Ugenya = ['Ward', groupObj]]).
       // =========================================================================
       const locateGroupDoc = async (col) => {
+        // 1. Flat root match
         const direct = await col.findOne({
           $or: [
             { groupName: groupName },
             { groupKey: targetGroupNorm },
-            { groupId: groupName }
+            { groupId: groupName },
+            { accountNumber: groupName }
           ]
         });
-        if (direct) return { doc: direct, isNested: false, nestedLocation: null };
+        if (direct && (direct.groupName || direct.groupKey || direct.groupId)) {
+          return { doc: direct, isNested: false, layout: "flat", groupData: direct, col };
+        }
 
-        const cursor = col.find({ "constituencies.wards.data": { $exists: true } });
-        for await (const countyDoc of cursor) {
+        // 2. Structured hierarchy (e.g. groups-members: constituencies[].wards[].data[])
+        const structDocs = await col.find({ "constituencies.wards.data": { $exists: true } }).toArray();
+        for (const countyDoc of structDocs) {
           if (!countyDoc || !Array.isArray(countyDoc.constituencies)) continue;
           for (let i = 0; i < countyDoc.constituencies.length; i++) {
             const cons = countyDoc.constituencies[i];
@@ -3003,54 +3007,111 @@ const applyAtomicGroupMemberContribution = async ({
                 const g = ward.data[k];
                 const gName = normalizeGroupName(g?.groupName);
                 const gId = normalizeGroupName(g?.groupId);
-                if (g && (gName === targetGroupNorm || gId === targetGroupNorm)) {
-                  return { doc: countyDoc, isNested: true, nestedLocation: { cIdx: i, wIdx: j, gIdx: k, groupData: g } };
+                const gAcc = normalizeGroupName(g?.accountNumber);
+                if (
+                  g &&
+                  (gName === targetGroupNorm ||
+                   gId === targetGroupNorm ||
+                   gAcc === targetGroupNorm ||
+                   String(g.groupName || "").trim().toLowerCase() === String(groupName || "").trim().toLowerCase())
+                ) {
+                  return {
+                    doc: countyDoc,
+                    isNested: true,
+                    layout: "structured_hierarchy",
+                    nestedLocation: { cIdx: i, wIdx: j, gIdx: k, groupData: g },
+                    groupData: g,
+                    col
+                  };
                 }
               }
             }
           }
         }
+
+        // 3. Dynamic constituency array layout (e.g. groups collection: doc[constituency] = ['ward', groupObj])
+        const allDocs = await col.find({}).toArray();
+        for (const doc of allDocs) {
+          if (!doc) continue;
+          for (const key in doc) {
+            if (key === "_id" || key === "county" || key === "countyId" || key === "countryTransaction" || key === "syncedAt" || key === "createdAt" || key === "updatedAt") continue;
+            const items = doc[key];
+            if (!Array.isArray(items)) continue;
+            for (let idx = 0; idx < items.length; idx++) {
+              const item = items[idx];
+              if (item && typeof item === "object" && !Array.isArray(item)) {
+                const gName = normalizeGroupName(item.groupName);
+                const gId = normalizeGroupName(item.groupId);
+                const gAcc = normalizeGroupName(item.accountNumber);
+                if (
+                  gName === targetGroupNorm ||
+                  gId === targetGroupNorm ||
+                  gAcc === targetGroupNorm ||
+                  String(item.groupName || "").trim().toLowerCase() === String(groupName || "").trim().toLowerCase()
+                ) {
+                  return {
+                    doc,
+                    isNested: true,
+                    layout: "dynamic_constituency",
+                    constituencyKey: key,
+                    itemIndex: idx,
+                    groupData: item,
+                    col
+                  };
+                }
+              }
+            }
+          }
+        }
+
         return null;
       };
 
+      // 1. Verify group in `groups` collection first
       const locatedInGroups = await locateGroupDoc(groupsCol);
       if (!locatedInGroups) {
-        // Fallback directly without verifying groups-members
+        // Not available in `groups` collection -> fallback to personal wallet
         return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS", payAmount);
       }
 
-      // =========================================================================
-      // STAGE 2 — Group verified in `groups` collection. Now proceed to verify
-      // against `groups-members` collection and locate member sub-structure.
-      // =========================================================================
+      // 2. If available in `groups`, proceed to also verify from `groups-members` collection
       const locatedInMembersCol = await locateGroupDoc(membersCol);
+      if (!locatedInMembersCol) {
+        return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_MEMBERS", payAmount);
+      }
 
-      const { isNested, nestedLocation } = locatedInGroups;
-      const directMemberGroupDoc = locatedInGroups.doc;
-      const groupDoc = directMemberGroupDoc;
-      const targetGroupData = isNested ? nestedLocation.groupData : directMemberGroupDoc;
+      // Identify the member sub-data structure from groups-members (and groups)
+      const targetGroupData = locatedInMembersCol.groupData || locatedInGroups.groupData;
+      const groupDoc = locatedInMembersCol.doc || locatedInGroups.doc;
 
-      // Extract members map from groups collection and groups-members collection
-      const membersMapGroups = targetGroupData?.members || {};
-      const membersMapMembersCol = (locatedInMembersCol?.isNested
-        ? locatedInMembersCol.nestedLocation?.groupData?.members
-        : locatedInMembersCol?.doc?.members) || {};
-
-      const combinedMembersMap = { ...membersMapMembersCol, ...membersMapGroups };
-
+      const membersMap = targetGroupData.members || {};
       let memberKey = null;
       let memberRecord = null;
-      for (const [key, mem] of Object.entries(combinedMembersMap)) {
+
+      for (const [key, mem] of Object.entries(membersMap)) {
         const keyNorm = normalizePhone(key);
-        const idNorm = normalizePhone(mem?.memberId);
+        const idNorm = normalizePhone(mem?.memberId || mem?.phone || mem?.phoneNumber);
         if (keyNorm === mPhone || idNorm === mPhone) {
           memberKey = key;
           memberRecord = mem;
           break;
         }
       }
-      const isMemberVerified = Boolean(memberRecord);
 
+      // Fallback check against trustee/official/member keys if not directly in members map
+      if (!memberRecord) {
+        for (const [k, v] of Object.entries(locatedInGroups.groupData || {})) {
+          if ((k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")) && v && typeof v === "object") {
+            if (normalizePhone(v.phone) === mPhone || normalizePhone(v.id) === mPhone) {
+              memberKey = v.phone || k;
+              memberRecord = v;
+              break;
+            }
+          }
+        }
+      }
+
+      const isMemberVerified = Boolean(memberRecord);
       if (!isMemberVerified) {
         return await fallbackToPersonalWallet("MEMBER_NOT_IN_GROUP", payAmount);
       }
@@ -3059,19 +3120,15 @@ const applyAtomicGroupMemberContribution = async ({
       // STAGE 3 — verify EACH selected account BY NAME against the group's known
       // account schema (`groupaccoutverify`), independently.
       // =========================================================================
-      const memberColGroupData = locatedInMembersCol?.isNested
-        ? locatedInMembersCol.nestedLocation?.groupData
-        : locatedInMembersCol?.doc;
-
       const accountSchemaMap = {
-        ...(memberColGroupData?.accountSchema || {}),
-        ...(groupDoc.accountSchema || {}),
-        ...(targetGroupData.accountSchema || {})
+        ...(locatedInMembersCol.groupData?.accountSchema || {}),
+        ...(locatedInGroups.groupData?.accountSchema || {}),
+        ...(groupDoc.accountSchema || {})
       };
       const otherContribList =
-        targetGroupData.principles?.otherContributions ||
+        locatedInMembersCol.groupData?.principles?.otherContributions ||
+        locatedInGroups.groupData?.principles?.otherContributions ||
         groupDoc.principles?.otherContributions ||
-        memberColGroupData?.principles?.otherContributions ||
         [];
       const normStr = (s) => String(s || "").trim().toLowerCase();
 
@@ -3119,8 +3176,10 @@ const applyAtomicGroupMemberContribution = async ({
       const circleInfo = calculateActiveCircle(principlesSetAt, intervals);
       const nowIso = new Date().toISOString();
       const numOr0 = (v) => (typeof v === "number" && !Number.isNaN(v)) ? v : 0;
-      const prefix = isNested
-        ? `constituencies.${nestedLocation.cIdx}.wards.${nestedLocation.wIdx}.data.${nestedLocation.gIdx}.`
+
+      const memLoc = locatedInMembersCol;
+      const memPrefix = memLoc.isNested && memLoc.nestedLocation
+        ? `constituencies.${memLoc.nestedLocation.cIdx}.wards.${memLoc.nestedLocation.wIdx}.data.${memLoc.nestedLocation.gIdx}.`
         : "";
 
       const acctState = {};
@@ -3202,66 +3261,58 @@ const applyAtomicGroupMemberContribution = async ({
         pushByAccount[accId].push(txObject);
       }
 
-      // Update groups collection
+      // Write updates to groups-members collection
       const setFields = {};
       const pushFields = {};
 
       for (const [accId, as] of Object.entries(acctState)) {
-        setFields[`${prefix}members.${memberKey}.accounts.${accId}.accountVerified`] = accIdToName[accId];
-        setFields[`${prefix}members.${memberKey}.accounts.${accId}.accountName`] = accIdToName[accId];
-        setFields[`${prefix}members.${memberKey}.accounts.${accId}.financials.openingBalance`] = as.openingInitial;
-        setFields[`${prefix}members.${memberKey}.accounts.${accId}.financials.amountIn`] = as.amountInRunning;
-        setFields[`${prefix}members.${memberKey}.accounts.${accId}.financials.closingBalance`] = as.closingRunning;
+        setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.accountVerified`] = accIdToName[accId];
+        setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.accountName`] = accIdToName[accId];
+        setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.financials.openingBalance`] = as.openingInitial;
+        setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.financials.amountIn`] = as.amountInRunning;
+        setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.financials.closingBalance`] = as.closingRunning;
       }
       for (const [accId, aw] of Object.entries(acctWiseState)) {
-        setFields[`${prefix}groupFinancials.accountWise.${accId}.openingBalance`] = aw.openingInitial;
-        setFields[`${prefix}groupFinancials.accountWise.${accId}.amountIn`] = aw.amountInRunning;
-        setFields[`${prefix}groupFinancials.accountWise.${accId}.totalAmountIn`] = aw.totalAmountInRunning;
-        setFields[`${prefix}groupFinancials.accountWise.${accId}.closingBalance`] = aw.closingRunning;
-        setFields[`${prefix}groupFinancials.accountWise.${accId}.totalClosingBalance`] = aw.closingRunning;
+        setFields[`${memPrefix}groupFinancials.accountWise.${accId}.openingBalance`] = aw.openingInitial;
+        setFields[`${memPrefix}groupFinancials.accountWise.${accId}.amountIn`] = aw.amountInRunning;
+        setFields[`${memPrefix}groupFinancials.accountWise.${accId}.totalAmountIn`] = aw.totalAmountInRunning;
+        setFields[`${memPrefix}groupFinancials.accountWise.${accId}.closingBalance`] = aw.closingRunning;
+        setFields[`${memPrefix}groupFinancials.accountWise.${accId}.totalClosingBalance`] = aw.closingRunning;
       }
-      setFields[`${prefix}members.${memberKey}.memberFinancials.openingBalance`] = memberOpeningInitial;
-      setFields[`${prefix}members.${memberKey}.memberFinancials.amountIn`] = memberAmountInRunning;
-      setFields[`${prefix}members.${memberKey}.memberFinancials.closingBalance`] = memberClosingRunning;
-      setFields[`${prefix}groupFinancials.totalOpeningBalance`] = groupOpeningInitial;
-      setFields[`${prefix}groupFinancials.totalAmountIn`] = groupAmountInRunning;
-      setFields[`${prefix}groupFinancials.totalClosingBalance`] = groupClosingRunning;
-      setFields[isNested ? "syncedAt" : "updatedAt"] = nowIso;
+      setFields[`${memPrefix}members.${memberKey}.memberFinancials.openingBalance`] = memberOpeningInitial;
+      setFields[`${memPrefix}members.${memberKey}.memberFinancials.amountIn`] = memberAmountInRunning;
+      setFields[`${memPrefix}members.${memberKey}.memberFinancials.closingBalance`] = memberClosingRunning;
+      setFields[`${memPrefix}groupFinancials.totalOpeningBalance`] = groupOpeningInitial;
+      setFields[`${memPrefix}groupFinancials.totalAmountIn`] = groupAmountInRunning;
+      setFields[`${memPrefix}groupFinancials.totalClosingBalance`] = groupClosingRunning;
+      setFields[memLoc.isNested ? "syncedAt" : "updatedAt"] = nowIso;
 
       for (const [accId, txArr] of Object.entries(pushByAccount)) {
-        const historyPath = `${prefix}members.${memberKey}.accounts.${accId}.transactionHistory`;
+        const historyPath = `${memPrefix}members.${memberKey}.accounts.${accId}.transactionHistory`;
         pushFields[historyPath] = txArr.length > 1 ? { $each: txArr } : txArr[0];
-        pushFields[`${prefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`] = mPhone;
+        pushFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`] = mPhone;
       }
 
-      await groupsCol.updateOne({ _id: directMemberGroupDoc._id }, { $set: setFields, $push: pushFields });
+      await membersCol.updateOne({ _id: locatedInMembersCol.doc._id }, { $set: setFields, $push: pushFields });
 
-      // Synchronize groups-members collection if present
-      if (locatedInMembersCol && locatedInMembersCol.doc) {
-        try {
-          const memPrefix = locatedInMembersCol.isNested
-            ? `constituencies.${locatedInMembersCol.nestedLocation.cIdx}.wards.${locatedInMembersCol.nestedLocation.wIdx}.data.${locatedInMembersCol.nestedLocation.gIdx}.`
-            : "";
-          const memSetFields = {};
-          const memPushFields = {};
-
-          for (const [accId, as] of Object.entries(acctState)) {
-            memSetFields[`${memPrefix}members.${memberKey}.accounts.${accId}.accountVerified`] = accIdToName[accId];
-            memSetFields[`${memPrefix}members.${memberKey}.accounts.${accId}.accountName`] = accIdToName[accId];
-            memSetFields[`${memPrefix}members.${memberKey}.accounts.${accId}.financials.openingBalance`] = as.openingInitial;
-            memSetFields[`${memPrefix}members.${memberKey}.accounts.${accId}.financials.amountIn`] = as.amountInRunning;
-            memSetFields[`${memPrefix}members.${memberKey}.accounts.${accId}.financials.closingBalance`] = as.closingRunning;
-          }
-          for (const [accId, txArr] of Object.entries(pushByAccount)) {
-            const histPath = `${memPrefix}members.${memberKey}.accounts.${accId}.transactionHistory`;
-            memPushFields[histPath] = txArr.length > 1 ? { $each: txArr } : txArr[0];
-          }
-          memSetFields[locatedInMembersCol.isNested ? "syncedAt" : "updatedAt"] = nowIso;
-
-          await membersCol.updateOne({ _id: locatedInMembersCol.doc._id }, { $set: memSetFields, $push: memPushFields });
-        } catch (memSyncErr) {
-          console.warn("[applyAtomicGroupMemberContribution] groups-members sync notice:", memSyncErr.message);
+      // Synchronize groups collection as well
+      try {
+        const grpLoc = locatedInGroups;
+        const grpSetFields = {};
+        if (grpLoc.layout === "dynamic_constituency") {
+          const gPrefix = `${grpLoc.constituencyKey}.${grpLoc.itemIndex}.`;
+          grpSetFields[`${gPrefix}groupFinancials.totalClosingBalance`] = groupClosingRunning;
+          grpSetFields[`${gPrefix}updatedAt`] = nowIso;
+        } else if (grpLoc.layout === "structured_hierarchy" && grpLoc.nestedLocation) {
+          const gPrefix = `constituencies.${grpLoc.nestedLocation.cIdx}.wards.${grpLoc.nestedLocation.wIdx}.data.${grpLoc.nestedLocation.gIdx}.`;
+          grpSetFields[`${gPrefix}groupFinancials.totalClosingBalance`] = groupClosingRunning;
+          grpSetFields[`${gPrefix}updatedAt`] = nowIso;
         }
+        if (Object.keys(grpSetFields).length > 0) {
+          await groupsCol.updateOne({ _id: locatedInGroups.doc._id }, { $set: grpSetFields });
+        }
+      } catch (grpSyncErr) {
+        console.warn("[applyAtomicGroupMemberContribution] groups sync notice:", grpSyncErr.message);
       }
 
       // Update PersonalAccount statement
