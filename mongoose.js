@@ -131,6 +131,7 @@ const accountSchema = new mongoose.Schema(
   {
     accountId: { type: String, required: true },
     accountName: { type: String },
+    accountVerified: { type: String },
     expectedAmount: { type: String },
     financials: {
       openingBalance: { type: Number, default: 0 },
@@ -3022,6 +3023,40 @@ const applyAtomicGroupMemberContribution = async ({
     const nowIso = new Date().toISOString();
     const resolvedAccountName = registeredAccountName || accountName || "Saving";
 
+    // ---- Read PREVIOUS balances before computing new ones. closingBalance
+    // must never be blindly incremented — it is always recomputed as
+    // (previous closingBalance) + payAmount, with openingBalance stamped
+    // to that previous closing value. ----
+    const numOr0 = (v) => (typeof v === "number" && !Number.isNaN(v)) ? v : 0;
+
+    const prevAccountFin = targetGroupData.members?.[mPhone]?.accounts?.[accountId]?.financials || {};
+    const prevMemberFin = targetGroupData.members?.[mPhone]?.memberFinancials || {};
+    const prevAccountWise = targetGroupData.groupFinancials?.accountWise?.[accountId] || {};
+    const prevGroupFin = targetGroupData.groupFinancials || {};
+
+    // Account level
+    const accountOpening = numOr0(prevAccountFin.closingBalance);
+    const accountAmountIn = numOr0(prevAccountFin.amountIn) + payAmount;
+    const accountClosing = accountOpening + payAmount;
+
+    // Member level
+    const memberOpening = numOr0(prevMemberFin.closingBalance);
+    const memberAmountIn = numOr0(prevMemberFin.amountIn) + payAmount;
+    const memberClosing = memberOpening + payAmount;
+
+    // Group level — per account
+    const acctWiseOpening = numOr0(
+      prevAccountWise.closingBalance != null ? prevAccountWise.closingBalance : prevAccountWise.totalClosingBalance
+    );
+    const acctWiseAmountIn = numOr0(prevAccountWise.amountIn) + payAmount;
+    const acctWiseTotalAmountIn = numOr0(prevAccountWise.totalAmountIn) + payAmount;
+    const acctWiseClosing = acctWiseOpening + payAmount;
+
+    // Group level — overall total
+    const groupOpening = numOr0(prevGroupFin.totalClosingBalance);
+    const groupAmountIn = numOr0(prevGroupFin.totalAmountIn) + payAmount;
+    const groupClosing = groupOpening + payAmount;
+
     const txObject = {
       txId: txRef,
       reference: txRef,
@@ -3029,6 +3064,8 @@ const applyAtomicGroupMemberContribution = async ({
       accountId,
       accountName: resolvedAccountName,
       amount: payAmount,
+      openingBalance: accountOpening,
+      closingBalance: accountClosing,
       date: nowIso,
       paymentMethod,
       payerPhone: pPhone,
@@ -3041,22 +3078,27 @@ const applyAtomicGroupMemberContribution = async ({
     // 4. Update groups-members collection (financials, active circle round, member cycle)
     if (!isNested) {
       const updatePayload = {
-        $inc: {
-          [`members.${mPhone}.accounts.${accountId}.financials.amountIn`]: payAmount,
-          [`members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: payAmount,
-          [`members.${mPhone}.memberFinancials.amountIn`]: payAmount,
-          [`members.${mPhone}.memberFinancials.closingBalance`]: payAmount,
-          [`groupFinancials.accountWise.${accountId}.totalAmountIn`]: payAmount,
-          [`groupFinancials.accountWise.${accountId}.totalClosingBalance`]: payAmount,
-          [`groupFinancials.totalAmountIn`]: payAmount,
-          [`groupFinancials.totalClosingBalance`]: payAmount,
+        $set: {
+          [`members.${mPhone}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
+          [`members.${mPhone}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
+          [`members.${mPhone}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
+          [`members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
+          [`members.${mPhone}.memberFinancials.openingBalance`]: memberOpening,
+          [`members.${mPhone}.memberFinancials.amountIn`]: memberAmountIn,
+          [`members.${mPhone}.memberFinancials.closingBalance`]: memberClosing,
+          [`groupFinancials.accountWise.${accountId}.openingBalance`]: acctWiseOpening,
+          [`groupFinancials.accountWise.${accountId}.amountIn`]: acctWiseAmountIn,
+          [`groupFinancials.accountWise.${accountId}.totalAmountIn`]: acctWiseTotalAmountIn,
+          [`groupFinancials.accountWise.${accountId}.closingBalance`]: acctWiseClosing,
+          [`groupFinancials.accountWise.${accountId}.totalClosingBalance`]: acctWiseClosing,
+          [`groupFinancials.totalOpeningBalance`]: groupOpening,
+          [`groupFinancials.totalAmountIn`]: groupAmountIn,
+          [`groupFinancials.totalClosingBalance`]: groupClosing,
+          updatedAt: nowIso
         },
         $push: {
           [`members.${mPhone}.accounts.${accountId}.transactionHistory`]: txObject,
           [`members.${mPhone}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
-        },
-        $set: {
-          updatedAt: nowIso
         }
       };
 
@@ -3065,22 +3107,27 @@ const applyAtomicGroupMemberContribution = async ({
       const { cIdx, wIdx, gIdx } = nestedLocation;
       const prefix = `constituencies.${cIdx}.wards.${wIdx}.data.${gIdx}`;
       const updatePayload = {
-        $inc: {
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.amountIn`]: payAmount,
-          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: payAmount,
-          [`${prefix}.members.${mPhone}.memberFinancials.amountIn`]: payAmount,
-          [`${prefix}.members.${mPhone}.memberFinancials.closingBalance`]: payAmount,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.totalAmountIn`]: payAmount,
-          [`${prefix}.groupFinancials.accountWise.${accountId}.totalClosingBalance`]: payAmount,
-          [`${prefix}.groupFinancials.totalAmountIn`]: payAmount,
-          [`${prefix}.groupFinancials.totalClosingBalance`]: payAmount,
+        $set: {
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.accountVerified`]: resolvedAccountName,
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.openingBalance`]: accountOpening,
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.amountIn`]: accountAmountIn,
+          [`${prefix}.members.${mPhone}.accounts.${accountId}.financials.closingBalance`]: accountClosing,
+          [`${prefix}.members.${mPhone}.memberFinancials.openingBalance`]: memberOpening,
+          [`${prefix}.members.${mPhone}.memberFinancials.amountIn`]: memberAmountIn,
+          [`${prefix}.members.${mPhone}.memberFinancials.closingBalance`]: memberClosing,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.openingBalance`]: acctWiseOpening,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.amountIn`]: acctWiseAmountIn,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.totalAmountIn`]: acctWiseTotalAmountIn,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.closingBalance`]: acctWiseClosing,
+          [`${prefix}.groupFinancials.accountWise.${accountId}.totalClosingBalance`]: acctWiseClosing,
+          [`${prefix}.groupFinancials.totalOpeningBalance`]: groupOpening,
+          [`${prefix}.groupFinancials.totalAmountIn`]: groupAmountIn,
+          [`${prefix}.groupFinancials.totalClosingBalance`]: groupClosing,
+          syncedAt: nowIso
         },
         $push: {
           [`${prefix}.members.${mPhone}.accounts.${accountId}.transactionHistory`]: txObject,
           [`${prefix}.members.${mPhone}.accounts.${accountId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`]: mPhone
-        },
-        $set: {
-          syncedAt: nowIso
         }
       };
 
@@ -3088,6 +3135,7 @@ const applyAtomicGroupMemberContribution = async ({
     }
 
     // 5. Update PersonalAccount collection statement/balance
+    let personalOpeningBalance = 0;
     let personalClosingBalance = 0;
     await mutatePersonalLeaves(
       (r) => normalizePhone(r.phone) === mPhone,
@@ -3096,13 +3144,14 @@ const applyAtomicGroupMemberContribution = async ({
         if (!rec.account.personal) {
           rec.account.personal = { personal: 0, openBalance: 0, pendingBalance: 0, reg_fee: 0 };
         }
-        personalClosingBalance = Number(rec.account.personal.openBalance || 0);
+        personalOpeningBalance = Number(rec.account.personal.openBalance || 0);
+        personalClosingBalance = personalOpeningBalance + payAmount;
 
         if (!rec.transactions) rec.transactions = [];
         rec.transactions.push({
           reference: txRef,
           time: new Date(),
-          openingBalance: personalClosingBalance,
+          openingBalance: personalOpeningBalance,
           amount: payAmount,
           type: "group_contribution",
           from: { name: "Personal Account", number: mPhone },
@@ -3317,6 +3366,39 @@ const findGroupMemberTransactions = async (phone) => {
                   source: source || "groups-members"
                 });
               });
+            }
+
+            // 2b. Each verified account has its own transactionHistory — this is
+            // where applyAtomicGroupMemberContribution records contributions once
+            // the group/member/account-name checks pass, complete with
+            // accountVerified and opening/closing balance. Surface it here too,
+            // so it actually shows up in the member's statement.
+            if (mem && mem.accounts && typeof mem.accounts === "object") {
+              for (const [accId, acc] of Object.entries(mem.accounts)) {
+                if (!acc || !Array.isArray(acc.transactionHistory)) continue;
+                acc.transactionHistory.forEach(tx => {
+                  const trustedAccountName = acc.accountVerified || acc.accountName || tx.accountName || "Saving";
+                  txns.push({
+                    code: tx.txId || tx.reference || tx.code || "",
+                    amt: Number(tx.amount || 0),
+                    date: tx.date || tx.time || new Date().toISOString(),
+                    type: "group_deposit",
+                    groupName: gName,
+                    acc: `Group ${gName} (Account ${accId} - ${trustedAccountName})`,
+                    accountId: accId,
+                    accountName: trustedAccountName,
+                    accountVerified: acc.accountVerified || null,
+                    from: tx.payerPhone || rawPhone,
+                    fromNumber: tx.payerPhone || rawPhone,
+                    to: gName,
+                    toNumber: gName,
+                    circleRound: tx.circleRound || 1,
+                    opening: Number(tx.openingBalance ?? 0),
+                    closing: Number(tx.closingBalance ?? 0),
+                    source: source ? `${source}-account` : "groups-members-account"
+                  });
+                });
+              }
             }
           }
         }
