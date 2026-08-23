@@ -82,11 +82,10 @@ const writeJSON = (file, data) => {
 
 const norm = (p) => {
   if (!p) return "";
-  let s = String(p).trim();
-  if (s.startsWith("0")) s = s.substring(1);
-  if (s.startsWith("+254")) s = s.substring(4);
-  if (s.startsWith("254") && s.length > 9) s = s.substring(3);
-  return s;
+  const digits = String(p).trim().replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length >= 9) return digits.slice(-9);
+  return digits;
 };
 
 const flattenData = (data) => {
@@ -316,6 +315,8 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
                 groupNumber: doc.groupNumber || '',
                 accountNumber: doc.accountNumber || '',
                 phase: doc.phase || '',
+                principles: doc.principles || null,
+                principlesSetAt: doc.principlesSetAt || null,
                 role: roleInfo && roleInfo.key.startsWith('trustee_') ? 'trustee' : (roleInfo && roleInfo.key.startsWith('official_') ? 'official' : (isChairperson ? 'trustee' : 'member')),
                 roleTitle: (roleInfo && (roleInfo.item.title || roleInfo.item.type)) || (isChairperson ? 'Chairperson' : ''),
                 memberNumber: (roleInfo && roleInfo.item.memberNumber) || '',

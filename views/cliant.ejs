@@ -3865,14 +3865,19 @@ const app = {
         this.updateModalContent('Send Money — ' + dn, html, () => this.openModal('Send Money'), 'fa-paper-plane');
     },
     sendToMyAccount(groupName) {
-        const dn    = decodeURIComponent(groupName);
-        const group = this.data.userGroups.find(g => g.groupName === dn);
-        if (!group || !group.principles || !group.principles.otherContributions) {
-            const html = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No accounts found for this group.</p></div>`;
+        const dn = decodeURIComponent(groupName);
+        const dnLow = dn.trim().toLowerCase();
+        // Case-insensitive match so 'ONE SACCO 1' always finds itself regardless of encoding
+        const group = this.data.userGroups.find(g =>
+            (g.groupName || '').trim().toLowerCase() === dnLow
+        );
+        const accounts = group?.principles?.otherContributions || [];
+        if (!group || !accounts.length) {
+            const html = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No accounts found for <b>${dn}</b>. The group may still be loading — please close and try again.</p></div>`;
             this.updateModalContent('Send to My Account', html, () => this.selectGroupForSend(dn), 'fa-building-columns');
             return;
         }
-        this.data.groupAccounts  = group.principles.otherContributions;
+        this.data.groupAccounts  = accounts;
         this.data.addedAccounts  = [];
         this.data.errorMessage   = '';
         this.data.sendMode       = 'my';
