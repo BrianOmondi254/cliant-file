@@ -2153,15 +2153,21 @@ const adminSchema = new mongoose.Schema({
   ward: { type: String },
 });
 
-const adminConn = mongoose.createConnection(MONGODB_URI, adminConnectionOptions);
-// Add error handler to avoid unhandled promise rejection
-adminConn.on('error', (err) => {
-  console.error(`❌ Admin MongoDB connection error: ${err.message}`);
+// NOTE: "tbank-admin" is a different DATABASE, not a different CLUSTER —
+// it lives on the same Atlas deployment as the main connection. Previously
+// this opened a second, fully independent mongoose.createConnection(), which
+// meant a second TLS handshake to Atlas competing with the main one. On some
+// networks that second concurrent handshake was reliably timing out at the
+// secureConnect stage even though the primary connection succeeded every
+// time. useDb({ useCache: true }) reuses the already-open client/socket pool
+// from the default connection instead of dialing out again, so there is only
+// ever ONE physical connection to Atlas — its readyState tracks the main
+// connection automatically.
+const adminConn = mongoose.connection.useDb("tbank-admin", { useCache: true });
+adminConn.on("error", (err) => {
+  console.error(`❌ Admin MongoDB (tbank-admin) error: ${err.message}`);
 });
-adminConn.on("disconnected", () => {
-  adminConnectionPromise = null;
-});
-const adminDb = adminConn.useDb("tbank-admin");
+const adminDb = adminConn;
 const Admin = adminDb.model("Admin", adminSchema, "admins");
 
 /**
@@ -2178,52 +2184,19 @@ const superAdminSchema = new mongoose.Schema({
 
 const SuperAdmin = adminDb.model("SuperAdmin", superAdminSchema, "superAdmins");
 
-let adminConnectionPromise = null;
-let adminRetryCount = 0;
-const MAX_ADMIN_RETRIES = 5;
-
 /**
- * Connect (and reuse) the separate admin connection.
- * This was the root cause of "Operation admins.distinct() buffering timed out"
- * and "superAdmins.findOne() buffering timed out" — the admin connection was
- * created but never opened.
+ * "Connect" the admin DB — since adminConn now shares the main connection's
+ * client (see useDb({ useCache: true }) above), there is no separate socket
+ * to dial. This just ensures the MAIN connection is up; adminConn.readyState
+ * tracks it automatically once that succeeds.
  */
 const connectAdminDB = async () => {
-  if (adminConn.readyState === 1) {
-    adminRetryCount = 0;
-    return adminConn;
-  }
-  if (adminConnectionPromise) return adminConnectionPromise;
-
-  const attemptConnect = async (retries) => {
-    adminConnectionPromise = (async () => {
-      try {
-        await adminConn.asPromise();
-        adminRetryCount = 0;
-        return adminConn;
-      } catch (error) {
-        if (retries < MAX_ADMIN_RETRIES) {
-          const backoff = Math.min(1000 * Math.pow(2, retries), 30000);
-          console.error(`❌ Admin DB connection attempt ${retries + 1} failed: ${error.message}. Retrying in ${backoff}ms...`);
-          adminConnectionPromise = null;
-          await new Promise(resolve => setTimeout(resolve, backoff));
-          return attemptConnect(retries + 1);
-        }
-        adminConnectionPromise = null;
-        console.error(`❌ Error connecting to admin MongoDB after ${MAX_ADMIN_RETRIES} attempts: ${error.message}`);
-        throw error;
-      }
-    })();
-
-    return adminConnectionPromise;
-  };
-
-  return attemptConnect(adminRetryCount);
+  await connectDB();
+  return adminConn;
 };
 
 const ensureAdminReady = async () => {
   if (adminConn.readyState === 1) {
-    adminRetryCount = 0;
     return true;
   }
   try {
@@ -2247,24 +2220,36 @@ const connectDB = async () => {
     return connectionPromise;
   }
 
+  // Register listeners BEFORE calling connect(). mongoose.connection is a
+  // persistent EventEmitter — if the socket emits 'error' (e.g. ECONNRESET
+  // during handshake) before any 'error' listener exists, Node treats it as
+  // an unhandled event and crashes the whole process, even though the
+  // connect() promise rejection below is already being caught elsewhere.
+  // Attaching these up front is what actually prevents the crash.
+  if (mongoose.connection.listenerCount("error") === 0) {
+    mongoose.connection.on("error", (err) => {
+      console.error(`❌ MongoDB connection error: ${err.message}`);
+    });
+  }
+
+  if (mongoose.connection.listenerCount("disconnected") === 0) {
+    mongoose.connection.on("disconnected", () => {
+      console.warn("⚠️  MongoDB disconnected");
+      connectionPromise = null;
+    });
+  }
+
+  if (mongoose.connection.listenerCount("reconnected") === 0) {
+    mongoose.connection.on("reconnected", () => {
+      console.log("🔄 MongoDB reconnected");
+    });
+  }
+
   connectionPromise = (async () => {
     try {
       console.log(`🔌 MongoDB connecting to ${maskMongoUri(MONGODB_URI)} ...`);
       const conn = await mongoose.connect(MONGODB_URI, connectionOptions);
       console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-
-      mongoose.connection.on("error", (err) => {
-        console.error(`❌ MongoDB connection error: ${err.message}`);
-      });
-
-      mongoose.connection.on("disconnected", () => {
-        console.warn("⚠️  MongoDB disconnected");
-        connectionPromise = null;
-      });
-
-      mongoose.connection.on("reconnected", () => {
-        console.log("🔄 MongoDB reconnected");
-      });
 
       // Open the separate admin connection used by Admin/SuperAdmin models
       connectAdminDB()
@@ -2276,8 +2261,11 @@ const connectDB = async () => {
       if (!process.listenerCount("SIGINT")) {
         process.on("SIGINT", async () => {
           try {
+            // adminConn shares the main connection's client (useDb/useCache),
+            // so closing mongoose.connection also tears down adminConn — no
+            // separate .close() call needed (and calling one here would just
+            // double-close the same underlying socket).
             await mongoose.connection.close();
-            await adminConn.close();
             console.log("MongoDB connections closed through app termination");
             process.exit(0);
           } catch (err) {
@@ -2818,6 +2806,45 @@ const withContributionLock = async (lockKey, fn) => {
   }
 };
 
+// =========================================================================
+// Real-time round-state resolver — computes each round's status purely by
+// comparing `refDate` against that round's own `scheduledDate` window. No
+// elapsed-time / month-count math is involved, and rounds[] is assumed to
+// already be in chronological order (round 1, 2, 3 ... as generated).
+//
+//   - "pending" -> refDate is before this round's scheduledDate
+//   - "active"  -> refDate falls within [this round's scheduledDate, next
+//                  round's scheduledDate) — or through `endDate` for the
+//                  final round
+//   - "closed"  -> refDate is on/after the NEXT round's scheduledDate (or
+//                  on/after `endDate` for the final round) — this round's
+//                  window has already passed
+//
+// Callers (e.g. a contribution being credited) should only ever READ the
+// round whose live status comes back "active" — never recompute an index.
+// =========================================================================
+const computeLiveRoundStatuses = (rounds, endDate, refDate = new Date()) => {
+  if (!Array.isArray(rounds) || rounds.length === 0) return [];
+  return rounds.map((round, i) => {
+    const schedDate = new Date(round.scheduledDate);
+    const nextSchedDate = i + 1 < rounds.length
+      ? new Date(rounds[i + 1].scheduledDate)
+      : (endDate ? new Date(endDate) : null);
+
+    let status;
+    if (Number.isNaN(schedDate.getTime())) {
+      status = round.status || "pending"; // malformed date -> leave as-is
+    } else if (refDate < schedDate) {
+      status = "pending";
+    } else if (nextSchedDate && !Number.isNaN(nextSchedDate.getTime()) && refDate >= nextSchedDate) {
+      status = "closed";
+    } else {
+      status = "active";
+    }
+    return { ...round, status };
+  });
+};
+
 const applyAtomicGroupMemberContribution = async ({
   groupName,
   memberPhone,
@@ -3066,57 +3093,78 @@ const applyAtomicGroupMemberContribution = async ({
         return null;
       };
 
-      // 1. Verify group in `groups` collection first
-      const locatedInGroups = await locateGroupDoc(groupsCol);
-      if (!locatedInGroups) {
-        // Not available in `groups` collection -> fallback to personal wallet
-        return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS", payAmount);
-      }
+      // =========================================================================
+      // Group existence gate — a group must be found in BOTH the `groups`
+      // collection AND the `groups-members` collection before any member or
+      // account-level verification is attempted. If `groups` doesn't have it,
+      // `groups-members` is never even queried — we stop immediately and
+      // fall back to crediting the payer's personal wallet.
+      // =========================================================================
+      const verifyGroupAcrossCollections = async () => {
+        // 1. Verify group in `groups` collection first
+        const locatedInGroups = await locateGroupDoc(groupsCol);
+        if (!locatedInGroups) {
+          // Not found in `groups` -> stop here, do NOT query groups-members
+          // or run any member verification. Fallback only.
+          return { ok: false, reason: "GROUP_NOT_FOUND_IN_GROUPS" };
+        }
 
-      // 2. If available in `groups`, proceed to also verify from `groups-members` collection
-      const locatedInMembersCol = await locateGroupDoc(membersCol);
-      if (!locatedInMembersCol) {
-        return await fallbackToPersonalWallet("GROUP_NOT_FOUND_IN_GROUPS_MEMBERS", payAmount);
-      }
+        // 2. Only if found in `groups`, proceed to also verify from `groups-members`
+        const locatedInMembersCol = await locateGroupDoc(membersCol);
+        if (!locatedInMembersCol) {
+          return { ok: false, reason: "GROUP_NOT_FOUND_IN_GROUPS_MEMBERS" };
+        }
 
-      // Identify the member sub-data structure from groups-members (and groups)
+        return { ok: true, locatedInGroups, locatedInMembersCol };
+      };
+
+      const groupCheck = await verifyGroupAcrossCollections();
+      if (!groupCheck.ok) {
+        return await fallbackToPersonalWallet(groupCheck.reason, payAmount);
+      }
+      const { locatedInGroups, locatedInMembersCol } = groupCheck;
+
+      // =========================================================================
+      // Member verification gate — verified strictly against the
+      // `groups-members` collection only. Match the payer's phone number
+      // against the member's `memberId` (primary), falling back to
+      // phone/phoneNumber field and the map key itself. The `groups`
+      // collection is not consulted here at all (it's already been used to
+      // confirm the group itself exists, in the group-existence gate above).
+      // =========================================================================
       const targetGroupData = locatedInMembersCol.groupData || locatedInGroups.groupData;
       const groupDoc = locatedInMembersCol.doc || locatedInGroups.doc;
 
-      const membersMap = {
-        ...(locatedInGroups.groupData?.members || {}),
-        ...(locatedInMembersCol.groupData?.members || {})
-      };
-      let memberKey = null;
-      let memberRecord = null;
+      const verifyMemberInGroupMembers = () => {
+        const membersColMembers = locatedInMembersCol.groupData?.members || {};
 
-      for (const [key, mem] of Object.entries(membersMap)) {
-        const keyNorm = normalizePhone(key);
-        const idNorm = normalizePhone(mem?.memberId || mem?.phone || mem?.phoneNumber);
-        if (keyNorm === mPhone || idNorm === mPhone) {
-          memberKey = key;
-          memberRecord = mem;
-          break;
-        }
-      }
+        let memberKey = null;
+        let memberRecord = null;
 
-      // Fallback check against trustee/official/member keys if not directly in members map
-      if (!memberRecord) {
-        for (const [k, v] of Object.entries(locatedInGroups.groupData || {})) {
-          if ((k.startsWith("trustee_") || k.startsWith("official_") || k.startsWith("member_")) && v && typeof v === "object") {
-            if (normalizePhone(v.phone) === mPhone || normalizePhone(v.id) === mPhone) {
-              memberKey = v.phone || k;
-              memberRecord = v;
-              break;
-            }
+        // Match: phone number vs memberId (primary), map key, phone/phoneNumber
+        for (const [key, mem] of Object.entries(membersColMembers)) {
+          const idNorm = normalizePhone(mem?.memberId);
+          const keyNorm = normalizePhone(key);
+          const phoneNorm = normalizePhone(mem?.phone || mem?.phoneNumber);
+          if (idNorm === mPhone || keyNorm === mPhone || phoneNorm === mPhone) {
+            memberKey = key;
+            memberRecord = mem;
+            break;
           }
         }
-      }
 
-      const isMemberVerified = Boolean(memberRecord);
-      if (!isMemberVerified) {
-        return await fallbackToPersonalWallet("MEMBER_NOT_IN_GROUP", payAmount);
+        if (!memberRecord) {
+          return { ok: false, reason: "MEMBER_NOT_IN_GROUP" };
+        }
+
+        return { ok: true, memberKey, memberRecord };
+      };
+
+      const memberCheck = verifyMemberInGroupMembers();
+      if (!memberCheck.ok) {
+        return await fallbackToPersonalWallet(memberCheck.reason, payAmount);
       }
+      const { memberKey, memberRecord } = memberCheck;
 
       // =========================================================================
       // STAGE 3 — verify EACH selected account BY NAME against the group's known
@@ -3202,6 +3250,7 @@ const applyAtomicGroupMemberContribution = async ({
       const intervals = targetGroupData.principles?.intervals || groupDoc?.principles?.intervals || {};
       const circleInfo = calculateActiveCircle(principlesSetAt, intervals);
       const nowIso = new Date().toISOString();
+      const nowDate = new Date(nowIso);
       const numOr0 = (v) => (typeof v === "number" && !Number.isNaN(v)) ? v : 0;
 
       const memLoc = locatedInMembersCol;
@@ -3240,6 +3289,27 @@ const applyAtomicGroupMemberContribution = async ({
       let groupAmountInRunning = numOr0(groupPrevFin.totalAmountIn);
       let groupClosingRunning = groupOpeningInitial;
 
+      // Per-account real-time round-state lookup (memoized) — the ONLY thing
+      // Stage 4 does with rounds is read whichever one comes back "active"
+      // from computeLiveRoundStatuses. No date math happens here.
+      const acctRoundState = {};
+      const getAcctRoundState = (accId) => {
+        if (!acctRoundState[accId]) {
+          const cycle = targetGroupData.members?.[memberKey]?.accounts?.[accId]?.dateIntervalCycle ||
+                        memberRecord?.accounts?.[accId]?.dateIntervalCycle || {};
+          const originalRounds = Array.isArray(cycle.rounds) ? cycle.rounds : [];
+          const liveRounds = computeLiveRoundStatuses(originalRounds, cycle.endDate, nowDate);
+          const activeIndex = liveRounds.findIndex((r) => r.status === "active");
+          acctRoundState[accId] = {
+            originalRounds,
+            liveRounds,
+            activeIndex,
+            activeRound: activeIndex >= 0 ? liveRounds[activeIndex] : null,
+          };
+        }
+        return acctRoundState[accId];
+      };
+
       const accIdToName = {};
       const pushByAccount = {};
       const txObjects = [];
@@ -3265,6 +3335,12 @@ const applyAtomicGroupMemberContribution = async ({
         groupAmountInRunning += lineAmt;
         groupClosingRunning += lineAmt;
 
+        const rs = getAcctRoundState(accId);
+        // Prefer the live-computed active round's own roundNumber; fall back
+        // to the legacy elapsed-time calculator only if no round's window
+        // covers today (e.g. cycle not yet started / already fully closed).
+        const effectiveRoundNumber = rs.activeRound?.roundNumber ?? circleInfo.roundNumber;
+
         const txObject = {
           txId: verifiedLines.length > 1 ? `${txRef}_${accId}` : txRef,
           reference: txRef,
@@ -3278,7 +3354,7 @@ const applyAtomicGroupMemberContribution = async ({
           paymentMethod,
           payerPhone: pPhone,
           memberPhone: mPhone,
-          circleRound: circleInfo.roundNumber,
+          circleRound: effectiveRoundNumber,
           type: "credit",
           status: "completed"
         };
@@ -3317,7 +3393,29 @@ const applyAtomicGroupMemberContribution = async ({
       for (const [accId, txArr] of Object.entries(pushByAccount)) {
         const historyPath = `${memPrefix}members.${memberKey}.accounts.${accId}.transactionHistory`;
         pushFields[historyPath] = txArr.length > 1 ? { $each: txArr } : txArr[0];
-        pushFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`] = mPhone;
+
+        // Real-time round-state sync: write any round whose live-computed
+        // status differs from what's stored (pending -> active -> closed),
+        // purely from comparing scheduledDate windows against `nowDate`.
+        const rs = getAcctRoundState(accId);
+        rs.liveRounds.forEach((liveRound, idx) => {
+          const storedStatus = rs.originalRounds[idx]?.status;
+          if (storedStatus !== liveRound.status) {
+            setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${idx}.status`] = liveRound.status;
+          }
+        });
+
+        if (rs.activeIndex >= 0) {
+          // Credit the contribution to whichever round is live-"active" —
+          // no calculation, just reading the status computed above.
+          pushFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${rs.activeIndex}.contributingMembers`] = mPhone;
+        } else {
+          // No round's window covers today (cycle not started yet, or fully
+          // closed) — fall back to the legacy elapsed-time index so the
+          // contribution still lands somewhere, and log it for review.
+          console.warn(`[applyAtomicGroupMemberContribution] No active round for account ${accId} (group "${groupName}") — falling back to elapsed-time round #${circleInfo.roundNumber}.`);
+          pushFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`] = mPhone;
+        }
       }
 
       await membersCol.updateOne({ _id: locatedInMembersCol.doc._id }, { $set: setFields, $push: pushFields });
@@ -3710,4 +3808,4 @@ const findGroupMemberTransactions = async (phone) => {
   }
 };
 
-module.exports.findGroupMemberTransactions = findGroupMemberTransactions;
+module.exports.findGroupMemberTransactions = findGroupMemberTransactions; 

@@ -340,7 +340,7 @@ router.get("/status/:checkoutId", async (req, res) => {
 
 router.get("/transactions", (req, res) => {
   const filePath = path.join(__dirname, "../mpesa-callbacks.json");
-  const data = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath)) : [];
+  const data = fs.existsSync(filePath) ? JSnodeON.parse(fs.readFileSync(filePath)) : [];
   res.json(data);
 });
 

@@ -4060,7 +4060,7 @@ const app = {
         html += `<div class="m-section-label">Pay Via</div>
         <div class="m-btn-row">
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.processPayment('tbank')"><i class="fa-solid fa-university"></i> tBank</button>
-            <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.processPayment('mpesa')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.confirmMpesaPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
         </div>`;
         const backFn = this.data.sendMode === 'my' ? () => this.renderAccountForm(dn) : () => this.showFinalPaymentOptions(dn);
         this.updateModalContent('Verify Payment', html, backFn, 'fa-file-invoice-dollar');
@@ -4094,9 +4094,58 @@ const app = {
         html += `<div class="m-pay-dark"><div class="m-pay-dark-title">Grand Total</div><div style="text-align:center;font-size:24px;font-weight:800;color:#fbbf24;">KSh ${totalSum.toLocaleString()}</div></div>
         <div class="m-btn-row" style="margin-top:14px;">
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.processPayment('tbank')"><i class="fa-solid fa-university"></i> tBank</button>
-            <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.processPayment('mpesa')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.confirmMpesaPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
         </div>`;
         this.updateModalContent('Payment Summary', html, () => this.showSeveralMembersSummary(dn, this.data.verifiedMembersList), 'fa-receipt');
+    },
+    confirmMpesaPayment(groupName) {
+        const dn = decodeURIComponent(groupName);
+        const phone = (this.data.user && this.data.user.phoneNumber) || '';
+        let total = 0;
+        let rowsHtml = `<div class="m-pay-row"><span class="m-pay-row-label">Group</span><span class="m-pay-row-value">${dn}</span></div>`;
+        if (this.data.isMultiMemberFlow && this.data.settledMembersData) {
+            const data = this.data.settledMembersData;
+            for (const idx in data) {
+                const m = data[idx];
+                let memberTotal = 0;
+                m.accounts.forEach(a => memberTotal += parseFloat(a.inputAmount) || 0);
+                total += memberTotal;
+                rowsHtml += `<div class="m-pay-row" style="align-items:flex-start;">
+                    <div><div style="font-weight:700;font-size:13px;">${m.name}</div><div style="font-size:10px;opacity:.7;">A/C: ${idx} • ${m.accounts.length} account(s)</div></div>
+                    <span class="m-pay-row-value">KSh ${memberTotal.toLocaleString()}</span>
+                </div>`;
+            }
+        } else {
+            const addedAccounts = this.data.addedAccounts || [];
+            addedAccounts.forEach(acc => total += parseFloat(acc.inputAmount) || 0);
+            const sendTo = this.data.recipientName || 'My Account';
+            const isMyAccount = this.data.sendMode === 'my';
+            rowsHtml += `<div class="m-pay-row">
+                <span class="m-pay-row-label">Recipient</span>
+                <div style="text-align:right;">
+                    <span class="m-pay-row-value">${sendTo}</span>
+                    ${isMyAccount && phone ? `<div style="font-size:10px;opacity:.7;">${phone}</div>` : ''}
+                </div>
+            </div>`;
+            addedAccounts.forEach(acc => {
+                rowsHtml += `<div class="m-pay-row">
+                    <div><div style="font-weight:700;font-size:13px;">${acc.accountName}</div><div style="font-size:10px;opacity:.7;">${acc.accountNumber}</div></div>
+                    <span class="m-pay-row-value">KSh ${parseFloat(acc.inputAmount).toLocaleString()}</span>
+                </div>`;
+            });
+        }
+        const html = `
+        <div class="m-info-banner green"><i class="fa-solid fa-mobile"></i><span>Confirm the details below before the M-Pesa prompt is sent to <b>${phone || 'your phone'}</b>.</span></div>
+        <div class="m-pay-dark">
+            <div class="m-pay-dark-title">Payment Details</div>
+            ${rowsHtml}
+            <div class="m-pay-total"><span class="m-pay-total-label">TOTAL</span><span class="m-pay-total-value">KSh ${total.toLocaleString()}</span></div>
+        </div>
+        <button class="m-submit-btn" style="margin-top:14px;background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.processPayment('mpesa')"><i class="fa-solid fa-check"></i> Proceed to Pay</button>`;
+        const backFn = this.data.isMultiMemberFlow
+            ? () => this.renderFinalBulkSummary(dn)
+            : () => this.showFinalPaymentSummary(dn);
+        this.updateModalContent('Confirm M-Pesa Payment', html, backFn, 'fa-mobile');
     },
     async processPayment(method) {
         let total = 0;
