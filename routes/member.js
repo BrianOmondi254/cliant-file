@@ -494,7 +494,7 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
           scheduledDate: roundDate,
           status: 'pending',
           amount: parseFloat(expectedAmount),
-          contributingMembers: []
+          accountroundPerformance: []
         });
 
         // Advance to next cycle date
@@ -810,7 +810,7 @@ router.post("/group/:groupNumber/member", (req, res) => {
           totalRounds: 1,
           expectedAmountPerRound: "100",
           totalExpectedAmount: "100",
-          rounds: [{ roundNumber: 1, scheduledDate: fmt(today), status: 'pending', amount: 100, contributingMembers: [] }]
+          rounds: [{ roundNumber: 1, scheduledDate: fmt(today), status: 'pending', amount: 100, accountroundPerformance: [] }]
         };
         accountsToUse = {
           "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },
@@ -832,7 +832,7 @@ router.post("/group/:groupNumber/member", (req, res) => {
         totalRounds: 1,
         expectedAmountPerRound: "100",
         totalExpectedAmount: "100",
-        rounds: [{ roundNumber: 1, scheduledDate: fmt(today), status: 'pending', amount: 100, contributingMembers: [] }]
+        rounds: [{ roundNumber: 1, scheduledDate: fmt(today), status: 'pending', amount: 100, accountroundPerformance: [] }]
       };
       accountsToUse = {
         "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [], dateIntervalCycle: baseCycle },

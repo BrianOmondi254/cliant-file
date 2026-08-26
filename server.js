@@ -30,6 +30,7 @@ const dealerRoutes = require("./routes/dealer");
 const generalRoutes = require("./routes/general");
 const proceedingsRoutes = require("./routes/proceedings");
 const locationsRoutes = require("./routes/locations");
+const pRoutes = require("./routes/p");
 const mpesaRoutes = require("./config/mpesa");
 const pesapalRoutes = require("./routes/pesapal");
 const {
@@ -157,6 +158,7 @@ app.use("/hq", hqOperationsRoutes);
 // 2️⃣ Public routes (auth + tbank + general)
 app.use("/", authRoutes);
 app.use("/", tbankRoutes);
+app.use("/p", pRoutes);
 app.use("/general", generalRoutes);
 app.use("/member", memberRoutes);
 app.use("/api/locations", locationsRoutes);

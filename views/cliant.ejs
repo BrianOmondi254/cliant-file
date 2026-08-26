@@ -640,6 +640,20 @@ const app = {
         selectedTranAccName: '',
         errorMessage: ''
     },
+    async safeJsonParse(response, fallbackLabel) {
+        const text = await response.text();
+        try {
+            if (!text || !text.trim()) return {};
+            return JSON.parse(text);
+        } catch (_e) {
+            const snippet = text.replace(/\s+/g, " ").slice(0, 160);
+            const label = fallbackLabel || "server response";
+            if (response.ok) {
+                throw new Error(`The ${label} was not in the expected format. Please try again.`);
+            }
+            throw new Error(`Request failed (HTTP ${response.status}). ${snippet ? "Server said: " + snippet : "Please try again."}`);
+        }
+    },
     /* ─── INIT ─── */
     init() {
         if (window.location.protocol === 'file:') {
@@ -654,6 +668,8 @@ const app = {
         } catch (e) {
             console.warn('Firebase init skipped:', e);
         }
+        // Hydrate wallet and group records immediately from local device storage for instant display
+        try { this.loadWalletFromLocalStorage(); } catch (e) {}
         // These are fire-and-forget; a failure must never block rendering.
         try { this.fetchWalletData(); } catch (e) { console.error('wallet fetch failed', e); }
         try { this.fetchInboxData(); } catch (e) { console.error('inbox fetch failed', e); }
@@ -774,6 +790,51 @@ const app = {
             console.error('Error fetching inbox data:', e);
         }
     },
+    saveWalletToLocalStorage() {
+        try {
+            const phone = (this.data.user && this.data.user.phoneNumber) || 'default';
+            const cacheKey = 'cliant_wallet_cache_' + phone;
+            const payload = {
+                balance: this.data.balance || 0,
+                transactions: this.data.transactions || [],
+                groupTransactions: this.data.groupTransactions || [],
+                groupMembers: this.data.groupMembers || [],
+                updatedAt: Date.now()
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(payload));
+            sessionStorage.setItem(cacheKey, JSON.stringify(payload));
+        } catch (e) {
+            console.warn('Could not save wallet to local device storage:', e);
+        }
+    },
+    loadWalletFromLocalStorage() {
+        try {
+            const phone = (this.data.user && this.data.user.phoneNumber) || 'default';
+            const cacheKey = 'cliant_wallet_cache_' + phone;
+            const raw = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
+            if (!raw) return false;
+            const cached = JSON.parse(raw);
+            if (cached && typeof cached === 'object') {
+                if (cached.balance !== undefined) {
+                    this.data.balance = Number(cached.balance) || 0;
+                }
+                if (Array.isArray(cached.transactions) && cached.transactions.length > 0) {
+                    this.data.transactions = cached.transactions;
+                }
+                if (Array.isArray(cached.groupTransactions) && cached.groupTransactions.length > 0) {
+                    this.data.groupTransactions = cached.groupTransactions;
+                }
+                if (Array.isArray(cached.groupMembers) && cached.groupMembers.length > 0) {
+                    this.data.groupMembers = cached.groupMembers;
+                }
+                this.updateWalletBalanceUI();
+                return true;
+            }
+        } catch (e) {
+            console.warn('Could not load wallet from local device storage:', e);
+        }
+        return false;
+    },
     async fetchWalletData() {
         try {
             const res = await fetch('/personal/wallet');
@@ -782,19 +843,28 @@ const app = {
                 this.data.balance = Number(data.balance) || Number(data.openBalance) || 0;
                 this.data.transactions = data.transactions || [];
                 this.data.groupTransactions = data.groupTransactions || [];
+                this.data.groupMembers = data.groupMembers || data.groupMemberRecords || [];
+                this.saveWalletToLocalStorage();
                 this.updateWalletBalanceUI();
                 this.refreshPersonalDashboardIfVisible();
             } else {
-                this.data.balance = 0;
-                this.data.transactions = [];
-                this.data.groupTransactions = [];
-                this.updateWalletBalanceUI();
+                if (!this.loadWalletFromLocalStorage()) {
+                    this.data.balance = 0;
+                    this.data.transactions = [];
+                    this.data.groupTransactions = [];
+                    this.data.groupMembers = [];
+                    this.updateWalletBalanceUI();
+                }
             }
         } catch (e) {
             console.error('Error fetching wallet:', e);
-            this.data.balance = 0;
-            this.data.transactions = [];
-            this.updateWalletBalanceUI();
+            if (!this.loadWalletFromLocalStorage()) {
+                this.data.balance = 0;
+                this.data.transactions = [];
+                this.data.groupTransactions = [];
+                this.data.groupMembers = [];
+                this.updateWalletBalanceUI();
+            }
             this.refreshPersonalDashboardIfVisible();
         }
     },
@@ -811,8 +881,22 @@ const app = {
         if (sheetBal) sheetBal.textContent = `KSh ${formatted}`;
     },
     /* ─── DIRECT BALANCE DISPLAY ─── */
-    async showBalanceDirectly() {
-        await this.fetchWalletData();
+    showBalanceDirectly() {
+        // 1. Instant Render: Use current memory / cached data immediately (0ms delay)
+        this.renderBalanceStatementView();
+
+        // 2. Background Refresh: Fetch fresh data from server and seamlessly update if view is still open
+        this.fetchWalletData().then(() => {
+            const sheet = document.getElementById('sheetWalletBalance');
+            if (sheet) {
+                this.renderBalanceStatementView();
+            }
+        }).catch(e => {
+            console.warn('Background wallet refresh failed:', e);
+        });
+    },
+
+    renderBalanceStatementView() {
         const balanceAmount = Number(this.data.balance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         const originalTxns = this.data.transactions || [];
         // Prefer opening/closing stored on PersonalAccount transactions; fall back to ledger rebuild
@@ -852,38 +936,97 @@ const app = {
             const amtPrefix = tx.isCredit ? '+' : '-';
             const bgLight = tx.isCredit ? '#f0fdf4' : '#fef2f2';
             const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt) * 3 + i * 71) % 900000).toUpperCase() + 'B');
-            const rawAcc = tx.acc || (tx.groupName ? `${tx.groupName} Account` : 'Personal Wallet');
-            const cleanAcc = rawAcc.replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
-            const rawFrom = tx.from || (tx.isCredit ? 'External Source' : 'Personal Wallet');
-            const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
-            const cleanFrom = tx.fromNumber || fromNameClean;
-            const rawTo = tx.toNumber || tx.to || tx.accountNumber || (tx.isCredit ? 'Personal Wallet' : 'External Recipient');
-            const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+            
+            const rawPurpose = String(tx.purpose || tx.rawType || tx.type || '').toLowerCase();
+            let displayTitle = 'Personal Wallet Transaction';
+            if (rawPurpose.includes('topup') || rawPurpose.includes('top_up') || (tx.isCredit && !tx.groupName)) {
+                displayTitle = 'Wallet Top-Up';
+            } else if (rawPurpose.includes('contribution') || tx.groupName) {
+                displayTitle = 'Group Account';
+            } else if (rawPurpose.includes('send') || rawPurpose.includes('transfer')) {
+                displayTitle = 'Wallet Transfer';
+            } else if (rawPurpose.includes('withdraw')) {
+                displayTitle = 'Wallet Withdrawal';
+            }
+
+            const rawFrom = tx.from || (tx.isCredit ? 'External / M-Pesa' : 'Personal Wallet');
+            const cleanFrom = String(tx.fromNumber || rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Direct Deposit');
+            let destinationAccountName = tx.accountName || '';
+            if (!destinationAccountName && tx.notes) {
+                const m = String(tx.notes).match(/\(([^)]+)\)/);
+                if (m && m[1]) destinationAccountName = m[1].trim();
+            }
+            if (!destinationAccountName && (tx.toNumber === '001' || tx.to === '001' || tx.accountId === '001')) {
+                destinationAccountName = 'Saving';
+            }
+
+            const rawTo = tx.toNumber || tx.to || (tx.isCredit ? 'Personal Wallet' : (tx.groupName || 'External Recipient'));
+            let cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Wallet Deposit');
+            if (destinationAccountName) {
+                if (/^\d{1,4}$/.test(cleanTo.trim()) || cleanTo === tx.accountId) {
+                    cleanTo = `${destinationAccountName}(${cleanTo.trim()})`;
+                } else if (cleanTo === '001') {
+                    cleanTo = `${destinationAccountName}(001)`;
+                }
+            } else if (cleanTo === '001') {
+                cleanTo = 'Saving(001)';
+            }
+
+            let groupTitle = tx.groupName || '';
+            if (!groupTitle && tx.notes) {
+                const gm = String(tx.notes).match(/contribution to ([^(]+)/i);
+                if (gm && gm[1]) groupTitle = gm[1].trim();
+            }
+            if (!groupTitle && tx.acc && String(tx.acc).startsWith('Group ')) {
+                const gm = String(tx.acc).match(/Group ([^(]+)/i);
+                if (gm && gm[1]) groupTitle = gm[1].trim();
+            }
+
+            let accountValue = '';
+            const isTopUp = rawPurpose.includes('topup') || rawPurpose.includes('top_up') || (tx.isCredit && !tx.groupName && !groupTitle);
+            if (isTopUp) {
+                accountValue = 'M-Pesa';
+            } else if (rawPurpose.includes('contribution') || tx.groupName || groupTitle) {
+                accountValue = groupTitle || tx.groupName || 'Group Account';
+            } else if (rawPurpose.includes('send') || rawPurpose.includes('transfer')) {
+                accountValue = 'Wallet';
+            } else if (rawPurpose.includes('withdraw')) {
+                accountValue = 'M-Pesa';
+            }
+            if (!accountValue) {
+                accountValue = tx.isCredit ? 'M-Pesa' : (groupTitle || tx.groupName || 'Wallet');
+            }
+
             return `
                 <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
                         <div>
-                            <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${cleanAcc}</h4>
+                            <span style="font-size: 9.5px; font-weight: 700; color: #166534; background: #ecfdf5; padding: 2px 7px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                                <i class="fa-solid fa-wallet"></i> Personal Account
+                            </span>
+                            <h4 style="font-size: 13px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${displayTitle}</h4>
                         </div>
                         <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap;">
                             ${txDate}
                         </span>
                     </div>
+                    <!-- From / Account / Processed To row -->
                     <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; text-align: center; gap: 8px; font-size: 10px; color: #64748b;">
                         <div style="flex: 1; text-align: left;">
                             <span style="font-weight: 700; color: #475569;">From:</span>
                             <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanFrom}</span>
                         </div>
                         <div style="flex: 1; text-align: center;">
-                            <span style="font-weight: 700; color: #475569;">Ref Code:</span>
-                            <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${txCode}</span>
+                            <span style="font-weight: 700; color: #475569;">Account:</span>
+                            <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${accountValue}</span>
                         </div>
                         <div style="flex: 1; text-align: right;">
                             <span style="font-weight: 700; color: #475569;">Processed To:</span>
                             <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanTo}</span>
                         </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9; border-bottom: 1px dashed #f1f5f9;">
+                    <!-- Opening Bal / Transaction / Closing Bal -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9;">
                         <div style="flex: 1; text-align: left;">
                             <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
                             <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
@@ -903,49 +1046,185 @@ const app = {
                             </span>
                         </div>
                     </div>
-                    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; opacity: 0.9;">
-                        <span>Status: <strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Completed</strong></span>
+                    <!-- Ref Code inline left, Status: Completed far right — below balance row -->
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">Ref Code:</span>
+                            <span style="font-family: monospace; font-weight: 800; color: #1e293b; font-size: 11px; letter-spacing: 0.3px;">${txCode}</span>
+                        </div>
+                        <strong style="color: #16a34a; font-size: 10.5px; white-space: nowrap; flex-shrink: 0;">
+                            <i class="fa-solid fa-circle-check"></i>&nbsp;Completed
+                        </strong>
                     </div>
                 </div>
             `;
         };
 
-        const verifiedGroupList = this.data.groupTransactions || [];
-        const seenTxKeys = new Set();
-
+        // 1. All personal wallet transactions in Wallet Transactions section
         if (ledgerItems.length > 0) {
             for (let i = ledgerItems.length - 1; i >= 0; i--) {
                 const tx = ledgerItems[i];
-                const isGroupTx = Boolean(
-                    tx.groupName ||
-                    tx.purpose === 'group_contribution' ||
-                    tx.type === 'group_deposit' ||
-                    tx.type === 'send_money' ||
-                    (tx.acc && (tx.acc.toLowerCase().includes('group') || tx.acc.toLowerCase().includes('saving') || tx.acc.toLowerCase().includes('welfare') || tx.acc.toLowerCase().includes('latenes') || tx.acc.toLowerCase().includes('registration')))
-                );
-                if (isGroupTx) {
-                    const key = tx.code || `${tx.groupName}_${tx.amt}_${tx.date}`;
-                    seenTxKeys.add(key);
-                    groupCardsHTML += createCardHTML(tx, i);
-                } else {
-                    walletCardsHTML += createCardHTML(tx, i);
-                }
+                walletCardsHTML += createCardHTML(tx, i);
             }
         }
 
-        // Add verified transactions from groups-members collection if not already included
-        verifiedGroupList.forEach((gt, idx) => {
-            const key = gt.code || `${gt.groupName}_${gt.amt}_${gt.date}`;
-            if (!seenTxKeys.has(key)) {
-                seenTxKeys.add(key);
-                groupCardsHTML += createCardHTML({
+        // 2. Group Transactions: Render transactionHistory records directly from groups-members collection
+        const groupMembersList = this.data.groupMembers || [];
+        const verifiedGroupList = this.data.groupTransactions || [];
+        const myPhone = (this.data.user && this.data.user.phoneNumber) || '';
+
+        const allGroupHistory = [];
+        const seenTxKeys = new Set();
+
+        if (groupMembersList.length > 0) {
+            groupMembersList.forEach(groupMem => {
+                const gName = groupMem.groupName || 'Group Account';
+                const memId = groupMem.memberId || myPhone;
+                const memberAccounts = groupMem.accounts || {};
+
+                // 1. Extract from each account's transactionHistory
+                Object.keys(memberAccounts).forEach(accId => {
+                    const acc = memberAccounts[accId] || {};
+                    const accName = acc.accountVerified || acc.accountName || ('Account ' + accId);
+                    const accHist = Array.isArray(acc.transactionHistory) ? acc.transactionHistory : [];
+                    accHist.forEach(tx => {
+                        const txCode = tx.transactionCode || tx.reference || tx.txId || tx.code || '';
+                        const txDate = tx.date || tx.time || tx.createdAt || new Date().toISOString();
+                        const uniqueKey = txCode ? (txCode + '_' + accId) : `${gName}_${accId}_${tx.amount}_${txDate}`;
+                        if (!seenTxKeys.has(uniqueKey)) {
+                            seenTxKeys.add(uniqueKey);
+                            allGroupHistory.push({
+                                ...tx,
+                                groupName: gName,
+                                memberId: memId,
+                                accountId: accId,
+                                accountName: accName,
+                                txCode: txCode || '-',
+                                txDate: txDate
+                            });
+                        }
+                    });
+                });
+
+                // 2. Also check member-level transactionHistory
+                const memHist = Array.isArray(groupMem.transactionHistory) ? groupMem.transactionHistory : [];
+                memHist.forEach(tx => {
+                    const txCode = tx.transactionCode || tx.reference || tx.txId || tx.code || '';
+                    const txDate = tx.date || tx.time || tx.createdAt || new Date().toISOString();
+                    const uniqueKey = txCode ? txCode : `${gName}_${tx.amount}_${txDate}`;
+                    if (!seenTxKeys.has(uniqueKey)) {
+                        seenTxKeys.add(uniqueKey);
+                        allGroupHistory.push({
+                            ...tx,
+                            groupName: gName,
+                            memberId: memId,
+                            accountId: tx.accountId || '',
+                            accountName: tx.accountName || 'Group Total',
+                            txCode: txCode || '-',
+                            txDate: txDate
+                        });
+                    }
+                });
+            });
+        }
+
+        // Fallback to verifiedGroupList if allGroupHistory is empty
+        if (allGroupHistory.length === 0 && verifiedGroupList.length > 0) {
+            verifiedGroupList.forEach(gt => {
+                const txCode = gt.code || gt.reference || gt.txId || '-';
+                const txDate = gt.date || gt.time || new Date().toISOString();
+                allGroupHistory.push({
                     ...gt,
-                    opening: gt.opening !== undefined ? gt.opening : 0,
-                    closing: gt.closing !== undefined ? gt.closing : gt.amt,
-                    isCredit: true
-                }, idx + 500);
-            }
-        });
+                    groupName: gt.groupName || 'Group Account',
+                    memberId: myPhone,
+                    accountId: gt.accountId || '001',
+                    accountName: gt.accountName || gt.acc || 'Saving',
+                    txCode: txCode,
+                    txDate: txDate
+                });
+            });
+        }
+
+        // Sort latest first
+        allGroupHistory.sort((a, b) => new Date(b.txDate || 0) - new Date(a.txDate || 0));
+
+        if (allGroupHistory.length > 0) {
+            groupCardsHTML = allGroupHistory.map(tx => {
+                const tDate = tx.txDate ? new Date(tx.txDate).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Today';
+
+                const tAmtIn = Number(tx.amountIn !== undefined ? tx.amountIn : (tx.amount || 0));
+                const tAmtOut = Number(tx.amountOut || 0);
+                const openVal = Number(tx.openingBalance !== undefined ? tx.openingBalance : (tx.opening || 0));
+                const closeVal = Number(tx.closingBalance !== undefined ? tx.closingBalance : (tx.closing || (openVal + tAmtIn - tAmtOut)));
+                const isIn = (tAmtIn > 0 && tAmtOut === 0) || String(tx.type || '').toLowerCase() === 'credit' || String(tx.type || '').toLowerCase() === 'contribution' || String(tx.type || '').toLowerCase() === 'group_deposit';
+                const isOut = tAmtOut > 0 || String(tx.type || '').toLowerCase() === 'debit';
+                const amtVal = isIn ? tAmtIn : (isOut ? tAmtOut : (Number(tx.amount) || 0));
+                const amtColor = isIn ? '#16a34a' : (isOut ? '#dc2626' : '#64748b');
+                const amtPrefix = isIn ? '+' : (isOut ? '-' : '');
+                const roundLabel = tx.roundNumber || tx.circleRound ? `Round #${tx.roundNumber || tx.circleRound}` : '';
+                const accLabel = tx.accountName ? (tx.accountId ? `${tx.accountName} (A/C ${tx.accountId})` : tx.accountName) : 'Group Account';
+
+                return `
+                    <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;">
+                                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #7c3aed; background: #f5f3ff; padding: 2px 7px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-users"></i> ${tx.groupName}
+                                    </span>
+                                    <span style="font-size: 9.5px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 10px;">
+                                        ${accLabel}
+                                    </span>
+                                    ${roundLabel ? `<span style="font-size: 9.5px; font-weight: 700; color: #7c3aed; background: #ede9fe; padding: 2px 6px; border-radius: 10px;">${roundLabel}</span>` : ''}
+                                </div>
+                                <div style="font-size: 11px; color: #64748b; font-family: 'Syne', sans-serif;">
+                                    Member ID: <strong style="color: #1e293b; font-family: monospace;">${tx.memberId}</strong>
+                                </div>
+                            </div>
+                            <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-left: 8px;">
+                                ${tDate}
+                            </span>
+                        </div>
+                        <!-- Opening Bal / Transaction / Closing Bal -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9;">
+                            <div style="flex: 1; text-align: left;">
+                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
+                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
+                                    KSh ${openVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </span>
+                            </div>
+                            <div style="flex: 1.2; text-align: center; background: ${isIn ? '#f0fdf4' : '#fef2f2'}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${isIn ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
+                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
+                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
+                                    ${amtPrefix} KSh ${amtVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </span>
+                            </div>
+                            <div style="flex: 1; text-align: right;">
+                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
+                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 800; color: #7c3aed; white-space: nowrap;">
+                                    KSh ${closeVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </span>
+                            </div>
+                        </div>
+                        <!-- Ref Code + value inline left, Status: Completed far right — below balance row -->
+                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">Ref Code:</span>
+                                <span style="font-family: monospace; font-weight: 800; color: #1e293b; font-size: 11px; letter-spacing: 0.3px;">${tx.txCode}</span>
+                            </div>
+                            <strong style="color: #16a34a; font-size: 10.5px; white-space: nowrap; flex-shrink: 0;">
+                                <i class="fa-solid fa-circle-check"></i>&nbsp;Completed
+                            </strong>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
         if (!walletCardsHTML) {
             walletCardsHTML = `<div style="text-align: center; padding: 20px 14px; background: white; border-radius: 12px; color: #94a3b8; font-size: 12px; border: 1px solid #e2e8f0;">No wallet transactions recorded yet.</div>`;
@@ -979,20 +1258,30 @@ const app = {
                     </button>
                 </div>
 
-                <!-- Div 1: Wallet Transactions -->
-                <div style="margin-bottom: 24px;">
-                    <div style="font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-wallet"></i> Wallet Transactions
+                <!-- Div 1: Wallet Transactions (Personal Account Collection) -->
+                <div style="margin-bottom: 26px;">
+                    <div style="font-size: 12.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #dcfce7; padding-bottom: 6px;">
+                        <span style="display: flex; align-items: center; gap: 7px;">
+                            <i class="fa-solid fa-wallet"></i> Wallet Transactions
+                        </span>
+                        <span style="font-size: 10px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 10px; text-transform: none;">
+                            Personal Account
+                        </span>
                     </div>
                     <div>
                         ${walletCardsHTML}
                     </div>
                 </div>
 
-                <!-- Div 2: Group Transactions -->
+                <!-- Div 2: Group Transactions (groups-members Collection) -->
                 <div>
-                    <div style="font-size: 12px; font-weight: 700; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-users-gear"></i> Group Transactions
+                    <div style="font-size: 12.5px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 6px;">
+                        <span style="display: flex; align-items: center; gap: 7px;">
+                            <i class="fa-solid fa-users-gear"></i> Group Transactions
+                        </span>
+                        <span style="font-size: 10px; font-weight: 700; color: #6b21a8; background: #f3e8ff; padding: 2px 8px; border-radius: 10px; text-transform: none;">
+                            Group Member Records
+                        </span>
                     </div>
                     <div>
                         ${groupCardsHTML}
@@ -1083,7 +1372,7 @@ const app = {
         };
         try {
             const methodRes = await fetch('/personal/wallet-payment-method');
-            const methodData = await methodRes.json();
+            const methodData = await this.safeJsonParse(methodRes, 'payment method configuration');
             if (!methodData.success) {
                 this.showToast(methodData.message || 'Could not load payment method.', 'error');
                 restoreBtn();
@@ -1096,7 +1385,7 @@ const app = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ amount, phone, payerPhone: phone }),
                 });
-                const data = await res.json();
+                const data = await this.safeJsonParse(res, 'Pesapal payment request');
                 if (data.success) {
                     const trackingId = data.order_tracking_id || data.orderId || data.orderId;
                     this.showPesapalWaiting(amount, trackingId, data.redirect_url);
@@ -1120,7 +1409,7 @@ const app = {
                         description: 'Cliant Wallet Add Fund',
                     }),
                 });
-                const data = await res.json();
+                const data = await this.safeJsonParse(res, 'M-Pesa STK push request');
                 if (data.success && data.CheckoutRequestID) {
                     this.showAddFundMpesaWaiting(amount, phone, data.CheckoutRequestID, data.CustomerMessage);
                     return;
@@ -1133,7 +1422,7 @@ const app = {
             restoreBtn();
         } catch (e) {
             console.error('Add Fund error:', e);
-            this.showToast('Network error starting payment.', 'error');
+            this.showToast((e && e.message) ? e.message : 'Network error starting payment.', 'error');
             restoreBtn();
         }
     },
@@ -1168,11 +1457,51 @@ const app = {
         }
         try {
             const res = await fetch('/api/mpesa/status/' + encodeURIComponent(checkoutId));
-            const data = await res.json();
+            const data = await this.safeJsonParse(res, 'M-Pesa payment status');
             const code = data.ResultCode !== undefined ? Number(data.ResultCode) : null;
             if (code === 0 || (data._walletTopUp && data._walletTopUp.success)) {
                 if (this._addFundPollTimer) clearInterval(this._addFundPollTimer);
                 await this.fetchWalletData();
+
+                const groupCtx = this.data._groupPaymentCtx || null;
+                if (groupCtx && groupCtx.groupName) {
+                    try {
+                        const mres = await fetch('/p/member-record?groupName=' + encodeURIComponent(groupCtx.groupName) + '&phone=' + encodeURIComponent(groupCtx.phone));
+                        const mdata = await this.safeJsonParse(mres, 'member record lookup');
+                        if (mdata && mdata.success && mdata.member) {
+                            const html = this.renderGroupPaymentSuccessHTML({
+                                member: mdata.member,
+                                ledgerUpdated: true,
+                                reference: data.MpesaReceiptNumber || data.CheckoutRequestID || checkoutId,
+                                groupName: groupCtx.groupName,
+                                message: 'M-Pesa group payment received & ledger updated.',
+                                walletBalance: mdata.walletBalance,
+                                tbankAccounts: groupCtx.accounts || []
+                            });
+                            this.updateModalContent('✓ M-Pesa Payment Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                            this.data._groupPaymentCtx = null;
+                            return;
+                        }
+                    } catch (ee) {
+                        console.warn('M-Pesa group member fetch failed — showing group summary fallback:', ee);
+                    }
+                    this.data._groupPaymentCtx = null;
+                    const totalVal = Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const balVal = Number(this.data.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const html = `
+                    <div class="m-info-banner amber"><i class="fa-solid fa-triangle-exclamation"></i><span>M-Pesa group payment confirmed. The detailed group ledger display is still refreshing — your accounts were correctly credited.</span></div>
+                    <div class="m-stat-grid" style="margin-top:4px;">
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Group</div><div class="m-stat-cell-value" style="font-size:12px;">${groupCtx.groupName}</div></div>
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Amount</div><div class="m-stat-cell-value">KSh ${totalVal}</div></div>
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Accounts</div><div class="m-stat-cell-value">${(groupCtx.accounts || []).length}</div></div>
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Wallet</div><div class="m-stat-cell-value">KSh ${balVal}</div></div>
+                    </div>
+                    <div class="m-info-banner green" style="margin-top:14px;"><i class="fa-solid fa-circle-check"></i><span>Reference: ${data.MpesaReceiptNumber || data.CheckoutRequestID || checkoutId}</span></div>
+                    <button class="m-submit-btn" style="margin-top:14px;" onclick="app.closeModal(); app.fetchWalletData();"><i class="fa-solid fa-check"></i> Done</button>`;
+                    this.updateModalContent('M-Pesa Group Payment Confirmed', html, null, 'fa-circle-check', 'linear-gradient(135deg, #f59e0b, #fbbf24)');
+                    return;
+                }
+
                 const bal = Number(this.data.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const html = `
                 <div class="m-info-banner green"><i class="fa-solid fa-circle-check"></i><span>Payment received. Your wallet has been updated.</span></div>
@@ -1185,10 +1514,10 @@ const app = {
                 return;
             }
             if (code !== null && code !== 0 && data.ResultDesc) {
-                // 1032 = request cancelled, etc. Keep polling until definitive fail codes commonly used
                 const failCodes = new Set([1032, 1037, 1, 2001]);
                 if (failCodes.has(code)) {
                     if (this._addFundPollTimer) clearInterval(this._addFundPollTimer);
+                    this.data._groupPaymentCtx = null;
                     const statusEl = document.getElementById('addFundMpesaStatus');
                     if (statusEl) {
                         statusEl.className = 'm-info-banner red';
@@ -3444,8 +3773,7 @@ const app = {
             if (chevron) chevron.style.transform = hidden ? 'rotate(180deg)' : 'rotate(0deg)';
         }
     },
-    async flowMiniStatement() {
-        await this.fetchWalletData();
+    buildMiniStatementHTML() {
         const allTxns = [...(this.data.transactions || []), ...(this.data.groupTransactions || [])];
         const seen = new Set();
         const uniqueTxns = [];
@@ -3470,7 +3798,11 @@ const app = {
                 const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const cleanFrom = tx.fromNumber || fromNameClean;
                 const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? (tx.groupName || 'Personal Account') : 'External Wallet');
-                const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                let cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const destAcc = tx.accountName || (tx.notes && (String(tx.notes).match(/\(([^)]+)\)/) || [])[1]) || (cleanTo === '001' ? 'Saving' : '');
+                if (destAcc && (/^\d{1,4}$/.test(cleanTo.trim()) || cleanTo === tx.accountId || cleanTo === '001')) {
+                    cleanTo = `${destAcc}(${cleanTo.trim()})`;
+                }
                 const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt || 0) * 3 + idx * 71) % 900000).toUpperCase() + 'B');
                 itemsHTML += `
                     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;">
@@ -3492,18 +3824,29 @@ const app = {
         } else {
             itemsHTML = `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">No recent transactions found.</div>`;
         }
-        const html = `
+        return `
             <div style="margin-bottom:14px;font-weight:700;font-size:13px;color:var(--primary);text-align:center;padding:8px;background:#f0fdf4;border-radius:8px;">
                 📜 Mini Statement (Recent Transactions)
             </div>
             ${itemsHTML}
             <button class="m-submit-btn secondary" style="margin-top:10px;" onclick="app.openModal('Statement')">Back to Options</button>
         `;
-        this.updateModalContent('Transaction Statement', html, () => this.openModal('Statement'), 'fa-list-ul');
     },
-    async flowLongStatement() {
-        const months = document.getElementById('statementDuration')?.value || '1';
-        await this.fetchWalletData();
+    flowMiniStatement() {
+        // 1. Instant 0ms render from memory / cache
+        const html = this.buildMiniStatementHTML();
+        this.updateModalContent('Transaction Statement', html, () => this.openModal('Statement'), 'fa-list-ul');
+
+        // 2. Background sync
+        this.fetchWalletData().then(() => {
+            const body = document.getElementById('modalBody');
+            if (body && body.innerHTML.includes('Mini Statement')) {
+                const updatedHtml = this.buildMiniStatementHTML();
+                this.updateModalContent('Transaction Statement', updatedHtml, () => this.openModal('Statement'), 'fa-list-ul');
+            }
+        }).catch(() => {});
+    },
+    buildLongStatementHTML(months) {
         const allTxns = [...(this.data.transactions || []), ...(this.data.groupTransactions || [])];
         const seen = new Set();
         const uniqueTxns = [];
@@ -3528,7 +3871,11 @@ const app = {
                 const fromNameClean = String(rawFrom).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
                 const cleanFrom = tx.fromNumber || fromNameClean;
                 const rawTo = tx.toNumber || tx.to || tx.accountNumber || (isCredit ? (tx.groupName || 'Personal Account') : 'External Wallet');
-                const cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                let cleanTo = String(rawTo).replace(/pesapal|m-pesa|mpesa/gi, 'Transaction');
+                const destAcc = tx.accountName || (tx.notes && (String(tx.notes).match(/\(([^)]+)\)/) || [])[1]) || (cleanTo === '001' ? 'Saving' : '');
+                if (destAcc && (/^\d{1,4}$/.test(cleanTo.trim()) || cleanTo === tx.accountId || cleanTo === '001')) {
+                    cleanTo = `${destAcc}(${cleanTo.trim()})`;
+                }
                 const txCode = tx.code || tx.reference || ('TXN' + String(100000 + (Number(tx.amt || 0) * 3 + idx * 71) % 900000).toUpperCase() + 'B');
                 itemsHTML += `
                     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px;">
@@ -3550,14 +3897,28 @@ const app = {
         } else {
             itemsHTML = `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">No transaction records found for the past ${months} month(s).</div>`;
         }
-        const html = `
+        return `
             <div style="margin-bottom:14px;font-weight:700;font-size:13px;color:var(--primary);text-align:center;padding:8px;background:#e0f2fe;border-radius:8px;">
                 📜 Long Statement (${months} Month${months > 1 ? 's' : ''})
             </div>
             ${itemsHTML}
             <button class="m-submit-btn secondary" style="margin-top:10px;" onclick="app.openModal('Statement')">Back to Options</button>
         `;
+    },
+    flowLongStatement() {
+        const months = document.getElementById('statementDuration')?.value || '1';
+        // 1. Instant 0ms render from memory / cache
+        const html = this.buildLongStatementHTML(months);
         this.updateModalContent('Transaction Statement', html, () => this.openModal('Statement'), 'fa-file-contract');
+
+        // 2. Background sync
+        this.fetchWalletData().then(() => {
+            const body = document.getElementById('modalBody');
+            if (body && body.innerHTML.includes('Long Statement')) {
+                const updatedHtml = this.buildLongStatementHTML(months);
+                this.updateModalContent('Transaction Statement', updatedHtml, () => this.openModal('Statement'), 'fa-file-contract');
+            }
+        }).catch(() => {});
     },
     /* ─── GENERAL VIEW ─── */
     renderGeneralView(container) {
@@ -4059,7 +4420,7 @@ const app = {
         html += `<div class="m-pay-total"><span class="m-pay-total-label">TOTAL</span><span class="m-pay-total-value">KSh ${total.toLocaleString()}</span></div></div>`;
         html += `<div class="m-section-label">Pay Via</div>
         <div class="m-btn-row">
-            <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.processPayment('tbank')"><i class="fa-solid fa-university"></i> tBank</button>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.openTbankConfirmation('${encodeURIComponent(dn)}')"><i class="fa-solid fa-university"></i> tBank</button>
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.confirmMpesaPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
         </div>`;
         const backFn = this.data.sendMode === 'my' ? () => this.renderAccountForm(dn) : () => this.showFinalPaymentOptions(dn);
@@ -4093,7 +4454,7 @@ const app = {
         }
         html += `<div class="m-pay-dark"><div class="m-pay-dark-title">Grand Total</div><div style="text-align:center;font-size:24px;font-weight:800;color:#fbbf24;">KSh ${totalSum.toLocaleString()}</div></div>
         <div class="m-btn-row" style="margin-top:14px;">
-            <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.processPayment('tbank')"><i class="fa-solid fa-university"></i> tBank</button>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.openTbankConfirmation('${encodeURIComponent(dn)}')"><i class="fa-solid fa-university"></i> tBank</button>
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.confirmMpesaPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
         </div>`;
         this.updateModalContent('Payment Summary', html, () => this.showSeveralMembersSummary(dn, this.data.verifiedMembersList), 'fa-receipt');
@@ -4175,14 +4536,38 @@ const app = {
             amount: parseFloat(acc.inputAmount) || 0
         })).filter(a => a.amount > 0);
 
+        if (groupName) {
+            this.data._groupPaymentCtx = {
+                groupName,
+                phone,
+                accounts: accountsPayload,
+                method
+            };
+        } else {
+            this.data._groupPaymentCtx = null;
+        }
+
         this.showToast('Initiating payment request…', 'info');
 
         try {
-            const methodRes = await fetch('/personal/wallet-payment-method');
-            const methodData = await methodRes.json();
-            const activeMethod = String(methodData.paymentMethod || method || 'mpesa').toLowerCase();
+            const explicitMethod = String(method || '').toLowerCase();
 
-            if (activeMethod === 'pesapal') {
+            const methodRes = await fetch('/personal/wallet-payment-method');
+            const methodData = await this.safeJsonParse(methodRes, 'payment method configuration');
+            const serverMethod = String(methodData.paymentMethod || '').toLowerCase();
+            if (!serverMethod || serverMethod === 'none') {
+                this.showToast('No active payment method is configured on this server. Please contact the administrator.', 'error');
+                return;
+            }
+
+            let chosenMethod = serverMethod;
+
+            const serverMismatch = (explicitMethod === 'pesapal' || explicitMethod === 'mpesa') && explicitMethod !== serverMethod;
+            if (serverMismatch) {
+                this.showToast(`Payment method switched to ${serverMethod.toUpperCase()} (as configured on this server).`, 'info');
+            }
+
+            if (chosenMethod === 'pesapal') {
                 const res = await fetch('/api/payment/pesapal/request-payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4197,42 +4582,592 @@ const app = {
                         accounts: accountsPayload
                     }),
                 });
-                const data = await res.json();
-                if (data.success) {
-                    const trackingId = data.order_tracking_id || data.orderId;
-                    this.showPesapalWaiting(total, trackingId, data.redirect_url);
+                const data = await this.safeJsonParse(res, 'Pesapal payment request');
+                if (!data.success && data.paymentMethod && data.paymentMethod !== 'pesapal') {
+                    console.warn(`[processPayment] Server gate reports active method is ${data.paymentMethod}, retrying with that provider.`);
+                    chosenMethod = String(data.paymentMethod).toLowerCase();
+                } else {
+                    if (data.success) {
+                        const trackingId = data.order_tracking_id || data.orderId;
+                        this.showPesapalWaiting(total, trackingId, data.redirect_url);
+                        return;
+                    }
+                    this.showToast(data.message || 'Failed to start Pesapal payment.', 'error');
                     return;
                 }
-                this.showToast(data.message || 'Failed to start Pesapal payment.', 'error');
+            }
+
+            if (chosenMethod === 'mpesa') {
+                const res = await fetch('/api/mpesa/stk-push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phone,
+                        amount: total,
+                        purpose: 'group_contribution',
+                        groupName: groupName,
+                        accountId: firstAccId,
+                        accountName: firstAccName,
+                        accounts: accountsPayload,
+                        accountPhone: phone,
+                        reference: 'Group Deposit',
+                        description: 'Group Contribution via M-Pesa'
+                    }),
+                });
+                const data = await this.safeJsonParse(res, 'M-Pesa STK push request');
+                if (!data.success && data.paymentMethod && data.paymentMethod !== 'mpesa') {
+                    console.warn(`[processPayment] Server gate reports active method is ${data.paymentMethod}, retrying with that provider.`);
+                    const fallbackMethod = String(data.paymentMethod).toLowerCase();
+                    if (fallbackMethod === 'pesapal') {
+                        const res2 = await fetch('/api/payment/pesapal/request-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                amount: total,
+                                phone: phone,
+                                payerPhone: phone,
+                                purpose: 'group_contribution',
+                                groupName: groupName,
+                                accountId: firstAccId,
+                                accountName: firstAccName,
+                                accounts: accountsPayload
+                            }),
+                        });
+                        const data2 = await this.safeJsonParse(res2, 'Pesapal fallback payment request');
+                        if (data2.success) {
+                            const trackingId = data2.order_tracking_id || data2.orderId;
+                            this.showPesapalWaiting(total, trackingId, data2.redirect_url);
+                            return;
+                        }
+                        this.showToast(data2.message || 'Failed to start Pesapal payment after switch.', 'error');
+                        return;
+                    }
+                }
+                if (data.success && data.CheckoutRequestID) {
+                    this.showAddFundMpesaWaiting(total, phone, data.CheckoutRequestID, data.CustomerMessage);
+                    return;
+                }
+                this.showToast(data.message || 'Failed to send M-Pesa STK push.', 'error');
                 return;
             }
 
-            // Default M-Pesa STK Push
-            const res = await fetch('/api/mpesa/stk-push', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    phone: phone,
-                    amount: total,
-                    purpose: 'group_contribution',
-                    groupName: groupName,
-                    accountId: firstAccId,
-                    accountName: firstAccName,
-                    accounts: accountsPayload,
-                    accountPhone: phone,
-                    reference: 'Group Deposit',
-                    description: 'Group Contribution via M-Pesa'
-                }),
-            });
-            const data = await res.json();
-            if (data.success && data.CheckoutRequestID) {
-                this.showAddFundMpesaWaiting(total, phone, data.CheckoutRequestID, data.CustomerMessage);
-                return;
-            }
-            this.showToast(data.message || 'Failed to send M-Pesa STK push.', 'error');
+            this.showToast(`No supported active payment method (configured: "${serverMethod}").`, 'error');
         } catch (e) {
             console.error('Group payment error:', e);
-            this.showToast('Network error starting payment.', 'error');
+            this.showToast((e && e.message) ? e.message : 'Network error starting payment.', 'error');
+        }
+    },
+    /* ─── TBANK SEND FLOW (confirmation only, no direct payment) ─── */
+    openTbankConfirmation(groupName) {
+        const dn = decodeURIComponent(groupName);
+        let total = 0;
+        let accounts = [];
+        const addedAccounts = this.data.addedAccounts || [];
+        if (this.data.isMultiMemberFlow && this.data.settledMembersData) {
+            for (const idx in this.data.settledMembersData) {
+                const m = this.data.settledMembersData[idx];
+                m.accounts.forEach(a => {
+                    total += parseFloat(a.inputAmount) || 0;
+                    accounts.push({ name: m.name, accountName: a.accountName, accountNumber: a.accountNumber, amount: parseFloat(a.inputAmount) || 0 });
+                });
+            }
+        } else {
+            addedAccounts.forEach(acc => {
+                total += parseFloat(acc.inputAmount) || 0;
+                accounts.push({ accountName: acc.accountName, accountNumber: acc.accountNumber, amount: parseFloat(acc.inputAmount) || 0 });
+            });
+        }
+        if (!total || total <= 0) {
+            this.showToast('Invalid total payment amount.', 'error');
+            return;
+        }
+        this.data.tbankGroup = dn;
+        this.data.tbankTotal = total;
+        this.data.tbankAccounts = accounts;
+        const sendTo = this.data.recipientName || 'My Account';
+        let rowsHtml = `<div class="m-pay-row"><span class="m-pay-row-label">Group</span><span class="m-pay-row-value">${dn}</span></div>`;
+        rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Recipient</span><span class="m-pay-row-value">${sendTo}</span></div>`;
+        accounts.forEach(acc => {
+            rowsHtml += `<div class="m-pay-row">
+                <div><div style="font-weight:700;font-size:13px;">${acc.accountName}</div><div style="font-size:10px;opacity:.7;">${acc.accountNumber}</div></div>
+                <span class="m-pay-row-value">KSh ${Number(acc.amount).toLocaleString()}</span>
+            </div>`;
+        });
+        const html = `
+            <div class="m-info-banner amber"><i class="fa-solid fa-university"></i><span>You are about to submit this transaction to <b>tBank</b>. No payment will be deducted yet — confirm to proceed.</span></div>
+            <div class="m-pay-dark">
+                <div class="m-pay-dark-title">tBank Confirmation</div>
+                ${rowsHtml}
+                <div class="m-pay-total"><span class="m-pay-total-label">TOTAL</span><span class="m-pay-total-value">KSh ${total.toLocaleString()}</span></div>
+            </div>
+            <button class="m-submit-btn" style="margin-top:14px;background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.proceedTbankPayment()"><i class="fa-solid fa-check"></i> Proceed</button>`;
+        const backFn = this.data.isMultiMemberFlow
+            ? () => this.renderFinalBulkSummary(dn)
+            : () => this.showFinalPaymentSummary(dn ? encodeURIComponent(dn) : '');
+        this.updateModalContent('Confirm tBank', html, backFn, 'fa-university');
+    },
+    proceedTbankPayment() {
+        const html = `
+            <div class="m-info-banner blue"><i class="fa-solid fa-lock"></i><span>Enter your 4-digit Personal PIN to authorize this tBank transaction.</span></div>
+            <div class="m-field">
+                <label>Your PIN</label>
+                <input type="password" id="tbankPin" maxlength="4" placeholder="••••" inputmode="numeric" style="letter-spacing:4px;font-size:20px;font-weight:700;text-align:center;">
+            </div>
+            <div id="tbankPinError" class="hidden m-info-banner red" style="margin-bottom:10px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="tbankPinErrorText"></span></div>
+            <button class="m-submit-btn" onclick="app.processTbankPin()"><i class="fa-solid fa-lock"></i> Verify PIN</button>`;
+        const backFn = this.data.tbankGroup
+            ? () => this.openTbankConfirmation(encodeURIComponent(this.data.tbankGroup))
+            : () => this.showFinalPaymentSummary('');
+        this.updateModalContent('Verify Account', html, backFn, 'fa-lock');
+    },
+    async processTbankPin() {
+        const pin = document.getElementById('tbankPin').value;
+        const errDiv = document.getElementById('tbankPinError');
+        const errTxt = document.getElementById('tbankPinErrorText');
+        if (!pin || pin.length < 4) {
+            if (errDiv) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a 4-digit PIN.'; }
+            return;
+        }
+        const submitBtn = document.querySelector('#modalBody .m-submit-btn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.8';
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Waiting verification…';
+        }
+        if (errDiv) { errDiv.classList.add('hidden'); }
+        try {
+            const res = await fetch('/personal/verify-pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '';
+                    submitBtn.innerHTML = '<i class="fa-solid fa-lock"></i> Verify PIN';
+                }
+                if (errDiv) { errDiv.classList.remove('hidden'); errTxt.textContent = data.message || 'Wrong PIN.'; }
+                return;
+            }
+            // PIN matched → verify total against wallet balance
+            const balance = Number(this.data.balance) || 0;
+            const total = Number(this.data.tbankTotal) || 0;
+            if (total > balance) {
+                const html = `
+                    <div class="m-info-banner red"><i class="fa-solid fa-triangle-exclamation"></i><span>You have insufficient account balance of <b>KSh ${total.toLocaleString()}</b> to proceed with payment.</span></div>
+                    <div class="m-pay-dark">
+                        <div class="m-pay-dark-title">Balance Check</div>
+                        <div class="m-pay-row"><span class="m-pay-row-label">Required</span><span class="m-pay-row-value">KSh ${total.toLocaleString()}</span></div>
+                        <div class="m-pay-row"><span class="m-pay-row-label">Available</span><span class="m-pay-row-value">KSh ${balance.toLocaleString()}</span></div>
+                    </div>
+                    <button class="m-submit-btn" onclick="app.openTbankConfirmation('${this.data.tbankGroup ? encodeURIComponent(this.data.tbankGroup) : ''}')"><i class="fa-solid fa-arrow-left"></i> Back</button>`;
+                this.updateModalContent('Insufficient Balance', html, null, 'fa-wallet');
+                return;
+            }
+            // Sufficient balance → verify group + member before next level
+            const phone = (this.data.user && this.data.user.phoneNumber) || '';
+            try {
+                const vres = await fetch('/p/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        groupName: this.data.tbankGroup || '',
+                        phone,
+                        accounts: this.data.tbankAccounts || []
+                    })
+                });
+                const vdata = await vres.json();
+                if (!vdata.success) {
+                    const html = `
+                        <div class="m-info-banner red"><i class="fa-solid fa-triangle-exclamation"></i><span>${vdata.message || 'Verification failed.'}</span></div>
+                        <button class="m-submit-btn" onclick="app.openTbankConfirmation('${this.data.tbankGroup ? encodeURIComponent(this.data.tbankGroup) : ''}')"><i class="fa-solid fa-arrow-left"></i> Back</button>`;
+                    this.updateModalContent('Verification Failed', html, null, 'fa-circle-xmark');
+                    return;
+                }
+                // All accounts verified → proceed with the payment workflow (no raw data dump)
+                const html = `
+                    <div class="m-info-banner green"><i class="fa-solid fa-circle-check"></i><span>All accounts verified in <b>${this.data.tbankGroup}</b>. Confirm to proceed with the payment from your Personal wallet.</span></div>
+                    <button class="m-submit-btn" style="margin-top:14px;background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.submitTbankToP()"><i class="fa-solid fa-check"></i> Proceed to Payment</button>`;
+                this.updateModalContent('Accounts Verified', html, () => this.openTbankConfirmation(encodeURIComponent(this.data.tbankGroup)), 'fa-user-check');
+            } catch (e) {
+                console.error('tBank verify error:', e);
+                this.showToast('Network error during verification.', 'error');
+            }
+        } catch (e) {
+            console.error('Error verifying PIN:', e);
+            if (errDiv) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Server communication error.'; }
+        }
+    },
+    renderGroupPaymentSuccessHTML(params) {
+        const member = params.member || {};
+        const ledgerOk = params.ledgerUpdated !== false;
+        const pdataRef = params.reference || '';
+        const pdataGroup = params.groupName || '';
+        const pdataMsg = params.message || '';
+        const pdataNewBal = Number(params.newBalance || params.walletBalance || 0);
+        const txAccounts = params.tbankAccounts || params.accounts || [];
+
+        const warningHtml = ledgerOk ? '' : `
+            <div class="m-info-banner red" style="margin-bottom:12px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Your wallet was debited, but we could not confirm the group account was credited yet. Keep your reference and contact support if this isn't resolved shortly.</span>
+            </div>`;
+
+        const mf = member.memberFinancials || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
+        const totalMemberClosing = Number(mf.closingBalance || 0);
+        const totalMemberOpening = Number(mf.openingBalance || 0);
+        const totalIn = Number(mf.amountIn || 0);
+        const totalOut = Number(mf.amountOut || 0);
+
+        const refBase = String(pdataRef || '').split('_')[0];
+        const memberAccounts = member.accounts || {};
+        const displayList = [];
+        let totalAllAccounts = 0;
+
+        if (Array.isArray(txAccounts) && txAccounts.length > 0) {
+            txAccounts.forEach((txa) => {
+                const accId = String(txa.accountId || txa.accountNumber || '');
+                if (!accId) return;
+                const txAmt = Number(txa.amount || txa.inputAmount || 0);
+                const txAccountName = txa.accountName || txa.name || '';
+                const acc = memberAccounts[accId] || {};
+                const accTxHistory = Array.isArray(acc.transactionHistory) ? acc.transactionHistory : [];
+
+                let matchedTx = null;
+                for (let i = accTxHistory.length - 1; i >= 0; i--) {
+                    const tx = accTxHistory[i];
+                    const tCode = String(tx.transactionCode || tx.reference || '');
+                    const tBase = tCode.split('_')[0];
+                    const matchesCode = refBase && (tCode === pdataRef || tBase === refBase || (refBase && tBase && tCode.includes(refBase)));
+                    const matchesAmt = txAmt > 0 && Number(tx.amount || tx.amountIn || 0) === txAmt;
+                    if (matchesCode || matchesAmt) { matchedTx = tx; break; }
+                }
+                if (!matchedTx && accTxHistory.length > 0) matchedTx = accTxHistory[accTxHistory.length - 1];
+
+                const useTx = matchedTx || {};
+                const finalAccName = txAccountName || acc.accountName || useTx.accountName || ('Account ' + accId);
+                const finalTxCode = useTx.transactionCode || useTx.reference || pdataRef || '-';
+                const finalRoundNo = useTx.roundNumber !== undefined && useTx.roundNumber !== null ? useTx.roundNumber : '-';
+                const finalOpening = Number(useTx.openingBalance !== undefined && useTx.openingBalance !== null ? useTx.openingBalance : (acc.financials?.openingBalance || 0));
+                const finalAmtIn = Number(useTx.amountIn !== undefined && useTx.amountIn !== null ? useTx.amountIn : (txAmt || acc.financials?.amountIn || 0));
+                const finalClosing = Number(useTx.closingBalance !== undefined && useTx.closingBalance !== null ? useTx.closingBalance : (acc.financials?.closingBalance || (finalOpening + finalAmtIn)));
+                const amountForDisplay = txAmt > 0 ? txAmt : finalAmtIn;
+                totalAllAccounts += amountForDisplay;
+
+                const roundPerformanceEntry = (() => {
+                    try {
+                        const cycle = acc.dateIntervalCycle || {};
+                        const rounds = Array.isArray(cycle.rounds) ? cycle.rounds : [];
+                        for (const r of rounds) {
+                            const perf = Array.isArray(r.accountroundPerformance) ? r.accountroundPerformance : [];
+                            const found = perf.find(e => {
+                                const peCode = String(e.transactionCode || '');
+                                const peBase = peCode.split('_')[0];
+                                const peAmt = Number(e.amountIn || 0);
+                                return (peCode === finalTxCode) ||
+                                       (refBase && peBase === refBase) ||
+                                       (finalRoundNo !== '-' && String(e.roundNumber) === String(finalRoundNo) && peAmt === amountForDisplay);
+                            });
+                            if (found) return found;
+                        }
+                        return null;
+                    } catch (e) { return null; }
+                })();
+                displayList.push({
+                    accId,
+                    accName: finalAccName,
+                    txCode: finalTxCode,
+                    roundNo: finalRoundNo,
+                    opening: finalOpening,
+                    amountIn: amountForDisplay,
+                    closing: finalClosing,
+                    roundPerformanceEntry,
+                    accTxHistory
+                });
+            });
+        } else {
+            const accIds = Object.keys(memberAccounts);
+            accIds.forEach((accId) => {
+                const acc = memberAccounts[accId] || {};
+                const accTxHistory = Array.isArray(acc.transactionHistory) ? acc.transactionHistory : [];
+                let matchedTx = null;
+                for (let i = accTxHistory.length - 1; i >= 0; i--) {
+                    const tx = accTxHistory[i];
+                    const tCode = String(tx.transactionCode || tx.reference || '');
+                    const tBase = tCode.split('_')[0];
+                    if (refBase && (tCode === pdataRef || tBase === refBase || (refBase && tCode.includes(refBase)))) { matchedTx = tx; break; }
+                }
+                if (!matchedTx && accTxHistory.length > 0) matchedTx = accTxHistory[accTxHistory.length - 1];
+                const useTx = matchedTx || {};
+                const finalOpening = Number(useTx.openingBalance !== undefined && useTx.openingBalance !== null ? useTx.openingBalance : 0);
+                const finalAmtIn = Number(useTx.amountIn !== undefined && useTx.amountIn !== null ? useTx.amountIn : 0);
+                const finalClosing = Number(useTx.closingBalance !== undefined && useTx.closingBalance !== null ? useTx.closingBalance : (finalOpening + finalAmtIn));
+                if (matchedTx && finalAmtIn > 0) {
+                    totalAllAccounts += finalAmtIn;
+                    displayList.push({
+                        accId,
+                        accName: acc.accountName || useTx.accountName || ('Account ' + accId),
+                        txCode: useTx.transactionCode || useTx.reference || pdataRef || '-',
+                        roundNo: useTx.roundNumber !== undefined && useTx.roundNumber !== null ? useTx.roundNumber : '-',
+                        opening: finalOpening,
+                        amountIn: finalAmtIn,
+                        closing: finalClosing,
+                        roundPerformanceEntry: null,
+                        accTxHistory
+                    });
+                }
+            });
+        }
+
+        let accountRowsHtml = '';
+        let allRoundPerfHtml = '';
+        displayList.forEach((row, rowIdx) => {
+            const roundPerformanceEntry = row.roundPerformanceEntry;
+            const roundPerfHtml = roundPerformanceEntry ? `
+                <div style="margin-top:10px;padding:8px 10px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;">
+                        <div style="color:#065f46;font-weight:700;font-family:'Syne',sans-serif;">
+                            <i class="fa-solid fa-rotate"></i> Active Round #${roundPerformanceEntry.roundNumber || row.roundNo} Update
+                            <div style="font-size:11.5px;color:#047857;font-weight:600;margin-top:1px;font-family:'Syne',sans-serif;">Round Total</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px;font-size:12px;">
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;">Opening</div>
+                            <div style="color:#111827;font-weight:700;font-family:monospace;">KSh ${Number(roundPerformanceEntry.openingBalance || 0).toLocaleString()}</div>
+                        </div>
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;">In</div>
+                            <div style="color:#16a34a;font-weight:700;font-family:monospace;">+ KSh ${Number(roundPerformanceEntry.amountIn || 0).toLocaleString()}</div>
+                        </div>
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;">Out</div>
+                            <div style="color:#dc2626;font-weight:700;font-family:monospace;">- KSh ${Number(roundPerformanceEntry.amountOut || 0).toLocaleString()}</div>
+                        </div>
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;">Closing</div>
+                            <div style="color:#0c8f44;font-weight:800;font-family:monospace;">KSh ${Number(roundPerformanceEntry.closingBalance || 0).toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:6px;padding:5px 8px;background:#d1fae5;border-radius:5px;display:flex;justify-content:center;align-items:center;">
+                        <span style="font-size:12px;color:#064e3b;font-weight:700;font-family:'Syne',sans-serif;">
+                            <i class="fa-solid fa-hashtag"></i>
+                            &nbsp;Ref:&nbsp;<span style="font-family:monospace;">${roundPerformanceEntry.transactionCode || row.txCode}</span>
+                        </span>
+                    </div>
+                </div>` : (row.roundNo !== '-' ? `
+                <div style="margin-top:10px;padding:6px 10px;background:#f0fdf4;border:1px dashed #86efac;border-radius:6px;">
+                    <span style="font-size:12.5px;color:#166534;font-weight:700;font-family:'Syne',sans-serif;">
+                        <i class="fa-solid fa-rotate"></i> Active Round: <b>#${row.roundNo}</b>
+                        <div style="font-size:11.5px;color:#15803d;font-weight:600;margin-top:1px;display:inline;margin-left:6px;font-family:'Syne',sans-serif;">Round Total</div>
+                    </span>
+                    <span style="font-size:12.5px;color:#166534;margin-left:8px;font-weight:600;font-family:'Syne',sans-serif;">
+                        A/C: <span style="font-family:monospace;">${row.accId}</span>
+                    </span>
+                    <span style="float:right;font-size:13px;color:#166534;font-weight:800;font-family:monospace;">
+                        + KSh ${row.amountIn.toLocaleString()}
+                    </span>
+                </div>` : '');
+            if (roundPerfHtml) allRoundPerfHtml += roundPerfHtml;
+
+            const accIdSafe = String(row.accId || rowIdx).replace(/[^a-zA-Z0-9]/g, '_');
+            const panelId = 'accHist_' + rowIdx + '_' + accIdSafe;
+            const arrowId = 'accArrow_' + rowIdx + '_' + accIdSafe;
+            const hist = Array.isArray(row.accTxHistory) ? row.accTxHistory.slice().sort((a, b) => {
+                const at = new Date(a.time || a.createdAt || 0).getTime();
+                const bt = new Date(b.time || b.createdAt || 0).getTime();
+                return bt - at;
+            }) : [];
+            const histListHtml = hist.length === 0
+                ? `<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> No transaction history yet.</div>`
+                : hist.map((tx) => {
+                    const tCode = tx.transactionCode || tx.reference || '-';
+                    const tAmtIn = Number(tx.amountIn || tx.amount || 0);
+                    const tAmtOut = Number(tx.amountOut || 0);
+                    const tOpen = Number(tx.openingBalance || 0);
+                    const tClose = Number(tx.closingBalance || (tOpen + tAmtIn - tAmtOut));
+                    const tRaw = new Date(tx.time || tx.createdAt || Date.now());
+                    const tStamp = isNaN(tRaw.getTime()) ? '' : (tRaw.toLocaleDateString() + ' ' + tRaw.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+                    const isIn = tAmtIn > 0;
+                    const isOut = tAmtOut > 0;
+                    const signCol = isIn ? '#0c8f44' : (isOut ? '#dc2626' : '#64748b');
+                    const signText = isIn ? `+ KSh ${tAmtIn.toLocaleString()}` : (isOut ? `- KSh ${tAmtOut.toLocaleString()}` : `KSh 0`);
+                    return `
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 6px;border-bottom:1px dashed #e2e8f0;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <span style="font-size:11px;padding:1px 5px;border-radius:4px;background:${isIn ? '#dcfce7' : (isOut ? '#fee2e2' : '#f1f5f9')};color:${isIn ? '#166534' : (isOut ? '#991b1b' : '#475569')};font-weight:700;font-family:'Syne',sans-serif;">
+                                    ${isIn ? 'CREDIT' : (isOut ? 'DEBIT' : 'ENTRY')}
+                                </span>
+                                <span style="font-family:monospace;font-size:11.5px;color:#64748b;">${tCode}</span>
+                            </div>
+                            <div style="font-size:11px;color:#94a3b8;margin-top:3px;font-family:'Syne',sans-serif;">
+                                <i class="fa-solid fa-calendar-days"></i> ${tStamp || 'N/A'}
+                            </div>
+                            <div style="font-size:11px;color:#64748b;margin-top:2px;font-family:'Syne',sans-serif;">
+                                Open:&nbsp;<span style="font-family:monospace;">KSh ${tOpen.toLocaleString()}</span>
+                                &nbsp;•&nbsp; Close:&nbsp;<span style="font-family:monospace;">KSh ${tClose.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;margin-left:8px;flex-shrink:0;">
+                            <div style="font-size:13px;font-weight:800;font-family:monospace;color:${signCol};">${signText}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            const histPanelHtml = `
+                <div id="${panelId}" style="display:none;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="font-size:12.5px;font-weight:800;color:#0f172a;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> Transaction History (${hist.length})</div>
+                        <div style="font-size:11px;color:#94a3b8;font-family:'Syne',sans-serif;">latest first</div>
+                    </div>
+                    <div style="max-height:260px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;">
+                        ${histListHtml}
+                    </div>
+                </div>`;
+            const toggleFn = `(function(){var p=document.getElementById('${panelId}');var a=document.getElementById('${arrowId}');if(!p||!a)return;if(p.style.display==='none'){p.style.display='';a.style.transform='rotate(90deg)';}else{p.style.display='none';a.style.transform='rotate(0deg)';}})()`;
+
+            accountRowsHtml += `
+                <div style="display:flex;align-items:center;gap:6px;margin-top:4px;margin-bottom:8px;cursor:pointer;user-select:none;" onclick="${toggleFn}">
+                    <span id="${arrowId}" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:14px;font-weight:800;font-family:'Syne',sans-serif;transition:transform 0.15s ease-in-out;flex-shrink:0;">&gt;</span>
+                    <div style="font-weight:800;color:#0f172a;font-size:16px;font-family:'Syne',sans-serif;flex:1;">${row.accName} Total Saving</div>
+                </div>
+                <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                        <div>
+                            <div style="font-size:12.5px;color:#64748b;font-weight:500;margin-top:1px;font-family:'Syne',sans-serif;">
+                                A/C No:&nbsp;<span style="font-family:monospace;font-weight:600;color:#334155;">${row.accId}</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:10.5px;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:0.3px;font-family:'Syne',sans-serif;">Amount Credited</div>
+                            <div style="font-size:18px;font-weight:800;color:#0c8f44;font-family:'Syne',sans-serif;">+ KSh ${row.amountIn.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:2px;">
+                        <div style="background:#f8fafc;padding:6px 8px;border-radius:6px;text-align:center;">
+                            <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;font-weight:700;letter-spacing:0.3px;font-family:'Syne',sans-serif;">Opening Bal</div>
+                            <div style="font-size:13px;font-family:monospace;font-weight:600;color:#475569;margin-top:2px;">KSh ${row.opening.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#dcfce7;padding:6px 8px;border-radius:6px;text-align:center;">
+                            <div style="font-size:10px;text-transform:uppercase;color:#166534;font-weight:700;letter-spacing:0.3px;font-family:'Syne',sans-serif;">Amount In</div>
+                            <div style="font-size:13px;font-family:monospace;font-weight:700;color:#16a34a;margin-top:2px;">+ KSh ${row.amountIn.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#d1fae5;padding:6px 8px;border-radius:6px;text-align:center;">
+                            <div style="font-size:10px;text-transform:uppercase;color:#065f46;font-weight:700;letter-spacing:0.3px;font-family:'Syne',sans-serif;">Closing Bal</div>
+                            <div style="font-size:13px;font-family:monospace;font-weight:800;color:#0c8f44;margin-top:2px;">KSh ${row.closing.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    ${histPanelHtml}
+                </div>`;
+        });
+
+        if (!accountRowsHtml) {
+            accountRowsHtml = `<div class="m-empty-state"><i class="fa-solid fa-folder-open"></i><p>No account statement available for this transaction.</p></div>`;
+        }
+
+        return `
+            <div style="text-align:center;padding:8px 0 14px;">
+                <h3 style="color:#0f172a;margin-bottom:6px;font-size:16px;font-weight:800;font-family:'Syne',sans-serif;">${ledgerOk ? 'Payment Successful!' : 'Payment Deducted — Pending Confirmation'}</h3>
+                <p style="color:#64748b;font-size:12px;margin-bottom:3px;">${pdataMsg || ''}</p>
+                <p style="color:#64748b;font-size:11px;">
+                    Ref: <span style="font-family:monospace;font-weight:700;color:#334155;">${pdataRef || ''}</span>
+                    <span style="margin:0 6px;">•</span>
+                    Group: <b>${pdataGroup || ''}</b>
+                </p>
+            </div>
+            <div class="m-info-banner blue" style="margin-bottom:10px;">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Wallet Balance: <b>KSh ${pdataNewBal.toLocaleString()}</b> &nbsp;•&nbsp; Total Credited to Accounts: <b>KSh ${totalAllAccounts.toLocaleString()}</b></span>
+            </div>
+            ${warningHtml}
+
+            <div style="font-weight:800;color:#0f172a;font-size:16px;margin-top:0;margin-bottom:8px;font-family:'Syne',sans-serif;">Total Member Saving Statement</div>
+            <div style="background:white;border:1px solid ${ledgerOk ? '#86efac' : '#fecaca'};border-radius:10px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:12.5px;color:#64748b;font-weight:500;margin-top:1px;font-family:'Syne',sans-serif;">
+                                Group:&nbsp;<b>${pdataGroup || ''}</b>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:10.5px;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:0.3px;font-family:'Syne',sans-serif;">Net Change</div>
+                            <div style="font-size:18px;font-weight:800;color:#${(totalIn - totalOut) >= 0 ? '0c8f44' : 'dc2626'};font-family:'Syne',sans-serif;">
+                                ${(totalIn - totalOut) >= 0 ? '+' : '-'} KSh ${Math.abs(totalIn - totalOut).toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:0.3px;">Opening Bal</div>
+                            <div style="color:#111827;font-weight:700;font-family:monospace;font-size:13px;margin-top:2px;">KSh ${totalMemberOpening.toLocaleString()}</div>
+                        </div>
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:0.3px;">Amount In</div>
+                            <div style="color:#16a34a;font-weight:700;font-family:monospace;font-size:13px;margin-top:2px;">+ KSh ${totalIn.toLocaleString()}</div>
+                        </div>
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:0.3px;">Amount Out</div>
+                            <div style="color:#dc2626;font-weight:700;font-family:monospace;font-size:13px;margin-top:2px;">- KSh ${totalOut.toLocaleString()}</div>
+                        </div>
+                        <div style="background:white;padding:4px 6px;border-radius:6px;text-align:center;">
+                            <div style="color:#6b7280;font-weight:600;font-family:'Syne',sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:0.3px;">Closing Bal</div>
+                            <div style="color:#0c8f44;font-weight:800;font-family:monospace;font-size:13px;margin-top:2px;">KSh ${totalMemberClosing.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div style="padding:5px 8px;background:#d1fae5;border-radius:5px;display:flex;justify-content:center;align-items:center;">
+                        <span style="font-size:12px;color:#064e3b;font-weight:700;font-family:'Syne',sans-serif;">
+                            <i class="fa-solid fa-hashtag"></i>
+                            &nbsp;Ref:&nbsp;<span style="font-family:monospace;">${pdataRef || '-'}</span>
+                        </span>
+                    </div>
+                </div>
+                ${allRoundPerfHtml}
+            </div>
+
+            ${accountRowsHtml}
+
+            <div class="m-btn-row" style="margin-top:14px;">
+                <button class="m-submit-btn secondary" onclick="app.closeModal(); app.fetchWalletData(); app.showBalanceDirectly();"><i class="fa-solid fa-receipt"></i> View Ledger</button>
+                <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.closeModal(); app.fetchWalletData();"><i class="fa-solid fa-check"></i> Done</button>
+            </div>`;
+    },
+    async submitTbankToP() {
+        const payload = {
+            groupName: this.data.tbankGroup || '',
+            phone: (this.data.user && this.data.user.phoneNumber) || '',
+            total: this.data.tbankTotal || 0,
+            accounts: this.data.tbankAccounts || []
+        };
+        try {
+            const pres = await fetch('/p', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const pdata = await pres.json();
+            if (!pdata.success) {
+                this.showToast(pdata.message || 'Payment failed.', 'error');
+                return;
+            }
+            // Refresh wallet & group data in real-time across database, session & local device storage
+            try { await this.fetchWalletData(); } catch (fe) {}
+            const ledgerOk = pdata.ledgerUpdated !== false;
+            const html = this.renderGroupPaymentSuccessHTML({
+                member: pdata.member,
+                ledgerUpdated: pdata.ledgerUpdated,
+                reference: pdata.reference,
+                groupName: pdata.groupName,
+                message: pdata.message,
+                newBalance: pdata.newBalance,
+                tbankAccounts: this.data.tbankAccounts || []
+            });
+            this.updateModalContent(ledgerOk ? '✓ Payment Success' : 'Action Needed', html, null, ledgerOk ? 'fa-circle-check' : 'fa-triangle-exclamation', ledgerOk ? 'linear-gradient(135deg, #16a34a, #4ade80)' : 'linear-gradient(135deg, #dc2626, #f87171)');
+        } catch (e) {
+            console.error('Group payment request error:', e);
+            this.showToast('Network error during payment processing.', 'error');
         }
     },
     showPesapalWaiting(amount, trackingId, redirectUrl) {
@@ -4281,6 +5216,54 @@ const app = {
             if (data && (data.isCompleted || data.statusCode === 1 || data.statusCode === 200)) {
                 if (this._pesapalPollTimer) clearInterval(this._pesapalPollTimer);
                 await this.fetchWalletData();
+
+                const groupCtx = this.data._groupPaymentCtx || null;
+                if (groupCtx && groupCtx.groupName) {
+                    let html = '';
+                    let ledgerOk = true;
+                    try {
+                        const mres = await fetch('/p/member-record?groupName=' + encodeURIComponent(groupCtx.groupName) + '&phone=' + encodeURIComponent(groupCtx.phone));
+                        const mdata = await mres.json();
+                        if (mdata && mdata.success && mdata.member) {
+                            html = this.renderGroupPaymentSuccessHTML({
+                                member: mdata.member,
+                                ledgerUpdated: true,
+                                reference: trackingId,
+                                groupName: groupCtx.groupName,
+                                message: 'Pesapal group payment received & ledger updated.',
+                                walletBalance: mdata.walletBalance,
+                                tbankAccounts: groupCtx.accounts || []
+                            });
+                            this.updateModalContent('✓ Pesapal Payment Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                            this.data._groupPaymentCtx = null;
+                            return;
+                        } else {
+                            ledgerOk = (mdata && mdata.success) ? true : false;
+                        }
+                    } catch (ee) {
+                        ledgerOk = false;
+                    }
+                    this.data._groupPaymentCtx = null;
+                    const totalStr = Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const balStr = Number(this.data.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const bannerColor = ledgerOk ? 'green' : 'amber';
+                    const bannerIcon = ledgerOk ? 'fa-circle-check' : 'fa-triangle-exclamation';
+                    const bannerMsg = ledgerOk
+                        ? 'Group payment received & confirmed. Member record is being reflected.'
+                        : 'Group payment confirmed on the server. The ledger display below will catch up shortly — your accounts were credited.';
+                    html = `
+                    <div class="m-info-banner ${bannerColor}"><i class="fa-solid ${bannerIcon}"></i><span>${bannerMsg}</span></div>
+                    <div class="m-stat-grid" style="margin-top:4px;">
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Group</div><div class="m-stat-cell-value" style="font-size:12px;">${groupCtx.groupName}</div></div>
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Amount</div><div class="m-stat-cell-value">KSh ${totalStr}</div></div>
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Accounts</div><div class="m-stat-cell-value">${(groupCtx.accounts || []).length}</div></div>
+                        <div class="m-stat-cell"><div class="m-stat-cell-label">Wallet</div><div class="m-stat-cell-value">KSh ${balStr}</div></div>
+                    </div>
+                    <div style="margin-top:14px;"><button class="m-submit-btn" onclick="app.closeModal(); app.fetchWalletData();"><i class="fa-solid fa-check"></i> Done</button></div>`;
+                    this.updateModalContent(ledgerOk ? 'Payment Successful' : 'Payment Confirmed', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                    return;
+                }
+
                 const bal = Number(this.data.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const html = `
                 <div class="m-info-banner green"><i class="fa-solid fa-circle-check"></i><span>Payment received & confirmed! Your wallet balance has been updated.</span></div>

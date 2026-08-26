@@ -1,4 +1,11 @@
-const { creditPendingHolding, creditWalletTopUp } = require("./trans");
+const {
+  creditPendingHolding,
+  creditWalletTopUp,
+  applyVerifiedPesapalPayment,
+  setPesapalPending,
+  getPesapalPending,
+  clearPesapalPending,
+} = require("./trans");
 
 const express = require("express");
 const crypto = require("crypto");
@@ -772,7 +779,7 @@ router.post("/request-payment", async (req, res) => {
   try {
     const sessionUser = (req.session && req.session.user) || null;
     if (!sessionUser || !sessionUser.phoneNumber) {
-      return res.status(401).json({ success: false, message: "Please log in to add funds." });
+      return res.status(401).json({ success: false, message: "Please log in to proceed with payment." });
     }
 
     const { settings: feeSettings, source } = await loadRegistrationFeeSettings();
@@ -780,7 +787,7 @@ router.post("/request-payment", async (req, res) => {
     if (method !== "pesapal") {
       return res.status(400).json({
         success: false,
-        message: `Pesapal is not the active payment method (source=${source}, method=${method || "none"}).`,
+        message: `Pesapal is not the active payment method on this server (source=${source}, method=${method || "none"}).`,
         paymentMethod: method || "none",
       });
     }
@@ -864,8 +871,21 @@ router.post("/request-payment", async (req, res) => {
     }
 
     const now = Date.now();
+    const accountsPayload = Array.isArray(req.body.accounts)
+      ? req.body.accounts
+          .map(a => ({
+            accountId: String(a.accountId || a.accountNumber || "001"),
+            accountName: String(a.accountName || "").trim(),
+            amount: Number(a.amount || a.inputAmount || 0),
+          }))
+          .filter(a => a.amount > 0)
+      : [];
     await setPendingPayment(req, orderId, {
-      purpose: "wallet_topup",
+      purpose: reqPurpose,
+      groupName: req.body.groupName || "",
+      accountId: req.body.accountId || "001",
+      accountName: req.body.accountName || "",
+      accounts: accountsPayload,
       creditPhone,
       payerPhone,
       amount,
@@ -1005,112 +1025,112 @@ async function handlePesapalCallback(req, res) {
       }
 
       const purpose = String(pending.purpose || userData.purpose || "").toLowerCase();
-      if (purpose === "group_contribution") {
+
+      // --- Unified purpose dispatch via trans.js ---
+      if (purpose === "group_contribution" || purpose === "wallet_topup") {
         const creditPhone = String(
           pending.creditPhone || userData.creditPhone || resolvedPhone || ""
         ).trim();
         const payerPhone = String(
           pending.payerPhone || userData.payerPhone || resolvedPhone || paymentAccount || ""
         ).trim();
-        const { applyAtomicGroupMemberContribution } = require("../mongoose");
+        const rawAccounts =
+          Array.isArray(pending.accounts) && pending.accounts.length > 0
+            ? pending.accounts
+            : userData.accounts;
+
         try {
-          const result = await applyAtomicGroupMemberContribution({
-            groupName: pending.groupName || userData.groupName,
-            memberPhone: creditPhone,
-            accountId: pending.accountId || userData.accountId || "001",
+          const txRes = await applyVerifiedPesapalPayment(strOrderTrackingId, {
             amount: expectedAmount,
             reference: confirmationCode || strOrderTrackingId || OrderMerchantReference || "",
-            paymentMethod: "pesapal",
-            payerPhone,
+            paymentMethod: (paymentMethod || "pesapal").toLowerCase(),
+            notes: purpose === "group_contribution"
+              ? `Group contribution via Pesapal`
+              : `Wallet Add Fund via Pesapal`,
+            fallbackData: {
+              purpose,
+              creditPhone,
+              payerPhone,
+              amount: expectedAmount,
+              groupName: pending.groupName || userData.groupName || "",
+              accountId: pending.accountId || userData.accountId || "001",
+              accountName: pending.accountName || userData.accountName || "",
+              accounts: rawAccounts,
+              phoneNumber: resolvedPhone,
+              county: userData.county || "",
+              constituency: userData.constituency || "",
+              ward: userData.ward || "",
+            },
           });
           console.log(
-            `[Pesapal Callback] Group contribution result for ${creditPhone}:`,
-            result.success ? `OK round=${result.circleRound}` : result.reason
+            `[Pesapal Callback] ${purpose} result for ${creditPhone}:`,
+            txRes.success
+              ? (purpose === "group_contribution" ? `OK round=${txRes.circleRound}` : `OK balance=${txRes.balance}`)
+              : txRes.reason
           );
-        } catch (topErr) {
-          console.error("[Pesapal Callback] applyAtomicGroupMemberContribution error:", topErr.message);
+        } catch (txErr) {
+          console.error(`[Pesapal Callback] applyVerifiedPesapalPayment error (${purpose}):`, txErr.message);
         }
 
-        return res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>Group Contribution Successful</title>
-            <style>
-              body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-                background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);font-family:system-ui,sans-serif;padding:16px;}
-              .card{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:28px 22px;text-align:center;
-                box-shadow:0 20px 50px rgba(0,0,0,.3);}
-              h1{font-size:20px;margin:0 0 8px;color:#166534;}
-              p{font-size:14px;color:#475569;line-height:1.5;margin:0 0 18px;}
-              a{display:inline-block;padding:12px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);
-                color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;}
-            </style>
-            <script>setTimeout(function(){ window.location.replace('/personal/send-money'); }, 2500);</script>
-          </head>
-          <body>
-            <div class="card">
-              <h1>Payment Successful</h1>
-              <p>KSh ${Number(expectedAmount).toLocaleString()} has been added to ${pending.groupName || userData.groupName || 'your group'}.</p>
-              <a href="/personal/send-money">Back to Send Money</a>
-            </div>
-          </body>
-        </html>`);
-      }
-
-      if (purpose === "wallet_topup") {
-        const creditPhone = String(
-          pending.creditPhone || userData.creditPhone || resolvedPhone || ""
-        ).trim();
-        const payerPhone = String(
-          pending.payerPhone || userData.payerPhone || resolvedPhone || paymentAccount || ""
-        ).trim();
-        try {
-          const topUp = await creditWalletTopUp({
-            phone: creditPhone,
-            amount: expectedAmount,
-            reference: confirmationCode || strOrderTrackingId || OrderMerchantReference || "",
-            paymentMethod: "pesapal",
-            payerPhone,
-            notes: "Wallet Add Fund via Pesapal",
-          });
-          console.log(
-            `[Pesapal Callback] Wallet top-up result for ${creditPhone}:`,
-            topUp.success ? `OK balance=${topUp.balance}` : topUp.reason
-          );
-        } catch (topErr) {
-          console.error("[Pesapal Callback] creditWalletTopUp error:", topErr.message);
+        if (purpose === "group_contribution") {
+          return res.send(`
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Group Contribution Successful</title>
+              <style>
+                body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+                  background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);font-family:system-ui,sans-serif;padding:16px;}
+                .card{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:28px 22px;text-align:center;
+                  box-shadow:0 20px 50px rgba(0,0,0,.3);}
+                h1{font-size:20px;margin:0 0 8px;color:#166534;}
+                p{font-size:14px;color:#475569;line-height:1.5;margin:0 0 18px;}
+                a{display:inline-block;padding:12px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);
+                  color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;}
+              </style>
+              <script>setTimeout(function(){ window.location.replace('/personal/send-money'); }, 2500);</script>
+            </head>
+            <body>
+              <div class="card">
+                <h1>Payment Successful</h1>
+                <p>KSh ${Number(expectedAmount).toLocaleString()} has been added to ${pending.groupName || userData.groupName || 'your group'}.</p>
+                <a href="/personal/send-money">Back to Send Money</a>
+              </div>
+            </body>
+          </html>`);
         }
 
-        return res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>Wallet Top-up Successful</title>
-            <style>
-              body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-                background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);font-family:system-ui,sans-serif;padding:16px;}
-              .card{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:28px 22px;text-align:center;
-                box-shadow:0 20px 50px rgba(0,0,0,.3);}
-              h1{font-size:20px;margin:0 0 8px;color:#166534;}
-              p{font-size:14px;color:#475569;line-height:1.5;margin:0 0 18px;}
-              a{display:inline-block;padding:12px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);
-                color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;}
-            </style>
-            <script>setTimeout(function(){ window.location.replace('/personal'); }, 2500);</script>
-          </head>
-          <body>
-            <div class="card">
-              <h1>Payment Successful</h1>
-              <p>KSh ${Number(expectedAmount).toLocaleString()} has been added to your personal wallet.</p>
-              <a href="/personal">Back to Wallet</a>
-            </div>
-          </body>
-        </html>`);
+        if (purpose === "wallet_topup") {
+          return res.send(`
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Wallet Top-up Successful</title>
+              <style>
+                body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+                  background:linear-gradient(160deg,#0f2027,#203a43,#2c5364);font-family:system-ui,sans-serif;padding:16px;}
+                .card{background:#fff;border-radius:12px;max-width:420px;width:100%;padding:28px 22px;text-align:center;
+                  box-shadow:0 20px 50px rgba(0,0,0,.3);}
+                h1{font-size:20px;margin:0 0 8px;color:#166534;}
+                p{font-size:14px;color:#475569;line-height:1.5;margin:0 0 18px;}
+                a{display:inline-block;padding:12px 18px;background:linear-gradient(135deg,#0c8f44,#34d399);
+                  color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:14px;}
+              </style>
+              <script>setTimeout(function(){ window.location.replace('/personal'); }, 2500);</script>
+            </head>
+            <body>
+              <div class="card">
+                <h1>Payment Successful</h1>
+                <p>KSh ${Number(expectedAmount).toLocaleString()} has been added to your personal wallet.</p>
+                <a href="/personal">Back to Wallet</a>
+              </div>
+            </body>
+          </html>`);
+        }
       }
 
       if (PendingAccount && upsertPendingAccount) {
@@ -1530,16 +1550,23 @@ router.get("/status/:orderTrackingId", async (req, res) => {
 
     if (isCompleted) {
       const pending = (await getPendingPayment(req))?.[orderTrackingId] || null;
-      if (pending && pending.purpose === "group_contribution") {
-        const { applyAtomicGroupMemberContribution } = require("../mongoose");
-        await applyAtomicGroupMemberContribution({
-          groupName: pending.groupName,
-          memberPhone: pending.creditPhone || pending.phoneNumber,
-          accountId: pending.accountId || "001",
+      if (pending && (pending.purpose === "group_contribution" || pending.purpose === "wallet_topup")) {
+        applyVerifiedPesapalPayment(orderTrackingId, {
           amount: pending.amount,
           reference: orderTrackingId,
           paymentMethod: "pesapal",
-          payerPhone: pending.payerPhone,
+          notes: `Pesapal status poll (${pending.purpose})`,
+          fallbackData: {
+            purpose: pending.purpose,
+            creditPhone: pending.creditPhone || pending.phoneNumber || "",
+            payerPhone: pending.payerPhone || "",
+            amount: pending.amount,
+            groupName: pending.groupName || "",
+            accountId: pending.accountId || "001",
+            accountName: pending.accountName || "",
+            accounts: pending.accounts,
+            phoneNumber: pending.phoneNumber || "",
+          },
         }).catch(e => console.error("[Pesapal status poll credit error]", e.message));
       }
     }

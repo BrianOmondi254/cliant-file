@@ -945,61 +945,59 @@ router.get("/wallet", async (req, res) => {
     const phone = req.session.user?.phoneNumber;
     if (!phone) return res.status(401).json({ success: false, error: "Not authenticated" });
 
-    console.log(`[/wallet] Fetching for phone: ${phone}`);
+    const phoneVariants = [
+      phone,
+      phone.startsWith("0") ? phone.substring(1) : phone,
+      phone.startsWith("+254") ? phone.substring(4) : phone,
+      phone.startsWith("254") && phone.length > 9 ? phone.substring(3) : phone,
+      `0${phone.replace(/^(\+?254|0)/, "")}`,
+      `+254${phone.replace(/^(\+?254|0)/, "")}`,
+      `254${phone.replace(/^(\+?254|0)/, "")}`,
+    ].filter((v, i, arr) => v && arr.indexOf(v) === i);
 
-    const groupTxns = await findGroupMemberTransactions(phone);
+    const getPersonalAccountPromise = (async () => {
+      let acc = null;
+      try {
+        const db = require("mongoose").connection.db;
+        if (db) {
+          const countyDoc = await db.collection("personalaccounts").findOne({
+            "constituencies.wards.data": {
+              $elemMatch: { phone: { $in: phoneVariants } }
+            }
+          });
+          if (countyDoc) {
+            for (const cons of countyDoc.constituencies || []) {
+              for (const ward of cons.wards || []) {
+                const leaf = (ward.data || []).find(r => phoneVariants.includes(r.phone));
+                if (leaf) {
+                  acc = { ...leaf, county: countyDoc.county, constituency: cons.name, ward: ward.name };
+                  break;
+                }
+              }
+              if (acc) break;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[/wallet] Fast lookup failed, falling back:", e.message);
+      }
+      if (!acc) {
+        acc = await findPersonalAccountByPhone(phone);
+      }
+      return acc;
+    })();
+
+    // Run queries concurrently in parallel
+    const [groupTxns, mongoAcc] = await Promise.all([
+      findGroupMemberTransactions(phone),
+      getPersonalAccountPromise
+    ]);
+
+    const groupMemberRecords = groupTxns.groupMembers || groupTxns.memberRecords || [];
 
     if (req.session.user) {
       req.session.user.verifiedGroupTransactions = groupTxns;
-    }
-
-    // --- Try fast direct nested query first (avoids full cursor scan) ---
-    let mongoAcc = null;
-    try {
-      const db = require("mongoose").connection.db;
-      if (db) {
-        const phoneVariants = [
-          phone,
-          phone.startsWith("0") ? phone.substring(1) : phone,
-          phone.startsWith("+254") ? phone.substring(4) : phone,
-          phone.startsWith("254") && phone.length > 9 ? phone.substring(3) : phone,
-          `0${phone.replace(/^(\+?254|0)/, "")}`,
-          `+254${phone.replace(/^(\+?254|0)/, "")}`,
-          `254${phone.replace(/^(\+?254|0)/, "")}`,
-        ].filter((v, i, arr) => v && arr.indexOf(v) === i);
-
-        const countyDoc = await db.collection("personalaccounts").findOne({
-          "constituencies.wards.data": {
-            $elemMatch: { phone: { $in: phoneVariants } }
-          }
-        });
-
-        if (countyDoc) {
-          for (const cons of countyDoc.constituencies || []) {
-            for (const ward of cons.wards || []) {
-              const leaf = (ward.data || []).find(r => phoneVariants.includes(r.phone));
-              if (leaf) {
-                mongoAcc = { ...leaf, county: countyDoc.county, constituency: cons.name, ward: ward.name };
-                console.log(`[/wallet] Found via $elemMatch for phone: ${phone}, openBalance: ${leaf.account?.personal?.openBalance}`);
-                break;
-              }
-            }
-            if (mongoAcc) break;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("[/wallet] Fast lookup failed, falling back:", e.message);
-    }
-
-    // --- Fallback to existing findPersonalAccountByPhone ---
-    if (!mongoAcc) {
-      mongoAcc = await findPersonalAccountByPhone(phone);
-      if (mongoAcc) {
-        console.log(`[/wallet] Found via findPersonalAccountByPhone, openBalance: ${mongoAcc.account?.personal?.openBalance}`);
-      } else {
-        console.warn(`[/wallet] No account found for phone: ${phone}`);
-      }
+      req.session.user.verifiedGroupMembers = groupMemberRecords;
     }
 
     if (!mongoAcc) {
@@ -1011,6 +1009,8 @@ router.get("/wallet", async (req, res) => {
         balance: cachedBalance,
         transactions: [],
         groupTransactions: groupTxns,
+        groupMembers: groupMemberRecords,
+        groupMemberRecords: groupMemberRecords,
         accountExists: false,
         source: "session_cache",
       });
@@ -1076,23 +1076,43 @@ router.get("/wallet", async (req, res) => {
       const toName = toObj.name || (typeof t.to === "string" ? t.to : "");
       const toNum = toObj.number || (typeof t.to === "string" && !isNaN(t.to) ? t.to : mongoAcc.phone);
 
+      const notes = String(t.notes || "");
+      let extractedGroup = t.groupName || (toObj.name !== "Personal Account" ? toObj.name : "") || "";
+      let extractedAccId = t.accountId || (toObj.number && /^\d{1,4}$/.test(toObj.number) ? toObj.number : "");
+      let extractedAccName = t.accountName || "";
+
+      if (notes.includes("contribution to")) {
+        const match = notes.match(/contribution to ([^(]+)\(([^)]+)\)/i);
+        if (match) {
+          if (!extractedGroup) extractedGroup = match[1].trim();
+          if (!extractedAccName) extractedAccName = match[2].trim();
+        }
+      }
+      if (!extractedAccName && (extractedAccId === '001' || toObj.number === '001')) {
+        extractedAccName = 'Saving';
+      }
+      if (!extractedAccId && toObj.number && /^\d{1,4}$/.test(toObj.number)) {
+        extractedAccId = toObj.number;
+      }
+
       const isGroup = Boolean(
+        extractedGroup ||
         t.groupName ||
         t.purpose === "group_contribution" ||
         rawType === "group_deposit" ||
-        (t.notes && t.notes.toLowerCase().includes("contribution to"))
+        notes.toLowerCase().includes("contribution to")
       );
 
       const accTitle = isGroup
-        ? `${t.groupName || 'Group'} (Acc ${t.accountId || '001'} - ${t.accountName || 'Saving'})`
+        ? `${extractedGroup || t.groupName || 'Group'} (Acc ${extractedAccId || t.accountId || '001'} - ${extractedAccName || t.accountName || 'Saving'})`
         : (fromName || toName || "Personal Account");
 
       return {
         type: isIn ? "deposit" : "withdraw",
         rawType: t.type || (isIn ? "deposit" : "withdraw"),
-        groupName: t.groupName || (isGroup ? "Group Account" : ""),
-        accountId: t.accountId || "",
-        accountName: t.accountName || "",
+        groupName: extractedGroup || t.groupName || (isGroup ? "Group Account" : ""),
+        accountId: extractedAccId || t.accountId || "",
+        accountName: extractedAccName || t.accountName || "",
         circleRound: t.circleRound || 1,
         purpose: t.purpose || (isGroup ? "group_contribution" : "wallet_transfer"),
         acc: accTitle,
@@ -1101,7 +1121,7 @@ router.get("/wallet", async (req, res) => {
         accountNumber: toNum || fromNum || mongoAcc.phone,
         from: fromName || fromNum || (isIn ? "External Source" : "Personal Account"),
         fromNumber: fromNum || (isIn ? "" : mongoAcc.phone),
-        to: toName || toNum || (isGroup ? (t.groupName || "Group Account") : (isIn ? "Personal Account" : mongoAcc.phone)),
+        to: toName || toNum || (isGroup ? (extractedGroup || "Group Account") : (isIn ? "Personal Account" : mongoAcc.phone)),
         toNumber: toNum || mongoAcc.phone,
         notes: t.notes || "",
         code: t.reference || t.code || "",
@@ -1112,6 +1132,19 @@ router.get("/wallet", async (req, res) => {
       };
     });
 
+    if (req.session) {
+      req.session.walletBalance = Number(balance) || 0;
+      req.session.walletTransactions = transactions;
+      req.session.groupTransactions = groupTxns;
+      req.session.groupMembers = groupMemberRecords;
+      if (req.session.user) {
+        req.session.user.walletBalance = Number(balance) || 0;
+        req.session.user.verifiedGroupTransactions = groupTxns;
+        req.session.user.verifiedGroupMembers = groupMemberRecords;
+      }
+      try { req.session.save(); } catch (se) {}
+    }
+
     return res.json({
       success: true,
       balance: Number(balance) || 0,
@@ -1119,6 +1152,8 @@ router.get("/wallet", async (req, res) => {
       personal: personalBal,
       transactions,
       groupTransactions: groupTxns,
+      groupMembers: groupMemberRecords,
+      groupMemberRecords: groupMemberRecords,
       accountExists: true,
       source: "mongodb",
     });

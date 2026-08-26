@@ -44,7 +44,314 @@ const {
   savePersonalAccountToMongo,
   mutatePersonalLeaves,
   findPersonalRecord,
+  applyAtomicGroupMemberContribution,
 } = require("../mongoose");
+
+/* ============================================================================
+ * Payment-Provider Pending-Tracking Maps
+ *
+ * The payment-provider routers (mpesa.js, pesapal.js) should ONLY record
+ * "initiate metadata here via setMpesaPending / setPesapalPending.
+ * On a VERIFIED callback/IPN, providers call applyVerifiedMpesaPayment /
+ * applyVerifiedPesapalPayment, and this module dispatches the actual
+ * account / balance / round logic.
+ * ========================================================================== */
+
+const mpesaPending = new Map();
+const mpesaCreditedIds = new Set();
+
+const pesapalPending = new Map();
+const pesapalCreditedIds = new Set();
+
+setInterval(() => {
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+  for (const [key, val] of mpesaPending.entries()) {
+    if ((val.initiatedAtMs || 0) < cutoff) mpesaPending.delete(key);
+  }
+  for (const [key, val] of pesapalPending.entries()) {
+    if ((val.initiatedAtMs || 0) < cutoff) pesapalPending.delete(key);
+  }
+}, 15 * 60 * 1000);
+
+function normalizeAccounts(accounts) {
+  return Array.isArray(accounts)
+    ? accounts
+        .map(a => ({
+          accountId: String(a.accountId || a.accountNumber || "001"),
+          accountName: String(a.accountName || "").trim(),
+          amount: Number(a.amount || a.inputAmount || 0),
+        }))
+        .filter(a => a.amount > 0)
+    : [];
+}
+
+async function setMpesaPending(checkoutId, payload) {
+  if (!checkoutId) return;
+  const id = String(checkoutId);
+  const record = {
+    purpose: String(payload.purpose || "wallet_topup").toLowerCase(),
+    creditPhone: payload.creditPhone ? String(payload.creditPhone).trim() : "",
+    payerPhone: payload.payerPhone ? String(payload.payerPhone).trim() : "",
+    amount: Number(payload.amount || 0),
+    groupName: payload.groupName || "",
+    accountId: payload.accountId || "001",
+    accountName: payload.accountName || "",
+    accounts: normalizeAccounts(payload.accounts),
+    initiatedAtMs: payload.initiatedAtMs || Date.now(),
+    MerchantRequestID: payload.MerchantRequestID || null,
+    ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+  };
+  mpesaPending.set(id, record);
+}
+
+function getMpesaPending(checkoutId) {
+  return checkoutId ? mpesaPending.get(String(checkoutId)) : null;
+}
+
+function clearMpesaPending(checkoutId) {
+  if (checkoutId) mpesaPending.delete(String(checkoutId));
+}
+
+async function setPesapalPending(orderOrTrackingId, payload) {
+  if (!orderOrTrackingId) return;
+  const id = String(orderOrTrackingId);
+  const record = {
+    purpose: String(payload.purpose || "registration_fee").toLowerCase(),
+    creditPhone: payload.creditPhone ? String(payload.creditPhone).trim() : "",
+    payerPhone: payload.payerPhone ? String(payload.payerPhone).trim() : "",
+    amount: Number(payload.amount || 0),
+    groupName: payload.groupName || "",
+    accountId: payload.accountId || "001",
+    accountName: payload.accountName || "",
+    accounts: normalizeAccounts(payload.accounts),
+    phoneNumber: payload.phoneNumber || payload.resolvedPhone || "",
+    county: payload.county || "",
+    constituency: payload.constituency || "",
+    ward: payload.ward || "",
+    userData: payload.userData && typeof payload.userData === "object" ? payload.userData : {},
+    initiatedAtMs: payload.initiatedAtMs || Date.now(),
+    ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+  };
+  pesapalPending.set(id, record);
+}
+
+function getPesapalPending(orderOrTrackingId) {
+  return orderOrTrackingId ? pesapalPending.get(String(orderOrTrackingId)) : null;
+}
+
+function clearPesapalPending(orderOrTrackingId) {
+  if (orderOrTrackingId) pesapalPending.delete(String(orderOrTrackingId));
+}
+
+/* ============================================================================
+ * Unified Verified-Payment Dispatcher
+ *
+ * Purpose dispatch rules:
+ *   "registration_fee"    -> creditPendingHolding  (Phase 1 holding bucket)
+ *   "wallet_topup"        -> creditWalletTopUp     (personal wallet increase)
+ *   "group_contribution"  -> applyAtomicGroupMemberContribution (group round)
+ *
+ * The provider routers NEVER do any of these calls themselves — they only
+ * call applyVerifiedMpesaPayment / applyVerifiedPesapalPayment after a
+ * verified success from the upstream provider.
+ * ========================================================================== */
+
+async function dispatchPaymentByPurpose(params) {
+  const {
+    purpose,
+    phone,
+    creditPhone,
+    payerPhone,
+    amount,
+    reference,
+    paymentMethod,
+    notes,
+    groupName,
+    accountId,
+    accountName,
+    accounts,
+    county,
+    constituency,
+    ward,
+  } = params || {};
+
+  const p = String(purpose || "wallet_topup").toLowerCase();
+  const effectiveCredit = String(creditPhone || phone || "").trim();
+  const effectivePayer = String(payerPhone || effectiveCredit).trim();
+  const amt = Number(amount || 0);
+  const ref = String(reference || "").trim();
+  const method = String(paymentMethod || "unknown").toLowerCase();
+
+  if (!effectiveCredit) {
+    return { success: false, reason: "NO_CREDIT_PHONE" };
+  }
+  if (!amt || amt <= 0) {
+    return { success: false, reason: "INVALID_AMOUNT" };
+  }
+
+  if (p === "group_contribution") {
+    if (!groupName) {
+      return { success: false, reason: "NO_GROUP_NAME" };
+    }
+    try {
+      return await applyAtomicGroupMemberContribution({
+        groupName: groupName,
+        memberPhone: effectiveCredit,
+        accountId: accountId || "001",
+        accountName: accountName || "",
+        accounts: normalizeAccounts(accounts).length > 0 ? normalizeAccounts(accounts) : undefined,
+        amount: amt,
+        reference: ref,
+        paymentMethod: method,
+        payerPhone: effectivePayer,
+      });
+    } catch (e) {
+      console.error("[trans.dispatch] applyAtomicGroupMemberContribution error:", e.message);
+      return { success: false, reason: "GROUP_PAYMENT_ERROR", error: e.message };
+    }
+  }
+
+  if (p === "wallet_topup") {
+    try {
+      return await creditWalletTopUp({
+        phone: effectiveCredit,
+        amount: amt,
+        reference: ref,
+        paymentMethod: method,
+        payerPhone: effectivePayer,
+        notes: notes || "Wallet Add Fund",
+      });
+    } catch (e) {
+      console.error("[trans.dispatch] creditWalletTopUp error:", e.message);
+      return { success: false, reason: "WALLET_TOPUP_ERROR", error: e.message };
+    }
+  }
+
+  if (p === "registration_fee") {
+    try {
+      return await creditPendingHolding({
+        phone: effectiveCredit,
+        county: county || "",
+        constituency: constituency || "",
+        ward: ward || "",
+        amount: amt,
+        reference: ref,
+        paymentMethod: method,
+        notes: notes || "Registration fee received — held pending account completion",
+      });
+    } catch (e) {
+      console.error("[trans.dispatch] creditPendingHolding error:", e.message);
+      return { success: false, reason: "PENDING_HOLDING_ERROR", error: e.message };
+    }
+  }
+
+  return { success: false, reason: "UNKNOWN_PURPOSE", purpose: p };
+}
+
+async function applyVerifiedMpesaPayment(checkoutId, overrides = {}) {
+  const id = String(checkoutId || "");
+  if (!id || mpesaCreditedIds.has(id)) {
+    return { success: false, reason: "ALREADY_CREDITED_OR_MISSING" };
+  }
+  const pending = mpesaPending.get(id);
+  if (!pending) {
+    return { success: false, reason: "NO_PENDING" };
+  }
+
+  mpesaCreditedIds.add(id);
+  mpesaPending.delete(id);
+
+  try {
+    const amount = overrides.amount != null ? Number(overrides.amount) : pending.amount;
+    const result = await dispatchPaymentByPurpose({
+      purpose: pending.purpose,
+      creditPhone: pending.creditPhone,
+      payerPhone: overrides.payerPhone || pending.payerPhone,
+      amount,
+      reference: overrides.reference || id,
+      paymentMethod: "mpesa",
+      notes: overrides.notes || pending.notes || `M-Pesa STK payment (${pending.purpose || "transaction"})`,
+      groupName: pending.groupName,
+      accountId: pending.accountId,
+      accountName: pending.accountName,
+      accounts: pending.accounts,
+    });
+    if (!result.success) {
+      mpesaCreditedIds.delete(id);
+      mpesaPending.set(id, pending);
+    }
+    return result;
+  } catch (e) {
+    mpesaCreditedIds.delete(id);
+    mpesaPending.set(id, pending);
+    throw e;
+  }
+}
+
+async function applyVerifiedPesapalPayment(orderOrTrackingId, overrides = {}) {
+  const id = String(orderOrTrackingId || "");
+  if (!id || pesapalCreditedIds.has(id)) {
+    return { success: false, reason: "ALREADY_CREDITED_OR_MISSING" };
+  }
+  let pending = pesapalPending.get(id);
+
+  if (!pending && overrides.fallbackData) {
+    const fb = overrides.fallbackData;
+    pending = {
+      purpose: String(fb.purpose || "registration_fee").toLowerCase(),
+      creditPhone: String(fb.creditPhone || ""),
+      payerPhone: String(fb.payerPhone || ""),
+      amount: Number(fb.amount || 0),
+      groupName: fb.groupName || "",
+      accountId: fb.accountId || "001",
+      accountName: fb.accountName || "",
+      accounts: normalizeAccounts(fb.accounts),
+      phoneNumber: fb.phoneNumber || "",
+      county: fb.county || "",
+      constituency: fb.constituency || "",
+      ward: fb.ward || "",
+      userData: fb.userData || {},
+      initiatedAtMs: Date.now(),
+    };
+  }
+
+  if (!pending) {
+    return { success: false, reason: "NO_PENDING" };
+  }
+
+  pesapalCreditedIds.add(id);
+  pesapalPending.delete(id);
+
+  try {
+    const amount = overrides.amount != null ? Number(overrides.amount) : pending.amount;
+    const result = await dispatchPaymentByPurpose({
+      purpose: pending.purpose,
+      creditPhone: pending.creditPhone || pending.phoneNumber,
+      payerPhone: overrides.payerPhone || pending.payerPhone || pending.phoneNumber,
+      phone: pending.phoneNumber,
+      amount,
+      reference: overrides.reference || id,
+      paymentMethod: (overrides.paymentMethod || "pesapal").toLowerCase(),
+      notes: overrides.notes || pending.notes || `Pesapal payment (${pending.purpose || "transaction"})`,
+      groupName: pending.groupName,
+      accountId: pending.accountId,
+      accountName: pending.accountName,
+      accounts: pending.accounts,
+      county: pending.county,
+      constituency: pending.constituency,
+      ward: pending.ward,
+    });
+    if (!result.success) {
+      pesapalCreditedIds.delete(id);
+      pesapalPending.set(id, pending);
+    }
+    return result;
+  } catch (e) {
+    pesapalCreditedIds.delete(id);
+    pesapalPending.set(id, pending);
+    throw e;
+  }
+}
 
 /**
  * Confirms a phone number exists somewhere in the County collection's
@@ -772,4 +1079,13 @@ module.exports = {
   creditPendingToPersonalAccount,
   transferRegistrarFeeToPersonal,
   creditWalletTopUp,
+  dispatchPaymentByPurpose,
+  setMpesaPending,
+  getMpesaPending,
+  clearMpesaPending,
+  applyVerifiedMpesaPayment,
+  setPesapalPending,
+  getPesapalPending,
+  clearPesapalPending,
+  applyVerifiedPesapalPayment,
 };

@@ -1066,7 +1066,7 @@ const buildAccountTemplates = (principles, principlesSetAt) => {
         scheduledDate: roundDate,
         status: 'pending',
         amount: parseFloat(expectedAmount),
-        contributingMembers: []
+        accountroundPerformance: []
       });
 
       if (frequency === 'daily') current.setDate(current.getDate() + 1);

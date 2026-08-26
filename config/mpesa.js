@@ -3,8 +3,12 @@ const fs = require("fs");
 const path = require("path");
 const router = express.Router();
 
-const { creditWalletTopUp } = require("../routes/trans");
-const { applyAtomicGroupMemberContribution } = require("../mongoose");
+const {
+  setMpesaPending,
+  getMpesaPending,
+  clearMpesaPending,
+  applyVerifiedMpesaPayment,
+} = require("../routes/trans");
 
 const mpesaConfig = {
   consumerKey: process.env.MPESA_CONSUMER_KEY || "",
@@ -16,68 +20,6 @@ const mpesaConfig = {
   stkPushUrl: "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
   stkQueryUrl: "https://sandbox.safaricom.co.ke/mpesa/stkquery/v1/query",
 };
-
-/** CheckoutRequestID → pending wallet top-up meta */
-const pendingWalletTopups = new Map();
-const creditedCheckoutIds = new Set();
-
-setInterval(() => {
-  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
-  for (const [key, val] of pendingWalletTopups.entries()) {
-    if ((val.initiatedAtMs || 0) < cutoff) pendingWalletTopups.delete(key);
-  }
-}, 15 * 60 * 1000);
-
-async function applyWalletTopUpFromPending(checkoutId, overrides = {}) {
-  const id = String(checkoutId || "");
-  if (!id || creditedCheckoutIds.has(id)) {
-    return { success: false, reason: "ALREADY_CREDITED_OR_MISSING" };
-  }
-  const pending = pendingWalletTopups.get(id);
-  if (!pending) {
-    return { success: false, reason: "NO_PENDING" };
-  }
-
-  if (pending.purpose === "group_contribution") {
-    creditedCheckoutIds.add(id);
-    pendingWalletTopups.delete(id);
-    try {
-      return await applyAtomicGroupMemberContribution({
-        groupName: pending.groupName,
-        memberPhone: pending.creditPhone,
-        accountId: pending.accountId || "001",
-        accountName: pending.accountName || "",
-        accounts: Array.isArray(pending.accounts) && pending.accounts.length > 0 ? pending.accounts : undefined,
-        amount: overrides.amount != null ? overrides.amount : pending.amount,
-        reference: overrides.reference || id,
-        paymentMethod: "mpesa",
-        payerPhone: pending.payerPhone,
-      });
-    } catch (e) {
-      creditedCheckoutIds.delete(id);
-      throw e;
-    }
-  }
-
-  if (pending.purpose !== "wallet_topup") {
-    return { success: false, reason: "NO_PENDING" };
-  }
-  creditedCheckoutIds.add(id);
-  pendingWalletTopups.delete(id);
-  try {
-    return await creditWalletTopUp({
-      phone: pending.creditPhone,
-      amount: overrides.amount != null ? overrides.amount : pending.amount,
-      reference: overrides.reference || id,
-      paymentMethod: "mpesa",
-      payerPhone: pending.payerPhone,
-      notes: overrides.notes || "Wallet Add Fund via M-Pesa STK",
-    });
-  } catch (e) {
-    creditedCheckoutIds.delete(id);
-    throw e;
-  }
-}
 
 function toMpesaPhone(phone) {
   let d = String(phone || "").replace(/\D/g, "");
@@ -108,38 +50,73 @@ async function loadPaymentMethod() {
   return { paymentMethod: "none", source: "none" };
 }
 
+async function safeJsonParse(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text || "{}");
+  } catch (_e) {
+    const snippet = text.replace(/\s+/g, " ").slice(0, 200);
+    throw new Error(
+      response.ok
+        ? `M-Pesa API returned a non-JSON response. Please check your credentials or try again later.`
+        : `M-Pesa API request failed (HTTP ${response.status}). ${snippet ? "Response: " + snippet : ""}`
+    );
+  }
+}
+
+function validateMpesaCredentials() {
+  if (!mpesaConfig.consumerKey || !mpesaConfig.consumerSecret) {
+    throw new Error("M-Pesa credentials are not configured on this server. Please contact the administrator to set MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET.");
+  }
+  if (!mpesaConfig.shortcode || !mpesaConfig.passkey) {
+    throw new Error("M-Pesa shortcode or passkey is not configured. Please contact the administrator to set MPESA_SHORTCODE and MPESA_PASSKEY.");
+  }
+}
+
 async function getAccessToken() {
+  validateMpesaCredentials();
+
   const auth = Buffer.from(`${mpesaConfig.consumerKey}:${mpesaConfig.consumerSecret}`).toString("base64");
 
-  const response = await fetch(mpesaConfig.authUrl, {
-    method: "GET",
-    headers: { Authorization: `Basic ${auth}` },
-  });
+  let response;
+  try {
+    response = await fetch(mpesaConfig.authUrl, {
+      method: "GET",
+      headers: { Authorization: `Basic ${auth}` },
+    });
+  } catch (netErr) {
+    throw new Error("Could not connect to M-Pesa authentication server. Please check your internet connection or try again later.");
+  }
 
-  const data = await response.json();
+  const data = await safeJsonParse(response);
+  if (!response.ok || !data.access_token) {
+    const msg = data.errorMessage || data.error || `HTTP ${response.status}`;
+    throw new Error(`M-Pesa authentication failed: ${msg}. Please verify your MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET.`);
+  }
   return data.access_token;
 }
 
 router.post("/stk-push", async (req, res) => {
   try {
     const { phone, amount, reference, description, purpose, accountPhone, accounts } = req.body;
-    const accessToken = await getAccessToken();
+
+    const { paymentMethod, source } = await loadPaymentMethod();
+    if (paymentMethod !== "mpesa") {
+      return res.status(400).json({
+        success: false,
+        message: `M-Pesa is not the active payment method on this server (source=${source}, method=${paymentMethod || "none"}).`,
+        paymentMethod: paymentMethod || "none",
+      });
+    }
+
+    const sessionUser = req.session && req.session.user;
+    if (!sessionUser || !sessionUser.phoneNumber) {
+      return res.status(401).json({ success: false, message: "Please log in to proceed with payment." });
+    }
 
     const isWalletTopup = String(purpose || "").toLowerCase() === "wallet_topup";
-    if (isWalletTopup) {
-      const { paymentMethod, source } = await loadPaymentMethod();
-      if (paymentMethod !== "mpesa") {
-        return res.status(400).json({
-          success: false,
-          message: `M-Pesa is not the active payment method (source=${source}, method=${paymentMethod}).`,
-          paymentMethod,
-        });
-      }
-      const sessionUser = req.session && req.session.user;
-      if (!sessionUser || !sessionUser.phoneNumber) {
-        return res.status(401).json({ success: false, message: "Please log in to add funds." });
-      }
-    }
+
+    const accessToken = await getAccessToken();
 
     const mpesaPhone = toMpesaPhone(phone);
     if (!mpesaPhone || mpesaPhone.length < 12) {
@@ -168,16 +145,21 @@ router.post("/stk-push", async (req, res) => {
       TransactionDesc: description || (isWalletTopup ? "Cliant Wallet Add Fund" : "Agent Payment Request"),
     };
 
-    const response = await fetch(mpesaConfig.stkPushUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    let response;
+    try {
+      response = await fetch(mpesaConfig.stkPushUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (netErr) {
+      throw new Error("Could not connect to M-Pesa STK push server. Please check your internet connection or try again later.");
+    }
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
 
     const isSuccess = data && data.ResponseCode === "0";
 
@@ -189,7 +171,7 @@ router.post("/stk-push", async (req, res) => {
         (req.session && req.session.user && req.session.user.phoneNumber) ||
         phone
       ).trim();
-      pendingWalletTopups.set(String(data.CheckoutRequestID), {
+      await setMpesaPending(String(data.CheckoutRequestID), {
         purpose: "wallet_topup",
         creditPhone,
         payerPhone: mpesaPhone,
@@ -205,21 +187,12 @@ router.post("/stk-push", async (req, res) => {
         (req.session && req.session.user && req.session.user.phoneNumber) ||
         phone
       ).trim();
-      const normalizedAccounts = Array.isArray(accounts)
-        ? accounts
-            .map(a => ({
-              accountId: String(a.accountId || a.accountNumber || "001"),
-              accountName: String(a.accountName || "").trim(),
-              amount: Number(a.amount || a.inputAmount || 0),
-            }))
-            .filter(a => a.amount > 0)
-        : [];
-      pendingWalletTopups.set(String(data.CheckoutRequestID), {
+      await setMpesaPending(String(data.CheckoutRequestID), {
         purpose: "group_contribution",
         groupName: groupName || "",
         accountId: accountId || "001",
         accountName: accountName || "",
-        accounts: normalizedAccounts,
+        accounts: Array.isArray(accounts) ? accounts : [],
         creditPhone,
         payerPhone: mpesaPhone,
         amount: payAmount,
@@ -261,7 +234,7 @@ router.post("/callback", async (req, res) => {
     if (body) {
       const checkoutId = String(body.CheckoutRequestID || "");
       const resultCode = Number(body.ResultCode);
-      const pending = checkoutId ? pendingWalletTopups.get(checkoutId) : null;
+      const pending = checkoutId ? getMpesaPending(checkoutId) : null;
 
       if (pending && resultCode === 0) {
         let paidAmount = pending.amount;
@@ -272,7 +245,7 @@ router.post("/callback", async (req, res) => {
           if (item.Name === "MpesaReceiptNumber") mpesaReceipt = String(item.Value || "");
         }
 
-        const txRes = await applyWalletTopUpFromPending(checkoutId, {
+        const txRes = await applyVerifiedMpesaPayment(checkoutId, {
           amount: paidAmount,
           reference: mpesaReceipt || checkoutId,
           notes: `M-Pesa STK payment (${pending.purpose || "transaction"})`,
@@ -283,7 +256,7 @@ router.post("/callback", async (req, res) => {
         );
       } else if (pending && resultCode !== 0) {
         console.warn(`[M-Pesa Callback] Payment failed ResultCode=${resultCode} Desc=${body.ResultDesc}`);
-        pendingWalletTopups.delete(checkoutId);
+        clearMpesaPending(checkoutId);
       }
     }
   } catch (cbErr) {
@@ -308,22 +281,27 @@ router.get("/status/:checkoutId", async (req, res) => {
       CheckoutRequestID: checkoutId,
     };
 
-    const response = await fetch(mpesaConfig.stkQueryUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    let response;
+    try {
+      response = await fetch(mpesaConfig.stkQueryUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (netErr) {
+      throw new Error("Could not connect to M-Pesa status server. Please try again later.");
+    }
 
-    const data = await response.json();
+    const data = await safeJsonParse(response);
 
     // If STK query reports success and we still have a pending top-up, credit now
     const resultCode = data && (data.ResultCode !== undefined ? Number(data.ResultCode) : null);
     if (resultCode === 0) {
       try {
-        const txRes = await applyWalletTopUpFromPending(checkoutId, {
+        const txRes = await applyVerifiedMpesaPayment(checkoutId, {
           notes: "M-Pesa STK (status poll)",
         });
         if (txRes && txRes.success) data._txResult = txRes;
@@ -340,7 +318,7 @@ router.get("/status/:checkoutId", async (req, res) => {
 
 router.get("/transactions", (req, res) => {
   const filePath = path.join(__dirname, "../mpesa-callbacks.json");
-  const data = fs.existsSync(filePath) ? JSnodeON.parse(fs.readFileSync(filePath)) : [];
+  const data = fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath)) : [];
   res.json(data);
 });
 

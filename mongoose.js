@@ -1478,13 +1478,16 @@ const findGroupNameInGroupsMembersCollection = async (groupName) => {
 
     for await (const doc of cursor) {
       if (!doc || !Array.isArray(doc.constituencies)) continue;
-      for (const constituency of doc.constituencies) {
+      for (let i = 0; i < doc.constituencies.length; i++) {
+        const constituency = doc.constituencies[i];
         if (!constituency || !Array.isArray(constituency.wards)) continue;
-        for (const ward of constituency.wards) {
+        for (let j = 0; j < constituency.wards.length; j++) {
+          const ward = constituency.wards[j];
           if (!ward || !Array.isArray(ward.data)) continue;
-          for (const group of ward.data) {
-            const flatName = normalizeGroupName(group.groupName);
-            const flatId = normalizeGroupName(group.groupId);
+          for (let k = 0; k < ward.data.length; k++) {
+            const group = ward.data[k];
+            const flatName = normalizeGroupName(group && group.groupName);
+            const flatId = normalizeGroupName(group && group.groupId);
             if (!group || (flatName !== target && flatId !== target)) continue;
             return {
               group,
@@ -1492,6 +1495,11 @@ const findGroupNameInGroupsMembersCollection = async (groupName) => {
               constituency: group.constituency || constituency.name,
               ward: group.ward || ward.name,
               source: "groups-members.regional",
+              // Exact write coordinates — reused by callers that need to
+              // mutate this same group later (e.g. the tBank payment route)
+              // instead of re-scanning and possibly resolving a different doc.
+              docId: doc._id,
+              groupPath: `constituencies.${i}.wards.${j}.data.${k}`,
             };
           }
         }
@@ -2759,6 +2767,121 @@ setInterval(() => {
   if (processedGroupTxIds.size > 10000) processedGroupTxIds.clear();
 }, 2 * 60 * 60 * 1000);
 
+// =========================================================================
+// Builds the dateIntervalCycle.rounds[] array that computeLiveRoundStatuses
+// consumes. Call this whenever a member's contribution schedule is first
+// created (con_group.ejs's "Activate Principles" -> POST /general/set-principles
+// is where `principles.intervals` originates), and it's also used below as a
+// self-healing fallback when an account has no rounds yet.
+//
+// intervalConfig matches con_group.ejs's `principles.intervals` shape exactly:
+//   { frequency, endSavingPeriod, contributionDay, weekOfMonth, month }
+//
+// Guarantees computeLiveRoundStatuses' two assumptions:
+//   1. Every round.scheduledDate is a parseable ISO string (never left to
+//      chance / free-text input).
+//   2. Rounds come out pre-sorted ascending (they're generated in order).
+// =========================================================================
+const DEFAULT_ROUND_COUNTS = { daily: 30, weekly: 52, monthly: 12, yearly: 5 };
+
+// con_group.ejs's "End Saving Period" <select> — total cycle duration,
+// expressed in months regardless of contribution frequency.
+const SAVING_PERIOD_MONTHS = {
+  "6-months": 6,
+  "1-year": 12,
+  "2-years": 24,
+  "3-years": 36,
+  "4-years": 48,
+  "5-years": 60,
+};
+
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WEEK_OF_MONTH_INDEX = { "1st Week": 0, "2nd Week": 1, "3rd Week": 2, "4th Week": 3 };
+const MONTH_INDEX = {
+  January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+  July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
+};
+
+// How many rounds a full cycle needs, given the admin's chosen
+// `endSavingPeriod` (e.g. "5-years") and how often contributions land.
+// Falls back to the old fixed defaults if endSavingPeriod wasn't set/recognized
+// (e.g. legacy groups saved before this field existed).
+const roundsForSavingPeriod = (frequency, endSavingPeriod) => {
+  const months = SAVING_PERIOD_MONTHS[String(endSavingPeriod || "").toLowerCase()];
+  if (!months) return DEFAULT_ROUND_COUNTS[frequency] || DEFAULT_ROUND_COUNTS.weekly;
+  if (frequency === "daily") return Math.round(months * 30.44);
+  if (frequency === "monthly") return months;
+  if (frequency === "yearly") return Math.max(1, Math.round(months / 12));
+  return Math.round(months * (52 / 12)); // weekly, and the fallback for unknown frequencies
+};
+
+// Snaps the cycle's first round onto the exact weekday / week-of-month /
+// month the admin picked in con_group.ejs, instead of just "whatever weekday
+// principlesSetAt happens to be". Subsequent rounds stay evenly spaced from
+// this anchor by addIntervalToDate, so the whole schedule stays aligned.
+const alignFirstRoundDate = (start, frequency, intervalConfig) => {
+  const d = new Date(start);
+  const targetDow = WEEKDAYS.indexOf(intervalConfig?.contributionDay || "");
+  const weekIdx = WEEK_OF_MONTH_INDEX[intervalConfig?.weekOfMonth];
+
+  if (frequency === "weekly" && targetDow >= 0) {
+    d.setDate(d.getDate() + ((targetDow - d.getDay() + 7) % 7));
+  } else if (frequency === "monthly" && weekIdx != null) {
+    d.setDate(1);
+    d.setDate(1 + (targetDow >= 0 ? (targetDow - d.getDay() + 7) % 7 : 0) + weekIdx * 7);
+  } else if (frequency === "yearly" && intervalConfig?.month in MONTH_INDEX) {
+    d.setMonth(MONTH_INDEX[intervalConfig.month]);
+    d.setDate(1);
+    if (weekIdx != null) {
+      d.setDate(1 + (targetDow >= 0 ? (targetDow - d.getDay() + 7) % 7 : 0) + weekIdx * 7);
+    }
+  }
+  return d;
+};
+
+const addIntervalToDate = (date, n, frequency) => {
+  const d = new Date(date);
+  if (frequency === "daily") d.setDate(d.getDate() + n);
+  else if (frequency === "monthly") d.setMonth(d.getMonth() + n);
+  else if (frequency === "yearly") d.setFullYear(d.getFullYear() + n);
+  else d.setDate(d.getDate() + n * 7); // weekly, and the fallback for unknown frequencies
+  return d;
+};
+
+const buildDateIntervalCycle = (startDate, intervalConfig = {}, totalRounds) => {
+  const frequency = String(intervalConfig?.frequency || "").toLowerCase() || "weekly";
+  const rawStart = startDate ? new Date(startDate) : new Date();
+  if (Number.isNaN(rawStart.getTime())) {
+    // Never persist an unparseable cycle — that's exactly what causes a
+    // round to get stuck forever (see computeLiveRoundStatuses' malformed
+    // branch). Fall back to "now" instead of writing bad data.
+    return buildDateIntervalCycle(new Date().toISOString(), intervalConfig, totalRounds);
+  }
+  const start = alignFirstRoundDate(rawStart, frequency, intervalConfig);
+
+  const count = Number.isInteger(totalRounds) && totalRounds > 0
+    ? totalRounds
+    : roundsForSavingPeriod(frequency, intervalConfig?.endSavingPeriod);
+
+  const rounds = [];
+  for (let i = 0; i < count; i++) {
+    rounds.push({
+      roundNumber: i + 1,
+      scheduledDate: addIntervalToDate(start, i, frequency).toISOString(),
+      status: "pending", // computeLiveRoundStatuses recomputes this live on every read
+      accountroundPerformance: [],
+    });
+  }
+
+  return {
+    frequency,
+    endSavingPeriod: intervalConfig?.endSavingPeriod || null,
+    startDate: start.toISOString(),
+    endDate: addIntervalToDate(start, count, frequency).toISOString(),
+    rounds,
+  };
+};
+
 const calculateActiveCircle = (principlesSetAt, intervalConfig = {}) => {
   const frequency = String(intervalConfig?.frequency || '').toLowerCase() || 'weekly';
   const startRaw = principlesSetAt || new Date().toISOString();
@@ -3292,11 +3415,23 @@ const applyAtomicGroupMemberContribution = async ({
       // Per-account real-time round-state lookup (memoized) — the ONLY thing
       // Stage 4 does with rounds is read whichever one comes back "active"
       // from computeLiveRoundStatuses. No date math happens here.
+      //
+      // Self-healing: if an account has no rounds yet (never generated) or
+      // its cycle is otherwise unusable, we build one now via
+      // buildDateIntervalCycle instead of falling through to the old
+      // elapsed-time index forever — the fresh cycle is persisted below so
+      // every subsequent contribution finds real rounds already in place.
       const acctRoundState = {};
+      const regeneratedCycles = {}; // accId -> newly-built cycle, flushed into setFields below
       const getAcctRoundState = (accId) => {
         if (!acctRoundState[accId]) {
-          const cycle = targetGroupData.members?.[memberKey]?.accounts?.[accId]?.dateIntervalCycle ||
+          let cycle = targetGroupData.members?.[memberKey]?.accounts?.[accId]?.dateIntervalCycle ||
                         memberRecord?.accounts?.[accId]?.dateIntervalCycle || {};
+          if (!Array.isArray(cycle.rounds) || cycle.rounds.length === 0) {
+            cycle = buildDateIntervalCycle(principlesSetAt, intervals);
+            regeneratedCycles[accId] = cycle;
+            console.warn(`[applyAtomicGroupMemberContribution] No rounds found for account ${accId} (group "${groupName}") — generating a fresh cycle.`);
+          }
           const originalRounds = Array.isArray(cycle.rounds) ? cycle.rounds : [];
           const liveRounds = computeLiveRoundStatuses(originalRounds, cycle.endDate, nowDate);
           const activeIndex = liveRounds.findIndex((r) => r.status === "active");
@@ -3394,27 +3529,50 @@ const applyAtomicGroupMemberContribution = async ({
         const historyPath = `${memPrefix}members.${memberKey}.accounts.${accId}.transactionHistory`;
         pushFields[historyPath] = txArr.length > 1 ? { $each: txArr } : txArr[0];
 
-        // Real-time round-state sync: write any round whose live-computed
-        // status differs from what's stored (pending -> active -> closed),
-        // purely from comparing scheduledDate windows against `nowDate`.
         const rs = getAcctRoundState(accId);
-        rs.liveRounds.forEach((liveRound, idx) => {
-          const storedStatus = rs.originalRounds[idx]?.status;
-          if (storedStatus !== liveRound.status) {
-            setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${idx}.status`] = liveRound.status;
-          }
-        });
 
-        if (rs.activeIndex >= 0) {
-          // Credit the contribution to whichever round is live-"active" —
-          // no calculation, just reading the status computed above.
-          pushFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${rs.activeIndex}.contributingMembers`] = mPhone;
+        if (regeneratedCycles[accId]) {
+          // Freshly-built cycle for an account that had none — persist it
+          // with LIVE-corrected statuses (rs.liveRounds), not the raw
+          // "pending for everyone" shape buildDateIntervalCycle returns, so
+          // the round that's actually active today reads "active" right
+          // away instead of waiting for a later contribution to fix it up.
+          setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle`] = {
+            ...regeneratedCycles[accId],
+            rounds: rs.liveRounds,
+          };
         } else {
-          // No round's window covers today (cycle not started yet, or fully
-          // closed) — fall back to the legacy elapsed-time index so the
-          // contribution still lands somewhere, and log it for review.
-          console.warn(`[applyAtomicGroupMemberContribution] No active round for account ${accId} (group "${groupName}") — falling back to elapsed-time round #${circleInfo.roundNumber}.`);
-          pushFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${circleInfo.roundIndex}.contributingMembers`] = mPhone;
+          // Real-time round-state sync: write any round whose live-computed
+          // status differs from what's stored (pending -> active -> closed),
+          // purely from comparing scheduledDate windows against `nowDate`.
+          rs.liveRounds.forEach((liveRound, idx) => {
+            const storedStatus = rs.originalRounds[idx]?.status;
+            if (storedStatus !== liveRound.status) {
+              setFields[`${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${idx}.status`] = liveRound.status;
+            }
+          });
+        }
+
+        // A cycle now always has real rounds (existing or freshly built), so
+        // there should always be an active one. If not — every round's
+        // window has actually elapsed (cycle ran out) — log it distinctly
+        // from the old "rounds don't exist" case instead of guessing an index.
+        if (rs.activeIndex >= 0) {
+          const rpPath = `${memPrefix}members.${memberKey}.accounts.${accId}.dateIntervalCycle.rounds.${rs.activeIndex}.accountroundPerformance`;
+          const perfEntries = txArr.map((tx) => ({
+            memberId: mPhone,
+            openingBalance: Number(tx.openingBalance || 0),
+            amountIn: Number(tx.amount || 0),
+            amountOut: 0,
+            closingBalance: Number(tx.closingBalance || 0),
+            transactionCode: tx.txId,
+            transactionDate: tx.date,
+            roundNumber: tx.circleRound,
+            accountId: tx.accountId,
+          }));
+          pushFields[rpPath] = perfEntries.length > 1 ? { $each: perfEntries } : perfEntries[0];
+        } else {
+          console.warn(`[applyAtomicGroupMemberContribution] Cycle exhausted for account ${accId} (group "${groupName}") — every round's window has passed. Contribution recorded in transactionHistory only; the cycle needs to be renewed.`);
         }
       }
 
@@ -3596,6 +3754,8 @@ module.exports = {
   updatePersonalRecord,
   upsertPersonalAccount,
   calculateActiveCircle,
+  buildDateIntervalCycle,
+  computeLiveRoundStatuses,
   applyAtomicGroupMemberContribution,
 };
 
@@ -3621,6 +3781,7 @@ const findGroupMemberTransactions = async (phone) => {
     ];
 
     const txns = [];
+    const groupMembers = [];
 
     // Helper to process a group object
     const processGroupObj = (g, source) => {
@@ -3656,7 +3817,31 @@ const findGroupMemberTransactions = async (phone) => {
       // 2. Check members map / object
       if (g.members && typeof g.members === "object") {
         for (const [key, mem] of Object.entries(g.members)) {
-          if (normalizePhone(key) === nPhone || phoneVariants.includes(key)) {
+          const idNorm = normalizePhone(mem && mem.memberId);
+          const keyNorm = normalizePhone(key);
+          const phoneNorm = normalizePhone(mem && (mem.phone || mem.phoneNumber));
+          if (keyNorm === nPhone || phoneVariants.includes(key) || idNorm === nPhone || phoneVariants.includes(mem?.memberId) || phoneNorm === nPhone || phoneVariants.includes(mem?.phone)) {
+            if (mem) {
+              groupMembers.push({
+                groupName: gName,
+                groupId: g.groupId || g.accountNumber || "",
+                memberId: mem.memberId || key,
+                name: mem.name || "",
+                phone: mem.phone || mem.phoneNumber || rawPhone,
+                memberFinancials: mem.memberFinancials || {
+                  openingBalance: 0,
+                  amountIn: 0,
+                  amountOut: 0,
+                  closingBalance: 0
+                },
+                accounts: mem.accounts || {},
+                dateIntervalCycle: mem.dateIntervalCycle || g.dateIntervalCycle || g.groupFinancials?.dateIntervalCycle || {},
+                transactions: Array.isArray(mem.transactions) ? mem.transactions : [],
+                transactionHistory: Array.isArray(mem.transactionHistory) ? mem.transactionHistory : [],
+                source: source || "groups-members"
+              });
+            }
+
             if (mem && Array.isArray(mem.transactions)) {
               mem.transactions.forEach(tx => {
                 txns.push({
@@ -3751,44 +3936,16 @@ const findGroupMemberTransactions = async (phone) => {
       }
     });
 
-    // 3. Search group-related transactions from `PersonalAccount`
-    const pAcc = await personalAccountCol.findOne({
-      $or: [
-        { phone: { $in: phoneVariants } },
-        { "account.personal.accountNumber": { $in: phoneVariants } }
-      ]
+    // Deduplicate group members
+    const seenGroups = new Set();
+    const uniqueGroupMembers = [];
+    groupMembers.forEach(gm => {
+      const gKey = `${gm.groupName || ''}_${gm.groupId || ''}_${gm.memberId || ''}`;
+      if (!seenGroups.has(gKey)) {
+        seenGroups.add(gKey);
+        uniqueGroupMembers.push(gm);
+      }
     });
-    if (pAcc && Array.isArray(pAcc.transactions)) {
-      pAcc.transactions.forEach(t => {
-        const isGroup = Boolean(
-          t.groupName ||
-          t.purpose === "group_contribution" ||
-          t.type === "group_deposit" ||
-          (t.notes && t.notes.toLowerCase().includes("contribution to"))
-        );
-        if (isGroup) {
-          const gName = t.groupName || "Group Account";
-          txns.push({
-            code: t.reference || t.code || "",
-            amt: Number(t.amount || 0),
-            date: t.time || t.date || new Date().toISOString(),
-            type: "group_deposit",
-            groupName: gName,
-            acc: `Group ${gName} (Account ${t.accountId || '001'} - ${t.accountName || 'Saving'})`,
-            accountId: t.accountId || "001",
-            accountName: t.accountName || "Saving",
-            from: rawPhone,
-            fromNumber: rawPhone,
-            to: gName,
-            toNumber: gName,
-            circleRound: t.circleRound || 1,
-            opening: Number(t.openingBalance ?? 0),
-            closing: Number(t.closingBalance ?? 0),
-            source: "personal-account"
-          });
-        }
-      });
-    }
 
     // Deduplicate transactions by reference code or composite key
     const seen = new Set();
@@ -3801,11 +3958,15 @@ const findGroupMemberTransactions = async (phone) => {
       }
     });
 
-    return uniqueTxns.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    uniqueTxns.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    uniqueTxns.groupMembers = uniqueGroupMembers;
+    uniqueTxns.memberRecords = uniqueGroupMembers;
+
+    return uniqueTxns;
   } catch (e) {
     console.error("[findGroupMemberTransactions error]", e.message);
     return [];
   }
 };
 
-module.exports.findGroupMemberTransactions = findGroupMemberTransactions; 
+module.exports.findGroupMemberTransactions = findGroupMemberTransactions;
