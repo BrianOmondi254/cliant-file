@@ -479,32 +479,53 @@ router.get("/", async (req, res) => {
       return false;
     };
 
-    // ── Fetch groups from MongoDB `groups` collection and match the logged-in phone ──
-    const userGroups = [];
-    try {
-      const groupsFromCollection = await getGroupsForMemberFromGroupsCollection(phone);
-      userGroups.push(...groupsFromCollection);
-      console.log(`[personal] groups collection returned ${groupsFromCollection.length} group(s) for ${phone}: ${groupsFromCollection.map(g => g.groupName).join(', ') || '(none)'}`);
-    } catch (e) {
-      console.error("[personal] groups collection membership lookup error:", e.message);
-    }
+    // Session already set agent/dealer on login — skip extra DB hits unless flags missing
+    const needRoleLookup = req.session.isAgent === undefined || req.session.isDealer === undefined;
 
-    // Use session flags for showDealer, showAgent, agent, and hasAgentPin
-    // To be robust, re-check against MongoDB collections if flags are missing or stale
-    let isAgentInFile = false;
-    let isDealerInFile = false;
-    try {
-      const dbReady = await ensureMongoReady();
-      if (dbReady) {
-        isAgentInFile = !!(await findAgentByPhone(phone));
-        isDealerInFile = !!(await findDealerByPhone(phone));
-      }
-    } catch (e) {
-      console.error("[personal] agent/dealer lookup error:", e.message);
-    }
+    // Run independent DB work in parallel (was sequential + loaded ALL users)
+    const [
+      groupsFromCollection,
+      dbUser,
+      mongoMessages,
+      pendingOfficerMessage,
+      tbankSettings,
+      roleLookup,
+    ] = await Promise.all([
+      getGroupsForMemberFromGroupsCollection(phone).catch((e) => {
+        console.error("[personal] groups collection membership lookup error:", e.message);
+        return [];
+      }),
+      findUserByPhone(phone).catch((e) => {
+        console.error("Error finding user in DB for PIN check:", e.message);
+        return null;
+      }),
+      getMessagesForUser(phone).catch((e) => {
+        console.error("Error fetching messages from MongoDB:", e.message);
+        return [];
+      }),
+      (req.session.user && req.session.user.phoneNumber)
+        ? getPendingOfficerMessageByPhone(req.session.user.phoneNumber).catch(() => null)
+        : Promise.resolve(null),
+      getTbankSettings().catch((e) => {
+        console.error("Error fetching tbank settings:", e.message);
+        return null;
+      }),
+      needRoleLookup
+        ? Promise.all([
+            findAgentByPhone(phone).catch(() => null),
+            findDealerByPhone(phone).catch(() => null),
+          ]).then(([a, d]) => ({ isAgent: !!a, isDealer: !!d }))
+        : Promise.resolve({
+            isAgent: !!req.session.isAgent,
+            isDealer: !!req.session.isDealer,
+          }),
+    ]);
 
-    const showDealer = !!(req.session.isDealer || isDealerInFile);
-    const showAgent = !!(req.session.isAgent || isAgentInFile);
+    const userGroups = Array.isArray(groupsFromCollection) ? groupsFromCollection : [];
+    console.log(`[personal] groups collection returned ${userGroups.length} group(s) for ${phone}: ${userGroups.map(g => g.groupName).join(', ') || '(none)'}`);
+
+    const showDealer = !!(req.session.isDealer || roleLookup.isDealer);
+    const showAgent = !!(req.session.isAgent || roleLookup.isAgent);
 
     const dealerIsVerified = !!req.session.dealerPhone;
     const agentIsVerified = true;
@@ -515,20 +536,6 @@ router.get("/", async (req, res) => {
     let isMember = false;
     const constitutionKeys = [];
     const groupMessages = [];
-
-    const userInThisGroup = (g, phone) => {
-      return Object.values(g).some(v => {
-        if (v && typeof v === 'object') {
-          if (v.phone && norm(v.phone) === norm(phone)) return true;
-          if (v.requesterPhone && norm(v.requesterPhone) === norm(phone)) return true;
-          if (v.approverPhone && norm(v.approverPhone) === norm(phone)) return true;
-          if (v.to && norm(v.to) === norm(phone)) return true;
-          if (Array.isArray(v)) return v.some(child => child && typeof child === 'object' && search(child));
-          return search(v);
-        }
-        return false;
-      });
-    };
 
     userGroups.forEach(group => {
       const role = String(group.role || '').toLowerCase();
@@ -579,94 +586,82 @@ router.get("/", async (req, res) => {
       }
     });
 
-    // Fetch messages from MongoDB messages collection
-    try {
-      const mongoMessages = await getMessagesForUser(phone);
-      mongoMessages.forEach(msg => {
-        if (msg.type === 'security_alert' && msg.title === 'Constitution Key' && msg.key) {
-          constitutionKeys.push({
-            groupName: msg.groupName,
-            key: msg.key,
-            type: 'security_alert'
-          });
-        } else if (msg.to && norm(msg.to) === norm(phone)) {
-          groupMessages.push({
-            _id: msg._id,
-            groupName: msg.groupName || 'Notification',
-            title: msg.title || 'Notification',
-            type: msg.type || 'general',
-            content: msg.content,
-            meta: msg.meta,
-            createdAt: msg.createdAt,
-            isNew: msg.isNew !== false
-          });
-        }
-      });
-    } catch (e) {
-      console.error("Error fetching messages from MongoDB:", e.message);
-    }
+    (mongoMessages || []).forEach(msg => {
+      if (msg.type === 'security_alert' && msg.title === 'Constitution Key' && msg.key) {
+        constitutionKeys.push({
+          groupName: msg.groupName,
+          key: msg.key,
+          type: 'security_alert'
+        });
+      } else if (msg.to && norm(msg.to) === norm(phone)) {
+        groupMessages.push({
+          _id: msg._id,
+          groupName: msg.groupName || 'Notification',
+          title: msg.title || 'Notification',
+          type: msg.type || 'general',
+          content: msg.content,
+          meta: msg.meta,
+          createdAt: msg.createdAt,
+          isNew: msg.isNew !== false
+        });
+      }
+    });
 
     const normalizedPhone = norm(phone);
 
-    // Get all users from MongoDB for name lookups and PIN check
-    let usersFlat = [];
-    try {
-      usersFlat = await getAllUsersFlattened();
-    } catch (e) {
-      console.error("Error fetching users from MongoDB:", e.message);
-    }
-
-    const getUserName = (phoneNumber) => {
-      if (!phoneNumber) return null;
-      try {
-        return getUserNameByPhone(phoneNumber);
-      } catch (e) {
-        const normalized = norm(phoneNumber);
-        const u = usersFlat.find(user => norm(user.phoneNumber) === normalized);
-        if (!u) return null;
-        return `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
-      }
-    };
-
-    // Augment userGroups with member names
+    // Resolve member display names only for phones on this user's groups (one county scan),
+    // instead of getAllUsersFlattened() which loaded every user in the DB.
+    const phonesNeedingNames = new Set();
     userGroups.forEach(group => {
       Object.keys(group).forEach(key => {
         if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
           const item = group[key];
           if (item && typeof item === 'object' && item.phone) {
-            const u = usersFlat.find(user => norm(user.phoneNumber) === norm(item.phone));
-            if (u) item.name = `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim();
+            phonesNeedingNames.add(norm(item.phone));
           }
         }
       });
     });
 
-    const generalExists = userGroups.length > 0;
-
-    let hasPersonalPin = false;
-    try {
-      const dbUser = await findUserByPhone(phone);
-      if (dbUser && dbUser.personalPin) {
-        hasPersonalPin = true;
-      } else {
-        const currentUser = usersFlat.find(u => norm(u.phoneNumber) === norm(phone));
-        hasPersonalPin = !!(currentUser && currentUser.personalPin);
+    if (phonesNeedingNames.size > 0) {
+      try {
+        const ready = await ensureMongoReady();
+        if (ready) {
+          const nameByPhone = new Map();
+          const counties = await County.find({}).lean();
+          for (const countyItem of counties) {
+            for (const consItem of countyItem.constituencies || []) {
+              for (const wardItem of consItem.wards || []) {
+                for (const u of wardItem.data || []) {
+                  const key = norm(u.phoneNumber);
+                  if (!key || !phonesNeedingNames.has(key) || nameByPhone.has(key)) continue;
+                  nameByPhone.set(
+                    key,
+                    `${u.FirstName || ''} ${u.MiddleName || ''} ${u.LastName || ''}`.replace(/\s+/g, ' ').trim()
+                  );
+                }
+              }
+            }
+          }
+          userGroups.forEach(group => {
+            Object.keys(group).forEach(key => {
+              if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+                const item = group[key];
+                if (item && typeof item === 'object' && item.phone) {
+                  const n = nameByPhone.get(norm(item.phone));
+                  if (n) item.name = n;
+                }
+              }
+            });
+          });
+        }
+      } catch (e) {
+        console.error("Error resolving member names:", e.message);
       }
-    } catch (e) {
-      console.error("Error finding user in DB for PIN check:", e);
     }
 
-      let pendingOfficerMessage = null;
-      if (req.session.user && req.session.user.phoneNumber) {
-        pendingOfficerMessage = await getPendingOfficerMessageByPhone(req.session.user.phoneNumber);
-      }
-
-      let tbankSettings = null;
-      try {
-        tbankSettings = await getTbankSettings();
-      } catch (e) {
-        console.error("Error fetching tbank settings:", e.message);
-      }
+    const generalExists = userGroups.length > 0;
+    const hasPersonalPin = !!(dbUser && dbUser.personalPin);
 
  res.render('cliant', {
         user: req.session.user,
@@ -1521,6 +1516,229 @@ router.post("/general", (req, res) => {
   writeJSON(groupsFile, accounts);
 
   res.redirect("/personal/myaccount?alert=Group%20Created%20Successfully");
+});
+
+/* Normalize member A/C numbers so "7", "07", "007" match */
+const normMemberNo = (v) => {
+  const s = String(v || "").trim();
+  if (!s) return "";
+  const digits = s.replace(/\D/g, "");
+  if (!digits) return s.toLowerCase();
+  return String(parseInt(digits, 10));
+};
+
+const buildMemberResult = (person, key, fallbackIndex) => {
+  if (!person || typeof person !== "object") return null;
+  const phone = person.phone || person.phoneNumber || person.memberId || "";
+  const name =
+    person.name ||
+    [person.FirstName, person.MiddleName, person.LastName].filter(Boolean).join(" ").trim() ||
+    person.title ||
+    (key ? String(key).replace(/_/g, " ") : "Member");
+  const memberNumber =
+    person.memberNumber ||
+    person.index ||
+    fallbackIndex ||
+    (key && String(key).includes("_") ? String(key).split("_").pop() : "") ||
+    "";
+  return {
+    name: String(name).trim() || "Member",
+    phone: String(phone || "").trim(),
+    memberNumber: String(memberNumber || "").trim(),
+    role: person.role || person.type || (key ? String(key).split("_")[0] : "member"),
+    verified: true,
+  };
+};
+
+/** Find a member inside a group document by member number / index / key suffix */
+const findMemberInGroupDocByNumber = (group, memberNumber) => {
+  if (!group || !memberNumber) return null;
+  const wanted = normMemberNo(memberNumber);
+  if (!wanted) return null;
+
+  const matchesNo = (...vals) =>
+    vals.some((v) => {
+      const n = normMemberNo(v);
+      return n && n === wanted;
+    });
+
+  // Flat keys: trustee_1, official_2, member_7
+  for (const key of Object.keys(group)) {
+    if (!(key.startsWith("trustee_") || key.startsWith("official_") || key.startsWith("member_"))) continue;
+    const person = group[key];
+    if (!person || typeof person !== "object") continue;
+    const keySuffix = key.includes("_") ? key.split("_").pop() : "";
+    if (
+      matchesNo(person.memberNumber, person.index, keySuffix) ||
+      key.endsWith("_" + memberNumber) ||
+      key.endsWith("_" + wanted)
+    ) {
+      return buildMemberResult(person, key, keySuffix || wanted);
+    }
+  }
+
+  // members map / array (groups-members + MemberGroup docs)
+  const members = group.members;
+  if (members && typeof members === "object" && !Array.isArray(members)) {
+    for (const [key, person] of Object.entries(members)) {
+      if (!person || typeof person !== "object") continue;
+      if (matchesNo(person.memberNumber, person.index, person.memberId, key)) {
+        return buildMemberResult(person, key, person.memberNumber || person.index || wanted);
+      }
+    }
+  }
+  if (Array.isArray(members)) {
+    for (let i = 0; i < members.length; i++) {
+      const person = members[i];
+      if (!person || typeof person !== "object") continue;
+      if (matchesNo(person.memberNumber, person.index, i + 1, person.memberId)) {
+        return buildMemberResult(person, null, person.memberNumber || String(i + 1));
+      }
+    }
+  }
+
+  return null;
+};
+
+const groupNameMatches = (group, groupName) => {
+  const target = String(groupName || "").trim().toLowerCase();
+  if (!target || !group) return false;
+  return [group.groupName, group.groupKey, group.groupId, group.accountNumber]
+    .some((v) => String(v || "").trim().toLowerCase() === target);
+};
+
+/**
+ * POST /personal/verify-group-member
+ * Look up another group member by member A/C number and return name + phone.
+ */
+router.post("/verify-group-member", async (req, res) => {
+  try {
+    const groupName = String(req.body.groupName || "").trim();
+    const memberNumber = String(req.body.memberNumber || req.body.memberIndex || "").trim();
+    const sessionPhone = req.session?.user?.phoneNumber || "";
+
+    if (!groupName) {
+      return res.json({ success: false, message: "Group name is required." });
+    }
+    if (!memberNumber) {
+      return res.json({ success: false, message: "Member A/C number is required." });
+    }
+
+    let found = null;
+    let source = "";
+
+    // 1) general.json (legacy flat trustee_/member_ keys)
+    try {
+      const groupsRaw = readJSON(groupsFile, {});
+      const allGroups = flattenData(groupsRaw);
+      const group = allGroups.find((g) => groupNameMatches(g, groupName));
+      if (group) {
+        found = findMemberInGroupDocByNumber(group, memberNumber);
+        if (found) source = "general";
+      }
+    } catch (e) {
+      console.error("[verify-group-member] general.json lookup:", e.message);
+    }
+
+    // 2) MongoDB groups + groups-members
+    if (!found) {
+      try {
+        const ready = await ensureMongoReady();
+        const db = ready ? require("mongoose").connection.db : null;
+        if (db) {
+          const scanDocs = async (colName) => {
+            const docs = await db.collection(colName).find({}).toArray();
+            for (const doc of docs) {
+              if (!doc) continue;
+
+              if (groupNameMatches(doc, groupName)) {
+                const hit = findMemberInGroupDocByNumber(doc, memberNumber);
+                if (hit) return hit;
+              }
+
+              // Nested regional structure
+              for (const cons of doc.constituencies || []) {
+                for (const ward of cons.wards || []) {
+                  for (const g of ward.data || []) {
+                    if (!groupNameMatches(g, groupName)) continue;
+                    const hit = findMemberInGroupDocByNumber(g, memberNumber);
+                    if (hit) return hit;
+                  }
+                }
+              }
+
+              // Flat constituency-as-key arrays
+              for (const key of Object.keys(doc)) {
+                if (key === "_id" || key === "county" || key === "performance" || key === "constituencies") continue;
+                const items = doc[key];
+                if (!Array.isArray(items)) continue;
+                for (const item of items) {
+                  if (!item || typeof item !== "object" || !item.groupName) continue;
+                  if (!groupNameMatches(item, groupName)) continue;
+                  const hit = findMemberInGroupDocByNumber(item, memberNumber);
+                  if (hit) return hit;
+                }
+              }
+            }
+            return null;
+          };
+
+          found = await scanDocs("groups");
+          if (found) source = "groups";
+          if (!found) {
+            found = await scanDocs("groups-members");
+            if (found) source = "groups-members";
+          }
+        }
+      } catch (e) {
+        console.error("[verify-group-member] Mongo lookup:", e.message);
+      }
+    }
+
+    if (!found) {
+      return res.json({
+        success: false,
+        message: `Member A/C number ${memberNumber} was not found in ${groupName}.`,
+      });
+    }
+
+    // Block sending to yourself
+    if (sessionPhone && found.phone && norm(found.phone) === norm(sessionPhone)) {
+      return res.json({
+        success: false,
+        message: "That is your own member number. Use My Account instead.",
+      });
+    }
+
+    // Enrich name from user registry when missing / generic
+    if (found.phone && (!found.name || /^member(\s|$)/i.test(found.name))) {
+      try {
+        const dbUser = await findUserByPhone(found.phone);
+        if (dbUser) {
+          const full = [dbUser.FirstName, dbUser.MiddleName, dbUser.LastName]
+            .filter(Boolean)
+            .join(" ")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (full) found.name = full;
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    return res.json({
+      success: true,
+      verified: true,
+      name: found.name,
+      phone: found.phone,
+      memberNumber: found.memberNumber || memberNumber,
+      role: found.role,
+      groupName,
+      source,
+    });
+  } catch (err) {
+    console.error("[verify-group-member]", err);
+    return res.status(500).json({ success: false, message: "Could not verify member. Try again." });
+  }
 });
 
 /* 💸 Send Money Flow */

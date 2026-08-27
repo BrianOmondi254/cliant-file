@@ -298,52 +298,107 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
   };
 
   const findVerifiedGroupInGroupsMembers = async (groupName, phone) => {
-    const ready = await ensureMongoReady();
-    if (!ready) return null;
-
     const targetPhone = normalizeKenyanPhone(phone);
     const targetGroup = String(groupName || '').trim().toLowerCase();
     if (!targetPhone || !targetGroup) return null;
 
-    const mongoose = require('mongoose');
-    const db = mongoose.connection.db;
-    if (!db) return null;
+    // 1. Try MongoDB groups-members collection
+    try {
+      const ready = await ensureMongoReady();
+      if (ready) {
+        const mongoose = require('mongoose');
+        const db = mongoose.connection.db;
+        if (db) {
+          const cursor = db.collection('groups-members').find({}, { projection: { county: 1, constituencies: 1, _id: 0 } });
 
-    const cursor = db.collection('groups-members').find({}, { projection: { county: 1, constituencies: 1, _id: 0 } });
+          for await (const doc of cursor) {
+            if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
 
-    for await (const doc of cursor) {
-      if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
+            for (const constituency of doc.constituencies) {
+              if (!constituency || !Array.isArray(constituency.wards)) continue;
 
-      for (const constituency of doc.constituencies) {
-        if (!constituency || !Array.isArray(constituency.wards)) continue;
+              for (const ward of constituency.wards) {
+                if (!ward || !Array.isArray(ward.data)) continue;
 
-        for (const ward of constituency.wards) {
-          if (!ward || !Array.isArray(ward.data)) continue;
+                for (const group of ward.data) {
+                  if (!group) continue;
+                  const gName = String(group.groupName || '').trim().toLowerCase();
+                  const gId = String(group.groupId || '').trim().toLowerCase();
+                  const gAcc = String(group.accountNumber || '').trim().toLowerCase();
+                  if (gName !== targetGroup && gId !== targetGroup && gAcc !== targetGroup) continue;
 
-          for (const group of ward.data) {
-            if (!group || !group.groupName) continue;
-            if (String(group.groupName).trim().toLowerCase() !== targetGroup) continue;
+                  const members = group.members || {};
+                  const matchedMemberKey = Object.keys(members).find(memberKey => {
+                    const member = members[memberKey];
+                    const memberPhone = member && (member.memberId || member.phone || member.phoneNumber) ? (member.memberId || member.phone || member.phoneNumber) : memberKey;
+                    return normalizeKenyanPhone(memberPhone) === targetPhone;
+                  });
 
-            const members = group.members || {};
-            const matchedMemberKey = Object.keys(members).find(memberKey => {
-              const member = members[memberKey];
-              const memberPhone = member && (member.memberId || member.phone || member.phoneNumber) ? (member.memberId || member.phone || member.phoneNumber) : memberKey;
-              return normalizeKenyanPhone(memberPhone) === targetPhone;
-            });
-
-            if (!matchedMemberKey) continue;
-
-            return {
-              group,
-              county: group.county || doc.county,
-              constituency: group.constituency || constituency.name,
-              ward: group.ward || ward.name,
-              memberKey: matchedMemberKey,
-              member: members[matchedMemberKey]
-            };
+                  if (matchedMemberKey) {
+                    return {
+                      group,
+                      county: group.county || doc.county,
+                      constituency: group.constituency || constituency.name,
+                      ward: group.ward || ward.name,
+                      memberKey: matchedMemberKey,
+                      member: members[matchedMemberKey]
+                    };
+                  }
+                }
+              }
+            }
           }
         }
       }
+    } catch (e) {
+      console.warn('[findVerifiedGroupInGroupsMembers] Mongo lookup error:', e.message);
+    }
+
+    // 2. Fallback to regional member.json
+    try {
+      const memberData = readJSON(memberRegionsFile, {});
+      const regions = memberData.regions || {};
+      for (const countyKey of Object.keys(regions)) {
+        if (countyKey === 'regionTransaction') continue;
+        const countyDoc = regions[countyKey];
+        if (!countyDoc || !Array.isArray(countyDoc.constituencies)) continue;
+
+        for (const constituency of countyDoc.constituencies) {
+          if (!constituency || !Array.isArray(constituency.wards)) continue;
+
+          for (const ward of constituency.wards) {
+            if (!ward || !Array.isArray(ward.data)) continue;
+
+            for (const group of ward.data) {
+              if (!group) continue;
+              const gName = String(group.groupName || '').trim().toLowerCase();
+              const gId = String(group.groupId || '').trim().toLowerCase();
+              const gAcc = String(group.accountNumber || '').trim().toLowerCase();
+              if (gName !== targetGroup && gId !== targetGroup && gAcc !== targetGroup) continue;
+
+              const members = group.members || {};
+              const matchedMemberKey = Object.keys(members).find(memberKey => {
+                const member = members[memberKey];
+                const memberPhone = member && (member.memberId || member.phone || member.phoneNumber) ? (member.memberId || member.phone || member.phoneNumber) : memberKey;
+                return normalizeKenyanPhone(memberPhone) === targetPhone;
+              });
+
+              if (matchedMemberKey) {
+                return {
+                  group,
+                  county: group.county || countyDoc.county || countyKey,
+                  constituency: group.constituency || constituency.name,
+                  ward: group.ward || ward.name,
+                  memberKey: matchedMemberKey,
+                  member: members[matchedMemberKey]
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[findVerifiedGroupInGroupsMembers] JSON fallback error:', e.message);
     }
 
     return null;
@@ -412,6 +467,70 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
       };
     }
 
+    // Format current verified member data object
+    const verifiedMember = verified.member || {};
+    const verifiedMemberKey = verified.memberKey || '';
+    const verifiedMemberId = verifiedMember.memberId || verifiedMember.phone || verifiedMemberKey;
+    const verifiedMemberName = verifiedMember.name || verifiedMemberKey;
+    const memberRole = (verifiedMember.role || verifiedMember.type || 'member').toLowerCase();
+    const isMemberOnly = memberRole !== 'trustee' && memberRole !== 'official';
+
+    // Ensure member's accounts are populated with schema accounts
+    const memberAccounts = { ...(verifiedMember.accounts || {}) };
+    let sumOpenBal = 0;
+    let sumAmtIn = 0;
+    let sumAmtOut = 0;
+    let sumClosingBal = 0;
+
+    for (const accId of Object.keys(accountSchema)) {
+      const schema = accountSchema[accId];
+      const acc = memberAccounts[accId] || {};
+      const fins = acc.financials || {
+        openingBalance: 0,
+        amountIn: 0,
+        amountOut: 0,
+        closingBalance: 0
+      };
+      const openBal = Number(fins.openingBalance || 0);
+      const amtIn = Number(fins.amountIn || 0);
+      const amtOut = Number(fins.amountOut || 0);
+      const closingBal = Number(fins.closingBalance || 0);
+
+      sumOpenBal += openBal;
+      sumAmtIn += amtIn;
+      sumAmtOut += amtOut;
+      sumClosingBal += closingBal;
+
+      memberAccounts[accId] = {
+        accountId: schema.accountId || accId,
+        accountName: acc.accountName || schema.accountName || accId,
+        expectedAmount: Number(acc.expectedAmount || schema.expectedAmount || 0),
+        financials: {
+          openingBalance: openBal,
+          amountIn: amtIn,
+          amountOut: amtOut,
+          closingBalance: closingBal,
+          transactionHistory: fins.transactionHistory || []
+        }
+      };
+    }
+
+    const memberFinancials = verifiedMember.memberFinancials || {
+      openingBalance: sumOpenBal,
+      amountIn: sumAmtIn,
+      amountOut: sumAmtOut,
+      closingBalance: sumClosingBal
+    };
+
+    const currentUser = {
+      ...verifiedMember,
+      memberId: verifiedMemberId,
+      name: verifiedMemberName,
+      role: memberRole,
+      memberFinancials,
+      accounts: memberAccounts
+    };
+
     return {
       success: true,
       verified: true,
@@ -420,14 +539,21 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
       groupNumber: group.groupNumber || '',
       groupId: group.groupId || '',
       accountNumber: group.accountNumber || group.groupId || '',
-      phase: group.phase || '',
-      county: verified.county,
-      constituency: verified.constituency,
-      ward: verified.ward,
+      phase: group.phase || 3,
+      county: verified.county || group.county || '',
+      constituency: verified.constituency || group.constituency || '',
+      ward: verified.ward || group.ward || '',
       accountSchema,
       accountDetails,
       totalMembers: Object.keys(members).length,
-      currentUser: verified.member,
+      currentUser,
+      verifiedMember: currentUser,
+      verifiedMemberId,
+      verifiedMemberName,
+      loggedInMemberName: verifiedMemberName,
+      loggedInMemberId: verifiedMemberId,
+      loggedInMemberRole: memberRole,
+      isMemberOnly,
       groupTransaction: group.groupTransaction || {},
       countyTransaction: group.countyTransaction || {}
     };

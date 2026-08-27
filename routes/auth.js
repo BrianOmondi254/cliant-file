@@ -1822,12 +1822,10 @@ router.post("/login", async (req, res) => {
 
   if (!valid) return res.render("login", buildLoginContext({ alert: "Wrong password! Check your password and try again." }));
 
-  // Update last login in MongoDB
-  try {
-    await updateLastLogin(loginPhone);
-  } catch (dbErr) {
+  // Don't block redirect on last-login write
+  updateLastLogin(loginPhone).catch((dbErr) => {
     console.error("❌ Failed to update last login in MongoDB:", dbErr.message);
-  }
+  });
 
   // ✅ Save session user
   req.session.user = { 
@@ -1842,16 +1840,14 @@ router.post("/login", async (req, res) => {
   const currentSeason = tbankData.compliance?.periods?.season || "Annual";
   req.session.loginSeason = currentSeason;
 
-  // Determine if user is agent or dealer and save to session (MongoDB only).
-  // findAgentByPhone / findDealerByPhone tolerate any stored phone format.
+  // Agent + dealer lookups in parallel (already connected from earlier ensureMongoReady)
   let mongoAgent = null;
   let mongoDealer = null;
   try {
-    const dbReady = await ensureMongoReady();
-    if (dbReady) {
-      mongoAgent = await findAgentByPhone(loginPhone);
-      mongoDealer = await findDealerByPhone(loginPhone);
-    }
+    [mongoAgent, mongoDealer] = await Promise.all([
+      findAgentByPhone(loginPhone),
+      findDealerByPhone(loginPhone),
+    ]);
   } catch (dbErr) {
     console.error("MongoDB agent/dealer lookup error during login:", dbErr.message);
   }
