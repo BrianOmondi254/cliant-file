@@ -11,17 +11,12 @@ const {
   normalizePhone,
   normalizeGroupName,
   computeLiveRoundStatuses,
+  saveMessageToMongo,
 } = require("../mongoose");
 
 // Locate the group member document in `groups-members` so we can write the
 // updated financials back. Returns the doc _id, the dotted member path, the
 // member key and the live member record.
-//
-// `hint` (optional) is the {docId, groupPath} pair already resolved by
-// findGroupNameInGroupsMembersCollection during /verify. When present we look
-// there FIRST so the write lands on the exact same group doc that verification
-// matched, instead of independently re-scanning the whole collection (which
-// could resolve a different/duplicate doc and silently miss the real one).
 const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
   const db = mongoose.connection.db;
   if (!db) return null;
@@ -39,15 +34,15 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
         if (idNorm === mPhone || keyNorm === mPhone || phoneNorm === mPhone) {
           return {
             doc,
+            groupData: g,
             memberKey: key,
             memberPath: `${hint.groupPath}.members.${key}`,
+            groupPath: hint.groupPath,
             memberRecord: mem,
           };
         }
       }
     }
-    // Hint didn't pan out (doc/group/member moved or was removed between
-    // verify and pay) — fall through to the full scan below as a backstop.
   }
 
   const target = normalizeGroupName(groupName);
@@ -76,8 +71,10 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
               if (idNorm === mPhone || keyNorm === mPhone || phoneNorm === mPhone) {
                 return {
                   doc,
+                  groupData: g,
                   memberKey: key,
                   memberPath: `constituencies.${i}.wards.${j}.data.${k}.members.${key}`,
+                  groupPath: `constituencies.${i}.wards.${j}.data.${k}`,
                   memberRecord: mem,
                 };
               }
@@ -93,7 +90,14 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
         const keyNorm = normalizePhone(key);
         const phoneNorm = normalizePhone(mem && (mem.phone || mem.phoneNumber));
         if (idNorm === mPhone || keyNorm === mPhone || phoneNorm === mPhone) {
-          return { doc, memberKey: key, memberPath: `members.${key}`, memberRecord: mem };
+          return {
+            doc,
+            groupData: doc,
+            memberKey: key,
+            memberPath: `members.${key}`,
+            groupPath: "",
+            memberRecord: mem
+          };
         }
       }
     }
@@ -101,22 +105,8 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
   return null;
 };
 
-// Verify group (both collections) + member + every account, in order,
-// BEFORE any money moves. Returns a structured result (no writes).
-const verifyTbank = async ({ groupName, phone, accounts }) => {
-  // 1. group name in `groups` collection
-  const inGroups = await findGroupNameInMongoGroupsCollection(groupName);
-  if (!inGroups) {
-    return { ok: false, stage: "groups", message: `Group "${groupName}" was not found in the groups collection.` };
-  }
-
-  // 2. group name in `groups-members` collection
-  const inMembers = await findGroupNameInGroupsMembersCollection(groupName);
-  if (!inMembers) {
-    return { ok: false, stage: "groups-members", message: `Group "${groupName}" was not found in the groups-members collection.` };
-  }
-
-  // 3. member within `groups-members` matched by phone vs memberId / key / phone
+// Helper: verify a single member & account list against verified group docs
+const verifySingleMemberTbank = ({ inGroups, inMembers, groupName, phone, accounts }) => {
   const members = (inMembers.group && inMembers.group.members) || {};
   const mPhone = normalizePhone(phone);
   let memberKey = null;
@@ -132,20 +122,19 @@ const verifyTbank = async ({ groupName, phone, accounts }) => {
     }
   }
   if (!memberRecord) {
-    return { ok: false, stage: "member", message: `Member with phone ${phone || "(none)"} was not found within the ${groupName} members.` };
+    return { ok: false, stage: "member", message: `Member with phone ${phone || "(none)"} was not found within ${groupName}.` };
   }
 
-  // Build the lines + the account schema map (mirrors STAGE 3 in applyAtomicGroupMemberContribution)
   const lines = (accounts || [])
     .map((a) => ({
       accountId: String(a.accountNumber || a.accountId || "001"),
       accountName: a.accountName || "",
-      amount: Number(a.amount) || 0,
+      amount: Number(a.amount != null ? a.amount : a.inputAmount) || 0,
     }))
     .filter((l) => l.amount > 0);
 
   if (!lines.length) {
-    return { ok: false, stage: "accounts", message: "No valid accounts to process." };
+    return { ok: false, stage: "accounts", message: "No valid accounts to process for member." };
   }
 
   const accountSchemaMap = {
@@ -189,12 +178,11 @@ const verifyTbank = async ({ groupName, phone, accounts }) => {
     }
   }
 
-  // 4. If ANY account failed verification, do NOT proceed.
   if (failedAccounts.length) {
     return {
       ok: false,
       stage: "account",
-      message: "Some accounts could not be verified. Payment aborted — no amount was deducted.",
+      message: `Some accounts could not be verified for member ${phone}.`,
       failedAccounts,
     };
   }
@@ -206,10 +194,63 @@ const verifyTbank = async ({ groupName, phone, accounts }) => {
     memberKey,
     memberRecord,
     lines: verifiedLines,
-    // Exact doc/path the group was matched at — reused by the payment route
-    // so the ledger write lands on the same group verification just checked.
     locationHint: { docId: inMembers.docId, groupPath: inMembers.groupPath },
   };
+};
+
+// Verify group (both collections) + member + every account, in order,
+// BEFORE any money moves. Returns a structured result (no writes).
+const verifyTbank = async ({ groupName, phone, accounts, members }) => {
+  // 1. group name in `groups` collection first
+  const inGroups = await findGroupNameInMongoGroupsCollection(groupName);
+  if (!inGroups) {
+    return { ok: false, stage: "groups", message: `Group "${groupName}" was not found in the groups collection.` };
+  }
+
+  // 2. group name in `groups-members` collection
+  const inMembers = await findGroupNameInGroupsMembersCollection(groupName);
+  if (!inMembers) {
+    return { ok: false, stage: "groups-members", message: `Group "${groupName}" was not found in the groups-members collection.` };
+  }
+
+  // Support batch / queue of members (Multi-member flow)
+  if (Array.isArray(members) && members.length > 0) {
+    const verifiedMembers = [];
+    const unverifiedMembers = [];
+
+    for (const m of members) {
+      const mPhone = m.phone || m.memberPhone || m.phoneNumber || "";
+      const mAccounts = m.accounts || [];
+      const mRes = verifySingleMemberTbank({ inGroups, inMembers, groupName, phone: mPhone, accounts: mAccounts });
+      if (mRes.ok) {
+        verifiedMembers.push({
+          ...mRes,
+          name: m.name || mRes.memberRecord?.name || `Member ${mRes.memberKey}`,
+          memberNumber: m.memberNumber || m.index || mRes.memberKey,
+        });
+      } else {
+        unverifiedMembers.push({
+          phone: mPhone,
+          name: m.name || "",
+          memberNumber: m.memberNumber || m.index || "",
+          reason: mRes.message || "Verification failed",
+          failedAccounts: mRes.failedAccounts || [],
+        });
+      }
+    }
+
+    return {
+      ok: verifiedMembers.length > 0,
+      isBatch: true,
+      groupName,
+      verifiedMembers,
+      unverifiedMembers,
+      locationHint: { docId: inMembers.docId, groupPath: inMembers.groupPath },
+    };
+  }
+
+  // Single member verification
+  return verifySingleMemberTbank({ inGroups, inMembers, groupName, phone, accounts });
 };
 
 router.get("/", (req, res) => {
@@ -218,21 +259,35 @@ router.get("/", (req, res) => {
 
 // Verification step only (no deduction). Used to gate the "Proceed" button.
 router.post("/verify", async (req, res) => {
-  const { groupName, phone, accounts } = req.body || {};
+  const { groupName, phone, memberPhone, accounts, members } = req.body || {};
   if (!groupName) {
     return res.json({ success: false, stage: "group", message: "Group name is required." });
   }
   try {
     await ensureMongoReady();
-    const result = await verifyTbank({ groupName, phone, accounts });
+    const effectivePhone = memberPhone || phone;
+    const result = await verifyTbank({ groupName, phone: effectivePhone, accounts, members });
     if (!result.ok) {
       return res.json({
         success: false,
-        stage: result.stage,
-        message: result.message,
+        stage: result.stage || "verification",
+        message: result.message || "Verification failed.",
         failedAccounts: result.failedAccounts,
+        unverifiedMembers: result.unverifiedMembers,
       });
     }
+
+    if (result.isBatch) {
+      return res.json({
+        success: true,
+        stage: "verified",
+        groupName,
+        isBatch: true,
+        verifiedMembers: result.verifiedMembers,
+        unverifiedMembers: result.unverifiedMembers,
+      });
+    }
+
     res.json({
       success: true,
       stage: "verified",
@@ -249,61 +304,111 @@ router.post("/verify", async (req, res) => {
 // Payment step: re-verify everything, deduct from the Personal wallet, record
 // the transaction, and update the group member's financials (the destination).
 router.post("/", async (req, res) => {
-  const { groupName, phone, accounts } = req.body || {};
+  const { groupName, phone, payerPhone, memberPhone, accounts, members } = req.body || {};
   if (!groupName) {
     return res.json({ success: false, message: "Group name is required." });
   }
-  if (!phone) {
-    return res.json({ success: false, message: "Member phone is required." });
+
+  const sessionPhone = req.session?.user?.phoneNumber || "";
+  const effectivePayerPhone = normalizePhone(sessionPhone || payerPhone || phone);
+  const effectiveMemberPhone = normalizePhone(memberPhone || phone);
+
+  if (!effectivePayerPhone) {
+    return res.json({ success: false, message: "Payer phone is required." });
   }
+
   try {
     await ensureMongoReady();
 
-    // Re-verify (group, member, ALL accounts) BEFORE any deduction.
-    const result = await verifyTbank({ groupName, phone, accounts });
+    // Re-verify (group, member(s), ALL accounts) BEFORE any deduction.
+    const result = await verifyTbank({
+      groupName,
+      phone: effectiveMemberPhone,
+      accounts,
+      members,
+    });
+
     if (!result.ok) {
       return res.json({
         success: false,
         stage: result.stage,
         message: result.message,
         failedAccounts: result.failedAccounts,
+        unverifiedMembers: result.unverifiedMembers,
       });
     }
 
-    const lines = result.lines;
-    const mPhone = result.mPhone;
     const now = new Date();
+    const nowIso = now.toISOString();
     const txRef = "TBANK-" + Date.now().toString(36).toUpperCase();
-    const total = lines.reduce((s, l) => s + l.amount, 0);
+
+    // Build the list of verified targets to process:
+    // If batch: ONLY process verified members. Unverified members are EXCLUDED from deduction.
+    const verifiedTargets = result.isBatch
+      ? result.verifiedMembers
+      : [
+          {
+            mPhone: result.mPhone,
+            memberKey: result.memberKey,
+            memberRecord: result.memberRecord,
+            lines: result.lines,
+            locationHint: result.locationHint,
+            name: req.body.recipientName || "Member",
+            memberNumber: req.body.recipientMemberNumber || result.memberKey,
+          },
+        ];
+
+    // Compute grand total for all verified members & accounts
+    let grandTotal = 0;
+    const allDebits = [];
+    for (const target of verifiedTargets) {
+      for (const line of target.lines) {
+        grandTotal += line.amount;
+        allDebits.push({
+          targetPhone: target.mPhone,
+          targetName: target.name,
+          accountId: line.accountId,
+          accountName: line.resolvedAccountName,
+          amount: line.amount,
+        });
+      }
+    }
+
+    if (grandTotal <= 0) {
+      return res.json({ success: false, message: "Total payment amount must be greater than zero." });
+    }
 
     let savedDoc = null;
     let finalBalance = 0;
 
-    // --- 1. Deduct from the Personal wallet + record the transaction ---
+    // --- 1. Deduct total from the Payer's Personal wallet ---
     await mutatePersonalLeaves(
-      (r) => normalizePhone(r.phone) === mPhone,
+      (r) => normalizePhone(r.phone) === effectivePayerPhone,
       (rec) => {
         const prevOpenBalance = Number(rec.account?.personal?.openBalance || 0);
+        if (prevOpenBalance < grandTotal) {
+          throw new Error(`Insufficient wallet balance. Available: KSh ${prevOpenBalance}, Required: KSh ${grandTotal}`);
+        }
         if (!rec.account) rec.account = {};
         if (!rec.account.personal) rec.account.personal = {};
         if (!rec.transactions) rec.transactions = [];
 
         let running = prevOpenBalance;
-        for (const line of lines) {
+        for (const debit of allDebits) {
           const opening = running;
-          const closing = opening - line.amount; // DEDUCT from personal wallet
+          const closing = opening - debit.amount;
           running = closing;
           rec.transactions.push({
-            reference: lines.length > 1 ? `${txRef}_${line.accountId}` : txRef,
+            reference: allDebits.length > 1 ? `${txRef}_${debit.accountId}` : txRef,
             time: now,
             openingBalance: opening,
-            amount: line.amount,
+            amount: debit.amount,
             type: "sent",
-            from: { name: "Personal Account", number: mPhone },
-            to: { name: groupName, number: line.accountId },
+            from: { name: "Personal Account", number: effectivePayerPhone },
+            to: { name: `${groupName} (${debit.targetName || debit.targetPhone})`, number: debit.accountId },
             closingBalance: closing,
             environment: "tbank",
-            notes: `tBank contribution to ${groupName} (${line.resolvedAccountName})`,
+            notes: `tBank payment to ${groupName} (${debit.accountName}) for ${debit.targetName || debit.targetPhone}`,
             status: "completed",
           });
         }
@@ -319,44 +424,54 @@ router.post("/", async (req, res) => {
       return res.json({
         success: false,
         stage: "wallet",
-        message: `Personal account for phone ${phone} was not found.`,
+        message: `Personal account for phone ${effectivePayerPhone} was not found.`,
       });
     }
 
-    // --- 2. Credit the group member's financials (the destination) ---
-    // NOTE: the wallet has already been debited above. If this step fails we
-    // must NOT report success as if the group was credited — that would show
-    // the client a stale/unchanged member object while implying it's current,
-    // and silently leave the group ledger short by `total`.
-    let updatedMember = result.memberRecord;
+    // --- 2. Credit each verified group member's financials (mirroring My Account update) ---
     let ledgerUpdated = false;
     let ledgerError = null;
+    let lastUpdatedMember = null;
+    const db = mongoose.connection.db;
+    const membersCol = db.collection("groups-members");
+    const groupsCol = db.collection("groups");
+
     try {
-      const loc = await locateGroupMemberDoc(groupName, mPhone, result.locationHint);
-      if (loc) {
+      for (const target of verifiedTargets) {
+        const loc = await locateGroupMemberDoc(groupName, target.mPhone, target.locationHint || result.locationHint);
+        if (!loc) {
+          console.warn(`[p] Could not locate member "${target.mPhone}" in "${groupName}".`);
+          continue;
+        }
+
         const mem = loc.memberRecord || {};
+        const targetTotal = target.lines.reduce((s, l) => s + l.amount, 0);
+
+        // Member financials update
         const fin = mem.memberFinancials || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
         const prevClosing = Number(fin.closingBalance || fin.openingBalance || 0);
         mem.memberFinancials = {
           openingBalance: prevClosing,
-          amountIn: (Number(fin.amountIn) || 0) + total,
+          amountIn: (Number(fin.amountIn) || 0) + targetTotal,
           amountOut: Number(fin.amountOut) || 0,
-          closingBalance: prevClosing + total,
+          closingBalance: prevClosing + targetTotal,
         };
 
         if (!mem.accounts) mem.accounts = {};
-        for (const line of lines) {
+        for (const line of target.lines) {
           const accId = String(line.accountId || "001");
           const acc = mem.accounts[accId] || {};
           const af = acc.financials || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
           const accPrevClosing = Number(af.closingBalance || af.openingBalance || 0);
+
           acc.financials = {
             openingBalance: accPrevClosing,
             amountIn: (Number(af.amountIn) || 0) + line.amount,
             amountOut: Number(af.amountOut) || 0,
             closingBalance: accPrevClosing + line.amount,
           };
-          mem.accounts[accId] = acc;
+          acc.accountVerified = line.resolvedAccountName;
+          acc.accountName = line.resolvedAccountName;
 
           const cycle = acc.dateIntervalCycle;
           let activeRoundNumber = null;
@@ -373,7 +488,7 @@ router.post("/", async (req, res) => {
           }
 
           if (!acc.transactionHistory) acc.transactionHistory = [];
-          const txCode = lines.length > 1 ? `${txRef}_${accId}` : txRef;
+          const txCode = target.lines.length > 1 ? `${txRef}_${accId}` : txRef;
           acc.transactionHistory.push({
             reference: txCode,
             transactionCode: txCode,
@@ -388,74 +503,115 @@ router.post("/", async (req, res) => {
             status: "completed",
             roundNumber: activeRoundNumber,
             accountId: accId,
+            payerPhone: effectivePayerPhone,
+            memberPhone: target.mPhone,
           });
 
-          if (cycle && Array.isArray(cycle.rounds) && cycle.rounds.length > 0) {
-            if (activeIndex >= 0) {
-              if (!Array.isArray(activeRound.accountroundPerformance)) activeRound.accountroundPerformance = [];
-              if (!activeRound.accountroundPerformance.find((e) => e && e.memberId === mPhone)) {
-                activeRound.accountroundPerformance.push({
-                  memberId: mPhone,
-                  openingBalance: accPrevClosing,
-                  amountIn: line.amount,
-                  amountOut: 0,
-                  closingBalance: accPrevClosing + line.amount,
-                  transactionCode: txCode,
-                  transactionDate: now,
-                  roundNumber: activeRoundNumber,
-                  accountId: accId,
-                });
-              }
-            } else {
-              console.warn(`[p] No active round for account ${accId} (group "${groupName}") — cycle not yet started or already exhausted.`);
+          if (cycle && Array.isArray(cycle.rounds) && cycle.rounds.length > 0 && activeIndex >= 0) {
+            if (!Array.isArray(activeRound.accountroundPerformance)) activeRound.accountroundPerformance = [];
+            if (!activeRound.accountroundPerformance.find((e) => e && e.memberId === target.mPhone)) {
+              activeRound.accountroundPerformance.push({
+                memberId: target.mPhone,
+                openingBalance: accPrevClosing,
+                amountIn: line.amount,
+                amountOut: 0,
+                closingBalance: accPrevClosing + line.amount,
+                transactionCode: txCode,
+                transactionDate: now,
+                roundNumber: activeRoundNumber,
+                accountId: accId,
+              });
             }
             acc.dateIntervalCycle = cycle;
-          } else {
-            console.warn(`[p] Account ${accId} (group "${groupName}") has no dateIntervalCycle/rounds — skipping round credit.`);
           }
+          mem.accounts[accId] = acc;
         }
 
         if (!mem.transactionHistory) mem.transactionHistory = [];
         mem.transactionHistory.push({
           reference: txRef,
           transactionCode: txRef,
-          amount: total,
-          amountIn: total,
+          amount: targetTotal,
+          amountIn: targetTotal,
           amountOut: 0,
           openingBalance: prevClosing,
-          closingBalance: prevClosing + total,
+          closingBalance: prevClosing + targetTotal,
           type: "contribution",
           date: now,
           status: "completed",
+          payerPhone: effectivePayerPhone,
+          memberPhone: target.mPhone,
         });
 
-        const membersCol = mongoose.connection.db.collection("groups-members");
         const writeResult = await membersCol.updateOne(
           { _id: loc.doc._id },
           { $set: { [loc.memberPath]: mem } }
         );
         if (writeResult.matchedCount > 0) {
-          updatedMember = mem;
+          lastUpdatedMember = mem;
           ledgerUpdated = true;
-        } else {
-          ledgerError = "Group document no longer matched at write time.";
+
+          // Sync total groupFinancials in groups-members & groups collections
+          try {
+            const gPath = loc.groupPath;
+            if (gPath) {
+              const gfPrefix = `${gPath}.groupFinancials`;
+              await membersCol.updateOne(
+                { _id: loc.doc._id },
+                {
+                  $inc: {
+                    [`${gfPrefix}.totalAmountIn`]: targetTotal,
+                    [`${gfPrefix}.totalClosingBalance`]: targetTotal,
+                  },
+                }
+              );
+            }
+            await groupsCol.updateMany(
+              {
+                $or: [
+                  { groupName: groupName },
+                  { groupId: groupName },
+                  { accountNumber: groupName },
+                ],
+              },
+              {
+                $inc: {
+                  "groupFinancials.totalAmountIn": targetTotal,
+                  "groupFinancials.totalClosingBalance": targetTotal,
+                },
+                $set: { updatedAt: nowIso },
+              }
+            );
+          } catch (syncErr) {
+            console.warn("[p] groupFinancials sync notice:", syncErr.message);
+          }
+
+          // Send confirmation notification to recipient member
+          try {
+            await saveMessageToMongo({
+              to: target.mPhone,
+              groupName,
+              type: "group_contribution_success",
+              title: "Contribution Received via tBank",
+              content: `Received KSh ${targetTotal.toLocaleString()} for ${groupName} (${target.lines.map((l) => l.resolvedAccountName).join(", ")}). Ref: ${txRef}.`,
+              createdAt: nowIso,
+              isNew: true,
+              meta: {
+                reference: txRef,
+                amount: targetTotal,
+                groupName,
+                payerPhone: effectivePayerPhone,
+                accounts: target.lines,
+              },
+            });
+          } catch (msgErr) {
+            console.warn("[p] Notification save notice:", msgErr.message);
+          }
         }
-      } else {
-        ledgerError = `Could not re-locate member "${phone}" in group "${groupName}" for the ledger write.`;
       }
     } catch (memberErr) {
       console.error("[p] member financials update error:", memberErr.message);
       ledgerError = memberErr.message || "Ledger write failed.";
-    }
-
-    if (!ledgerUpdated) {
-      // Money already left the personal wallet — log loudly server-side so
-      // this can be reconciled/replayed, since we won't silently pretend it
-      // succeeded to the client.
-      console.error(
-        `[p] LEDGER MISMATCH: wallet debited (ref ${txRef}, amount ${total}) but group "${groupName}" ` +
-        `member "${mPhone}" was NOT credited. Reason: ${ledgerError}`
-      );
     }
 
     if (req.session) {
@@ -463,7 +619,9 @@ router.post("/", async (req, res) => {
       if (req.session.user) {
         req.session.user.walletBalance = finalBalance;
       }
-      try { req.session.save(); } catch (se) {}
+      try {
+        req.session.save();
+      } catch (se) {}
     }
 
     res.json({
@@ -473,11 +631,13 @@ router.post("/", async (req, res) => {
         : "Payment was deducted from your wallet, but we couldn't confirm it reached the group account. Support has been notified — please save your reference.",
       reference: txRef,
       newBalance: finalBalance,
+      walletBalance: finalBalance,
       groupName,
-      memberPhone: mPhone,
-      member: updatedMember,
+      payerPhone: effectivePayerPhone,
+      member: lastUpdatedMember,
       ledgerUpdated,
       ledgerError: ledgerUpdated ? undefined : ledgerError,
+      unverifiedMembers: result.unverifiedMembers || [],
     });
   } catch (e) {
     console.error("[p] payment error:", e.message);

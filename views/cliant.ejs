@@ -38,7 +38,7 @@
             display: flex;
             justify-content: center;
             align-items: stretch;
-            background: #e8edf5;
+            background: transparent;
             box-sizing: border-box;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
@@ -188,7 +188,7 @@
             background: white; padding: 12px 8px; border-radius: 12px;
             flex: 1; text-align: center;
             box-shadow: var(--shadow-sm);
-            font-size: 11px; font-weight: 600; color: #444;
+            font-size: 13px; font-weight: 600; color: #444;
             cursor: pointer; transition: background 0.2s, transform 0.15s;
             border: none;
             display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -323,7 +323,7 @@
             cursor: pointer; text-align: left;
             transition: background .2s, border-color .2s, box-shadow .2s, transform .1s;
             font-family: 'DM Sans', 'Outfit', sans-serif;
-            font-size: 13px; font-weight: 600;
+            font-size: 14px; font-weight: 600;
             text-decoration: none;
             width: 100%; margin-bottom: 8px;
         }
@@ -359,8 +359,8 @@
         .bib-rose   { background: #ffe4e6; color: #be123c; }
         .bib-cyan   { background: #cffafe; color: #0e7490; }
         .btn-text-block { flex: 1; min-width: 0; }
-        .btn-label-text { display: block; }
-        .btn-hint-text  { display: block; font-size: 10px; font-weight: 400; color: var(--muted); margin-top: 1px; }
+        .btn-label-text { display: block; font-size: 14px; }
+        .btn-hint-text  { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 1px; }
         .btn-arrow-icon { color: var(--faint); font-size: 11px; }
         /* ── SECTION LABEL inside modal ── */
         .m-section-label {
@@ -410,7 +410,7 @@
             background: linear-gradient(135deg, #0c8f44, #34d399);
             color: #fff; border: none; border-radius: var(--radius-sm);
             font-family: 'Syne', sans-serif;
-            font-size: 14px; font-weight: 700;
+            font-size: 15px; font-weight: 700;
             cursor: pointer; transition: opacity .2s, transform .1s;
             letter-spacing: .3px; display: flex;
             align-items: center; justify-content: center; gap: 8px;
@@ -1001,17 +1001,17 @@ const app = {
                 <div style="background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-sm); transition: transform 0.2s;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
                         <div>
-                            <span style="font-size: 9.5px; font-weight: 700; color: #166534; background: #ecfdf5; padding: 2px 7px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #166534; background: #ecfdf5; padding: 2px 7px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                                 <i class="fa-solid fa-wallet"></i> Personal Account
                             </span>
-                            <h4 style="font-size: 13px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${displayTitle}</h4>
+                            <h4 style="font-size: 14px; font-weight: 700; color: var(--text-dark); margin: 0; line-height: 1.3;">${displayTitle}</h4>
                         </div>
-                        <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap;">
+                        <span style="font-size: 11px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap;">
                             ${txDate}
                         </span>
                     </div>
                     <!-- From / Account / Processed To row -->
-                    <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; text-align: center; gap: 8px; font-size: 10px; color: #64748b;">
+                    <div style="margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; text-align: center; gap: 8px; font-size: 12px; color: #64748b;">
                         <div style="flex: 1; text-align: left;">
                             <span style="font-weight: 700; color: #475569;">From:</span>
                             <span style="font-family: monospace; font-weight: 600; color: #1e293b;">${cleanFrom}</span>
@@ -1028,20 +1028,20 @@ const app = {
                     <!-- Opening Bal / Transaction / Closing Bal -->
                     <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9;">
                         <div style="flex: 1; text-align: left;">
-                            <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
-                            <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
+                            <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
+                            <span style="font-size: 13px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
                                 KSh ${Number(tx.opening).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </span>
                         </div>
                         <div style="flex: 1.2; text-align: center; background: ${bgLight}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${tx.isCredit ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
-                            <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
-                            <span style="font-size: 11.5px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
+                            <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
+                            <span style="font-size: 13px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
                                 ${amtPrefix} KSh ${Number(tx.amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </span>
                         </div>
                         <div style="flex: 1; text-align: right;">
-                            <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
-                            <span style="font-size: 11.5px; font-family: monospace; font-weight: 800; color: var(--primary); white-space: nowrap;">
+                            <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
+                            <span style="font-size: 13px; font-family: monospace; font-weight: 800; color: var(--primary); white-space: nowrap;">
                                 KSh ${Number(tx.closing).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </span>
                         </div>
@@ -1049,10 +1049,10 @@ const app = {
                     <!-- Ref Code inline left, Status: Completed far right — below balance row -->
                     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                         <div style="display: flex; align-items: center; gap: 5px;">
-                            <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">Ref Code:</span>
-                            <span style="font-family: monospace; font-weight: 800; color: #1e293b; font-size: 11px; letter-spacing: 0.3px;">${txCode}</span>
+                            <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">Ref Code:</span>
+                            <span style="font-family: monospace; font-weight: 800; color: #1e293b; font-size: 12px; letter-spacing: 0.3px;">${txCode}</span>
                         </div>
-                        <strong style="color: #16a34a; font-size: 10.5px; white-space: nowrap; flex-shrink: 0;">
+                        <strong style="color: #16a34a; font-size: 12px; white-space: nowrap; flex-shrink: 0;">
                             <i class="fa-solid fa-circle-check"></i>&nbsp;Completed
                         </strong>
                     </div>
@@ -1174,39 +1174,39 @@ const app = {
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; border-bottom: 1px dashed #f1f5f9; padding-bottom: 10px;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px;">
-                                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #7c3aed; background: #f5f3ff; padding: 2px 7px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #7c3aed; background: #f5f3ff; padding: 2px 7px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
                                         <i class="fa-solid fa-users"></i> ${tx.groupName}
                                     </span>
-                                    <span style="font-size: 9.5px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 10px;">
+                                    <span style="font-size: 11px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 6px; border-radius: 10px;">
                                         ${accLabel}
                                     </span>
-                                    ${roundLabel ? `<span style="font-size: 9.5px; font-weight: 700; color: #7c3aed; background: #ede9fe; padding: 2px 6px; border-radius: 10px;">${roundLabel}</span>` : ''}
+                                    ${roundLabel ? `<span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #ede9fe; padding: 2px 6px; border-radius: 10px;">${roundLabel}</span>` : ''}
                                 </div>
-                                <div style="font-size: 11px; color: #64748b; font-family: 'Syne', sans-serif;">
+                                <div style="font-size: 12px; color: #64748b; font-family: 'Syne', sans-serif;">
                                     Member ID: <strong style="color: #1e293b; font-family: monospace;">${tx.memberId}</strong>
                                 </div>
                             </div>
-                            <span style="font-size: 10.5px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-left: 8px;">
+                            <span style="font-size: 11px; color: var(--text-light); font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-left: 8px;">
                                 ${tDate}
                             </span>
                         </div>
                         <!-- Opening Bal / Transaction / Closing Bal -->
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 10px 0; border-top: 1px solid #f1f5f9;">
                             <div style="flex: 1; text-align: left;">
-                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
-                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
+                                <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Opening Bal</div>
+                                <span style="font-size: 13px; font-family: monospace; font-weight: 600; color: #475569; white-space: nowrap;">
                                     KSh ${openVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
                             <div style="flex: 1.2; text-align: center; background: ${isIn ? '#f0fdf4' : '#fef2f2'}; padding: 6px 8px; border-radius: 8px; border: 1px solid ${isIn ? '#dcfce7' : '#fee2e2'}; overflow: hidden;">
-                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
-                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
+                                <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Transaction</div>
+                                <span style="font-size: 13px; font-family: monospace; font-weight: 700; color: ${amtColor}; white-space: nowrap;">
                                     ${amtPrefix} KSh ${amtVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
                             <div style="flex: 1; text-align: right;">
-                                <div style="font-size: 8.5px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
-                                <span style="font-size: 11.5px; font-family: monospace; font-weight: 800; color: #7c3aed; white-space: nowrap;">
+                                <div style="font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px;">Closing Bal</div>
+                                <span style="font-size: 13px; font-family: monospace; font-weight: 800; color: #7c3aed; white-space: nowrap;">
                                     KSh ${closeVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                 </span>
                             </div>
@@ -1214,10 +1214,10 @@ const app = {
                         <!-- Ref Code + value inline left, Status: Completed far right — below balance row -->
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                             <div style="display: flex; align-items: center; gap: 5px;">
-                                <span style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">Ref Code:</span>
-                                <span style="font-family: monospace; font-weight: 800; color: #1e293b; font-size: 11px; letter-spacing: 0.3px;">${tx.txCode}</span>
+                                <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;">Ref Code:</span>
+                                <span style="font-family: monospace; font-weight: 800; color: #1e293b; font-size: 12px; letter-spacing: 0.3px;">${tx.txCode}</span>
                             </div>
-                            <strong style="color: #16a34a; font-size: 10.5px; white-space: nowrap; flex-shrink: 0;">
+                            <strong style="color: #16a34a; font-size: 12px; white-space: nowrap; flex-shrink: 0;">
                                 <i class="fa-solid fa-circle-check"></i>&nbsp;Completed
                             </strong>
                         </div>
@@ -1260,11 +1260,11 @@ const app = {
 
                 <!-- Div 1: Wallet Transactions (Personal Account Collection) -->
                 <div style="margin-bottom: 26px;">
-                    <div style="font-size: 12.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #dcfce7; padding-bottom: 6px;">
+                    <div style="font-size: 14px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #dcfce7; padding-bottom: 6px;">
                         <span style="display: flex; align-items: center; gap: 7px;">
                             <i class="fa-solid fa-wallet"></i> Wallet Transactions
                         </span>
-                        <span style="font-size: 10px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 10px; text-transform: none;">
+                        <span style="font-size: 11px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 10px; text-transform: none;">
                             Personal Account
                         </span>
                     </div>
@@ -1275,11 +1275,11 @@ const app = {
 
                 <!-- Div 2: Group Transactions (groups-members Collection) -->
                 <div>
-                    <div style="font-size: 12.5px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 6px;">
+                    <div style="font-size: 14px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #f3e8ff; padding-bottom: 6px;">
                         <span style="display: flex; align-items: center; gap: 7px;">
                             <i class="fa-solid fa-users-gear"></i> Group Transactions
                         </span>
-                        <span style="font-size: 10px; font-weight: 700; color: #6b21a8; background: #f3e8ff; padding: 2px 8px; border-radius: 10px; text-transform: none;">
+                        <span style="font-size: 11px; font-weight: 700; color: #6b21a8; background: #f3e8ff; padding: 2px 8px; border-radius: 10px; text-transform: none;">
                             Group Member Records
                         </span>
                     </div>
@@ -1476,9 +1476,13 @@ const app = {
                                 groupName: groupCtx.groupName,
                                 message: 'M-Pesa group payment received & ledger updated.',
                                 walletBalance: mdata.walletBalance,
-                                tbankAccounts: groupCtx.accounts || []
+                                tbankAccounts: groupCtx.accounts || [],
+                                recipientName: this.data.isMultiMemberFlow ? '' : (this.data.recipientName || ''),
+                                recipientPhone: this.data.isMultiMemberFlow ? '' : (this.data.recipientPhone || ''),
+                                recipientMemberNumber: this.data.isMultiMemberFlow ? '' : (this.data.selectedMemberIndex || this.data.recipientMemberNumber || ''),
+                                isMultiMember: !!this.data.isMultiMemberFlow
                             });
-                            this.updateModalContent('✓ M-Pesa Payment Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                            this.updateModalContent('M-Pesa Payment Success', html, null, 'fa-receipt', 'linear-gradient(135deg, #16a34a, #4ade80)');
                             this.data._groupPaymentCtx = null;
                             return;
                         }
@@ -2501,24 +2505,24 @@ const app = {
             </div>
             <div style="display:flex;gap:8px;padding:0 16px 14px 16px;background:#fafafa;border-top:1px solid #f1f5f9;flex-wrap:wrap;">
                 <button class="action-btn" onclick="app.requirePersonalPin() && app.openModal('Send Money')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
-                    <span class="action-icon" style="font-size:16px;margin-bottom:2px;">💸</span>
-                    <span style="font-size:10px;font-weight:600;">Send</span>
+                    <span class="action-icon" style="font-size:18px;margin-bottom:2px;">💸</span>
+                    <span style="font-size:13px;font-weight:600;">Send</span>
                 </button>
                 <button class="action-btn" onclick="app.requirePersonalPin() && app.showBalanceDirectly()" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
-                    <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📥</span>
-                    <span style="font-size:10px;font-weight:600;">Balance</span>
+                    <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📥</span>
+                    <span style="font-size:13px;font-weight:600;">Balance</span>
                 </button>
                 <button class="action-btn" onclick="app.requirePersonalPin() && app.openModal('Statement')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
-                    <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📊</span>
-                    <span style="font-size:10px;font-weight:600;">Statement</span>
+                    <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📊</span>
+                    <span style="font-size:13px;font-weight:600;">Statement</span>
                 </button>
                 <button class="action-btn" onclick="app.requirePersonalPin() && app.openModal('Withdraw')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;${hasPin ? '' : 'opacity:.55;'}">
-                    <span class="action-icon" style="font-size:16px;margin-bottom:2px;">🏧</span>
-                    <span style="font-size:10px;font-weight:600;">Withdraw</span>
+                    <span class="action-icon" style="font-size:18px;margin-bottom:2px;">🏧</span>
+                    <span style="font-size:13px;font-weight:600;">Withdraw</span>
                 </button>
                 <button class="action-btn" onclick="app.openModal('Change PIN')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;min-width:60px;">
-                    <span class="action-icon" style="font-size:16px;margin-bottom:2px;">🔒</span>
-                    <span style="font-size:10px;font-weight:600;">PIN</span>
+                    <span class="action-icon" style="font-size:18px;margin-bottom:2px;">🔒</span>
+                    <span style="font-size:13px;font-weight:600;">PIN</span>
                 </button>
             </div>
             ${!hasPin ? `<div style="padding:0 16px 14px;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;line-height:1.45;"><i class="fa-solid fa-circle-info" style="margin-right:5px;color:#f59e0b;"></i>Create your Personal PIN to unlock Send, Balance, Statement and Withdraw actions.</div>` : ''}
@@ -2660,16 +2664,16 @@ const app = {
                     <!-- Nested options row like wallet content -->
                     <div style="display:flex;gap:8px;padding:0 16px 14px 16px;background:#fafafa;border-top:1px solid #f1f5f9;">
                         <button class="action-btn" onclick="app.renderGroupAccountsPrimaryView('${encodeURIComponent(g.groupName)}', '${encodeURIComponent(g.accountNumber || '')}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📂</span>
-                            <span style="font-size:10px;font-weight:600;">Accounts</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📂</span>
+                            <span style="font-size:13px;font-weight:600;">Accounts</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupStatementModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📊</span>
-                            <span style="font-size:10px;font-weight:600;">Statements</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📊</span>
+                            <span style="font-size:13px;font-weight:600;">Statements</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupPendingModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">⏳</span>
-                            <span style="font-size:10px;font-weight:600;">Pending</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">⏳</span>
+                            <span style="font-size:13px;font-weight:600;">Pending</span>
                         </button>
                     </div>
                 </div>
@@ -2683,16 +2687,16 @@ const app = {
                     <!-- Nested options row like Contribution -->
                     <div style="display:flex;gap:8px;padding:0 16px 14px 16px;background:#fafafa;border-top:1px solid #f1f5f9;">
                         <button class="action-btn" onclick="app.openGroupLoanBalanceModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">💰</span>
-                            <span style="font-size:10px;font-weight:600;">Balance</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">💰</span>
+                            <span style="font-size:13px;font-weight:600;">Balance</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupRequestLoanModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📝</span>
-                            <span style="font-size:10px;font-weight:600;">Request</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📝</span>
+                            <span style="font-size:13px;font-weight:600;">Request</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupPayLoanModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">💸</span>
-                            <span style="font-size:10px;font-weight:600;">Pay Loan</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">💸</span>
+                            <span style="font-size:13px;font-weight:600;">Pay Loan</span>
                         </button>
                     </div>
                 </div>
@@ -2706,20 +2710,20 @@ const app = {
                     <!-- Nested options row like Contribution and Loan -->
                     <div style="display:flex;gap:8px;padding:0 16px 14px 16px;background:#fafafa;border-top:1px solid #f1f5f9;">
                         <button class="action-btn" onclick="app.openGroupAddMemberModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">➕</span>
-                            <span style="font-size:10px;font-weight:600;">Add Member</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">➕</span>
+                            <span style="font-size:13px;font-weight:600;">Add Member</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupReplaceOfficialModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">🔄</span>
-                            <span style="font-size:10px;font-weight:600;">Official</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">🔄</span>
+                            <span style="font-size:13px;font-weight:600;">Official</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupTerminateModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">❌</span>
-                            <span style="font-size:10px;font-weight:600;">Terminate</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">❌</span>
+                            <span style="font-size:13px;font-weight:600;">Terminate</span>
                         </button>
                         <button class="action-btn" onclick="app.openGroupConstitutionModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:16px;margin-bottom:2px;">📜</span>
-                            <span style="font-size:10px;font-weight:600;">Constitution</span>
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📜</span>
+                            <span style="font-size:13px;font-weight:600;">Constitution</span>
                         </button>
                     </div>
                 </div>
@@ -4564,26 +4568,84 @@ const app = {
         this.data.isMultiMemberFlow = false;
         this.renderAccountForm(dn);
     },
+    buildVerifiedRecipientHTML(name, phone, memberNo, includeStatus) {
+        const safeName = name || '—';
+        const safePhone = phone || '—';
+        const safeMember = memberNo ? `A/C ${memberNo}` : '—';
+        const statusCell = includeStatus ? `
+            <div>
+                <div class="m-pay-row-label">Verification Status</div>
+                <div class="m-pay-row-value" style="color:#4ade80;font-size:13px;">Verified</div>
+            </div>` : '';
+        return `<div class="m-pay-dark" style="margin-bottom:12px;">
+            <div class="m-pay-dark-title">Verified Recipient</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:6px;">
+                <div>
+                    <div class="m-pay-row-label">Recipient Name</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safeName}</div>
+                </div>
+                <div>
+                    <div class="m-pay-row-label">Verified Phone Number</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safePhone}</div>
+                </div>
+                <div>
+                    <div class="m-pay-row-label">Verified Member No.</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safeMember}</div>
+                </div>
+                ${statusCell}
+            </div>
+        </div>`;
+    },
+    buildPaymentSummaryDetailsGrid(groupName, recipient, phone, memberNo, showMemberNo) {
+        const safeGroup = groupName || '—';
+        const safeRecipient = recipient || '—';
+        const safePhone = phone || '—';
+        const safeMember = memberNo ? `A/C ${memberNo}` : '—';
+        const memberCell = showMemberNo ? `
+                <div>
+                    <div class="m-pay-row-label">Verified Member No.</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safeMember}</div>
+                </div>` : '';
+        return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed rgba(255,255,255,.15);">
+                <div>
+                    <div class="m-pay-row-label">Group</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safeGroup}</div>
+                </div>
+                <div>
+                    <div class="m-pay-row-label">Recipient</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safeRecipient}</div>
+                </div>
+                <div>
+                    <div class="m-pay-row-label">Verified Phone Number</div>
+                    <div class="m-pay-row-value" style="font-size:13px;">${safePhone}</div>
+                </div>
+                ${memberCell}
+            </div>`;
+    },
     renderAccountForm(groupName) {
         const accounts      = this.data.groupAccounts || [];
         const dn            = decodeURIComponent(groupName);
         const addedAccounts = this.data.addedAccounts || [];
         const errorMsg      = this.data.errorMessage || '';
-        const sendTo        = this.data.recipientName || 'My Account';
+        const sendTo        = this.data.sendMode === 'other' ? (this.data.recipientName || 'Member') : 'My Account';
         const sendPhone     = this.data.recipientPhone || '';
         const sendMemNo     = this.data.selectedMemberIndex || this.data.recipientMemberNumber || '';
         const icon          = this.data.sendMode === 'other' ? 'fa-user-group' : 'fa-building-columns';
         let html = '';
-        if (this.data.sendMode === 'other') {
-            html += `<div class="m-pay-dark">
-                <div class="m-pay-dark-title">Recipient Details</div>
-                <div class="m-pay-row"><span class="m-pay-row-label">Recipient</span><span class="m-pay-row-value">${sendTo}</span></div>
-                <div class="m-pay-row"><span class="m-pay-row-label">Phone Number</span><span class="m-pay-row-value">${sendPhone || '—'}</span></div>
-                <div class="m-pay-row"><span class="m-pay-row-label">Verified Member No.</span><span class="m-pay-row-value">${sendMemNo || '—'}</span></div>
-            </div>`;
+        if (this.data.sendMode === 'other' && !this.data.recipientVerifiedContinued) {
+            html += this.buildVerifiedRecipientHTML(sendTo, sendPhone, sendMemNo, false);
         }
-        html += `<div class="m-section-label">Source Account</div>
-        <div class="m-field" style="margin-bottom:8px;">
+        if (addedAccounts.length > 0) {
+            html += `<div class="m-section-label">Added Accounts</div>`;
+            addedAccounts.forEach((acc, index) => {
+                html += `<div class="m-added-acc">
+                    <button class="m-remove-btn" onclick="app.removeAccount(${index},'${encodeURIComponent(dn)}')"><i class="fa-solid fa-xmark"></i></button>
+                    <div style="flex:1;min-width:0;"><div class="m-added-acc-name">${acc.accountName}</div><div class="m-added-acc-num">${acc.accountNumber}</div></div>
+                    <div class="m-added-acc-amt">KSh ${acc.inputAmount}</div>
+                </div>`;
+            });
+        }
+        html += `<div class="m-field" style="margin-bottom:8px;">
             <label>Select Account</label>
             <select id="sourceAccount" class="form-input" onchange="app.onSourceChange('${encodeURIComponent(dn)}')" style="font-size:13px;">
                 <option value="">-- Select --</option>`;
@@ -4599,22 +4661,12 @@ const app = {
             const acc = this.data.searchedAccount;
             html += `<div class="m-pay-dark">
                 <div class="m-pay-dark-title">Selected Account</div>
-                <div class="m-pay-row"><div><div style="font-weight:700;font-size:13.5px;">${acc.accountName}</div><div style="font-size:11px;opacity:.7;">${acc.accountNumber}</div></div><div class="m-pay-row-value" style="font-size:11px;">Expected<br><span style="font-size:14px;">KSh ${acc.expectedAmount}</span></div></div>
+                <div class="m-pay-row"><span class="m-pay-row-label" style="font-size:15px;">${acc.accountName} · ${acc.accountNumber}</span><span class="m-pay-row-value" style="font-size:16px;">KSh ${acc.expectedAmount}</span></div>
                 <div style="display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.1);padding:8px 12px;border-radius:8px;margin-top:6px;">
-                    <span style="font-size:12px;opacity:.9;color:#fff;">Amount (KSh):</span>
-                    <input type="number" id="accountAmount" placeholder="0" inputmode="numeric" style="flex:1;padding:8px;font-size:15px;border:none;background:transparent;color:#fbbf24;font-weight:700;text-align:right;outline:none;">
+                    <span style="font-size:14px;opacity:.9;color:#fff;font-weight:600;">Amount (KSh):</span>
+                    <input type="number" id="accountAmount" placeholder="0" inputmode="numeric" style="flex:1;padding:8px;font-size:18px;border:none;background:transparent;color:#fbbf24;font-weight:700;text-align:right;outline:none;-moz-appearance:textfield;appearance:textfield;">
                 </div>
             </div>`;
-        }
-        if (addedAccounts.length > 0) {
-            html += `<div class="m-section-label">Added Accounts</div>`;
-            addedAccounts.forEach((acc, index) => {
-                html += `<div class="m-added-acc">
-                    <button class="m-remove-btn" onclick="app.removeAccount(${index},'${encodeURIComponent(dn)}')"><i class="fa-solid fa-xmark"></i></button>
-                    <div style="flex:1;min-width:0;"><div class="m-added-acc-name">${acc.accountName}</div><div class="m-added-acc-num">${acc.accountNumber}</div></div>
-                    <div class="m-added-acc-amt">KSh ${acc.inputAmount}</div>
-                </div>`;
-            });
         }
         html += `<div class="m-btn-row" style="margin-top:14px;">
             <button class="m-submit-btn secondary" onclick="app.addNextAccount('${encodeURIComponent(dn)}')"><i class="fa-solid fa-plus"></i> Add</button>
@@ -4726,24 +4778,16 @@ const app = {
         let total = 0;
         addedAccounts.forEach(acc => total += parseFloat(acc.inputAmount) || 0);
         const sendTo    = this.data.recipientName || 'My Account';
-        const sendPhone = this.data.recipientPhone || '';
+        const sendPhone = this.data.recipientPhone || (this.data.sendMode === 'my' && this.data.user ? this.data.user.phoneNumber : '');
         const memberIdx = this.data.selectedMemberIndex || this.data.recipientMemberNumber || '';
         let html = `<div class="m-pay-dark">
-            <div class="m-pay-dark-title">Payment Details</div>
-            <div class="m-pay-row"><span class="m-pay-row-label">Recipient</span><span class="m-pay-row-value">${sendTo}</span></div>`;
-        if (this.data.sendMode === 'other') {
-            if (sendPhone) {
-                html += `<div class="m-pay-row"><span class="m-pay-row-label">Phone Number</span><span class="m-pay-row-value">${sendPhone}</span></div>`;
-            }
-            if (memberIdx) {
-                html += `<div class="m-pay-row"><span class="m-pay-row-label">Verified Member No.</span><span class="m-pay-row-value">${memberIdx}</span></div>`;
-            }
-        }
+            <div class="m-pay-dark-title">Payment Summary</div>
+            ${this.buildPaymentSummaryDetailsGrid(dn, sendTo, sendPhone, memberIdx, this.data.sendMode === 'other' && !!memberIdx)}`;
         addedAccounts.forEach((acc, idx) => {
             html += `<div class="m-pay-row" style="position:relative;">
                 <div><div style="font-weight:700;font-size:13px;">${acc.accountName}</div><div style="font-size:10px;opacity:.7;">${acc.accountNumber}</div></div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span class="m-pay-row-value">KSh ${acc.inputAmount}</span>
+                    <span class="m-pay-row-value">KSh ${parseFloat(acc.inputAmount).toLocaleString()}</span>
                     <button onclick="app.removeAccountFromSummary(${idx},'${encodeURIComponent(dn)}')" style="background:rgba(239,68,68,.15);border:none;color:#f87171;cursor:pointer;font-size:13px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>`;
@@ -4755,7 +4799,7 @@ const app = {
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.confirmMpesaPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
         </div>`;
         const backFn = this.data.sendMode === 'my' ? () => this.renderAccountForm(dn) : () => this.showFinalPaymentOptions(dn);
-        this.updateModalContent('Verify Payment', html, backFn, 'fa-file-invoice-dollar');
+        this.updateModalContent('Payment Summary', html, backFn, 'fa-file-invoice-dollar');
     },
     renderFinalBulkSummary(groupName) {
         const dn   = decodeURIComponent(groupName);
@@ -4764,11 +4808,13 @@ const app = {
         let html = '';
         for (const idx in data) {
             const m = data[idx]; let memberTotal = 0;
+            const verifiedObj = (this.data.verifiedMembersList || []).find(vm => String(vm.index) === String(idx) || String(vm.memberNumber) === String(idx)) || {};
+            const memPhone = verifiedObj.phone || '';
             m.accounts.forEach(a => memberTotal += parseFloat(a.inputAmount) || 0);
             totalSum += memberTotal;
             html += `<div style="margin-bottom:14px;border-bottom:1px dashed #e2e8f0;padding-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;position:relative;" onclick="app.toggleMemberCollapse('${idx}')">
-                    <div><div style="font-weight:700;color:var(--primary);font-size:14px;margin-bottom:2px;">${m.name}</div><div style="font-size:10px;color:#64748b;font-weight:600;">A/C: ${idx}</div></div>
+                    <div><div style="font-weight:700;color:var(--primary);font-size:14px;margin-bottom:2px;">${m.name}</div><div style="font-size:10px;color:#64748b;font-weight:600;">A/C: ${idx}${memPhone ? ' • ' + memPhone : ''}</div></div>
                     <div style="display:flex;align-items:center;gap:10px;">
                         <div style="text-align:right;"><div style="font-weight:700;color:#10b981;font-size:14px;">KSh ${memberTotal.toLocaleString()}</div><div style="font-size:9px;color:#94a3b8;">${m.accounts.length} Account(s)</div></div>
                         <button onclick="event.stopPropagation(); app.removeFullMemberFromSummary('${idx}','${encodeURIComponent(dn)}')" style="background:rgba(239,68,68,.1);border:none;color:#ef4444;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i class="fa-solid fa-trash-can" style="font-size:12px;"></i></button>
@@ -4783,7 +4829,7 @@ const app = {
             });
             html += `</div></div>`;
         }
-        html += `<div class="m-pay-dark"><div class="m-pay-dark-title">Grand Total</div><div style="text-align:center;font-size:24px;font-weight:800;color:#fbbf24;">KSh ${totalSum.toLocaleString()}</div></div>
+        html += `<div class="m-pay-dark"><div class="m-pay-row"><span class="m-pay-row-label">Grand Total</span><span class="m-pay-row-value" style="font-size:20px;">KSh ${totalSum.toLocaleString()}</span></div></div>
         <div class="m-btn-row" style="margin-top:14px;">
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.openTbankConfirmation('${encodeURIComponent(dn)}')"><i class="fa-solid fa-university"></i> tBank</button>
             <button class="m-submit-btn" style="background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.confirmMpesaPayment('${encodeURIComponent(dn)}')"><i class="fa-solid fa-mobile"></i> M-Pesa</button>
@@ -4794,16 +4840,18 @@ const app = {
         const dn = decodeURIComponent(groupName);
         const phone = (this.data.user && this.data.user.phoneNumber) || '';
         let total = 0;
-        let rowsHtml = `<div class="m-pay-row"><span class="m-pay-row-label">Group</span><span class="m-pay-row-value">${dn}</span></div>`;
+        let rowsHtml = '';
         if (this.data.isMultiMemberFlow && this.data.settledMembersData) {
             const data = this.data.settledMembersData;
             for (const idx in data) {
                 const m = data[idx];
+                const verifiedObj = (this.data.verifiedMembersList || []).find(vm => String(vm.index) === String(idx) || String(vm.memberNumber) === String(idx)) || {};
+                const memPhone = verifiedObj.phone || '';
                 let memberTotal = 0;
                 m.accounts.forEach(a => memberTotal += parseFloat(a.inputAmount) || 0);
                 total += memberTotal;
                 rowsHtml += `<div class="m-pay-row" style="align-items:flex-start;">
-                    <div><div style="font-weight:700;font-size:13px;">${m.name}</div><div style="font-size:10px;opacity:.7;">A/C: ${idx} • ${m.accounts.length} account(s)</div></div>
+                    <div><div style="font-weight:700;font-size:13px;">${m.name}</div><div style="font-size:10px;opacity:.7;">A/C: ${idx}${memPhone ? ' • ' + memPhone : ''} • ${m.accounts.length} account(s)</div></div>
                     <span class="m-pay-row-value">KSh ${memberTotal.toLocaleString()}</span>
                 </div>`;
             }
@@ -4811,24 +4859,10 @@ const app = {
             const addedAccounts = this.data.addedAccounts || [];
             addedAccounts.forEach(acc => total += parseFloat(acc.inputAmount) || 0);
             const sendTo = this.data.recipientName || 'My Account';
-            const sendPhone = this.data.recipientPhone || '';
+            const sendPhone = this.data.recipientPhone || (this.data.sendMode === 'my' && phone ? phone : '');
             const memberIdx = this.data.selectedMemberIndex || this.data.recipientMemberNumber || '';
             const isMyAccount = this.data.sendMode === 'my';
-            rowsHtml += `<div class="m-pay-row">
-                <span class="m-pay-row-label">Recipient</span>
-                <div style="text-align:right;">
-                    <span class="m-pay-row-value">${sendTo}</span>
-                    ${isMyAccount && phone ? `<div style="font-size:10px;opacity:.7;">${phone}</div>` : ''}
-                </div>
-            </div>`;
-            if (!isMyAccount) {
-                if (sendPhone) {
-                    rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Phone Number</span><span class="m-pay-row-value">${sendPhone}</span></div>`;
-                }
-                if (memberIdx) {
-                    rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Verified Member No.</span><span class="m-pay-row-value">${memberIdx}</span></div>`;
-                }
-            }
+            rowsHtml += this.buildPaymentSummaryDetailsGrid(dn, sendTo, sendPhone, memberIdx, !isMyAccount && !!memberIdx);
             addedAccounts.forEach(acc => {
                 rowsHtml += `<div class="m-pay-row">
                     <div><div style="font-weight:700;font-size:13px;">${acc.accountName}</div><div style="font-size:10px;opacity:.7;">${acc.accountNumber}</div></div>
@@ -5004,18 +5038,32 @@ const app = {
         let total = 0;
         let accounts = [];
         const addedAccounts = this.data.addedAccounts || [];
+        let membersPayload = [];
         if (this.data.isMultiMemberFlow && this.data.settledMembersData) {
             for (const idx in this.data.settledMembersData) {
                 const m = this.data.settledMembersData[idx];
+                const verifiedObj = (this.data.verifiedMembersList || []).find(vm => String(vm.index) === String(idx) || String(vm.memberNumber) === String(idx)) || {};
+                const memPhone = verifiedObj.phone || '';
+                let memAccounts = [];
                 m.accounts.forEach(a => {
-                    total += parseFloat(a.inputAmount) || 0;
-                    accounts.push({ name: m.name, accountName: a.accountName, accountNumber: a.accountNumber, amount: parseFloat(a.inputAmount) || 0 });
+                    const amt = parseFloat(a.inputAmount) || 0;
+                    total += amt;
+                    accounts.push({ name: m.name, phone: memPhone, memberNumber: idx, accountName: a.accountName, accountNumber: a.accountNumber, amount: amt });
+                    memAccounts.push({ accountId: a.accountNumber, accountName: a.accountName, amount: amt });
+                });
+                membersPayload.push({
+                    memberNumber: idx,
+                    name: m.name,
+                    phone: memPhone,
+                    memberPhone: memPhone,
+                    accounts: memAccounts
                 });
             }
         } else {
             addedAccounts.forEach(acc => {
-                total += parseFloat(acc.inputAmount) || 0;
-                accounts.push({ accountName: acc.accountName, accountNumber: acc.accountNumber, amount: parseFloat(acc.inputAmount) || 0 });
+                const amt = parseFloat(acc.inputAmount) || 0;
+                total += amt;
+                accounts.push({ accountName: acc.accountName, accountNumber: acc.accountNumber, amount: amt });
             });
         }
         if (!total || total <= 0) {
@@ -5025,22 +5073,24 @@ const app = {
         this.data.tbankGroup = dn;
         this.data.tbankTotal = total;
         this.data.tbankAccounts = accounts;
+        this.data.tbankMembersPayload = membersPayload;
+
         const sendTo = this.data.recipientName || 'My Account';
-        const sendPhone = this.data.recipientPhone || '';
+        const sendPhone = this.data.recipientPhone || (this.data.sendMode === 'my' && this.data.user ? this.data.user.phoneNumber : '');
         const memberIdx = this.data.selectedMemberIndex || this.data.recipientMemberNumber || '';
-        let rowsHtml = `<div class="m-pay-row"><span class="m-pay-row-label">Group</span><span class="m-pay-row-value">${dn}</span></div>`;
-        rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Recipient</span><span class="m-pay-row-value">${sendTo}</span></div>`;
-        if (this.data.sendMode === 'other') {
-            if (sendPhone) {
-                rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Phone Number</span><span class="m-pay-row-value">${sendPhone}</span></div>`;
-            }
-            if (memberIdx) {
-                rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Verified Member No.</span><span class="m-pay-row-value">${memberIdx}</span></div>`;
-            }
+        let rowsHtml = '';
+        if (!this.data.isMultiMemberFlow) {
+            rowsHtml += this.buildPaymentSummaryDetailsGrid(dn, sendTo, sendPhone, memberIdx, this.data.sendMode === 'other' && !!memberIdx);
+        } else {
+            rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Group</span><span class="m-pay-row-value">${dn}</span></div>`;
+            rowsHtml += `<div class="m-pay-row"><span class="m-pay-row-label">Recipients</span><span class="m-pay-row-value">${membersPayload.length} Verified Member(s)</span></div>`;
         }
+
         accounts.forEach(acc => {
+            const label = acc.name ? `${acc.name} · ${acc.accountName}` : acc.accountName;
+            const sub = acc.phone ? `${acc.accountNumber} • ${acc.phone}` : acc.accountNumber;
             rowsHtml += `<div class="m-pay-row">
-                <div><div style="font-weight:700;font-size:13px;">${acc.accountName}</div><div style="font-size:10px;opacity:.7;">${acc.accountNumber}</div></div>
+                <div><div style="font-weight:700;font-size:13px;">${label}</div><div style="font-size:10px;opacity:.7;">${sub}</div></div>
                 <span class="m-pay-row-value">KSh ${Number(acc.amount).toLocaleString()}</span>
             </div>`;
         });
@@ -5119,15 +5169,23 @@ const app = {
             }
             // Sufficient balance → verify group + member before next level
             const phone = (this.data.user && this.data.user.phoneNumber) || '';
+            const verifyPayload = {
+                groupName: this.data.tbankGroup || '',
+                payerPhone: phone,
+                accounts: this.data.tbankAccounts || []
+            };
+            if (this.data.isMultiMemberFlow && this.data.tbankMembersPayload && this.data.tbankMembersPayload.length > 0) {
+                verifyPayload.members = this.data.tbankMembersPayload;
+            } else {
+                verifyPayload.phone = this.data.sendMode === 'other' && this.data.recipientPhone ? this.data.recipientPhone : phone;
+                verifyPayload.memberPhone = verifyPayload.phone;
+            }
+
             try {
                 const vres = await fetch('/p/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        groupName: this.data.tbankGroup || '',
-                        phone,
-                        accounts: this.data.tbankAccounts || []
-                    })
+                    body: JSON.stringify(verifyPayload)
                 });
                 const vdata = await vres.json();
                 if (!vdata.success) {
@@ -5137,7 +5195,7 @@ const app = {
                     this.updateModalContent('Verification Failed', html, null, 'fa-circle-xmark');
                     return;
                 }
-                // All accounts verified → proceed with the payment workflow (no raw data dump)
+                // All accounts verified → proceed with the payment workflow
                 const html = `
                     <div class="m-info-banner green"><i class="fa-solid fa-circle-check"></i><span>All accounts verified in <b>${this.data.tbankGroup}</b>. Confirm to proceed with the payment from your Personal wallet.</span></div>
                     <button class="m-submit-btn" style="margin-top:14px;background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.submitTbankToP()"><i class="fa-solid fa-check"></i> Proceed to Payment</button>`;
@@ -5151,7 +5209,174 @@ const app = {
             if (errDiv) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Server communication error.'; }
         }
     },
+    resolvePersonalWalletTxnsForPayment(params) {
+        const pdataRef = params.reference || '';
+        const refBase = String(pdataRef || '').split('_')[0];
+        const txAccounts = params.tbankAccounts || params.accounts || [];
+        const pdataNewBal = Number(params.newBalance || params.walletBalance || this.data.balance || 0);
+        const pdataGroup = params.groupName || '';
+        const recipientName = params.recipientName || this.data.recipientName || 'Member';
+        const myPhone = (this.data.user && this.data.user.phoneNumber) || '';
+
+        const matchesRef = (code) => {
+            const c = String(code || '').trim();
+            if (!c) return false;
+            const cBase = c.split('_')[0];
+            return c === pdataRef || (refBase && (cBase === refBase || c.includes(refBase)));
+        };
+
+        const walletTxns = (this.data.transactions || []).filter((tx) => {
+            if (!tx) return false;
+            if (matchesRef(tx.code || tx.reference)) return true;
+            if (refBase) return false;
+            const txAmt = Number(tx.amt || tx.amount || 0);
+            const isDebit = tx.type === 'withdraw' || tx.type === 'sent' || tx.rawType === 'sent';
+            const groupMatch = String(tx.groupName || '').toLowerCase() === String(pdataGroup).toLowerCase();
+            return isDebit && groupMatch && txAccounts.some((a) => Number(a.amount || a.inputAmount || 0) === txAmt);
+        });
+
+        if (walletTxns.length > 0) return walletTxns;
+
+        const totalPaid = txAccounts.reduce((s, a) => s + Number(a.amount || a.inputAmount || 0), 0);
+        if (totalPaid <= 0) return [];
+
+        return txAccounts.map((acc, i) => {
+            const amt = Number(acc.amount || acc.inputAmount || 0);
+            const accId = String(acc.accountId || acc.accountNumber || '001');
+            const accName = acc.accountName || acc.name || 'Saving';
+            const opening = pdataNewBal + totalPaid;
+            return {
+                type: 'withdraw',
+                rawType: 'sent',
+                purpose: 'group_contribution',
+                groupName: pdataGroup,
+                accountId: accId,
+                accountName: accName,
+                amt,
+                date: new Date().toISOString(),
+                from: 'Personal Account',
+                fromNumber: myPhone,
+                to: `${recipientName} (${pdataGroup})`,
+                toNumber: accId,
+                notes: `tBank payment to ${pdataGroup} (${accName}) for ${recipientName}`,
+                code: txAccounts.length > 1 ? `${pdataRef}_${accId}` : pdataRef,
+                opening: opening - (txAccounts.slice(0, i).reduce((s, a) => s + Number(a.amount || a.inputAmount || 0), 0)),
+                closing: opening - txAccounts.slice(0, i + 1).reduce((s, a) => s + Number(a.amount || a.inputAmount || 0), 0),
+                status: 'completed'
+            };
+        });
+    },
+    renderPersonalWalletPaymentSuccessHTML(params) {
+        const ledgerOk = params.ledgerUpdated !== false;
+        const pdataRef = params.reference || '';
+        const pdataGroup = params.groupName || '';
+        const pdataMsg = params.message || '';
+        const pdataNewBal = Number(params.newBalance || params.walletBalance || this.data.balance || 0);
+        const recipientName = params.recipientName || this.data.recipientName || 'Member';
+        const recipientPhone = params.recipientPhone || this.data.recipientPhone || '';
+        const recipientMemberNumber = params.recipientMemberNumber || this.data.selectedMemberIndex || this.data.recipientMemberNumber || '';
+        const walletTxns = this.resolvePersonalWalletTxnsForPayment(params);
+        const totalDebited = walletTxns.reduce((s, tx) => s + Number(tx.amt || tx.amount || 0), 0);
+
+        const warningHtml = ledgerOk ? '' : `
+            <div class="m-info-banner red" style="margin-bottom:12px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Your wallet was debited, but we could not confirm the recipient group account was credited yet. Keep your reference and contact support if this isn't resolved shortly.</span>
+            </div>`;
+
+        let walletCardsHTML = '';
+        walletTxns.forEach((tx, i) => {
+            const txDate = tx.date ? new Date(tx.date).toLocaleDateString(undefined, {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            }) : 'Today';
+            const amt = Number(tx.amt || tx.amount || 0);
+            const opening = Number(tx.opening !== undefined && tx.opening !== null ? tx.opening : (pdataNewBal + totalDebited));
+            const closing = Number(tx.closing !== undefined && tx.closing !== null ? tx.closing : (opening - amt));
+            const txCode = tx.code || tx.reference || pdataRef || '-';
+            const accName = tx.accountName || 'Saving';
+            const accId = tx.accountId || tx.toNumber || '001';
+
+            walletCardsHTML += `
+                <div style="background:white;border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid #e2e8f0;box-shadow:var(--shadow-sm);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;border-bottom:1px dashed #f1f5f9;padding-bottom:10px;">
+                        <div>
+                            <span style="font-size:11px;font-weight:800;text-transform:uppercase;color:#166534;background:#ecfdf5;padding:2px 7px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;margin-bottom:4px;">
+                                <i class="fa-solid fa-wallet"></i> Personal Account
+                            </span>
+                            <h4 style="font-size:14px;font-weight:700;color:#1e293b;margin:0;line-height:1.3;">Group Payment Sent</h4>
+                        </div>
+                        <span style="font-size:11px;color:#64748b;font-weight:600;background:#f1f5f9;padding:2px 8px;border-radius:20px;white-space:nowrap;">${txDate}</span>
+                    </div>
+                    <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;text-align:center;gap:8px;font-size:12px;color:#64748b;">
+                        <div style="flex:1;text-align:left;"><span style="font-weight:700;color:#475569;">From:</span> <span style="font-family:monospace;font-weight:600;color:#1e293b;">Personal Wallet</span></div>
+                        <div style="flex:1;text-align:center;">
+                            <span style="font-weight:700;color:#475569;">Group:</span>
+                            <span style="font-family:monospace;font-weight:600;color:#1e293b;display:block;margin-top:2px;">${pdataGroup}</span>
+                            <span style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-top:2px;">${accName} (A/C ${accId})</span>
+                        </div>
+                        <div style="flex:1;text-align:right;">
+                            <span style="font-weight:700;color:#475569;">To:</span>
+                            <span style="font-family:monospace;font-weight:600;color:#1e293b;display:block;margin-top:2px;">${recipientName}</span>
+                            ${recipientMemberNumber ? `<span style="font-size:10px;color:#64748b;font-weight:600;display:block;margin-top:2px;">Member No. ${recipientMemberNumber}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;padding:10px 0;border-top:1px solid #f1f5f9;">
+                        <div style="flex:1;text-align:left;">
+                            <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Opening Bal</div>
+                            <span style="font-size:13px;font-family:monospace;font-weight:600;color:#475569;">KSh ${opening.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                        <div style="flex:1.2;text-align:center;background:#fef2f2;padding:6px 8px;border-radius:8px;border:1px solid #fee2e2;">
+                            <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Transaction</div>
+                            <span style="font-size:13px;font-family:monospace;font-weight:700;color:#dc2626;">- KSh ${amt.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                        <div style="flex:1;text-align:right;">
+                            <div style="font-size:10px;text-transform:uppercase;color:#94a3b8;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Closing Bal</div>
+                            <span style="font-size:13px;font-family:monospace;font-weight:800;color:var(--primary);">KSh ${closing.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            <span style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Ref Code:</span>
+                            <span style="font-family:monospace;font-weight:800;color:#1e293b;font-size:12px;">${txCode}</span>
+                        </div>
+                        <strong style="color:#16a34a;font-size:12px;white-space:nowrap;flex-shrink:0;">Completed</strong>
+                    </div>
+                </div>`;
+        });
+
+        if (!walletCardsHTML) {
+            walletCardsHTML = `<div class="m-empty-state"><i class="fa-solid fa-wallet"></i><p>No personal wallet transaction found for this payment yet.</p></div>`;
+        }
+
+        return `
+            <div style="text-align:center;padding:18px 12px 14px;background:linear-gradient(135deg,#dcfce7,#f0fdf4);border-radius:14px;margin-bottom:14px;border:1px solid #86efac;">
+                <div style="font-size:18px;font-weight:800;color:#14532d;font-family:'Syne',sans-serif;margin-bottom:4px;">${ledgerOk ? 'Payment Successful!' : 'Payment Processed'}</div>
+                <div style="font-size:28px;font-weight:900;color:#dc2626;font-family:monospace;margin-bottom:6px;">- KSh ${totalDebited.toLocaleString()}</div>
+                <div style="font-size:11px;color:#166534;font-weight:600;font-family:'Syne',sans-serif;">
+                    <span style="background:#bbf7d0;padding:2px 8px;border-radius:20px;display:inline-block;"><i class="fa-solid fa-hashtag" style="font-size:10px;"></i> Ref: ${pdataRef || '—'}</span>
+                    &nbsp;•&nbsp;<span>Group: <b>${pdataGroup || '—'}</b></span>
+                </div>
+                ${pdataMsg ? `<div style="font-size:11px;color:#166534;margin-top:6px;font-family:'Syne',sans-serif;">${pdataMsg}</div>` : ''}
+            </div>
+            <div class="m-info-banner blue" style="margin-bottom:10px;">
+                <i class="fa-solid fa-wallet"></i>
+                <span>New Wallet Balance: <b>KSh ${pdataNewBal.toLocaleString()}</b> &nbsp;•&nbsp; Debited: <b>KSh ${totalDebited.toLocaleString()}</b></span>
+            </div>
+            ${warningHtml}
+            <div style="font-weight:800;color:#0f172a;font-size:16px;margin:0 0 8px;font-family:'Syne',sans-serif;">Personal Account Collection Statement</div>
+            <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Wallet debit from your Personal Account collection — not the general group account.</div>
+            ${walletCardsHTML}
+            <div class="m-btn-row" style="margin-top:14px;">
+                <button class="m-submit-btn secondary" onclick="app.closeModal(); app.fetchWalletData(); app.showBalanceDirectly();"><i class="fa-solid fa-receipt"></i> View Ledger</button>
+                <button class="m-submit-btn" style="background:linear-gradient(135deg,#10b981,#34d399);" onclick="app.closeModal(); app.fetchWalletData();"><i class="fa-solid fa-check"></i> Done</button>
+            </div>`;
+    },
     renderGroupPaymentSuccessHTML(params) {
+        const sendMode = params.sendMode || this.data.sendMode || 'my';
+        if (sendMode === 'other') {
+            return this.renderPersonalWalletPaymentSuccessHTML(params);
+        }
+
         const member = params.member || {};
         const ledgerOk = params.ledgerUpdated !== false;
         const pdataRef = params.reference || '';
@@ -5159,6 +5384,26 @@ const app = {
         const pdataMsg = params.message || '';
         const pdataNewBal = Number(params.newBalance || params.walletBalance || 0);
         const txAccounts = params.tbankAccounts || params.accounts || [];
+        const matchedGroup = (this.data.userGroups || []).find(g =>
+            (g.groupName || '').trim().toLowerCase() === String(pdataGroup || '').trim().toLowerCase()
+        );
+        const memberNumber = params.recipientMemberNumber
+            || this.data.selectedMemberIndex
+            || this.data.recipientMemberNumber
+            || member.memberNumber
+            || (matchedGroup && matchedGroup.memberNumber)
+            || '';
+        const memberName = params.recipientName
+            || member.name
+            || (this.data.user ? `${this.data.user.FirstName || ''} ${this.data.user.MiddleName || ''} ${this.data.user.LastName || ''}`.replace(/\s+/g, ' ').trim() : '')
+            || 'You';
+        const accountSummaryLines = (Array.isArray(txAccounts) && txAccounts.length > 0)
+            ? txAccounts.map((a) => {
+                const id = String(a.accountId || a.accountNumber || '001');
+                const name = a.accountName || a.name || 'Saving';
+                return `${name} (A/C ${id})`;
+            }).join(' · ')
+            : '';
 
         const warningHtml = ledgerOk ? '' : `
             <div class="m-info-banner red" style="margin-bottom:12px;">
@@ -5327,8 +5572,8 @@ const app = {
             const panelId = 'accHist_' + rowIdx + '_' + accIdSafe;
             const arrowId = 'accArrow_' + rowIdx + '_' + accIdSafe;
             const hist = Array.isArray(row.accTxHistory) ? row.accTxHistory.slice().sort((a, b) => {
-                const at = new Date(a.time || a.createdAt || 0).getTime();
-                const bt = new Date(b.time || b.createdAt || 0).getTime();
+                const at = new Date(a.time || a.date || a.createdAt || 0).getTime();
+                const bt = new Date(b.time || b.date || b.createdAt || 0).getTime();
                 return bt - at;
             }) : [];
             const histListHtml = hist.length === 0
@@ -5339,7 +5584,7 @@ const app = {
                     const tAmtOut = Number(tx.amountOut || 0);
                     const tOpen = Number(tx.openingBalance || 0);
                     const tClose = Number(tx.closingBalance || (tOpen + tAmtIn - tAmtOut));
-                    const tRaw = new Date(tx.time || tx.createdAt || Date.now());
+                    const tRaw = new Date(tx.time || tx.date || tx.createdAt || Date.now());
                     const tStamp = isNaN(tRaw.getTime()) ? '' : (tRaw.toLocaleDateString() + ' ' + tRaw.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
                     const isIn = tAmtIn > 0;
                     const isOut = tAmtOut > 0;
@@ -5419,22 +5664,28 @@ const app = {
         }
 
         return `
-            <div style="text-align:center;padding:8px 0 14px;">
-                <h3 style="color:#0f172a;margin-bottom:6px;font-size:16px;font-weight:800;font-family:'Syne',sans-serif;">${ledgerOk ? 'Payment Successful!' : 'Payment Deducted — Pending Confirmation'}</h3>
-                <p style="color:#64748b;font-size:12px;margin-bottom:3px;">${pdataMsg || ''}</p>
-                <p style="color:#64748b;font-size:11px;">
-                    Ref: <span style="font-family:monospace;font-weight:700;color:#334155;">${pdataRef || ''}</span>
-                    <span style="margin:0 6px;">•</span>
-                    Group: <b>${pdataGroup || ''}</b>
-                </p>
+            <!-- Success Hero Banner -->
+            <div style="text-align:center;padding:18px 12px 14px;background:linear-gradient(135deg,#dcfce7,#f0fdf4);border-radius:14px;margin-bottom:14px;border:1px solid #86efac;">
+                <div style="font-size:18px;font-weight:800;color:#14532d;font-family:'Syne',sans-serif;margin-bottom:4px;">${ledgerOk ? 'Payment Successful!' : 'Payment Processed'}</div>
+                <div style="font-size:28px;font-weight:900;color:#15803d;font-family:monospace;margin-bottom:6px;">KSh ${totalAllAccounts.toLocaleString()}</div>
+                <div style="font-size:11px;color:#166534;font-weight:600;font-family:'Syne',sans-serif;">
+                    <span style="background:#bbf7d0;padding:2px 8px;border-radius:20px;display:inline-block;">
+                        <i class="fa-solid fa-hashtag" style="font-size:10px;"></i> Ref: ${pdataRef || '—'}
+                    </span>
+                    &nbsp;•&nbsp;
+                    <span>Group: <b>${pdataGroup || '—'}</b></span>
+                </div>
+                ${pdataMsg ? `<div style="font-size:11px;color:#166534;margin-top:6px;font-family:'Syne',sans-serif;">${pdataMsg}</div>` : ''}
             </div>
+
+            <!-- Wallet balance row -->
             <div class="m-info-banner blue" style="margin-bottom:10px;">
                 <i class="fa-solid fa-wallet"></i>
-                <span>Wallet Balance: <b>KSh ${pdataNewBal.toLocaleString()}</b> &nbsp;•&nbsp; Total Credited to Accounts: <b>KSh ${totalAllAccounts.toLocaleString()}</b></span>
+                <span>New Wallet Balance: <b>KSh ${pdataNewBal.toLocaleString()}</b> &nbsp;•&nbsp; Credited: <b>KSh ${totalAllAccounts.toLocaleString()}</b></span>
             </div>
             ${warningHtml}
 
-            <div style="font-weight:800;color:#0f172a;font-size:16px;margin-top:0;margin-bottom:8px;font-family:'Syne',sans-serif;">Total Member Saving Statement</div>
+            <div style="font-weight:800;color:#0f172a;font-size:16px;margin-top:0;margin-bottom:8px;font-family:'Syne',sans-serif;">Group Statement</div>
             <div style="background:white;border:1px solid ${ledgerOk ? '#86efac' : '#fecaca'};border-radius:10px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
                 <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
@@ -5442,6 +5693,11 @@ const app = {
                             <div style="font-size:12.5px;color:#64748b;font-weight:500;margin-top:1px;font-family:'Syne',sans-serif;">
                                 Group:&nbsp;<b>${pdataGroup || ''}</b>
                             </div>
+                            ${accountSummaryLines ? `<div style="font-size:11px;color:#64748b;font-weight:600;margin-top:3px;font-family:'Syne',sans-serif;">${accountSummaryLines}</div>` : ''}
+                            <div style="font-size:12.5px;color:#64748b;font-weight:500;margin-top:8px;font-family:'Syne',sans-serif;">
+                                Member:&nbsp;<b>${memberName}</b>
+                            </div>
+                            ${memberNumber ? `<div style="font-size:11px;color:#64748b;font-weight:600;margin-top:3px;font-family:'Syne',sans-serif;">Member No. <span style="font-family:monospace;color:#334155;">${memberNumber}</span></div>` : ''}
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:10.5px;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:0.3px;font-family:'Syne',sans-serif;">Net Change</div>
@@ -5486,12 +5742,21 @@ const app = {
             </div>`;
     },
     async submitTbankToP() {
+        const phone = (this.data.user && this.data.user.phoneNumber) || '';
         const payload = {
             groupName: this.data.tbankGroup || '',
-            phone: (this.data.user && this.data.user.phoneNumber) || '',
+            payerPhone: phone,
             total: this.data.tbankTotal || 0,
             accounts: this.data.tbankAccounts || []
         };
+        if (this.data.isMultiMemberFlow && this.data.tbankMembersPayload && this.data.tbankMembersPayload.length > 0) {
+            payload.members = this.data.tbankMembersPayload;
+        } else {
+            payload.phone = this.data.sendMode === 'other' && this.data.recipientPhone ? this.data.recipientPhone : phone;
+            payload.memberPhone = payload.phone;
+            payload.recipientName = this.data.recipientName || '';
+            payload.recipientMemberNumber = this.data.selectedMemberIndex || this.data.recipientMemberNumber || '';
+        }
         try {
             const pres = await fetch('/p', {
                 method: 'POST',
@@ -5503,8 +5768,15 @@ const app = {
                 this.showToast(pdata.message || 'Payment failed.', 'error');
                 return;
             }
-            // Refresh wallet & group data in real-time across database, session & local device storage
+            // Update wallet balance immediately in memory & UI
+            if (pdata.newBalance !== undefined && pdata.newBalance !== null) {
+                this.data.balance = pdata.newBalance;
+                this.updateWalletBalanceUI();
+                this.saveWalletToLocalStorage();
+            }
             try { await this.fetchWalletData(); } catch (fe) {}
+            this.updateWalletBalanceUI();
+
             const ledgerOk = pdata.ledgerUpdated !== false;
             const html = this.renderGroupPaymentSuccessHTML({
                 member: pdata.member,
@@ -5513,9 +5785,13 @@ const app = {
                 groupName: pdata.groupName,
                 message: pdata.message,
                 newBalance: pdata.newBalance,
-                tbankAccounts: this.data.tbankAccounts || []
+                tbankAccounts: this.data.tbankAccounts || [],
+                recipientName: this.data.isMultiMemberFlow ? '' : (this.data.recipientName || ''),
+                recipientPhone: this.data.isMultiMemberFlow ? '' : (this.data.recipientPhone || ''),
+                recipientMemberNumber: this.data.isMultiMemberFlow ? '' : (this.data.selectedMemberIndex || this.data.recipientMemberNumber || ''),
+                isMultiMember: !!this.data.isMultiMemberFlow
             });
-            this.updateModalContent(ledgerOk ? '✓ Payment Success' : 'Action Needed', html, null, ledgerOk ? 'fa-circle-check' : 'fa-triangle-exclamation', ledgerOk ? 'linear-gradient(135deg, #16a34a, #4ade80)' : 'linear-gradient(135deg, #dc2626, #f87171)');
+            this.updateModalContent(ledgerOk ? 'Payment Successful' : 'Action Needed', html, null, ledgerOk ? 'fa-receipt' : 'fa-triangle-exclamation', ledgerOk ? 'linear-gradient(135deg, #16a34a, #4ade80)' : 'linear-gradient(135deg, #dc2626, #f87171)');
         } catch (e) {
             console.error('Group payment request error:', e);
             this.showToast('Network error during payment processing.', 'error');
@@ -5583,9 +5859,13 @@ const app = {
                                 groupName: groupCtx.groupName,
                                 message: 'Pesapal group payment received & ledger updated.',
                                 walletBalance: mdata.walletBalance,
-                                tbankAccounts: groupCtx.accounts || []
+                                tbankAccounts: groupCtx.accounts || [],
+                                recipientName: this.data.isMultiMemberFlow ? '' : (this.data.recipientName || ''),
+                                recipientPhone: this.data.isMultiMemberFlow ? '' : (this.data.recipientPhone || ''),
+                                recipientMemberNumber: this.data.isMultiMemberFlow ? '' : (this.data.selectedMemberIndex || this.data.recipientMemberNumber || ''),
+                                isMultiMember: !!this.data.isMultiMemberFlow
                             });
-                            this.updateModalContent('✓ Pesapal Payment Success', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                            this.updateModalContent('Pesapal Payment Success', html, null, 'fa-receipt', 'linear-gradient(135deg, #16a34a, #4ade80)');
                             this.data._groupPaymentCtx = null;
                             return;
                         } else {
@@ -5611,7 +5891,7 @@ const app = {
                         <div class="m-stat-cell"><div class="m-stat-cell-label">Wallet</div><div class="m-stat-cell-value">KSh ${balStr}</div></div>
                     </div>
                     <div style="margin-top:14px;"><button class="m-submit-btn" onclick="app.closeModal(); app.fetchWalletData();"><i class="fa-solid fa-check"></i> Done</button></div>`;
-                    this.updateModalContent(ledgerOk ? 'Payment Successful' : 'Payment Confirmed', html, null, 'fa-circle-check', 'linear-gradient(135deg, #16a34a, #4ade80)');
+                    this.updateModalContent(ledgerOk ? 'Payment Successful' : 'Payment Confirmed', html, null, 'fa-receipt', 'linear-gradient(135deg, #16a34a, #4ade80)');
                     return;
                 }
 
@@ -5652,17 +5932,18 @@ const app = {
         this.data.recipientPhone = '';
         this.data.recipientMemberNumber = '';
         this.data.selectedMemberIndex = '';
+        this.data.recipientVerifiedContinued = false;
         const html = `
-        <div class="m-info-banner blue"><i class="fa-solid fa-circle-info"></i><span>Enter the member's group A/C number to verify.</span></div>
-        <div class="m-field"><label>Member Group A/C Number</label><input type="text" id="memberIndexInput" class="form-input" placeholder="e.g. 7" inputmode="numeric"></div>
-        <div id="memberVerifyError" class="hidden m-info-banner red" style="margin-bottom:10px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="memberVerifyErrorText"></span></div>
-        <div id="memberVerifyResult" class="hidden" style="margin-bottom:12px;"></div>
-        <button class="m-submit-btn" id="verifyMemberBtn" onclick="app.verifyMemberIndex('${encodeURIComponent(dn)}')"><i class="fa-solid fa-magnifying-glass"></i> Verify A/C Number</button>`;
+        <div class="m-info-banner blue" id="memberVerifyBanner"><i class="fa-solid fa-circle-info"></i><span>Enter the member's group A/C number to verify.</span></div>
+        <div class="m-field" id="memberIndexField"><label>Member Group A/C Number</label><input type="text" id="memberIndexInput" class="form-input" placeholder="e.g. 7" inputmode="numeric"></div>
+        <button class="m-submit-btn" id="verifyMemberBtn" onclick="app.verifyMemberIndex('${encodeURIComponent(dn)}')" style="margin-top:4px;"><i class="fa-solid fa-magnifying-glass"></i> Verify Member</button>
+        <div id="memberVerifyError" class="hidden m-info-banner red" style="margin-bottom:10px;margin-top:10px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="memberVerifyErrorText"></span></div>
+        <div id="memberVerifyResult" class="hidden" style="margin-bottom:12px;"></div>`;
         this.updateModalContent('Verify Member A/C', html, () => this.sendToOtherMember(dn), 'fa-id-card');
     },
     showAddSeveralMembers(groupName) {
         const dn    = decodeURIComponent(groupName);
-        const group = this.data.userGroups.find(g => g.groupName === dn);
+        const group = this.data.userGroups.find(g => (g.groupName || '').trim().toLowerCase() === dn.trim().toLowerCase());
         if (!group) return;
         let totalGroupMembers = 0;
         for (const key in group) { if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) totalGroupMembers++; }
@@ -5713,7 +5994,7 @@ const app = {
         ))
         .then((results) => {
             const verified = [];
-            const errors = [];
+            const unverified = [];
             results.forEach(({ index, data }, idx) => {
                 if (data && data.success) {
                     verified.push({
@@ -5723,13 +6004,22 @@ const app = {
                         memberNumber: data.memberNumber || index
                     });
                 } else {
-                    errors.push((data && data.message) || `A/C ${index} (Field ${idx + 1}) not found.`);
+                    unverified.push({
+                        index,
+                        message: (data && data.message) || `A/C ${index} (Field ${idx + 1}) not found.`
+                    });
                 }
             });
-            if (errors.length > 0) {
-                if (errDiv) errDiv.classList.remove('hidden');
-                if (errTxt) errTxt.textContent = errors[0];
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-check"></i> Verify All Members'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-check"></i> Verify All Members'; }
+
+            if (unverified.length > 0) {
+                if (verified.length === 0) {
+                    if (errDiv) errDiv.classList.remove('hidden');
+                    if (errTxt) errTxt.textContent = unverified.map(u => u.message).join('; ');
+                    return;
+                }
+                // Partial verification: popup with back and continue options
+                this.showUnverifiedMembersPopup(dn, verified, unverified);
                 return;
             }
             this.data.isMultiMemberFlow   = true;
@@ -5742,6 +6032,44 @@ const app = {
             if (errTxt) errTxt.textContent = 'Network error. Please try again.';
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-check"></i> Verify All Members'; }
         });
+    },
+    showUnverifiedMembersPopup(groupName, verified, unverified) {
+        const dn = decodeURIComponent(groupName);
+        this._pendingVerifiedMembers = verified;
+        let html = `
+        <div class="m-info-banner amber"><i class="fa-solid fa-triangle-exclamation"></i><span>Some member accounts could not be verified in <b>${dn}</b>.</span></div>
+        <div class="m-section-label">Unverified Members (${unverified.length})</div>
+        <div class="m-pay-dark" style="margin-bottom:12px;">`;
+        unverified.forEach(u => {
+            html += `<div class="m-pay-row" style="color:#f87171;">
+                <div><div style="font-weight:700;font-size:13px;color:#fca5a5;">A/C ${u.index}</div><div style="font-size:10px;opacity:.8;color:#fca5a5;">${u.message}</div></div>
+                <span class="m-pay-row-value" style="color:#f87171;font-size:12px;"><i class="fa-solid fa-xmark"></i> Not Verified</span>
+            </div>`;
+        });
+        html += `</div>
+        <div class="m-section-label">Verified Members (${verified.length})</div>
+        <div class="m-pay-dark" style="margin-bottom:14px;">`;
+        verified.forEach(v => {
+            html += `<div class="m-pay-row">
+                <div><div style="font-weight:700;font-size:13px;">${v.name}</div><div style="font-size:10px;opacity:.7;">${v.phone || '—'}</div></div>
+                <span class="m-pay-row-value" style="font-size:12px;color:#4ade80;"><i class="fa-solid fa-circle-check"></i> A/C ${v.memberNumber}</span>
+            </div>`;
+        });
+        html += `</div>
+        <div class="m-info-banner green"><i class="fa-solid fa-shield-check"></i><span>If you continue, amounts for <b>unverified members will NOT be deducted</b> from your wallet.</span></div>
+        <div class="m-btn-row" style="margin-top:14px;">
+            <button class="m-submit-btn secondary" onclick="app.showAddSeveralMembers('${encodeURIComponent(dn)}')"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <button class="m-submit-btn" onclick="app.proceedWithVerifiedMembersOnly('${encodeURIComponent(dn)}')"><i class="fa-solid fa-arrow-right"></i> Continue with ${verified.length} Verified</button>
+        </div>`;
+        this.updateModalContent('Member Not Verified', html, () => this.showAddSeveralMembers(dn), 'fa-user-xmark');
+    },
+    proceedWithVerifiedMembersOnly(groupName) {
+        const dn = decodeURIComponent(groupName);
+        const verified = this._pendingVerifiedMembers || this.data.verifiedMembersList || [];
+        this.data.isMultiMemberFlow   = true;
+        this.data.verifiedMembersList = verified;
+        this.data.settledMembersData  = {};
+        this.showSeveralMembersSummary(dn, verified);
     },
     showSeveralMembersSummary(groupName, members) {
         const dn           = decodeURIComponent(groupName);
@@ -5815,6 +6143,7 @@ const app = {
         if (resultEl) { resultEl.classList.add('hidden'); resultEl.innerHTML = ''; }
         if (!index) { if (errDiv) errDiv.classList.remove('hidden'); if (errTxt) errTxt.textContent = "Please enter an account number"; return; }
 
+        if (input) input.disabled = true;
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying…'; }
 
         try {
@@ -5825,9 +6154,9 @@ const app = {
             });
             const data = await res.json();
             if (!data.success) {
-                if (errDiv) errDiv.classList.remove('hidden');
-                if (errTxt) errTxt.textContent = data.message || ('Account number ' + index + ' not found.');
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify A/C Number'; }
+                if (input) input.disabled = false;
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Member'; }
+                this.showSingleUnverifiedModal(dn, index, data.message || `Account number ${index} not found in group roster.`);
                 return;
             }
 
@@ -5841,23 +6170,40 @@ const app = {
             if (resultEl) {
                 resultEl.classList.remove('hidden');
                 resultEl.innerHTML = `
-                <div class="m-pay-dark">
-                    <div class="m-pay-dark-title">Verified Recipient</div>
-                    <div class="m-pay-row"><span class="m-pay-row-label">Recipient</span><span class="m-pay-row-value">${data.name || '—'}</span></div>
-                    <div class="m-pay-row"><span class="m-pay-row-label">Phone Number</span><span class="m-pay-row-value">${data.phone || '—'}</span></div>
-                    <div class="m-pay-row"><span class="m-pay-row-label">Verified Member No.</span><span class="m-pay-row-value">${data.memberNumber || index}</span></div>
-                </div>
-                <button class="m-submit-btn" style="margin-top:4px;background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.continueVerifiedMemberSend('${encodeURIComponent(dn)}')">
+                ${this.buildVerifiedRecipientHTML(data.name, data.phone, data.memberNumber || index, true)}
+                <button class="m-submit-btn" style="margin-top:8px;background:linear-gradient(135deg,#22c55e,#4ade80);" onclick="app.continueVerifiedMemberSend('${encodeURIComponent(dn)}')">
                     <i class="fa-solid fa-arrow-right"></i> Continue to Send
                 </button>`;
             }
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Again'; }
+            if (btn) btn.style.display = 'none';
+            if (input) input.style.display = 'none';
+            const bannerEl = document.getElementById('memberVerifyBanner');
+            if (bannerEl) bannerEl.style.display = 'none';
+            const fieldEl = document.getElementById('memberIndexField');
+            if (fieldEl) fieldEl.style.display = 'none';
         } catch (e) {
             console.error('[verifyMemberIndex]', e);
+            if (input) input.disabled = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify Member'; }
             if (errDiv) errDiv.classList.remove('hidden');
             if (errTxt) errTxt.textContent = 'Network error. Please try again.';
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Verify A/C Number'; }
         }
+    },
+    showSingleUnverifiedModal(groupName, memberNumber, message) {
+        const dn = decodeURIComponent(groupName);
+        const html = `
+        <div class="m-info-banner red"><i class="fa-solid fa-triangle-exclamation"></i><span>Member account could not be verified in <b>${dn}</b>.</span></div>
+        <div class="m-pay-dark" style="margin-bottom:14px;">
+            <div class="m-pay-dark-title">Unverified Account</div>
+            <div class="m-pay-row"><span class="m-pay-row-label">Entered A/C Number</span><span class="m-pay-row-value" style="color:#f87171;">A/C ${memberNumber}</span></div>
+            <div class="m-pay-row"><span class="m-pay-row-label">Status</span><span class="m-pay-row-value" style="color:#f87171;"><i class="fa-solid fa-xmark"></i> Not Verified</span></div>
+            <div class="m-pay-row"><span class="m-pay-row-label">Reason</span><span class="m-pay-row-value" style="font-size:12px;color:#fca5a5;">${message}</span></div>
+        </div>
+        <div class="m-info-banner green"><i class="fa-solid fa-shield-check"></i><span>No money has been or will be deducted from your personal wallet.</span></div>
+        <div class="m-btn-row" style="margin-top:14px;">
+            <button class="m-submit-btn" onclick="app.showSingleMemberSearch('${encodeURIComponent(dn)}')"><i class="fa-solid fa-arrow-left"></i> Back / Try Another A/C</button>
+        </div>`;
+        this.updateModalContent('Member Not Verified', html, () => this.showSingleMemberSearch(dn), 'fa-user-xmark');
     },
     continueVerifiedMemberSend(groupName) {
         const dn = decodeURIComponent(groupName);
@@ -5873,6 +6219,7 @@ const app = {
         this.data.addedAccounts  = [];
         this.data.errorMessage   = '';
         this.data.sendMode       = 'other';
+        this.data.recipientVerifiedContinued = true;
         this.renderAccountForm(dn);
     },
     /* ─── UTILITIES ─── */

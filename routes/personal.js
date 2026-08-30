@@ -1646,48 +1646,63 @@ router.post("/verify-group-member", async (req, res) => {
         const ready = await ensureMongoReady();
         const db = ready ? require("mongoose").connection.db : null;
         if (db) {
-          const scanDocs = async (colName) => {
-            const docs = await db.collection(colName).find({}).toArray();
-            for (const doc of docs) {
-              if (!doc) continue;
+          const { findGroupNameInMongoGroupsCollection, findGroupNameInGroupsMembersCollection } = require("../mongoose");
 
-              if (groupNameMatches(doc, groupName)) {
-                const hit = findMemberInGroupDocByNumber(doc, memberNumber);
-                if (hit) return hit;
-              }
+          // Step A: Verify group exists in `groups` collection
+          const inGroups = await findGroupNameInMongoGroupsCollection(groupName);
+          // Step B: Verify group exists in `groups-members` collection
+          const inMembers = inGroups ? await findGroupNameInGroupsMembersCollection(groupName) : null;
 
-              // Nested regional structure
-              for (const cons of doc.constituencies || []) {
-                for (const ward of cons.wards || []) {
-                  for (const g of ward.data || []) {
-                    if (!groupNameMatches(g, groupName)) continue;
-                    const hit = findMemberInGroupDocByNumber(g, memberNumber);
+          if (inMembers && inMembers.group) {
+            found = findMemberInGroupDocByNumber(inMembers.group, memberNumber);
+            if (found) source = "groups-members";
+          }
+
+          // Backstop: scan docs if structured lookup needed fallback
+          if (!found && inGroups) {
+            const scanDocs = async (colName) => {
+              const docs = await db.collection(colName).find({}).toArray();
+              for (const doc of docs) {
+                if (!doc) continue;
+
+                if (groupNameMatches(doc, groupName)) {
+                  const hit = findMemberInGroupDocByNumber(doc, memberNumber);
+                  if (hit) return hit;
+                }
+
+                // Nested regional structure
+                for (const cons of doc.constituencies || []) {
+                  for (const ward of cons.wards || []) {
+                    for (const g of ward.data || []) {
+                      if (!groupNameMatches(g, groupName)) continue;
+                      const hit = findMemberInGroupDocByNumber(g, memberNumber);
+                      if (hit) return hit;
+                    }
+                  }
+                }
+
+                // Flat constituency-as-key arrays
+                for (const key of Object.keys(doc)) {
+                  if (key === "_id" || key === "county" || key === "performance" || key === "constituencies") continue;
+                  const items = doc[key];
+                  if (!Array.isArray(items)) continue;
+                  for (const item of items) {
+                    if (!item || typeof item !== "object" || !item.groupName) continue;
+                    if (!groupNameMatches(item, groupName)) continue;
+                    const hit = findMemberInGroupDocByNumber(item, memberNumber);
                     if (hit) return hit;
                   }
                 }
               }
+              return null;
+            };
 
-              // Flat constituency-as-key arrays
-              for (const key of Object.keys(doc)) {
-                if (key === "_id" || key === "county" || key === "performance" || key === "constituencies") continue;
-                const items = doc[key];
-                if (!Array.isArray(items)) continue;
-                for (const item of items) {
-                  if (!item || typeof item !== "object" || !item.groupName) continue;
-                  if (!groupNameMatches(item, groupName)) continue;
-                  const hit = findMemberInGroupDocByNumber(item, memberNumber);
-                  if (hit) return hit;
-                }
-              }
-            }
-            return null;
-          };
-
-          found = await scanDocs("groups");
-          if (found) source = "groups";
-          if (!found) {
             found = await scanDocs("groups-members");
             if (found) source = "groups-members";
+            if (!found) {
+              found = await scanDocs("groups");
+              if (found) source = "groups";
+            }
           }
         }
       } catch (e) {
@@ -1731,6 +1746,7 @@ router.post("/verify-group-member", async (req, res) => {
       name: found.name,
       phone: found.phone,
       memberNumber: found.memberNumber || memberNumber,
+      memberId: found.memberId || found.phone,
       role: found.role,
       groupName,
       source,
