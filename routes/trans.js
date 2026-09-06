@@ -45,6 +45,7 @@ const {
   mutatePersonalLeaves,
   findPersonalRecord,
   applyAtomicGroupMemberContribution,
+  enqueueRegionalTransaction,
 } = require("../mongoose");
 
 /* ============================================================================
@@ -1065,6 +1066,25 @@ async function creditWalletTopUp({
       `[trans] Wallet top-up ${creditAmount} → ${phone} via ${paymentMethod} ` +
         `openBalance=${newOpenBalance}`,
     );
+
+    // Update regional ledger (Global → County → Constituency → Ward) — amounts only, non-blocking
+    enqueueRegionalTransaction({
+      txRef: reference || `TOPUP-${Date.now()}`,
+      nowIso: now.toISOString(),
+      paymentMethod,
+      mPhone: normalizePhone(phone),
+      pPhone: normalizePhone(payerPhone || phone),
+      groupName: "",
+      targetGroupData: {
+        county: membership.county || "",
+        constituency: membership.constituency || "",
+        ward: membership.ward || "",
+      },
+      locatedInMembersCol: null,
+      verifiedLines: [{ accountId: "wallet", resolvedAccountName: "Personal Wallet", amount: creditAmount }],
+      verifiedTotal: creditAmount,
+    });
+
     return { success: true, account: savedDoc, balance: newOpenBalance };
   } catch (err) {
     console.error("[trans] Error in creditWalletTopUp:", err.message);

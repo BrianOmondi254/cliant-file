@@ -704,6 +704,17 @@ const app = {
         this._inboxPollInterval = setInterval(() => {
             this.fetchInboxData();
         }, 30000);
+        // ── Phase 3: Listen for transaction events to refresh account view ──
+        window.addEventListener('group-account-updated', (e) => {
+            const updatedGroup = e && e.detail && e.detail.groupName;
+            // If the user currently has this group's accounts open, refresh it
+            if (updatedGroup && this._groupAccountsName &&
+                updatedGroup.trim().toLowerCase() === this._groupAccountsName.trim().toLowerCase()) {
+                const encodedGN = encodeURIComponent(this._groupAccountsName);
+                const encodedAN = encodeURIComponent(this._groupAccountsAccNum || '');
+                this.renderGroupAccountsPrimaryView(encodedGN, encodedAN);
+            }
+        });
         // Dynamically ensure Agent nav button is visible if the server-side check missed it
         this.ensureAgentNav();
     },
@@ -834,6 +845,27 @@ const app = {
             console.warn('Could not load wallet from local device storage:', e);
         }
         return false;
+    },
+    // ── Phase 3: Auto-invalidation ─────────────────────────────────────────
+    // Call this after any successful transaction (M-Pesa, contribution, manual entry).
+    // It clears the localStorage group account cache and notifies the server to
+    // clear its in-memory cache, so next accounts load fetches fresh MongoDB data.
+    invalidateGroupAccountsCache(groupName) {
+        if (!groupName) return;
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const lsCacheKey = `cliant_grp_acct_${phone}_${groupName.toLowerCase().replace(/\s+/g, '_')}`;
+        try {
+            localStorage.removeItem(lsCacheKey);
+            console.log('[cache] localStorage cleared for:', lsCacheKey);
+        } catch(e) {}
+        // Notify server to clear its cache entry too
+        fetch('/member/invalidate-group-cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupName, phone })
+        }).catch(() => {});
+        // If the accounts view is currently open, silently refresh it
+        window.dispatchEvent(new CustomEvent('group-account-updated', { detail: { groupName } }));
     },
     async fetchWalletData() {
         try {
@@ -2744,7 +2776,73 @@ const app = {
         if (!container) return;
         window.scrollTo(0, 0);
 
-        // Render Loading State in Primary Display
+        const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        // ── localStorage SWR cache key (per user + per group) ────────────────
+        const lsCacheKey = `cliant_grp_acct_${myPhone}_${decodedGroupName.toLowerCase().replace(/\s+/g, '_')}`;
+        const LS_TTL_MS = 30 * 60 * 1000; // 30 minutes hard TTL
+
+        // Helper: read cache entry
+        const _readCache = () => {
+            try {
+                const raw = localStorage.getItem(lsCacheKey);
+                if (!raw) return null;
+                const entry = JSON.parse(raw);
+                if (!entry || !entry.data || !entry.cachedAt) return null;
+                if (Date.now() - entry.cachedAt > LS_TTL_MS) {
+                    localStorage.removeItem(lsCacheKey);
+                    return null;
+                }
+                return entry;
+            } catch(e) { return null; }
+        };
+
+        // Helper: write cache entry
+        const _writeCache = (data) => {
+            try {
+                localStorage.setItem(lsCacheKey, JSON.stringify({
+                    data,
+                    cachedAt: Date.now(),
+                    dataVersion: data.dataVersion || 0
+                }));
+            } catch(e) { console.warn('[cache] Could not write to localStorage:', e); }
+        };
+
+        // ── Step 1: Check localStorage for instant render ────────────────────
+        const cacheEntry = _readCache();
+        if (cacheEntry && cacheEntry.data) {
+            // INSTANT render from cache — no spinner, no delay
+            this._groupAccountsData = cacheEntry.data;
+            this._groupAccountsName = decodedGroupName;
+            this._groupAccountsAccNum = accountNumber;
+            this._groupAccountsActiveTab = 'my';
+            this.renderGroupAccountsDisplay(cacheEntry.data, decodedGroupName, accountNumber, 'my');
+
+            // ── Step 2: Background revalidation (SWR) ───────────────────────
+            const cachedVersion = cacheEntry.dataVersion || 0;
+            fetch('/member/verified-groups-members', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName: decodedGroupName, accountNumber, phone: myPhone, clientVersion: cachedVersion })
+            })
+            .then(async res => { if (!res.ok) return null; return res.json(); })
+            .then(freshData => {
+                if (!freshData || freshData.success === false) return;
+                const freshVersion = freshData.dataVersion || 0;
+                // Only re-render if data actually changed
+                if (freshVersion > cachedVersion || freshVersion === 0) {
+                    _writeCache(freshData);
+                    this._groupAccountsData = freshData;
+                    this.renderGroupAccountsDisplay(freshData, decodedGroupName, accountNumber, this._groupAccountsActiveTab || 'my');
+                    console.log('[SWR] Updated accounts display with fresh data v' + freshVersion);
+                }
+            })
+            .catch(err => console.warn('[SWR background revalidation failed]', err.message));
+
+            // Done — no spinner shown, user sees data immediately
+            return;
+        }
+
+        // ── Step 3: No cache — show loading spinner and fetch ────────────────
         container.innerHTML = `
         <div style="padding:14px;">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
@@ -2758,28 +2856,22 @@ const app = {
             </div>
             <div style="background:white;border-radius:14px;padding:36px 20px;text-align:center;box-shadow:var(--shadow-sm);border:1px solid #e2e8f0;">
                 <i class="fa-solid fa-spinner fa-spin" style="font-size:32px;color:var(--primary);"></i>
-                <p style="margin-top:12px;font-size:13px;font-weight:700;color:#1e293b;">Loading Verified Member Data...</p>
-                <small style="color:#64748b;font-size:11px;">Fetching account balances...</small>
+                <p style="margin-top:12px;font-size:13px;font-weight:700;color:#1e293b;">Loading Account Data...</p>
+                <small style="color:#64748b;font-size:11px;">Connecting to database...</small>
             </div>
         </div>`;
 
-        // Fetch verified member data
-        const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
         fetch('/member/verified-groups-members', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupName: decodedGroupName, accountNumber, phone: myPhone })
+            body: JSON.stringify({ groupName: decodedGroupName, accountNumber, phone: myPhone, clientVersion: 0 })
         })
-        .then(res => {
-            if (!res.ok) {
-                // Fallback to group-accounts-schema endpoint
-                return fetch('/member/group-accounts-schema', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ groupName: decodedGroupName, accountNumber, phone: myPhone })
-                }).then(r => r.json());
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok || !data || data.error || data.success === false) {
+                throw new Error((data && data.error) ? data.error : ('Server error: ' + res.status));
             }
-            return res.json();
+            return data;
         })
         .then(data => {
             if (!data || data.error) {
@@ -2807,226 +2899,16 @@ const app = {
                 return;
             }
 
+            // Save to localStorage for next visit (instant render)
+            _writeCache(data);
+
             // Save data for reference
             this._groupAccountsData = data;
             this._groupAccountsName = decodedGroupName;
+            this._groupAccountsAccNum = accountNumber;
+            this._groupAccountsActiveTab = 'my';
 
-            // Extract verified member data object
-            const verifiedMember = data.currentUser || data.verifiedMember || data.member || {};
-            const memberId = data.verifiedMemberId || verifiedMember.memberId || data.loggedInMemberId || myPhone;
-            const memberName = data.verifiedMemberName || verifiedMember.name || data.loggedInMemberName || 'Member';
-            const roleRaw = verifiedMember.role || verifiedMember.type || data.loggedInMemberRole || (data.isMemberOnly ? 'member' : 'official');
-            const roleLabel = roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1);
-            const isMemberOnly = data.isMemberOnly !== undefined ? data.isMemberOnly : (roleRaw !== 'trustee' && roleRaw !== 'official');
-            const accountSchema = data.accountSchema || {};
-            const accountDetails = data.accountDetails || {};
-            const memberAccounts = verifiedMember.accounts || {};
-            const memberFinancials = verifiedMember.memberFinancials || {};
-
-            const accColors = {
-                saving:       { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank',     grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
-                registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card',         grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
-                late:         { bg: '#ffebee', color: '#c62828', icon: 'fa-clock',           grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
-                welfare:      { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding',   grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
-                default:      { bg: '#e8f0fe', color: '#1a73e8', icon: 'fa-wallet',          grad: 'linear-gradient(135deg,#1a73e8,#64b5f6)' }
-            };
-            const getAccStyle = (name) => {
-                const n = (name || '').toLowerCase();
-                if (n.includes('saving'))       return accColors.saving;
-                if (n.includes('registration')) return accColors.registration;
-                if (n.includes('late'))         return accColors.late;
-                if (n.includes('welfare'))      return accColors.welfare;
-                return accColors.default;
-            };
-
-            // Calculate metrics for each individual account balance
-            let totalOpening = 0;
-            let totalIn = 0;
-            let totalOut = 0;
-            let totalClosing = 0;
-
-            const accList = [];
-            for (const accId in accountSchema) {
-                const schema = accountSchema[accId];
-                const mAcc = memberAccounts[accId] || {};
-                const detail = accountDetails[accId] || {};
-                const fins = mAcc.financials || {};
-
-                let openBal = fins.openingBalance !== undefined ? Number(fins.openingBalance) : 0;
-                let amtIn = fins.amountIn !== undefined ? Number(fins.amountIn) : 0;
-                let amtOut = fins.amountOut !== undefined ? Number(fins.amountOut) : 0;
-                let closingBal = fins.closingBalance !== undefined ? Number(fins.closingBalance) : (openBal + amtIn - amtOut);
-
-                if (detail.members && isMemberOnly && detail.members.length === 1) {
-                    if (fins.openingBalance === undefined && detail.members[0]) {
-                        openBal = Number(detail.members[0].openingBalance || 0);
-                        amtIn = Number(detail.members[0].amountIn || 0);
-                        amtOut = Number(detail.members[0].amountOut || 0);
-                        closingBal = Number(detail.members[0].closingBalance || 0);
-                    }
-                }
-
-                totalOpening += openBal;
-                totalIn += amtIn;
-                totalOut += amtOut;
-                totalClosing += closingBal;
-
-                const expectedAmt = Number(mAcc.expectedAmount || schema.expectedAmount || detail.expectedAmount || 0);
-                const isPaid = amtIn >= expectedAmt && expectedAmt > 0;
-
-                accList.push({
-                    accId,
-                    accountName: schema.accountName || mAcc.accountName || accId,
-                    expectedAmount: expectedAmt,
-                    openBal,
-                    amtIn,
-                    amtOut,
-                    closingBal,
-                    isPaid,
-                    style: getAccStyle(schema.accountName || mAcc.accountName)
-                });
-            }
-
-            if (memberFinancials.closingBalance !== undefined && Number(memberFinancials.closingBalance) > 0) {
-                totalClosing = Number(memberFinancials.closingBalance);
-            }
-            if (memberFinancials.openingBalance !== undefined && Number(memberFinancials.openingBalance) > 0) {
-                totalOpening = Number(memberFinancials.openingBalance);
-            }
-            if (memberFinancials.amountIn !== undefined && Number(memberFinancials.amountIn) > 0) {
-                totalIn = Number(memberFinancials.amountIn);
-            }
-            if (memberFinancials.amountOut !== undefined && Number(memberFinancials.amountOut) > 0) {
-                totalOut = Number(memberFinancials.amountOut);
-            }
-
-            // Build Primary Display View
-            let html = `
-            <div style="padding:14px;">
-                <!-- BACK BUTTON & HEADER -->
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-                    <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
-                        <i class="fa-solid fa-arrow-left"></i>
-                    </button>
-                    <div style="flex:1;min-width:0;">
-                        <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${decodedGroupName}</h3>
-                        <small style="color:#64748b;font-size:11px;">${data.county || ''} ${data.ward ? '• ' + data.ward : ''} • Phase ${data.phase || '3'}</small>
-                    </div>
-                    <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:#dcfce7;color:#15803d;border:1px solid #86efac;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;">
-                        <i class="fa-solid fa-circle-check"></i> Verified
-                    </span>
-                </div>
-
-                <!-- VERIFIED MEMBER IDENTITY CARD -->
-                <div style="background:white;border:1.5px solid #d1fae5;border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:50%;background:#dcfce7;color:#15803d;border:2px solid #86efac;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
-                            <i class="fa-solid fa-user-check"></i>
-                        </div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                <span style="font-size:14.5px;font-weight:800;color:#1e293b;text-transform:capitalize;">${memberName}</span>
-                                <span style="font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:12px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;">${roleLabel.toUpperCase()}</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">
-                                <span style="font-size:11px;font-weight:700;color:#0f766e;background:#ccfbf1;padding:2px 7px;border-radius:6px;">
-                                    <i class="fa-solid fa-id-badge" style="margin-right:3px;"></i>Verified Member ID: <b>${memberId}</b>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MEMBER OVERVIEW BALANCE CARD -->
-                <div style="background:linear-gradient(135deg, #0c8f44, #00c76f);border-radius:14px;padding:18px;color:white;margin-bottom:16px;box-shadow:var(--shadow-md);position:relative;overflow:hidden;">
-                    <div style="font-size:11px;font-weight:600;opacity:0.9;text-transform:uppercase;letter-spacing:1px;">Member Total Contribution</div>
-                    <div style="font-size:26px;font-weight:800;margin:6px 0 14px 0;letter-spacing:-0.5px;">KSh ${totalClosing.toLocaleString()}</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
-                        <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
-                            <div style="font-size:9px;opacity:0.85;font-weight:700;text-transform:uppercase;">Opening Bal</div>
-                            <div style="font-size:12.5px;font-weight:800;margin-top:2px;">KSh ${totalOpening.toLocaleString()}</div>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
-                            <div style="font-size:9px;opacity:0.85;font-weight:700;text-transform:uppercase;">Total In</div>
-                            <div style="font-size:12.5px;font-weight:800;margin-top:2px;">+KSh ${totalIn.toLocaleString()}</div>
-                        </div>
-                        <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
-                            <div style="font-size:9px;opacity:0.85;font-weight:700;text-transform:uppercase;">Total Out</div>
-                            <div style="font-size:12.5px;font-weight:800;margin-top:2px;">-KSh ${totalOut.toLocaleString()}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- EACH ACCOUNT BALANCES SECTION -->
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="font-size:12.5px;font-weight:800;color:var(--text-dark);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
-                        <i class="fa-solid fa-folder-open" style="color:var(--primary);"></i> Each Account Balances (${accList.length})
-                    </div>
-                    ${!isMemberOnly ? `
-                    <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" style="background:none;border:none;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 6px;">
-                        <i class="fa-solid fa-users"></i> All Members View
-                    </button>` : ''}
-                </div>
-
-                <!-- ACCOUNT CARDS LIST -->
-                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">`;
-
-                accList.forEach(acc => {
-                    html += `
-                    <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);transition:all 0.2s;">
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                            <span style="width:40px;height:40px;border-radius:10px;background:${acc.style.bg};color:${acc.style.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
-                                <i class="fa-solid ${acc.style.icon}"></i>
-                            </span>
-                            <div style="flex:1;min-width:0;">
-                                <div style="font-weight:800;font-size:14px;color:#1e293b;">${acc.accountName}</div>
-                                <div style="font-size:11px;color:#64748b;margin-top:2px;">
-                                    A/C ID: <b>${acc.accId}</b> &nbsp;·&nbsp; Expected: <b>KSh ${acc.expectedAmount.toLocaleString()}</b>
-                                </div>
-                            </div>
-                            <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;${acc.isPaid ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;' : 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;'}">
-                                ${acc.isPaid ? '✓ Paid' : '⏳ Pending'}
-                            </span>
-                        </div>
-
-                        <!-- 4 FINANCIAL METRICS GRID -->
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:8px 10px;">
-                                <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Opening Bal</div>
-                                <div style="font-size:13px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${acc.openBal.toLocaleString()}</div>
-                            </div>
-                            <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:8px;padding:8px 10px;">
-                                <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.5px;">Amount In</div>
-                                <div style="font-size:13px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${acc.amtIn.toLocaleString()}</div>
-                            </div>
-                            <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:8px 10px;">
-                                <div style="font-size:9px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:0.5px;">Amount Out</div>
-                                <div style="font-size:13px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${acc.amtOut.toLocaleString()}</div>
-                            </div>
-                            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;">
-                                <div style="font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.5px;">Closing Bal</div>
-                                <div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${acc.closingBal.toLocaleString()}</div>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-
-                html += `
-                </div>
-
-                <!-- ACTION BUTTONS -->
-                <div style="display:flex;gap:10px;">
-                    <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
-                        <i class="fa-solid fa-arrow-left"></i> Group Dashboard
-                    </button>
-                    <button onclick="app.openGroupStatementModal('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
-                        <i class="fa-solid fa-file-lines"></i> Statements
-                    </button>
-                </div>
-            </div>`;
-
-            container.innerHTML = html;
-            window.scrollTo(0, 0);
+            this.renderGroupAccountsDisplay(data, decodedGroupName, accountNumber, 'my');
         })
         .catch(err => {
             console.error('[renderGroupAccountsPrimaryView] error:', err);
@@ -3051,6 +2933,436 @@ const app = {
                 </div>
             </div>`;
         });
+    },
+    shiftGroupAccountsView(tab) {
+        this._groupAccountsActiveTab = tab;
+        if (this._groupAccountsData && this._groupAccountsName) {
+            this.renderGroupAccountsDisplay(this._groupAccountsData, this._groupAccountsName, this._groupAccountsAccNum || '', tab);
+        }
+    },
+    renderGroupAccountsDisplay(data, decodedGroupName, accountNumber, activeTab = 'my') {
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+
+        // Extract verified member data object
+        const verifiedMember = data.currentUser || data.verifiedMember || data.member || {};
+        const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const memberId = data.verifiedMemberId || verifiedMember.memberId || data.loggedInMemberId || myPhone;
+        const memberName = data.verifiedMemberName || verifiedMember.name || data.loggedInMemberName || 'Member';
+        const nameLower = String(memberName).toLowerCase();
+        let roleRaw = String(verifiedMember.role || verifiedMember.type || data.loggedInMemberRole || '').toLowerCase();
+        if (!roleRaw || roleRaw === 'member') {
+            if (nameLower.includes('dealer')) roleRaw = 'dealer';
+            else if (nameLower.includes('official')) roleRaw = 'official';
+            else if (nameLower.includes('trust')) roleRaw = 'trustee';
+            else if (nameLower.includes('chair')) roleRaw = 'chairperson';
+            else roleRaw = data.isMemberOnly ? 'member' : 'official';
+        }
+        const roleLabel = roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1);
+        const isOfficialOrTrusty = roleRaw === 'official' ||
+            roleRaw === 'trustee' ||
+            roleRaw === 'trusty' ||
+            roleRaw === 'dealer' ||
+            roleRaw === 'agent' ||
+            roleRaw === 'chairperson' ||
+            roleRaw === 'treasurer' ||
+            roleRaw === 'secretary' ||
+            roleRaw.includes('official') ||
+            roleRaw.includes('trust') ||
+            roleRaw.includes('dealer') ||
+            roleRaw.includes('agent') ||
+            nameLower.includes('dealer') ||
+            nameLower.includes('official') ||
+            nameLower.includes('trustee') ||
+            nameLower.includes('chair') ||
+            (!data.isMemberOnly && roleRaw !== 'member');
+        const isMemberOnly = !isOfficialOrTrusty;
+        const accountSchema = data.accountSchema || {};
+        const accountDetails = data.accountDetails || {};
+        const memberAccounts = verifiedMember.accounts || {};
+        const memberFinancials = verifiedMember.memberFinancials || {};
+
+        const accColors = {
+            saving:       { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank',     grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
+            registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card',         grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
+            late:         { bg: '#ffebee', color: '#c62828', icon: 'fa-clock',           grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
+            welfare:      { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding',   grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
+            default:      { bg: '#e8f0fe', color: '#1a73e8', icon: 'fa-wallet',          grad: 'linear-gradient(135deg,#1a73e8,#64b5f6)' }
+        };
+        const getAccStyle = (name) => {
+            const n = (name || '').toLowerCase();
+            if (n.includes('saving'))       return accColors.saving;
+            if (n.includes('registration')) return accColors.registration;
+            if (n.includes('late'))         return accColors.late;
+            if (n.includes('welfare'))      return accColors.welfare;
+            return accColors.default;
+        };
+
+        // Calculate metrics for individual member account balance
+        let totalOpening = 0;
+        let totalIn = 0;
+        let totalOut = 0;
+        let totalClosing = 0;
+
+        const accList = [];
+        for (const accId in accountSchema) {
+            const schema = accountSchema[accId];
+            const mAcc = memberAccounts[accId] || {};
+            const detail = accountDetails[accId] || {};
+            const fins = mAcc.financials || {};
+
+            let openBal = fins.openingBalance !== undefined ? Number(fins.openingBalance) : 0;
+            let amtIn = fins.amountIn !== undefined ? Number(fins.amountIn) : 0;
+            let amtOut = fins.amountOut !== undefined ? Number(fins.amountOut) : 0;
+            let closingBal = fins.closingBalance !== undefined ? Number(fins.closingBalance) : (openBal + amtIn - amtOut);
+
+            if (detail.members && (fins.openingBalance === undefined || (openBal === 0 && amtIn === 0 && amtOut === 0 && closingBal === 0))) {
+                const foundMember = detail.members.find(m => String(m.memberId) === String(memberId) || (memberName && String(m.name).toLowerCase() === String(memberName).toLowerCase()));
+                if (foundMember) {
+                    openBal = Number(foundMember.openingBalance || 0);
+                    amtIn = Number(foundMember.amountIn || 0);
+                    amtOut = Number(foundMember.amountOut || 0);
+                    closingBal = Number(foundMember.closingBalance || 0);
+                } else if (isMemberOnly && detail.members.length === 1 && detail.members[0]) {
+                    openBal = Number(detail.members[0].openingBalance || 0);
+                    amtIn = Number(detail.members[0].amountIn || 0);
+                    amtOut = Number(detail.members[0].amountOut || 0);
+                    closingBal = Number(detail.members[0].closingBalance || 0);
+                }
+            }
+
+            totalOpening += openBal;
+            totalIn += amtIn;
+            totalOut += amtOut;
+            totalClosing += closingBal;
+
+            const expectedAmt = Number(mAcc.expectedAmount || schema.expectedAmount || detail.expectedAmount || 0);
+            const isPaid = amtIn >= expectedAmt && expectedAmt > 0;
+
+            accList.push({
+                accId,
+                accountName: schema.accountName || mAcc.accountName || accId,
+                expectedAmount: expectedAmt,
+                openBal,
+                amtIn,
+                amtOut,
+                closingBal,
+                isPaid,
+                style: getAccStyle(schema.accountName || mAcc.accountName)
+            });
+        }
+
+        if (memberFinancials.closingBalance !== undefined && Number(memberFinancials.closingBalance) > 0) {
+            totalClosing = Number(memberFinancials.closingBalance);
+        }
+        if (memberFinancials.openingBalance !== undefined && Number(memberFinancials.openingBalance) > 0) {
+            totalOpening = Number(memberFinancials.openingBalance);
+        }
+        if (memberFinancials.amountIn !== undefined && Number(memberFinancials.amountIn) > 0) {
+            totalIn = Number(memberFinancials.amountIn);
+        }
+        if (memberFinancials.amountOut !== undefined && Number(memberFinancials.amountOut) > 0) {
+            totalOut = Number(memberFinancials.amountOut);
+        }
+
+        // Calculate metrics for group-level account balances
+        let groupTotalOpening = 0;
+        let groupTotalIn = 0;
+        let groupTotalOut = 0;
+        let groupTotalClosing = 0;
+
+        const groupAccList = [];
+        for (const accId in accountSchema) {
+            const schema = accountSchema[accId];
+            const detail = accountDetails[accId] || {};
+            const members = detail.members || [];
+
+            const gOpen = detail.totalOpening !== undefined ? Number(detail.totalOpening) : members.reduce((sum, m) => sum + Number(m.openingBalance || 0), 0);
+            const gIn = detail.totalIn !== undefined ? Number(detail.totalIn) : members.reduce((sum, m) => sum + Number(m.amountIn || 0), 0);
+            const gOut = detail.totalOut !== undefined ? Number(detail.totalOut) : members.reduce((sum, m) => sum + Number(m.amountOut || 0), 0);
+            const gClosing = detail.totalBalance !== undefined ? Number(detail.totalBalance) : (gOpen + gIn - gOut);
+
+            groupTotalOpening += gOpen;
+            groupTotalIn += gIn;
+            groupTotalOut += gOut;
+            groupTotalClosing += gClosing;
+
+            const expectedAmt = Number(schema.expectedAmount || detail.expectedAmount || 0);
+            const paidCount = members.filter(m => Number(m.amountIn || 0) >= expectedAmt && expectedAmt > 0).length;
+
+            groupAccList.push({
+                accId,
+                accountName: schema.accountName || detail.accountName || accId,
+                expectedAmount: expectedAmt,
+                openBal: gOpen,
+                amtIn: gIn,
+                amtOut: gOut,
+                closingBal: gClosing,
+                membersCount: members.length,
+                paidCount,
+                style: getAccStyle(schema.accountName || detail.accountName)
+            });
+        }
+
+        // Build Primary Display View
+        let html = `
+        <div style="padding:14px;">
+            <!-- BACK BUTTON & HEADER -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div style="flex:1;min-width:0;">
+                    <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${decodedGroupName}</h3>
+                    <small style="color:#64748b;font-size:11px;">${data.county || ''} ${data.ward ? '• ' + data.ward : ''} • Phase ${data.phase || '3'}</small>
+                </div>
+                <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:#dcfce7;color:#15803d;border:1px solid #86efac;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;">
+                    <i class="fa-solid fa-circle-check"></i> Verified
+                </span>
+            </div>`;
+
+        // If verified as official or trusty: display My Account and Group Account shift button at top of account display
+        if (isOfficialOrTrusty) {
+            html += `
+            <!-- SHIFT BUTTON (MY ACCOUNT / GROUP ACCOUNT) -->
+            <div style="display:flex;background:#f1f5f9;padding:4px;border-radius:12px;margin-bottom:16px;border:1px solid #e2e8f0;gap:6px;">
+                <button type="button" onclick="app.shiftGroupAccountsView('my')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'my' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
+                    <i class="fa-solid fa-user"></i> My Account
+                </button>
+                <button type="button" onclick="app.shiftGroupAccountsView('group')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'group' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
+                    <i class="fa-solid fa-users"></i> Group Account
+                </button>
+            </div>`;
+        }
+
+        // VIEW RENDERING:
+        // If official/trusty selected 'group', render the Group Account Display
+        if (isOfficialOrTrusty && activeTab === 'group') {
+            html += `
+            <!-- GROUP OVERVIEW BALANCE CARD -->
+            <div style="background:linear-gradient(135deg, #0c8f44, #00c76f);border-radius:14px;padding:18px;color:white;margin-bottom:14px;box-shadow:var(--shadow-md);position:relative;overflow:hidden;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div style="font-size:11px;font-weight:600;opacity:0.9;text-transform:uppercase;letter-spacing:1px;">Group Total Contribution</div>
+                        <div style="font-size:26px;font-weight:800;margin:6px 0 14px 0;letter-spacing:-0.5px;">KSh ${groupTotalClosing.toLocaleString()}</div>
+                    </div>
+                    <span style="font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.2);backdrop-filter:blur(4px);color:white;border:1px solid rgba(255,255,255,0.3);display:inline-flex;align-items:center;gap:4px;">
+                        <i class="fa-solid fa-users"></i> ${data.totalMembers || groupAccList[0]?.membersCount || 0} Members
+                    </span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+                    <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
+                        <div style="font-size:9px;opacity:0.85;font-weight:700;text-transform:uppercase;">Opening Bal</div>
+                        <div style="font-size:12.5px;font-weight:800;margin-top:2px;">KSh ${groupTotalOpening.toLocaleString()}</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
+                        <div style="font-size:9px;opacity:0.85;font-weight:700;text-transform:uppercase;">Total In</div>
+                        <div style="font-size:12.5px;font-weight:800;margin-top:2px;">+KSh ${groupTotalIn.toLocaleString()}</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:8px 4px;">
+                        <div style="font-size:9px;opacity:0.85;font-weight:700;text-transform:uppercase;">Total Out</div>
+                        <div style="font-size:12.5px;font-weight:800;margin-top:2px;">-KSh ${groupTotalOut.toLocaleString()}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GROUP SUMMARY & MEMBERS ACTION STRIP -->
+            <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:13px;font-weight:800;color:#1e293b;">${data.totalMembers || groupAccList[0]?.membersCount || 0} Registered Members</div>
+                        <div style="font-size:10.5px;color:#64748b;margin-top:1px;">Group Account Pool View</div>
+                    </div>
+                </div>
+                <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#1e293b;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+                    <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> All Members
+                </button>
+            </div>
+
+            <!-- EACH GROUP ACCOUNT BALANCES SECTION -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div style="font-size:12.5px;font-weight:800;color:var(--text-dark);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-folder-open" style="color:#2563eb;"></i> Group Account Balances (${groupAccList.length})
+                </div>
+                <span style="font-size:11px;font-weight:600;color:#64748b;">${groupAccList[0]?.membersCount || 0} Members</span>
+            </div>
+
+            <!-- GROUP ACCOUNT CARDS LIST -->
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">`;
+
+            groupAccList.forEach(acc => {
+                html += `
+                <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span style="width:40px;height:40px;border-radius:10px;background:${acc.style.bg};color:${acc.style.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+                            <i class="fa-solid ${acc.style.icon}"></i>
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:800;font-size:14px;color:#1e293b;">${acc.accountName}</div>
+                            <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                                A/C ID: <b>${acc.accId}</b> &nbsp;·&nbsp; Expected: <b>KSh ${acc.expectedAmount.toLocaleString()}</b> /member
+                            </div>
+                        </div>
+                        <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;">
+                            ${acc.membersCount} Members
+                        </span>
+                    </div>
+
+                    <!-- 4 FINANCIAL METRICS GRID FOR GROUP -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                        <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Group Opening Bal</div>
+                            <div style="font-size:13px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${acc.openBal.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.5px;">Group Total In</div>
+                            <div style="font-size:13px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${acc.amtIn.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:0.5px;">Group Total Out</div>
+                            <div style="font-size:13px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${acc.amtOut.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.5px;">Group Closing Bal</div>
+                            <div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${acc.closingBal.toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    <!-- DRILL DOWN BUTTON -->
+                    <button onclick="app.openGroupAccountMembersView('${acc.accId}')" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:12px;font-weight:700;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+                        <span style="display:flex;align-items:center;gap:6px;">
+                            <i class="fa-solid fa-users-viewfinder" style="color:var(--primary);"></i> View Members Breakdown (${acc.membersCount})
+                        </span>
+                        <i class="fa-solid fa-chevron-right" style="font-size:10px;color:#94a3b8;"></i>
+                    </button>
+                </div>`;
+            });
+
+            html += `
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div style="display:flex;gap:10px;">
+                <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
+                    <i class="fa-solid fa-arrow-left"></i> Group Dashboard
+                </button>
+                <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
+                    <i class="fa-solid fa-users"></i> All Members
+                </button>
+                <button onclick="app.openGroupStatementModal('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
+                    <i class="fa-solid fa-file-lines"></i> Statements
+                </button>
+            </div>`;
+        } else {
+            // MY ACCOUNT DISPLAY (Standard display for members, or official/trusty on 'my' tab)
+            html += `
+            <!-- VERIFIED MEMBER IDENTITY + BALANCE CARD (unified) -->
+            <div style="background:linear-gradient(135deg, #0c8f44, #00c76f);border-radius:14px;padding:18px;color:white;margin-bottom:16px;box-shadow:var(--shadow-md);position:relative;overflow:hidden;">
+                <!-- decorative circle -->
+                <div style="position:absolute;top:-40%;right:-8%;width:140px;height:140px;background:rgba(255,255,255,0.08);border-radius:50%;pointer-events:none;"></div>
+                <!-- single row: left = avatar+name+id, right = contribution label+amount -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <!-- LEFT: avatar + identity -->
+                    <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:white;">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div style="min-width:0;">
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <span style="font-size:14px;font-weight:800;color:white;text-transform:capitalize;">${memberName}</span>
+                                <span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:12px;background:rgba(255,255,255,0.25);color:white;border:1px solid rgba(255,255,255,0.35);">${roleLabel.toUpperCase()}</span>
+                            </div>
+                            <div style="margin-top:4px;">
+                                <span style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.9);display:inline-flex;align-items:center;gap:4px;">
+                                    <i class="fa-solid fa-id-badge"></i> Verified Member ID: <b>${memberId}</b>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- RIGHT: contribution label + KSh amount -->
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-size:10px;font-weight:700;opacity:0.85;text-transform:uppercase;letter-spacing:0.8px;">${isOfficialOrTrusty ? 'My Total' : 'Total'}</div>
+                        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-top:2px;">KSh ${totalClosing.toLocaleString()}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EACH ACCOUNT BALANCES SECTION -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div style="font-size:12.5px;font-weight:800;color:var(--text-dark);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-folder-open" style="color:var(--primary);"></i> Each Account Balances (${accList.length})
+                </div>
+                ${!isMemberOnly ? `
+                <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" style="background:none;border:none;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 6px;">
+                    <i class="fa-solid fa-users"></i> All Members View
+                </button>` : ''}
+            </div>
+
+            <!-- ACCOUNT CARDS LIST -->
+            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">`;
+
+            accList.forEach(acc => {
+                html += `
+                <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px 16px;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span style="width:40px;height:40px;border-radius:10px;background:${acc.style.bg};color:${acc.style.color};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+                            <i class="fa-solid ${acc.style.icon}"></i>
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:800;font-size:14px;color:#1e293b;">${acc.accountName}</div>
+                            <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                                A/C ID: <b>${acc.accId}</b> &nbsp;·&nbsp; Expected: <b>KSh ${acc.expectedAmount.toLocaleString()}</b>
+                            </div>
+                        </div>
+                        <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;${acc.isPaid ? 'background:#dcfce7;color:#15803d;border:1px solid #86efac;' : 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;'}">
+                            ${acc.isPaid ? '✓ Paid' : '⏳ Pending'}
+                        </span>
+                    </div>
+
+                    <!-- 4 FINANCIAL METRICS GRID -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Opening Bal</div>
+                            <div style="font-size:13px;font-weight:800;color:#1e293b;margin-top:2px;">KSh ${acc.openBal.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.5px;">Amount In</div>
+                            <div style="font-size:13px;font-weight:800;color:#15803d;margin-top:2px;">+KSh ${acc.amtIn.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:0.5px;">Amount Out</div>
+                            <div style="font-size:13px;font-weight:800;color:#b91c1c;margin-top:2px;">-KSh ${acc.amtOut.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;">
+                            <div style="font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:0.5px;">Closing Bal</div>
+                            <div style="font-size:13px;font-weight:800;color:#1d4ed8;margin-top:2px;">KSh ${acc.closingBal.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            html += `
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div style="display:flex;gap:10px;">
+                <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
+                    <i class="fa-solid fa-arrow-left"></i> Group Dashboard
+                </button>
+                <button onclick="app.openGroupStatementModal('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
+                    <i class="fa-solid fa-file-lines"></i> Statements
+                </button>
+            </div>`;
+        }
+
+        html += `
+        </div>`;
+
+        container.innerHTML = html;
+        window.scrollTo(0, 0);
     },
     renderGroupPlan(group) {
         const p = group.principles;
@@ -3092,7 +3404,7 @@ const app = {
         const accountNumber = encodedAccNum ? decodeURIComponent(encodedAccNum) : '';
         document.getElementById('modalOverlay').classList.add('open');
         this.updateModalContent('Loading Accounts...', '<div style="text-align:center;padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--primary);"></i><p style="margin-top:10px;font-size:12px;color:#64748b;">Fetching account data...</p></div>', null, 'fa-folder-open');
-        fetch('/member/group-accounts-schema', {
+        fetch('/member/verified-groups-members', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ groupName: decodeURIComponent(groupName), accountNumber, phone: this.data.user.phoneNumber })
@@ -3486,38 +3798,25 @@ const app = {
         this.updateModalContent('Pending Contributions', html, null, 'fa-clock', 'linear-gradient(135deg, #f59e0b, #fbbf24)');
     },
     openGroupLoanBalanceModal(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
         document.getElementById('modalOverlay').classList.add('open');
         this.updateModalContent('Loading Loan Details...', '<div style="text-align:center;padding:20px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i></div>', null, 'fa-sack-dollar');
-        fetch('/member/group-by-name', {
+        fetch('/member/verified-groups-members', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupName })
+            body: JSON.stringify({ groupName: decodedGroupName, phone: this.data.user.phoneNumber })
         })
         .then(res => res.json())
-        .then(group => {
-            let closingBalance = 3500; // Premium fallback
-            const normalize = (p) => {
-                let s = String(p).trim().replace(/\D/g, '');
-                if (s.startsWith('254')) s = '0' + s.substring(3);
-                return s;
-            };
-            const loggedPhone = normalize(this.data.user.phoneNumber);
-            if (group && group.members) {
-                for (const phoneKey in group.members) {
-                    if (normalize(phoneKey) === loggedPhone) {
-                        const mData = group.members[phoneKey];
-                        // Try to find a loan account (e.g. ID "003" or account containing "loan" or "latenes")
-                        if (mData.accounts) {
-                            for (const accId in mData.accounts) {
-                                const accName = String(mData.accounts[accId].accountName).toLowerCase();
-                                if (accName.includes('loan') || accName.includes('late')) {
-                                    closingBalance = mData.accounts[accId].financials?.closingBalance || 0;
-                                    break;
-                                }
-                            }
-                        }
-                        break;
-                    }
+        .then(data => {
+            let closingBalance = 0;
+            const verifiedMember = data.currentUser || data.verifiedMember || data.member || {};
+            const accounts = verifiedMember.accounts || {};
+            for (const accId in accounts) {
+                const acc = accounts[accId];
+                const accName = String(acc.accountName || '').toLowerCase();
+                if (accName.includes('loan') || accName.includes('late')) {
+                    closingBalance = Number(acc.financials?.closingBalance || 0);
+                    break;
                 }
             }
             let html = `

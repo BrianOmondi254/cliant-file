@@ -39,12 +39,30 @@ const readJSON = (file, fallback = null) => {
 };
 
 const getRegionTransaction = async () => {
+  const defaultDoc = { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0, transactions: [] };
   try {
     const ready = await ensureMongoReady();
     if (ready) {
       const mongoose = require('mongoose');
       const col = mongoose.connection.db.collection('groups-members');
-      const doc = await col.findOne({ _id: 'regionTransaction' });
+      let doc = await col.findOne({ _id: 'regionTransaction' });
+      if (!doc) {
+        // Document was deleted — recreate it with zero balances
+        await col.updateOne(
+          { _id: 'regionTransaction' },
+          {
+            $setOnInsert: {
+              _id: 'regionTransaction',
+              county: 'Region',
+              countyId: 'region',
+              regionTransaction: defaultDoc,
+              syncedAt: new Date().toISOString(),
+            },
+          },
+          { upsert: true }
+        );
+        doc = await col.findOne({ _id: 'regionTransaction' });
+      }
       if (doc && doc.regionTransaction) {
         return doc.regionTransaction;
       }
@@ -52,10 +70,7 @@ const getRegionTransaction = async () => {
   } catch (e) {
     console.error('[regionTransaction] MongoDB read error:', e.message);
   }
-  
-  // Fallback to JSON file
-  const memberData = readJSON(memberRegionsFile, {});
-  return memberData.regions?.regionTransaction || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 };
+  return defaultDoc;
 };
 
 // Normalize a MongoDB group doc into the member.json shape the views expect.
@@ -297,52 +312,91 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
     return groups;
   };
 
+  // ── Server-side in-memory group cache (TTL: 5 minutes) ────────────────────
+  // Keyed by lower-cased groupName. Stores { verified, cachedAt, dataVersion }
+  // so repeated button clicks skip the DB round-trip entirely.
+  if (!global._groupVerifiedCache) global._groupVerifiedCache = {};
+  const GROUP_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+  const _getCachedGroup = (cacheKey) => {
+    const entry = global._groupVerifiedCache[cacheKey];
+    if (!entry) return null;
+    if (Date.now() - entry.cachedAt > GROUP_CACHE_TTL_MS) {
+      delete global._groupVerifiedCache[cacheKey];
+      return null;
+    }
+    return entry;
+  };
+
+  const _setCachedGroup = (cacheKey, verified, dataVersion) => {
+    global._groupVerifiedCache[cacheKey] = {
+      verified,
+      cachedAt: Date.now(),
+      dataVersion: dataVersion || 0
+    };
+  };
+
   const findVerifiedGroupInGroupsMembers = async (groupName, phone) => {
     const targetPhone = normalizeKenyanPhone(phone);
     const targetGroup = String(groupName || '').trim().toLowerCase();
     if (!targetPhone || !targetGroup) return null;
 
-    // 1. Try MongoDB groups-members collection
+    // ── 1. TARGETED MongoDB query (replaces slow find({}) full scan) ──────────
     try {
       const ready = await ensureMongoReady();
       if (ready) {
         const mongoose = require('mongoose');
         const db = mongoose.connection.db;
         if (db) {
-          const cursor = db.collection('groups-members').find({}, { projection: { county: 1, constituencies: 1, _id: 0 } });
+          // Use $elemMatch to let MongoDB do the heavy lifting server-side.
+          // This only transfers the matching county document, not the entire collection.
+          const doc = await db.collection('groups-members').findOne(
+            {
+              'constituencies.wards.data': {
+                $elemMatch: {
+                  $or: [
+                    { groupName: { $regex: new RegExp(`^${targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+                    { groupId:   { $regex: new RegExp(`^${targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+                    { accountNumber: { $regex: new RegExp(`^${targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+                  ]
+                }
+              }
+            },
+            { projection: { county: 1, constituencies: 1, dataVersion: 1, _id: 0 } }
+          );
 
-          for await (const doc of cursor) {
-            if (!doc || !doc.constituencies || !Array.isArray(doc.constituencies)) continue;
-
+          if (doc && Array.isArray(doc.constituencies)) {
             for (const constituency of doc.constituencies) {
               if (!constituency || !Array.isArray(constituency.wards)) continue;
-
               for (const ward of constituency.wards) {
                 if (!ward || !Array.isArray(ward.data)) continue;
-
                 for (const group of ward.data) {
                   if (!group) continue;
                   const gName = String(group.groupName || '').trim().toLowerCase();
-                  const gId = String(group.groupId || '').trim().toLowerCase();
-                  const gAcc = String(group.accountNumber || '').trim().toLowerCase();
+                  const gId   = String(group.groupId || '').trim().toLowerCase();
+                  const gAcc  = String(group.accountNumber || '').trim().toLowerCase();
                   if (gName !== targetGroup && gId !== targetGroup && gAcc !== targetGroup) continue;
 
                   const members = group.members || {};
                   const matchedMemberKey = Object.keys(members).find(memberKey => {
                     const member = members[memberKey];
-                    const memberPhone = member && (member.memberId || member.phone || member.phoneNumber) ? (member.memberId || member.phone || member.phoneNumber) : memberKey;
+                    const memberPhone = member && (member.memberId || member.phone || member.phoneNumber)
+                      ? (member.memberId || member.phone || member.phoneNumber)
+                      : memberKey;
                     return normalizeKenyanPhone(memberPhone) === targetPhone;
                   });
 
                   if (matchedMemberKey) {
-                    return {
+                    const result = {
                       group,
                       county: group.county || doc.county,
                       constituency: group.constituency || constituency.name,
                       ward: group.ward || ward.name,
                       memberKey: matchedMemberKey,
-                      member: members[matchedMemberKey]
+                      member: members[matchedMemberKey],
+                      dataVersion: doc.dataVersion || 0
                     };
+                    return result;
                   }
                 }
               }
@@ -352,53 +406,6 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
       }
     } catch (e) {
       console.warn('[findVerifiedGroupInGroupsMembers] Mongo lookup error:', e.message);
-    }
-
-    // 2. Fallback to regional member.json
-    try {
-      const memberData = readJSON(memberRegionsFile, {});
-      const regions = memberData.regions || {};
-      for (const countyKey of Object.keys(regions)) {
-        if (countyKey === 'regionTransaction') continue;
-        const countyDoc = regions[countyKey];
-        if (!countyDoc || !Array.isArray(countyDoc.constituencies)) continue;
-
-        for (const constituency of countyDoc.constituencies) {
-          if (!constituency || !Array.isArray(constituency.wards)) continue;
-
-          for (const ward of constituency.wards) {
-            if (!ward || !Array.isArray(ward.data)) continue;
-
-            for (const group of ward.data) {
-              if (!group) continue;
-              const gName = String(group.groupName || '').trim().toLowerCase();
-              const gId = String(group.groupId || '').trim().toLowerCase();
-              const gAcc = String(group.accountNumber || '').trim().toLowerCase();
-              if (gName !== targetGroup && gId !== targetGroup && gAcc !== targetGroup) continue;
-
-              const members = group.members || {};
-              const matchedMemberKey = Object.keys(members).find(memberKey => {
-                const member = members[memberKey];
-                const memberPhone = member && (member.memberId || member.phone || member.phoneNumber) ? (member.memberId || member.phone || member.phoneNumber) : memberKey;
-                return normalizeKenyanPhone(memberPhone) === targetPhone;
-              });
-
-              if (matchedMemberKey) {
-                return {
-                  group,
-                  county: group.county || countyDoc.county || countyKey,
-                  constituency: group.constituency || constituency.name,
-                  ward: group.ward || ward.name,
-                  memberKey: matchedMemberKey,
-                  member: members[matchedMemberKey]
-                };
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[findVerifiedGroupInGroupsMembers] JSON fallback error:', e.message);
     }
 
     return null;
@@ -461,6 +468,7 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
         accountName: schema.accountName,
         expectedAmount: Number(schema.expectedAmount || 0),
         members: memberList,
+        totalOpening: memberList.reduce((sum, member) => sum + member.openingBalance, 0),
         totalIn: memberList.reduce((sum, member) => sum + member.amountIn, 0),
         totalOut: memberList.reduce((sum, member) => sum + member.amountOut, 0),
         totalBalance: memberList.reduce((sum, member) => sum + member.closingBalance, 0)
@@ -472,8 +480,54 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
     const verifiedMemberKey = verified.memberKey || '';
     const verifiedMemberId = verifiedMember.memberId || verifiedMember.phone || verifiedMemberKey;
     const verifiedMemberName = verifiedMember.name || verifiedMemberKey;
-    const memberRole = (verifiedMember.role || verifiedMember.type || 'member').toLowerCase();
-    const isMemberOnly = memberRole !== 'trustee' && memberRole !== 'official';
+    const targetPhone = normalizeKenyanPhone(verifiedMemberId);
+    const nameLower = String(verifiedMemberName).toLowerCase();
+
+    let memberRole = String(verifiedMember.role || verifiedMember.type || '').toLowerCase();
+
+    // Check group chairperson phone
+    const chairPhone = normalizeKenyanPhone(group.phone || group.chairpersonPhone || group.chairpersonalphonenumber);
+    if (!memberRole && chairPhone && chairPhone === targetPhone) {
+      memberRole = 'trustee';
+    }
+
+    // Check group.trustees and group.officials arrays
+    if (!memberRole) {
+      if (Array.isArray(group.trustees) && group.trustees.some(t => normalizeKenyanPhone(t.phone || t.memberId || t.phoneNumber) === targetPhone)) {
+        memberRole = 'trustee';
+      } else if (Array.isArray(group.officials) && group.officials.some(o => normalizeKenyanPhone(o.phone || o.memberId || o.phoneNumber) === targetPhone)) {
+        memberRole = 'official';
+      }
+    }
+
+    // Check trustee_* and official_* keys on group
+    if (!memberRole) {
+      for (const key of Object.keys(group)) {
+        if (key.startsWith('trustee_') || key.startsWith('official_')) {
+          const info = group[key];
+          if (info && normalizeKenyanPhone(info.phone || info.memberId || info.phoneNumber) === targetPhone) {
+            memberRole = key.startsWith('trustee_') ? 'trustee' : 'official';
+            break;
+          }
+        }
+      }
+    }
+
+    // Check if dealer or agent by name or attributes
+    if (!memberRole || memberRole === 'member') {
+      if (nameLower.includes('dealer') || verifiedMember.dealer || verifiedMember.isDealer) {
+        memberRole = 'dealer';
+      } else if (nameLower.includes('agent') || verifiedMember.agent || verifiedMember.isAgent) {
+        memberRole = 'official';
+      }
+    }
+
+    if (!memberRole) {
+      memberRole = 'member';
+    }
+
+    const isOfficialOrTrusty = memberRole === 'trustee' || memberRole === 'official' || memberRole === 'trusty' || memberRole === 'dealer' || memberRole === 'agent' || memberRole === 'chairperson' || memberRole === 'treasurer' || memberRole === 'secretary';
+    const isMemberOnly = !isOfficialOrTrusty;
 
     // Ensure member's accounts are populated with schema accounts
     const memberAccounts = { ...(verifiedMember.accounts || {}) };
@@ -1403,12 +1457,13 @@ router.post("/group-accounts-schema", async (req, res) => {
       }
     }
 
-    accountDetails[accId] = {
+      accountDetails[accId] = {
       accountId:      schema.accountId,
       accountName:    schema.accountName,
       expectedAmount: schema.expectedAmount,
       members:        memberList,
       // Group-level totals (filtered if member-only)
+      totalOpening: memberList.reduce((s, m) => s + Number(m.openingBalance || 0), 0),
       totalIn:  memberList.reduce((s, m) => s + Number(m.amountIn),       0),
       totalOut: memberList.reduce((s, m) => s + Number(m.amountOut),      0),
       totalBalance: memberList.reduce((s, m) => s + Number(m.closingBalance), 0)
@@ -1422,6 +1477,8 @@ router.post("/group-accounts-schema", async (req, res) => {
     accountDetails,
     totalMembers:   isMemberOnly ? 1 : memberKeys.length,
     isMemberOnly,
+    currentUser:    loggedInMemberKey ? normalizedMembers[loggedInMemberKey] : null,
+    verifiedMember: loggedInMemberKey ? normalizedMembers[loggedInMemberKey] : null,
     loggedInMemberName,
     loggedInMemberRole: loggedInMemberRole || (isMemberOnly ? 'member' : 'official'),
     loggedInMemberId: loggedInMemberKey ? (normalizedMembers[loggedInMemberKey].memberId || loggedInMemberKey) : null,
@@ -1433,12 +1490,25 @@ router.post("/verified-groups-members", async (req, res) => {
   try {
     const { groupName, accountNumber } = req.body;
     const phone = req.body.phone || req.session?.user?.phoneNumber;
+    const clientVersion = Number(req.body.clientVersion) || 0;
 
     if (!groupName) {
       return res.status(400).json({ success: false, error: "groupName is required" });
     }
     if (!phone) {
       return res.status(401).json({ success: false, error: "Logged-in phone number is required" });
+    }
+
+    const cacheKey = `${String(groupName).trim().toLowerCase()}::${normalizeKenyanPhone(phone)}`;
+
+    // ── Serve from server-side cache if valid & client version matches ─────────
+    const cached = _getCachedGroup(cacheKey);
+    if (cached && cached.dataVersion > 0 && cached.dataVersion === clientVersion) {
+      console.log(`[verified-groups-members] Served from cache: ${cacheKey} v${cached.dataVersion}`);
+      const cachedPayload = buildGroupAccountsPayloadFromGroupsMembers(cached.verified);
+      cachedPayload.dataVersion = cached.dataVersion;
+      cachedPayload.fromCache = true;
+      return res.json(cachedPayload);
     }
 
     const verified = await findVerifiedGroupInGroupsMembers(groupName, phone);
@@ -1450,12 +1520,51 @@ router.post("/verified-groups-members", async (req, res) => {
       });
     }
 
+    // Store in server cache for 5 minutes
+    _setCachedGroup(cacheKey, verified, verified.dataVersion || Date.now());
+
     const payload = buildGroupAccountsPayloadFromGroupsMembers(verified);
-    console.log(`[verified-groups-members] Verified ${phone} in ${payload.groupName} from groups-members`);
+    payload.dataVersion = verified.dataVersion || global._groupVerifiedCache[cacheKey]?.dataVersion || 0;
+    payload.fromCache = false;
+
+    console.log(`[verified-groups-members] Verified ${phone} in ${payload.groupName} v${payload.dataVersion}`);
     res.json(payload);
   } catch (err) {
     console.error('[verified-groups-members] Error:', err.message);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── Cache Invalidation Endpoint ────────────────────────────────────────────
+// Called by the frontend after any successful transaction (M-Pesa, contribution,
+// manual entry) to force the next load to fetch fresh data from MongoDB.
+router.post("/invalidate-group-cache", (req, res) => {
+  try {
+    const { groupName } = req.body;
+    const phone = req.body.phone || req.session?.user?.phoneNumber;
+    if (!groupName) return res.json({ success: false, error: 'groupName required' });
+
+    if (global._groupVerifiedCache) {
+      if (phone) {
+        // Invalidate for this specific user+group pair
+        const cacheKey = `${String(groupName).trim().toLowerCase()}::${normalizeKenyanPhone(phone)}`;
+        delete global._groupVerifiedCache[cacheKey];
+        console.log(`[cache] Invalidated: ${cacheKey}`);
+      } else {
+        // Invalidate all entries for this group (any user)
+        const groupKey = String(groupName).trim().toLowerCase();
+        for (const key of Object.keys(global._groupVerifiedCache)) {
+          if (key.startsWith(groupKey + '::')) {
+            delete global._groupVerifiedCache[key];
+          }
+        }
+        console.log(`[cache] Invalidated all entries for group: ${groupKey}`);
+      }
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('[invalidate-group-cache] Error:', e.message);
+    res.json({ success: false, error: e.message });
   }
 });
 
@@ -2909,16 +3018,17 @@ router.post("/region-transaction", async (req, res) => {
       const col = mongoose.connection.db.collection('groups-members');
       await col.updateOne(
         { _id: 'regionTransaction' },
-        { $set: { regionTransaction: regionTxn, syncedAt: new Date().toISOString() } },
+        { 
+          $set: { 
+            county: 'Region',
+            countyId: 'region',
+            regionTransaction: regionTxn, 
+            syncedAt: new Date().toISOString() 
+          } 
+        },
         { upsert: true }
       );
     }
-    
-    // Also persist to member.json
-    const memberData = readJSON(memberRegionsFile, { regions: {} });
-    if (!memberData.regions) memberData.regions = {};
-    memberData.regions.regionTransaction = regionTxn;
-    writeJSON(memberRegionsFile, memberData);
     
     res.json({ success: true, regionTransaction: regionTxn });
   } catch (err) {
@@ -2933,15 +3043,21 @@ router.get("/regions", async (req, res) => {
     if (ready) {
       const mongoose = require('mongoose');
       const col = mongoose.connection.db.collection('groups-members');
-      const docs = await col.find({ countyId: { $ne: 'region' } }).toArray();
+      const docs = await col.find({ countyId: { $ne: 'region' }, _id: { $ne: 'regionTransaction' } }).toArray();
       const regions = {};
       for (const doc of docs) {
+        if (!doc.county) continue;
         regions[doc.county] = {
           county: doc.county,
-          countryTransaction: doc.countryTransaction,
+          countyId: doc.countyId || doc.county,
+          countryTransaction: doc.countryTransaction || { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0, transactions: [] },
           constituencies: doc.constituencies || [],
           syncedAt: doc.syncedAt
         };
+      }
+      const regDoc = await col.findOne({ _id: 'regionTransaction' });
+      if (regDoc && regDoc.regionTransaction) {
+        regions.regionTransaction = regDoc.regionTransaction;
       }
       return res.json({ success: true, regions });
     }
@@ -2949,9 +3065,7 @@ router.get("/regions", async (req, res) => {
     console.error('[regions] MongoDB read error:', e.message);
   }
   
-  // Fallback to JSON format
-  const memberData = readJSON(memberRegionsFile, { regions: {} });
-  res.json({ success: true, regions: memberData.regions || {} });
+  res.json({ success: true, regions: {} });
 });
 
 // GET /member/group-by-location - Get group by county/constituency/ward - uses nested constituencies/wards structure

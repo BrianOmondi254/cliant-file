@@ -2968,6 +2968,428 @@ const computeLiveRoundStatuses = (rounds, endDate, refDate = new Date()) => {
   });
 };
 
+// =========================================================================
+// High-Concurrency Regional Transaction Queue ("qing data")
+// Handles 1000+ simultaneous member transactions without delay or crash.
+// Enqueues in O(1) time and coalesces regional writes in background batches.
+// =========================================================================
+const regionalTransactionQueue = [];
+let isProcessingRegionalQueue = false;
+const REGIONAL_QUEUE_BATCH_SIZE = 150;
+
+const getRegionalQueueStats = () => ({
+  pending: regionalTransactionQueue.length,
+  isProcessing: isProcessingRegionalQueue,
+});
+
+const enqueueRegionalTransaction = (item) => {
+  if (!item || Number(item.verifiedTotal || 0) <= 0) return;
+  regionalTransactionQueue.push(item);
+  triggerRegionalQueueProcessing();
+};
+
+const triggerRegionalQueueProcessing = () => {
+  if (isProcessingRegionalQueue) return;
+  isProcessingRegionalQueue = true;
+  setImmediate(async () => {
+    try {
+      await processRegionalQueueWorker();
+    } catch (err) {
+      console.error("[processRegionalQueueWorker] Unhandled error:", err.message);
+    } finally {
+      isProcessingRegionalQueue = false;
+      if (regionalTransactionQueue.length > 0) {
+        triggerRegionalQueueProcessing();
+      }
+    }
+  });
+};
+
+const processRegionalBatch = async (batch, db) => {
+  if (!batch || batch.length === 0 || !db) return;
+  const membersCol = db.collection("groups-members");
+  const nowIso = new Date().toISOString();
+
+  // 1. Resolve regional metadata and prep records for every item in this batch
+  const batchTxEntries = [];
+  const byCounty = {};
+
+  for (const item of batch) {
+    let targetCounty = "Region";
+    let targetConstituency = "General";
+    let targetWard = "General";
+
+    if (item.locatedInMembersCol?.isNested && item.locatedInMembersCol?.nestedLocation) {
+      const { cIdx, wIdx } = item.locatedInMembersCol.nestedLocation;
+      targetCounty = item.locatedInMembersCol.doc?.county || targetCounty;
+      if (Array.isArray(item.locatedInMembersCol.doc?.constituencies)) {
+        const consObj = item.locatedInMembersCol.doc.constituencies[cIdx];
+        if (consObj?.name) targetConstituency = consObj.name;
+        if (Array.isArray(consObj?.wards) && consObj.wards[wIdx]?.name) {
+          targetWard = consObj.wards[wIdx].name;
+        }
+      }
+    } else if (item.locatedInMembersCol?.layout === "dynamic_constituency") {
+      targetCounty = item.locatedInMembersCol.doc?.county || targetCounty;
+      targetConstituency = item.locatedInMembersCol.constituencyKey || targetConstituency;
+      if (item.locatedInMembersCol.groupData?.ward) {
+        targetWard = item.locatedInMembersCol.groupData.ward;
+      }
+    }
+
+    if (item.targetGroupData) {
+      if (item.targetGroupData.county && targetCounty === "Region") targetCounty = item.targetGroupData.county;
+      if (item.targetGroupData.constituency && targetConstituency === "General") targetConstituency = item.targetGroupData.constituency;
+      if (item.targetGroupData.ward && targetWard === "General") targetWard = item.targetGroupData.ward;
+    }
+
+    const candidateGroupName = item.targetGroupData?.groupName || item.groupName;
+    if (candidateGroupName && (targetCounty === "Region" || targetConstituency === "General" || targetWard === "General")) {
+      const gHit = (await findGroupNameInGroupsMembersCollection(candidateGroupName)) ||
+                   (await findGroupNameInMongoGroupsCollection(candidateGroupName));
+      if (gHit) {
+        if (gHit.county && (targetCounty === "Region" || !targetCounty)) targetCounty = gHit.county;
+        if (gHit.constituency && (targetConstituency === "General" || !targetConstituency)) targetConstituency = gHit.constituency;
+        if (gHit.ward && (targetWard === "General" || !targetWard)) targetWard = gHit.ward;
+      }
+    }
+
+    item.resolvedCounty = targetCounty;
+    item.resolvedConstituency = targetConstituency;
+    item.resolvedWard = targetWard;
+
+    if (targetCounty && targetCounty !== "Region") {
+      if (!byCounty[targetCounty]) byCounty[targetCounty] = [];
+      byCounty[targetCounty].push(item);
+    }
+  }
+
+  // 2. Global Region Level (_id: 'regionTransaction') - Single Coalesced Write
+  let regionDoc = await membersCol.findOne({ _id: "regionTransaction" });
+  if (!regionDoc) {
+    regionDoc = {
+      _id: "regionTransaction",
+      county: "Region",
+      countyId: "region",
+      regionTransaction: {
+        openingBalance: 0,
+        amountIn: 0,
+        amountOut: 0,
+        closingBalance: 0,
+        transactions: [],
+      },
+      syncedAt: nowIso,
+    };
+  }
+
+  let regRunningClose = Number(regionDoc.regionTransaction?.closingBalance || 0);
+  let regRunningIn = Number(regionDoc.regionTransaction?.amountIn || 0);
+  let regRunningOut = Number(regionDoc.regionTransaction?.amountOut || 0);
+  const regInitialOpen = regRunningClose;
+
+  for (const item of batch) {
+    const amt = Number(item.verifiedTotal || 0);
+    const txOpen = regRunningClose;
+    regRunningClose = txOpen + amt;
+    regRunningIn += amt;
+
+    const txRecord = {
+      reference: item.txRef,
+      transactionCode: item.txRef,
+      time: new Date(),
+      date: item.nowIso || nowIso,
+      openingBalance: txOpen,
+      amount: amt,
+      amountIn: amt,
+      amountOut: 0,
+      closingBalance: regRunningClose,
+      type: "credit",
+      status: "completed",
+    };
+
+    item.txRecord = txRecord;
+    batchTxEntries.push(txRecord);
+  }
+
+  // Ensure the regionTransaction document exists before pushing to it
+  await membersCol.updateOne(
+    { _id: "regionTransaction" },
+    {
+      $setOnInsert: {
+        _id: "regionTransaction",
+        county: "Region",
+        countyId: "region",
+        regionTransaction: {
+          openingBalance: 0,
+          amountIn: 0,
+          amountOut: 0,
+          closingBalance: 0,
+          transactions: [],
+        },
+        syncedAt: nowIso,
+      },
+    },
+    { upsert: true }
+  );
+
+  await membersCol.updateOne(
+    { _id: "regionTransaction" },
+    {
+      $set: {
+        county: "Region",
+        countyId: "region",
+        "regionTransaction.openingBalance": regInitialOpen,
+        "regionTransaction.amountIn": regRunningIn,
+        "regionTransaction.amountOut": regRunningOut,
+        "regionTransaction.closingBalance": regRunningClose,
+        syncedAt: nowIso,
+      },
+      $push: {
+        "regionTransaction.transactions": {
+          $each: batchTxEntries,
+          $slice: -1000,
+        },
+      },
+    }
+  );
+
+  // 3. County, Constituency & Ward Level - Coalesced Writes with Auto-Creation if missing
+  for (const [countyName, countyItems] of Object.entries(byCounty)) {
+    let countyDoc = await membersCol.findOne({
+      county: countyName,
+      _id: { $ne: "regionTransaction" },
+    });
+
+    if (!countyDoc) {
+      countyDoc = {
+        county: countyName,
+        countyId: countyName.toLowerCase(),
+        countryTransaction: {
+          openingBalance: 0,
+          amountIn: 0,
+          amountOut: 0,
+          closingBalance: 0,
+          transactions: [],
+        },
+        constituencies: [],
+        syncedAt: nowIso,
+      };
+      const insRes = await membersCol.insertOne(countyDoc);
+      countyDoc._id = insRes.insertedId;
+    }
+
+    if (!countyDoc.countryTransaction) {
+      countyDoc.countryTransaction = {
+        openingBalance: 0,
+        amountIn: 0,
+        amountOut: 0,
+        closingBalance: 0,
+        transactions: [],
+      };
+    }
+    if (!Array.isArray(countyDoc.constituencies)) {
+      countyDoc.constituencies = [];
+    }
+
+    for (const cItem of countyItems) {
+      const cAmt = Number(cItem.verifiedTotal || 0);
+      const txBase = {
+        reference: cItem.txRecord.reference,
+        transactionCode: cItem.txRecord.transactionCode,
+        time: cItem.txRecord.time,
+        date: cItem.txRecord.date,
+        amount: cAmt,
+        amountIn: cAmt,
+        amountOut: 0,
+        type: "credit",
+        status: "completed",
+      };
+
+      // --- County Level ---
+      const countyCurrentClose = Number(countyDoc.countryTransaction?.closingBalance || 0);
+      const countyTxEntry = {
+        ...txBase,
+        openingBalance: countyCurrentClose,
+        closingBalance: countyCurrentClose + cAmt,
+      };
+
+      await membersCol.updateOne(
+        { _id: countyDoc._id },
+        {
+          $inc: {
+            "countryTransaction.amountIn": cAmt,
+            "countryTransaction.closingBalance": cAmt,
+          },
+          $push: {
+            "countryTransaction.transactions": {
+              $each: [countyTxEntry],
+              $slice: -1000,
+            },
+          },
+          $set: { syncedAt: nowIso },
+        }
+      );
+
+      // Keep countyDoc in-memory balances in sync
+      countyDoc.countryTransaction.closingBalance = countyCurrentClose + cAmt;
+      countyDoc.countryTransaction.amountIn = Number(countyDoc.countryTransaction.amountIn || 0) + cAmt;
+
+      // Re-read county doc to get fresh constituencies hierarchy
+      const freshCounty = await membersCol.findOne(
+        { _id: countyDoc._id },
+        { projection: { constituencies: 1 } }
+      );
+      if (freshCounty && Array.isArray(freshCounty.constituencies)) {
+        countyDoc.constituencies = freshCounty.constituencies;
+      }
+
+      // --- Constituency Level ---
+      const consName = String(cItem.resolvedConstituency || "").trim();
+      if (!consName || consName === "General") continue;
+
+      let consIdx = (countyDoc.constituencies || []).findIndex(
+        (c) => String(c.name || "").trim().toLowerCase() === consName.toLowerCase()
+      );
+
+      if (consIdx === -1) {
+        const newCons = {
+          name: consName,
+          constituencyTransaction: {
+            openingBalance: 0,
+            amountIn: 0,
+            amountOut: 0,
+            closingBalance: 0,
+            transactions: [],
+          },
+          wards: [],
+        };
+        await membersCol.updateOne(
+          { _id: countyDoc._id },
+          { $push: { constituencies: newCons } }
+        );
+        const refCounty = await membersCol.findOne({ _id: countyDoc._id }, { projection: { constituencies: 1 } });
+        countyDoc.constituencies = refCounty?.constituencies || [];
+        consIdx = countyDoc.constituencies.findIndex(
+          (c) => String(c.name || "").trim().toLowerCase() === consName.toLowerCase()
+        );
+      }
+
+      if (consIdx !== -1) {
+        const consDoc = countyDoc.constituencies[consIdx];
+        const consCurrentClose = Number(consDoc.constituencyTransaction?.closingBalance || 0);
+        const consTxEntry = {
+          ...txBase,
+          openingBalance: consCurrentClose,
+          closingBalance: consCurrentClose + cAmt,
+        };
+
+        await membersCol.updateOne(
+          { _id: countyDoc._id },
+          {
+            $inc: {
+              [`constituencies.${consIdx}.constituencyTransaction.amountIn`]: cAmt,
+              [`constituencies.${consIdx}.constituencyTransaction.closingBalance`]: cAmt,
+            },
+            $push: {
+              [`constituencies.${consIdx}.constituencyTransaction.transactions`]: {
+                $each: [consTxEntry],
+                $slice: -1000,
+              },
+            },
+          }
+        );
+
+        if (consDoc.constituencyTransaction) {
+          consDoc.constituencyTransaction.closingBalance = consCurrentClose + cAmt;
+        }
+
+        // --- Ward Level ---
+        const wardName = String(cItem.resolvedWard || "").trim();
+        if (wardName && wardName !== "General") {
+          let wardIdx = (consDoc.wards || []).findIndex(
+            (w) => String(w.name || "").trim().toLowerCase() === wardName.toLowerCase()
+          );
+
+          if (wardIdx === -1) {
+            const newWard = {
+              name: wardName,
+              wardTransaction: {
+                openingBalance: 0,
+                amountIn: 0,
+                amountOut: 0,
+                closingBalance: 0,
+                transactions: [],
+              },
+              data: [],
+            };
+            await membersCol.updateOne(
+              { _id: countyDoc._id },
+              { $push: { [`constituencies.${consIdx}.wards`]: newWard } }
+            );
+            const refCounty = await membersCol.findOne({ _id: countyDoc._id }, { projection: { constituencies: 1 } });
+            countyDoc.constituencies = refCounty?.constituencies || [];
+            const freshCons = countyDoc.constituencies[consIdx];
+            wardIdx = (freshCons?.wards || []).findIndex(
+              (w) => String(w.name || "").trim().toLowerCase() === wardName.toLowerCase()
+            );
+          }
+
+          if (wardIdx !== -1) {
+            const freshCons = countyDoc.constituencies[consIdx];
+            const wardDoc = freshCons.wards[wardIdx];
+            const wardCurrentClose = Number(wardDoc?.wardTransaction?.closingBalance || 0);
+            const wardTxEntry = {
+              ...txBase,
+              openingBalance: wardCurrentClose,
+              closingBalance: wardCurrentClose + cAmt,
+            };
+
+            await membersCol.updateOne(
+              { _id: countyDoc._id },
+              {
+                $inc: {
+                  [`constituencies.${consIdx}.wards.${wardIdx}.wardTransaction.amountIn`]: cAmt,
+                  [`constituencies.${consIdx}.wards.${wardIdx}.wardTransaction.closingBalance`]: cAmt,
+                },
+                $push: {
+                  [`constituencies.${consIdx}.wards.${wardIdx}.wardTransaction.transactions`]: {
+                    $each: [wardTxEntry],
+                    $slice: -1000,
+                  },
+                },
+              }
+            );
+          }
+        }
+      }
+    }
+  }
+};
+
+const processRegionalQueueWorker = async () => {
+  const ready = await ensureMongoReady();
+  if (!ready || mongoose.connection.readyState !== 1) {
+    console.warn("[processRegionalQueueWorker] Mongo not ready, will retry on next tick.");
+    return;
+  }
+  const db = mongoose.connection.db;
+
+  while (regionalTransactionQueue.length > 0) {
+    const batch = regionalTransactionQueue.splice(0, REGIONAL_QUEUE_BATCH_SIZE);
+    try {
+      await processRegionalBatch(batch, db);
+    } catch (err) {
+      console.error("[processRegionalBatch] Error in batch processing:", err.message);
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+};
+
+// Helper for direct/legacy invocation or testing
+const updateRegionalHierarchyTransactions = async (params) => {
+  enqueueRegionalTransaction(params);
+};
+
 const applyAtomicGroupMemberContribution = async ({
   groupName,
   memberPhone,
@@ -3598,6 +4020,24 @@ const applyAtomicGroupMemberContribution = async ({
         console.warn("[applyAtomicGroupMemberContribution] groups sync notice:", grpSyncErr.message);
       }
 
+      // Synchronize regional blocks asynchronously via high-throughput batch queue
+      try {
+        enqueueRegionalTransaction({
+          txRef,
+          nowIso,
+          paymentMethod,
+          mPhone,
+          pPhone,
+          groupName,
+          targetGroupData,
+          locatedInMembersCol,
+          verifiedLines,
+          verifiedTotal,
+        });
+      } catch (regSyncErr) {
+        console.warn("[applyAtomicGroupMemberContribution] regional queue notice:", regSyncErr.message);
+      }
+
       // Update PersonalAccount statement
       let personalRunning = 0;
       const personalStatements = [];
@@ -3757,6 +4197,9 @@ module.exports = {
   buildDateIntervalCycle,
   computeLiveRoundStatuses,
   applyAtomicGroupMemberContribution,
+  updateRegionalHierarchyTransactions,
+  enqueueRegionalTransaction,
+  getRegionalQueueStats,
 };
 
 const findGroupMemberTransactions = async (phone) => {

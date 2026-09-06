@@ -12,6 +12,7 @@ const {
   normalizeGroupName,
   computeLiveRoundStatuses,
   saveMessageToMongo,
+  enqueueRegionalTransaction,
 } = require("../mongoose");
 
 // Locate the group member document in `groups-members` so we can write the
@@ -27,6 +28,16 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
     if (doc) {
       const g = hint.groupPath.split(".").reduce((o, key) => (o == null ? o : o[key]), doc);
       const members = (g && g.members) || {};
+      const mMatch = String(hint.groupPath).match(/^constituencies\.(\d+)\.wards\.(\d+)\.data\.(\d+)$/);
+      let cIdx = null, wIdx = null, gIdx = null;
+      let consName = "", wardName = "";
+      if (mMatch) {
+        cIdx = parseInt(mMatch[1], 10);
+        wIdx = parseInt(mMatch[2], 10);
+        gIdx = parseInt(mMatch[3], 10);
+        consName = doc.constituencies?.[cIdx]?.name || "";
+        wardName = doc.constituencies?.[cIdx]?.wards?.[wIdx]?.name || "";
+      }
       for (const [key, mem] of Object.entries(members)) {
         const idNorm = normalizePhone(mem && mem.memberId);
         const keyNorm = normalizePhone(key);
@@ -39,6 +50,11 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
             memberPath: `${hint.groupPath}.members.${key}`,
             groupPath: hint.groupPath,
             memberRecord: mem,
+            isNested: !!mMatch,
+            nestedLocation: mMatch ? { cIdx, wIdx, gIdx } : null,
+            county: doc.county || g?.county || "",
+            constituency: consName || g?.constituency || "",
+            ward: wardName || g?.ward || "",
           };
         }
       }
@@ -76,6 +92,11 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
                   memberPath: `constituencies.${i}.wards.${j}.data.${k}.members.${key}`,
                   groupPath: `constituencies.${i}.wards.${j}.data.${k}`,
                   memberRecord: mem,
+                  isNested: true,
+                  nestedLocation: { cIdx: i, wIdx: j, gIdx: k },
+                  county: doc.county || g?.county || "",
+                  constituency: cons?.name || g?.constituency || "",
+                  ward: ward?.name || g?.ward || "",
                 };
               }
             }
@@ -96,7 +117,10 @@ const locateGroupMemberDoc = async (groupName, mPhone, hint) => {
             memberKey: key,
             memberPath: `members.${key}`,
             groupPath: "",
-            memberRecord: mem
+            memberRecord: mem,
+            county: doc.county || "",
+            constituency: "",
+            ward: "",
           };
         }
       }
@@ -584,6 +608,34 @@ router.post("/", async (req, res) => {
             );
           } catch (syncErr) {
             console.warn("[p] groupFinancials sync notice:", syncErr.message);
+          }
+
+          // Synchronize regional blocks (Global Region -> County -> Constituency -> Ward)
+          try {
+            enqueueRegionalTransaction({
+              txRef,
+              nowIso,
+              paymentMethod: "tbank",
+              mPhone: target.mPhone,
+              pPhone: effectivePayerPhone,
+              groupName,
+              targetGroupData: {
+                groupName,
+                county: loc.county || loc.doc?.county || loc.groupData?.county || "",
+                constituency: loc.constituency || loc.groupData?.constituency || "",
+                ward: loc.ward || loc.groupData?.ward || "",
+              },
+              locatedInMembersCol: {
+                doc: loc.doc,
+                groupData: loc.groupData,
+                isNested: loc.isNested,
+                nestedLocation: loc.nestedLocation,
+              },
+              verifiedLines: target.lines,
+              verifiedTotal: targetTotal,
+            });
+          } catch (regQueueErr) {
+            console.warn("[p] regional queue notice:", regQueueErr.message);
           }
 
           // Send confirmation notification to recipient member
