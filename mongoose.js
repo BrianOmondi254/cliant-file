@@ -1353,11 +1353,39 @@ const createPerformanceIndexes = async () => {
 
     const membersCol = db.collection("groups-members");
     try {
-      const idx2 = await membersCol.createIndex(
-        { county: 1 },
-        { background: true, name: "county_1" }
+      const idxPromises = [];
+      idxPromises.push(
+        membersCol.createIndex(
+          { county: 1 },
+          { background: true, name: "county_1" }
+        ).then(r => `groups-members:${r}`)
       );
-      results.push(`groups-members: ${idx2}`);
+      // Case-insensitive indexes for group lookup fields (strength:2 = case insensitive, accent insensitive)
+      const ciCollation = { locale: "en", strength: 2 };
+      idxPromises.push(
+        membersCol.createIndex(
+          { "constituencies.wards.data.groupName": 1 },
+          { background: true, name: "ward_data_groupName_ci", collation: ciCollation }
+        ).then(r => `groups-members:gn_ci:${r}`)
+      );
+      idxPromises.push(
+        membersCol.createIndex(
+          { "constituencies.wards.data.groupId": 1 },
+          { background: true, name: "ward_data_groupId_ci", collation: ciCollation }
+        ).then(r => `groups-members:gid_ci:${r}`)
+      );
+      idxPromises.push(
+        membersCol.createIndex(
+          { "constituencies.wards.data.accountNumber": 1 },
+          { background: true, name: "ward_data_accNum_ci", collation: ciCollation }
+        ).then(r => `groups-members:acc_ci:${r}`)
+      );
+      const settled = await Promise.allSettled(idxPromises);
+      const results2 = settled
+        .filter(s => s.status === "fulfilled")
+        .map(s => s.value)
+        .concat(settled.filter(s => s.status === "rejected").map(s => `idx_err:${String(s.reason && s.reason.message || s.reason).slice(0,80)}`));
+      results.push(results2.join(", "));
     } catch (e) {
       results.push(`groups-members index error: ${e.message}`);
     }

@@ -303,7 +303,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <a href="/general/group/<%= encodeURIComponent(group.groupName) %>" class="header-back">
+      <a href="javascript:void(0)" onclick="if(window.history.length > 1){ window.history.back(); } else { window.location.href='/personal'; }" class="header-back">
         <i class="fas fa-arrow-left"></i>
       </a>
       <div style="flex:1; text-align:center;">

@@ -316,7 +316,7 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
   // Keyed by lower-cased groupName. Stores { verified, cachedAt, dataVersion }
   // so repeated button clicks skip the DB round-trip entirely.
   if (!global._groupVerifiedCache) global._groupVerifiedCache = {};
-  const GROUP_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  const GROUP_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes (invalidated explicitly on writes)
 
   const _getCachedGroup = (cacheKey) => {
     const entry = global._groupVerifiedCache[cacheKey];
@@ -348,29 +348,59 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
         const mongoose = require('mongoose');
         const db = mongoose.connection.db;
         if (db) {
-          // Use $elemMatch to let MongoDB do the heavy lifting server-side.
-          // This only transfers the matching county document, not the entire collection.
-          const doc = await db.collection('groups-members').findOne(
-            {
-              'constituencies.wards.data': {
-                $elemMatch: {
-                  $or: [
-                    { groupName: { $regex: new RegExp(`^${targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
-                    { groupId:   { $regex: new RegExp(`^${targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
-                    { accountNumber: { $regex: new RegExp(`^${targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
-                  ]
+          const membersCol = db.collection('groups-members');
+          const ciCollation = { locale: "en", strength: 2 };
+          let doc = null;
+          let hitIndex = -1; // 0=groupName, 1=groupId, 2=accountNumber, 3=regex
+          const searchFields = [
+            { path: 'constituencies.wards.data.groupName',        value: targetGroup },
+            { path: 'constituencies.wards.data.groupId',          value: targetGroup },
+            { path: 'constituencies.wards.data.accountNumber',    value: targetGroup }
+          ];
+          // 1) Exact-match queries with collation FIRST (index-enabled, no regex)
+          for (let i = 0; i < searchFields.length && !doc; i++) {
+            const sf = searchFields[i];
+            try {
+              doc = await membersCol.findOne(
+                { [sf.path]: targetGroup },
+                { projection: { county: 1, constituencies: 1, dataVersion: 1, _id: 0 }, collation: ciCollation, maxTimeMS: 2000 }
+              );
+              if (doc) hitIndex = i;
+            } catch (_e) { /* fall through */ }
+          }
+          // 2) Fallback: combined regex query (used only if exact matches missed — rare)
+          if (!doc) {
+            const escaped = targetGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const targetRegex = new RegExp(`^${escaped}$`, 'i');
+            doc = await membersCol.findOne(
+              {
+                'constituencies.wards.data': {
+                  $elemMatch: {
+                    $or: [
+                      { groupName: targetRegex },
+                      { groupId: targetRegex },
+                      { accountNumber: targetRegex }
+                    ]
+                  }
                 }
-              }
-            },
-            { projection: { county: 1, constituencies: 1, dataVersion: 1, _id: 0 } }
-          );
+              },
+              { projection: { county: 1, constituencies: 1, dataVersion: 1, _id: 0 }, maxTimeMS: 3000 }
+            );
+            if (doc) hitIndex = 3;
+          }
 
           if (doc && Array.isArray(doc.constituencies)) {
-            for (const constituency of doc.constituencies) {
+            const constituencies = doc.constituencies;
+            for (let ci = 0; ci < constituencies.length; ci++) {
+              const constituency = constituencies[ci];
               if (!constituency || !Array.isArray(constituency.wards)) continue;
-              for (const ward of constituency.wards) {
+              const wards = constituency.wards;
+              for (let wi = 0; wi < wards.length; wi++) {
+                const ward = wards[wi];
                 if (!ward || !Array.isArray(ward.data)) continue;
-                for (const group of ward.data) {
+                const wardGroups = ward.data;
+                for (let gi = 0; gi < wardGroups.length; gi++) {
+                  const group = wardGroups[gi];
                   if (!group) continue;
                   const gName = String(group.groupName || '').trim().toLowerCase();
                   const gId   = String(group.groupId || '').trim().toLowerCase();
@@ -378,13 +408,21 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
                   if (gName !== targetGroup && gId !== targetGroup && gAcc !== targetGroup) continue;
 
                   const members = group.members || {};
-                  const matchedMemberKey = Object.keys(members).find(memberKey => {
+                  let matchedMemberKey = null;
+                  let matchedMember = null;
+                  const memberKeys = Object.keys(members);
+                  for (let mi = 0; mi < memberKeys.length; mi++) {
+                    const memberKey = memberKeys[mi];
                     const member = members[memberKey];
-                    const memberPhone = member && (member.memberId || member.phone || member.phoneNumber)
+                    const rawPhone = member && (member.memberId || member.phone || member.phoneNumber)
                       ? (member.memberId || member.phone || member.phoneNumber)
                       : memberKey;
-                    return normalizeKenyanPhone(memberPhone) === targetPhone;
-                  });
+                    if (normalizeKenyanPhone(rawPhone) === targetPhone) {
+                      matchedMemberKey = memberKey;
+                      matchedMember = member;
+                      break;
+                    }
+                  }
 
                   if (matchedMemberKey) {
                     const result = {
@@ -393,7 +431,7 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
                       constituency: group.constituency || constituency.name,
                       ward: group.ward || ward.name,
                       memberKey: matchedMemberKey,
-                      member: members[matchedMemberKey],
+                      member: matchedMember,
                       dataVersion: doc.dataVersion || 0
                     };
                     return result;
@@ -442,6 +480,9 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
     for (const accId of Object.keys(accountSchema)) {
       const schema = accountSchema[accId];
       const memberList = [];
+      const expectedAmt = Number(schema.expectedAmount || 0);
+      let tOpen = 0, tIn = 0, tOut = 0, tClose = 0;
+      let paidCount = 0;
 
       for (const memberKey of Object.keys(members)) {
         const member = members[memberKey];
@@ -452,26 +493,33 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
           amountOut: 0,
           closingBalance: 0
         };
+        const oB = Number(financials.openingBalance || 0);
+        const aI = Number(financials.amountIn || 0);
+        const aO = Number(financials.amountOut || 0);
+        const cB = Number(financials.closingBalance || 0);
+        tOpen += oB; tIn += aI; tOut += aO; tClose += cB;
+        if (expectedAmt > 0 && aI >= expectedAmt) paidCount++;
 
         memberList.push({
           memberId: member.memberId || memberKey,
           name: member.name || memberKey,
-          openingBalance: Number(financials.openingBalance || 0),
-          amountIn: Number(financials.amountIn || 0),
-          amountOut: Number(financials.amountOut || 0),
-          closingBalance: Number(financials.closingBalance || 0)
+          openingBalance: oB,
+          amountIn: aI,
+          amountOut: aO,
+          closingBalance: cB
         });
       }
 
       accountDetails[accId] = {
         accountId: schema.accountId,
         accountName: schema.accountName,
-        expectedAmount: Number(schema.expectedAmount || 0),
+        expectedAmount: expectedAmt,
         members: memberList,
-        totalOpening: memberList.reduce((sum, member) => sum + member.openingBalance, 0),
-        totalIn: memberList.reduce((sum, member) => sum + member.amountIn, 0),
-        totalOut: memberList.reduce((sum, member) => sum + member.amountOut, 0),
-        totalBalance: memberList.reduce((sum, member) => sum + member.closingBalance, 0)
+        totalOpening: tOpen,
+        totalIn: tIn,
+        totalOut: tOut,
+        totalBalance: tClose,
+        paidCount
       };
     }
 
@@ -485,22 +533,26 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
 
     let memberRole = String(verifiedMember.role || verifiedMember.type || '').toLowerCase();
 
-    // Check group chairperson phone
-    const chairPhone = normalizeKenyanPhone(group.phone || group.chairpersonPhone || group.chairpersonalphonenumber);
-    if (!memberRole && chairPhone && chairPhone === targetPhone) {
-      memberRole = 'trustee';
-    }
-
-    // Check group.trustees and group.officials arrays
+    // Single linear pass: chairperson → trustees/officials arrays → trustee_/official_ keys → dealer/agent name heuristics
     if (!memberRole) {
-      if (Array.isArray(group.trustees) && group.trustees.some(t => normalizeKenyanPhone(t.phone || t.memberId || t.phoneNumber) === targetPhone)) {
-        memberRole = 'trustee';
-      } else if (Array.isArray(group.officials) && group.officials.some(o => normalizeKenyanPhone(o.phone || o.memberId || o.phoneNumber) === targetPhone)) {
-        memberRole = 'official';
+      const chairPhone = normalizeKenyanPhone(group.phone || group.chairpersonPhone || group.chairpersonalphonenumber);
+      if (chairPhone && chairPhone === targetPhone) memberRole = 'trustee';
+    }
+    if (!memberRole) {
+      const trusteesArr = Array.isArray(group.trustees) ? group.trustees : [];
+      const officialsArr = Array.isArray(group.officials) ? group.officials : [];
+      const combinedLen = Math.max(trusteesArr.length, officialsArr.length);
+      for (let i = 0; i < combinedLen && !memberRole; i++) {
+        if (i < trusteesArr.length) {
+          const t = trusteesArr[i];
+          if (t && normalizeKenyanPhone(t.phone || t.memberId || t.phoneNumber) === targetPhone) memberRole = 'trustee';
+        }
+        if (!memberRole && i < officialsArr.length) {
+          const o = officialsArr[i];
+          if (o && normalizeKenyanPhone(o.phone || o.memberId || o.phoneNumber) === targetPhone) memberRole = 'official';
+        }
       }
     }
-
-    // Check trustee_* and official_* keys on group
     if (!memberRole) {
       for (const key of Object.keys(group)) {
         if (key.startsWith('trustee_') || key.startsWith('official_')) {
@@ -512,19 +564,14 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
         }
       }
     }
-
-    // Check if dealer or agent by name or attributes
-    if (!memberRole || memberRole === 'member') {
-      if (nameLower.includes('dealer') || verifiedMember.dealer || verifiedMember.isDealer) {
+    if (!memberRole) {
+      if (verifiedMember.dealer || verifiedMember.isDealer) {
         memberRole = 'dealer';
-      } else if (nameLower.includes('agent') || verifiedMember.agent || verifiedMember.isAgent) {
+      } else if (verifiedMember.agent || verifiedMember.isAgent) {
         memberRole = 'official';
       }
     }
-
-    if (!memberRole) {
-      memberRole = 'member';
-    }
+    if (!memberRole) memberRole = 'member';
 
     const isOfficialOrTrusty = memberRole === 'trustee' || memberRole === 'official' || memberRole === 'trusty' || memberRole === 'dealer' || memberRole === 'agent' || memberRole === 'chairperson' || memberRole === 'treasurer' || memberRole === 'secretary';
     const isMemberOnly = !isOfficialOrTrusty;
@@ -576,13 +623,55 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
       closingBalance: sumClosingBal
     };
 
+    const memberTitle = verifiedMember.title || verifiedMember.roleTitle || verifiedMember.type || '';
+
+    // Ensure FirstName / MiddleName / SecondName / LastName are populated (fallback via display-name split)
+    const _rawFirst = verifiedMember.FirstName || verifiedMember.firstName || verifiedMember.first_name || '';
+    const _rawMiddle = verifiedMember.MiddleName || verifiedMember.middleName || verifiedMember.SecondName || verifiedMember.secondName || '';
+    const _rawLast = verifiedMember.LastName || verifiedMember.lastName || verifiedMember.last_name || '';
+    const _hasSplit = !!( _rawFirst || _rawMiddle || _rawLast);
+    const _split = _hasSplit ? null : splitDisplayName(verifiedMemberName);
+    const _FirstName = _rawFirst || (_split ? _split.FirstName : '');
+    const _MiddleName = _rawMiddle || (_split ? _split.MiddleName : '');
+    const _LastName = _rawLast || (_split ? _split.LastName : '');
+
     const currentUser = {
       ...verifiedMember,
       memberId: verifiedMemberId,
       name: verifiedMemberName,
+      FirstName: _FirstName,
+      MiddleName: _MiddleName,
+      SecondName: _MiddleName,
+      LastName: _LastName,
       role: memberRole,
+      title: memberTitle,
+      roleTitle: memberTitle,
       memberFinancials,
       accounts: memberAccounts
+    };
+
+    const constitutionCreated = group.constitutionKeyGeneratedAt || group.constitutionKeySetByAgentAt || group.createdAt || group.principlesSetAt || new Date().toISOString();
+    const now = new Date();
+    const created = new Date(constitutionCreated);
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const intervals = (group.principles && group.principles.intervals) ? group.principles.intervals : {};
+    const endSavingPeriod = intervals.endSavingPeriod || '1-year';
+    let totalRounds = 52;
+    if (endSavingPeriod === '6-months') totalRounds = 26;
+    else if (endSavingPeriod === '2-years') totalRounds = 104;
+    else if (endSavingPeriod === '3-years') totalRounds = 156;
+    else if (endSavingPeriod === '4-years') totalRounds = 208;
+    else if (endSavingPeriod === '5-years') totalRounds = 260;
+    const activeRound = Math.min(totalRounds, Math.ceil(diffDays / 7) || 1);
+    const daysUntilMeeting = 7 - (diffDays % 7);
+    const remainRounds = Math.max(0, totalRounds - activeRound);
+    const summaryStats = {
+      activeRound,
+      daysUntilMeeting,
+      totalMembers: Object.keys(members).length,
+      remainRounds,
+      totalRounds
     };
 
     return {
@@ -607,7 +696,9 @@ const getMemberMetaFromGeneralGroup = (group, memberPhone) => {
       loggedInMemberName: verifiedMemberName,
       loggedInMemberId: verifiedMemberId,
       loggedInMemberRole: memberRole,
+      loggedInMemberTitle: memberTitle,
       isMemberOnly,
+      summaryStats,
       groupTransaction: group.groupTransaction || {},
       countyTransaction: group.countyTransaction || {}
     };
@@ -1180,6 +1271,25 @@ const findGroupInMemberJson = (groupName) => {
   return null;
 };
 
+// ── Helper: split a display name into FirstName / MiddleName / LastName ──
+const splitDisplayName = (rawName) => {
+  const s = String(rawName || '').replace(/\s+/g, ' ').trim();
+  const out = { FirstName: '', MiddleName: '', LastName: '' };
+  if (!s) return out;
+  const parts = s.split(' ');
+  if (parts.length === 1) {
+    out.FirstName = parts[0];
+  } else if (parts.length === 2) {
+    out.FirstName = parts[0];
+    out.LastName = parts[1];
+  } else {
+    out.FirstName = parts[0];
+    out.MiddleName = parts.slice(1, -1).join(' ');
+    out.LastName = parts[parts.length - 1];
+  }
+  return out;
+};
+
 // ── Helper: Normalize member accounts from member.json structure ──
 const normalizeMembersFromMemberJson = (group) => {
   const members = group.members || {};
@@ -1187,10 +1297,26 @@ const normalizeMembersFromMemberJson = (group) => {
 
   for (const phone in members) {
     const m = members[phone];
+    const rawFirst = m.FirstName || m.firstName || m.first_name || '';
+    const rawMiddle = m.MiddleName || m.middleName || m.SecondName || m.secondName || '';
+    const rawLast = m.LastName || m.lastName || m.last_name || '';
+    const hasSplit = !!(rawFirst || rawMiddle || rawLast);
+    const split = hasSplit ? null : splitDisplayName(m.name || phone);
+    const FirstName = rawFirst || (split ? split.FirstName : '');
+    const MiddleName = rawMiddle || (split ? split.MiddleName : '');
+    const LastName = rawLast || (split ? split.LastName : '');
+
     normalized[phone] = {
       memberId: m.memberId || phone,
       name: m.name || phone,
+      FirstName,
+      MiddleName,
+      SecondName: MiddleName,
+      LastName,
       role: m.role || 'member',
+      title: m.title || m.roleTitle || m.type || '',
+      roleTitle: m.roleTitle || m.title || m.type || '',
+      type: m.type || m.role || 'member',
       accounts: (m.accounts && typeof m.accounts === 'object' && !Array.isArray(m.accounts))
         ? { ...m.accounts }
         : (m.accounts || {})
@@ -1207,10 +1333,26 @@ const normalizeMembersFromGroupsMembers = (group) => {
 
   for (const phone in members) {
     const m = members[phone];
+    const rawFirst = m.FirstName || m.firstName || m.first_name || '';
+    const rawMiddle = m.MiddleName || m.middleName || m.SecondName || m.secondName || '';
+    const rawLast = m.LastName || m.lastName || m.last_name || '';
+    const hasSplit = !!(rawFirst || rawMiddle || rawLast);
+    const split = hasSplit ? null : splitDisplayName(m.name || phone);
+    const FirstName = rawFirst || (split ? split.FirstName : '');
+    const MiddleName = rawMiddle || (split ? split.MiddleName : '');
+    const LastName = rawLast || (split ? split.LastName : '');
+
     normalized[phone] = {
       memberId: m.memberId || m.phone || phone,
       name: m.name || phone,
+      FirstName,
+      MiddleName,
+      SecondName: MiddleName,
+      LastName,
       role: m.role || m.type || 'member',
+      title: m.title || m.roleTitle || m.type || '',
+      roleTitle: m.roleTitle || m.title || m.type || '',
+      type: m.type || m.role || 'member',
       accounts: (m.accounts && typeof m.accounts === 'object' && !Array.isArray(m.accounts))
         ? { ...m.accounts }
         : (m.accounts || {})
@@ -1350,6 +1492,7 @@ router.post("/group-accounts-schema", async (req, res) => {
   let loggedInMemberKey = null;
   let loggedInMemberRole = null;
   let loggedInMemberName = null;
+  let loggedInMemberTitle = null;
 
   if (loginPhone) {
     // Find the logged-in member in the normalized members
@@ -1361,6 +1504,7 @@ router.post("/group-accounts-schema", async (req, res) => {
         loggedInMemberKey = memberKey;
         loggedInMemberRole = (m.role || m.type || 'member').toLowerCase();
         loggedInMemberName = m.name || loginPhone;
+        loggedInMemberTitle = m.title || m.roleTitle || m.type || '';
         break;
       }
     }
@@ -1470,6 +1614,31 @@ router.post("/group-accounts-schema", async (req, res) => {
     };
   }
 
+  // ── Summary Stats (active round info) ──
+  const constitutionCreated = foundGroup.constitutionKeyGeneratedAt || foundGroup.constitutionKeySetByAgentAt || foundGroup.createdAt || foundGroup.principlesSetAt || new Date().toISOString();
+  const now = new Date();
+  const created = new Date(constitutionCreated);
+  const diffTime = Math.abs(now.getTime() - created.getTime());
+  const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  const intervals = (foundGroup.principles && foundGroup.principles.intervals) ? foundGroup.principles.intervals : {};
+  const endSavingPeriod = intervals.endSavingPeriod || '1-year';
+  let totalRounds = 52;
+  if (endSavingPeriod === '6-months') totalRounds = 26;
+  else if (endSavingPeriod === '2-years') totalRounds = 104;
+  else if (endSavingPeriod === '3-years') totalRounds = 156;
+  else if (endSavingPeriod === '4-years') totalRounds = 208;
+  else if (endSavingPeriod === '5-years') totalRounds = 260;
+  const activeRound = Math.min(totalRounds, Math.ceil(diffDays / 7) || 1);
+  const daysUntilMeeting = 7 - (diffDays % 7);
+  const remainRounds = Math.max(0, totalRounds - activeRound);
+  const summaryStats = {
+    activeRound,
+    daysUntilMeeting,
+    totalMembers: isMemberOnly ? 1 : memberKeys.length,
+    remainRounds,
+    totalRounds
+  };
+
   res.json({
     groupName:      foundGroup.groupName,
     groupNumber:    foundGroup.groupNumber,
@@ -1481,7 +1650,10 @@ router.post("/group-accounts-schema", async (req, res) => {
     verifiedMember: loggedInMemberKey ? normalizedMembers[loggedInMemberKey] : null,
     loggedInMemberName,
     loggedInMemberRole: loggedInMemberRole || (isMemberOnly ? 'member' : 'official'),
+    loggedInMemberTitle: loggedInMemberTitle || '',
+    roleTitle: loggedInMemberTitle || '',
     loggedInMemberId: loggedInMemberKey ? (normalizedMembers[loggedInMemberKey].memberId || loggedInMemberKey) : null,
+    summaryStats,
     source: foundInSource
   });
 });
@@ -2068,7 +2240,7 @@ router.get("/contribution", async (req, res) => {
   });
 });
 
-router.get("/loan", async (req, res) => {
+router.get(["/loan", "/mloan"], async (req, res) => {
   const { groupName, memberPhone: queryPhone } = req.query;
 
   if (!groupName) {

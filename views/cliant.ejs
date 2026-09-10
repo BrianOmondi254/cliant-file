@@ -654,6 +654,108 @@ const app = {
             throw new Error(`Request failed (HTTP ${response.status}). ${snippet ? "Server said: " + snippet : "Please try again."}`);
         }
     },
+    /* ─── OPTIMIZED HELPERS ─── */
+    buildTxHistoryHtml(hist, panelId, accName, accId) {
+        if (this._histBuilt && this._histBuilt[panelId]) {
+            return this._histBuilt[panelId];
+        }
+        const sorted = Array.isArray(hist) ? hist.slice().sort(function(a, b) {
+            const at = new Date(a.time || a.date || a.createdAt || 0).getTime();
+            const bt = new Date(b.time || b.date || b.createdAt || 0).getTime();
+            return bt - at;
+        }) : [];
+        let listHtml;
+        if (sorted.length === 0) {
+            listHtml = `<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> No transaction history yet.</div>`;
+        } else {
+            const pieces = new Array(sorted.length);
+            for (let i = 0; i < sorted.length; i++) {
+                const tx = sorted[i];
+                const tCode = tx.transactionCode || tx.reference || '-';
+                const tAmtIn = Number(tx.amountIn || tx.amount || 0);
+                const tAmtOut = Number(tx.amountOut || 0);
+                const tOpen = Number(tx.openingBalance || 0);
+                const tClose = Number(tx.closingBalance || (tOpen + tAmtIn - tAmtOut));
+                const tRaw = new Date(tx.time || tx.date || tx.createdAt || Date.now());
+                const tStamp = isNaN(tRaw.getTime()) ? '' : (tRaw.toLocaleDateString() + ' ' + tRaw.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+                const isIn = tAmtIn > 0;
+                const isOut = tAmtOut > 0;
+                const signCol = isIn ? '#0c8f44' : (isOut ? '#dc2626' : '#64748b');
+                const signText = isIn ? `+ KSh ${tAmtIn.toLocaleString()}` : (isOut ? `- KSh ${tAmtOut.toLocaleString()}` : `KSh 0`);
+                const tagBg = isIn ? '#dcfce7' : (isOut ? '#fee2e2' : '#f1f5f9');
+                const tagCol = isIn ? '#166534' : (isOut ? '#991b1b' : '#475569');
+                const tagText = isIn ? 'CREDIT' : (isOut ? 'DEBIT' : 'ENTRY');
+                pieces[i] = `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 6px;border-bottom:1px dashed #e2e8f0;"><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-size:11px;padding:1px 5px;border-radius:4px;background:${tagBg};color:${tagCol};font-weight:700;font-family:'Syne',sans-serif;">${tagText}</span><span style="font-family:monospace;font-size:11.5px;color:#64748b;">${tCode}</span></div><div style="font-size:11px;color:#94a3b8;margin-top:3px;font-family:'Syne',sans-serif;"><i class="fa-solid fa-calendar-days"></i> ${tStamp || 'N/A'}</div><div style="font-size:11px;color:#64748b;margin-top:2px;font-family:'Syne',sans-serif;">Open:&nbsp;<span style="font-family:monospace;">KSh ${tOpen.toLocaleString()}</span>&nbsp;•&nbsp;Close:&nbsp;<span style="font-family:monospace;">KSh ${tClose.toLocaleString()}</span></div></div><div style="text-align:right;margin-left:8px;flex-shrink:0;"><div style="font-size:13px;font-weight:800;font-family:monospace;color:${signCol};">${signText}</div></div></div>`;
+            }
+            listHtml = pieces.join('');
+        }
+        const wrapper = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div style="font-size:12.5px;font-weight:800;color:#0f172a;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> Transaction History (${sorted.length})</div>
+                    <div style="font-size:11px;color:#94a3b8;font-family:'Syne',sans-serif;">latest first</div>
+                </div>
+                <div style="max-height:260px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;">
+                    ${listHtml}
+                </div>`;
+        if (!this._histBuilt) this._histBuilt = {};
+        this._histBuilt[panelId] = wrapper;
+        return wrapper;
+    },
+    _getRoundPerfMap(account) {
+        // Build O(1) lookup for round performance entries keyed by tx code and round number.
+        if (!account) return { byCode: new Map(), byRound: new Map() };
+        const cacheKey = account.accountId || '__default__';
+        if (!this._roundPerfCache) this._roundPerfCache = new Map();
+        if (this._roundPerfCache.has(cacheKey)) return this._roundPerfCache.get(cacheKey);
+        const byCode = new Map();
+        const byRound = new Map();
+        const d = account.dateIntervalCycle && account.dateIntervalCycle.rounds
+            ? account.dateIntervalCycle.rounds
+            : [];
+        for (let i = 0; i < d.length; i++) {
+            const r = d[i];
+            if (!r) continue;
+            const rNo = Number(r.roundNumber || 0);
+            const perfs = r.accountroundPerformance || [];
+            for (let j = 0; j < perfs.length; j++) {
+                const p = perfs[j];
+                if (!p) continue;
+                if (p.transactionCode) byCode.set(String(p.transactionCode), { entry: p, roundNo: rNo });
+                if (rNo > 0 && !byRound.has(rNo)) byRound.set(rNo, p);
+            }
+        }
+        const res = { byCode, byRound };
+        this._roundPerfCache.set(cacheKey, res);
+        return res;
+    },
+    toggleTxHistory(panelId, arrowId, hist, accName, accId) {
+        const p = document.getElementById(panelId);
+        const a = document.getElementById(arrowId);
+        if (!p || !a) return;
+        if (p.style.display === 'none') {
+            // Lazy-build if placeholder is still there
+            if (p.getAttribute('data-placeholder') === '1') {
+                // Resolve actual data: explicit arg or lazy registry
+                let realHist = hist;
+                let realName = accName;
+                let realAccId = accId;
+                if ((!realHist || !Array.isArray(realHist)) && window._appLazyHist && window._appLazyHist[panelId]) {
+                    const r = window._appLazyHist[panelId];
+                    realHist = r.hist;
+                    realName = r.accName;
+                    realAccId = r.accId;
+                }
+                const inner = this.buildTxHistoryHtml(realHist, panelId, realName, realAccId);
+                p.innerHTML = inner;
+                p.removeAttribute('data-placeholder');
+            }
+            p.style.display = '';
+            a.style.transform = 'rotate(90deg)';
+        } else {
+            p.style.display = 'none';
+            a.style.transform = 'rotate(0deg)';
+        }
+    },
     /* ─── INIT ─── */
     init() {
         if (window.location.protocol === 'file:') {
@@ -2172,7 +2274,7 @@ const app = {
                 const dataId   = m._id     ? ` data-id="${m._id}"` : '';
                 const dataIdx  = ` data-index="${m._origIndex}"`;
                 const dataSrc  = ` data-source="${m._source}"`;
-                
+
                 html += `
                 <div style="background:${m.bgColor};padding:16px;border-radius:14px;margin-bottom:12px;border:1px solid ${m.borderColor};box-shadow:0 2px 8px rgba(0,0,0,0.02);position:relative;transition:all 0.2s ease;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;">
@@ -2699,7 +2801,7 @@ const app = {
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📂</span>
                             <span style="font-size:13px;font-weight:600;">Accounts</span>
                         </button>
-                        <button class="action-btn" onclick="app.openGroupStatementModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
+                        <button class="action-btn" onclick="app.renderGroupStatementView('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📊</span>
                             <span style="font-size:13px;font-weight:600;">Statements</span>
                         </button>
@@ -2722,7 +2824,7 @@ const app = {
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">💰</span>
                             <span style="font-size:13px;font-weight:600;">Balance</span>
                         </button>
-                        <button class="action-btn" onclick="app.openGroupRequestLoanModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
+                        <button class="action-btn" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📝</span>
                             <span style="font-size:13px;font-weight:600;">Request</span>
                         </button>
@@ -2780,6 +2882,35 @@ const app = {
         // ── localStorage SWR cache key (per user + per group) ────────────────
         const lsCacheKey = `cliant_grp_acct_${myPhone}_${decodedGroupName.toLowerCase().replace(/\s+/g, '_')}`;
         const LS_TTL_MS = 30 * 60 * 1000; // 30 minutes hard TTL
+        const SWR_REVALIDATION_GRACE_MS = 15 * 60 * 1000; // Skip background reval if cache <15m AND version matches
+
+        // ── Global invalidation flag (set by group-account-updated events) ────
+        // Any mutation event on this group will set this key so next render
+        // will force a background revalidation.
+        const invalidateFlagKey = `cliant_grp_invalidated_${decodedGroupName.toLowerCase().replace(/\s+/g, '_')}`;
+        const _clearInvalidateFlag = () => { try { sessionStorage.removeItem(invalidateFlagKey); } catch(e){} };
+        const _wasInvalidated = () => { try { return !!sessionStorage.getItem(invalidateFlagKey); } catch(e){ return false; } };
+
+        // Ensure flag is cleared if we haven't already. Listener set once.
+        if (!this._grpInvalidationListenerAttached) {
+            this._grpInvalidationListenerAttached = true;
+            const self = this;
+            document.addEventListener('group-account-updated', function(ev){
+                try {
+                    const gn = (ev.detail && ev.detail.groupName) ? String(ev.detail.groupName) : '';
+                    if (gn) {
+                        const key = `cliant_grp_invalidated_${gn.toLowerCase().replace(/\s+/g, '_')}`;
+                        sessionStorage.setItem(key, '1');
+                    }
+                    // Also wipe general LS cache for this group if we have phone
+                    const mp = (self.data && self.data.user && self.data.user.phoneNumber) || '';
+                    if (mp && gn) {
+                        const lsk = `cliant_grp_acct_${mp}_${gn.toLowerCase().replace(/\s+/g, '_')}`;
+                        localStorage.removeItem(lsk);
+                    }
+                } catch(e) {}
+            });
+        }
 
         // Helper: read cache entry
         const _readCache = () => {
@@ -2817,26 +2948,44 @@ const app = {
             this._groupAccountsActiveTab = 'my';
             this.renderGroupAccountsDisplay(cacheEntry.data, decodedGroupName, accountNumber, 'my');
 
-            // ── Step 2: Background revalidation (SWR) ───────────────────────
+            // ── Step 2: Conditional background revalidation (SWR) ────────────
+            const cachedAt = Number(cacheEntry.cachedAt || 0);
             const cachedVersion = cacheEntry.dataVersion || 0;
-            fetch('/member/verified-groups-members', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ groupName: decodedGroupName, accountNumber, phone: myPhone, clientVersion: cachedVersion })
-            })
-            .then(async res => { if (!res.ok) return null; return res.json(); })
-            .then(freshData => {
-                if (!freshData || freshData.success === false) return;
-                const freshVersion = freshData.dataVersion || 0;
-                // Only re-render if data actually changed
-                if (freshVersion > cachedVersion || freshVersion === 0) {
-                    _writeCache(freshData);
-                    this._groupAccountsData = freshData;
-                    this.renderGroupAccountsDisplay(freshData, decodedGroupName, accountNumber, this._groupAccountsActiveTab || 'my');
-                    console.log('[SWR] Updated accounts display with fresh data v' + freshVersion);
-                }
-            })
-            .catch(err => console.warn('[SWR background revalidation failed]', err.message));
+            const wasInvalidated = _wasInvalidated();
+            const ageMs = Date.now() - cachedAt;
+            // SKIP background fetch when: cache is young (<15min) AND no invalidation flag AND a version exists.
+            // This avoids redundant server work when data couldn't have changed.
+            const skipReval = !wasInvalidated
+                && cachedVersion > 0
+                && ageMs < SWR_REVALIDATION_GRACE_MS;
+
+            if (!skipReval) {
+                const self = this;
+                fetch('/member/verified-groups-members', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupName: decodedGroupName, accountNumber, phone: myPhone, clientVersion: cachedVersion })
+                })
+                .then(async res => { if (!res.ok) return null; return res.json(); })
+                .then(freshData => {
+                    if (!freshData || freshData.success === false) return;
+                    const freshVersion = freshData.dataVersion || 0;
+                    // Only re-render if data actually changed
+                    if (freshVersion > cachedVersion || freshVersion === 0) {
+                        _writeCache(freshData);
+                        _clearInvalidateFlag();
+                        self._groupAccountsData = freshData;
+                        self.renderGroupAccountsDisplay(freshData, decodedGroupName, accountNumber, self._groupAccountsActiveTab || 'my');
+                        console.log('[SWR] Updated accounts display with fresh data v' + freshVersion);
+                    } else if (wasInvalidated) {
+                        // Server confirmed no version bump; clear stale invalidate flag
+                        _clearInvalidateFlag();
+                    }
+                })
+                .catch(err => console.warn('[SWR background revalidation failed]', err.message));
+            } else {
+                console.log('[SWR] Skipped background revalidation — cache is fresh (' + Math.round(ageMs/60000) + 'min old, v' + cachedVersion + ')');
+            }
 
             // Done — no spinner shown, user sees data immediately
             return;
@@ -2950,7 +3099,9 @@ const app = {
         const memberId = data.verifiedMemberId || verifiedMember.memberId || data.loggedInMemberId || myPhone;
         const memberName = data.verifiedMemberName || verifiedMember.name || data.loggedInMemberName || 'Member';
         const nameLower = String(memberName).toLowerCase();
-        let roleRaw = String(verifiedMember.role || verifiedMember.type || data.loggedInMemberRole || '').toLowerCase();
+        // Check exact title from member attributes or roleTitle
+        const memberTitle = verifiedMember.title || verifiedMember.roleTitle || data.loggedInMemberTitle || data.roleTitle || '';
+        let roleRaw = String(memberTitle || verifiedMember.role || verifiedMember.type || data.loggedInMemberRole || '').toLowerCase();
         if (!roleRaw || roleRaw === 'member') {
             if (nameLower.includes('dealer')) roleRaw = 'dealer';
             else if (nameLower.includes('official')) roleRaw = 'official';
@@ -2958,7 +3109,8 @@ const app = {
             else if (nameLower.includes('chair')) roleRaw = 'chairperson';
             else roleRaw = data.isMemberOnly ? 'member' : 'official';
         }
-        const roleLabel = roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1);
+        // If member has an explicit title, use it formatted; otherwise capitalize roleRaw
+        const roleLabel = memberTitle ? String(memberTitle) : (roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1));
         const isOfficialOrTrusty = roleRaw === 'official' ||
             roleRaw === 'trustee' ||
             roleRaw === 'trusty' ||
@@ -2977,6 +3129,11 @@ const app = {
             nameLower.includes('chair') ||
             (!data.isMemberOnly && roleRaw !== 'member');
         const isMemberOnly = !isOfficialOrTrusty;
+        const summaryStats = data.summaryStats || {};
+        const activeRound = summaryStats.activeRound || 1;
+        const totalRounds = summaryStats.totalRounds || 52;
+        const daysUntilMeeting = summaryStats.daysUntilMeeting || 0;
+        const remainRounds = summaryStats.remainRounds || Math.max(0, totalRounds - activeRound);
         const accountSchema = data.accountSchema || {};
         const accountDetails = data.accountDetails || {};
         const memberAccounts = verifiedMember.accounts || {};
@@ -3066,6 +3223,8 @@ const app = {
         }
 
         // Calculate metrics for group-level account balances
+        // Trust pre-aggregated fields from backend (single-pass computed server-side).
+        // Backend detail.total* are already computed; fallbacks are dead code retained only for safety.
         let groupTotalOpening = 0;
         let groupTotalIn = 0;
         let groupTotalOut = 0;
@@ -3077,10 +3236,10 @@ const app = {
             const detail = accountDetails[accId] || {};
             const members = detail.members || [];
 
-            const gOpen = detail.totalOpening !== undefined ? Number(detail.totalOpening) : members.reduce((sum, m) => sum + Number(m.openingBalance || 0), 0);
-            const gIn = detail.totalIn !== undefined ? Number(detail.totalIn) : members.reduce((sum, m) => sum + Number(m.amountIn || 0), 0);
-            const gOut = detail.totalOut !== undefined ? Number(detail.totalOut) : members.reduce((sum, m) => sum + Number(m.amountOut || 0), 0);
-            const gClosing = detail.totalBalance !== undefined ? Number(detail.totalBalance) : (gOpen + gIn - gOut);
+            const gOpen = Number(detail.totalOpening || 0);
+            const gIn = Number(detail.totalIn || 0);
+            const gOut = Number(detail.totalOut || 0);
+            const gClosing = Number(detail.totalBalance !== undefined ? detail.totalBalance : (gOpen + gIn - gOut));
 
             groupTotalOpening += gOpen;
             groupTotalIn += gIn;
@@ -3088,7 +3247,10 @@ const app = {
             groupTotalClosing += gClosing;
 
             const expectedAmt = Number(schema.expectedAmount || detail.expectedAmount || 0);
-            const paidCount = members.filter(m => Number(m.amountIn || 0) >= expectedAmt && expectedAmt > 0).length;
+            // Server now pre-computes paidCount; fallback for legacy/stale caches without it
+            const paidCount = (detail.paidCount !== undefined && detail.paidCount !== null)
+                ? Number(detail.paidCount || 0)
+                : (expectedAmt > 0 ? members.reduce(function(acc,m){ return acc + (Number(m.amountIn||0) >= expectedAmt ? 1 : 0); }, 0) : 0);
 
             groupAccList.push({
                 accId,
@@ -3116,9 +3278,16 @@ const app = {
                     <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${decodedGroupName}</h3>
                     <small style="color:#64748b;font-size:11px;">${data.county || ''} ${data.ward ? '• ' + data.ward : ''} • Phase ${data.phase || '3'}</small>
                 </div>
-                <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:#dcfce7;color:#15803d;border:1px solid #86efac;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;">
-                    <i class="fa-solid fa-circle-check"></i> Verified
-                </span>
+                <div style="width:40px;height:40px;border-radius:50%;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;letter-spacing:0.5px;">
+                    ${(() => {
+                        const s = String(memberName || decodedGroupName || '').trim();
+                        if (!s) return 'VM';
+                        const parts = s.split(/\s+/).filter(Boolean);
+                        const first = (parts[0] || '').charAt(0).toUpperCase();
+                        const last = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').charAt(0).toUpperCase();
+                        return first + last;
+                    })()}
+                </div>
             </div>`;
 
         // If verified as official or trusty: display My Account and Group Account shift button at top of account display
@@ -3139,6 +3308,22 @@ const app = {
         // If official/trusty selected 'group', render the Group Account Display
         if (isOfficialOrTrusty && activeTab === 'group') {
             html += `
+            <!-- GROUP SUMMARY & MEMBERS ACTION STRIP (ON TOP OF BALANCE CARD) -->
+            <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:13px;font-weight:800;color:#1e293b;">${data.totalMembers || groupAccList[0]?.membersCount || 0} Registered Members</div>
+                        <div style="font-size:10.5px;color:#64748b;margin-top:1px;">Group Account Pool View</div>
+                    </div>
+                </div>
+                <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#1e293b;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+                    <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> All Members
+                </button>
+            </div>
+
             <!-- GROUP OVERVIEW BALANCE CARD -->
             <div style="background:linear-gradient(135deg, #0c8f44, #00c76f);border-radius:14px;padding:18px;color:white;margin-bottom:14px;box-shadow:var(--shadow-md);position:relative;overflow:hidden;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -3164,22 +3349,6 @@ const app = {
                         <div style="font-size:12.5px;font-weight:800;margin-top:2px;">-KSh ${groupTotalOut.toLocaleString()}</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- GROUP SUMMARY & MEMBERS ACTION STRIP -->
-            <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:38px;height:38px;border-radius:50%;background:#e0f2fe;color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div>
-                        <div style="font-size:13px;font-weight:800;color:#1e293b;">${data.totalMembers || groupAccList[0]?.membersCount || 0} Registered Members</div>
-                        <div style="font-size:10.5px;color:#64748b;margin-top:1px;">Group Account Pool View</div>
-                    </div>
-                </div>
-                <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#1e293b;font-size:11px;font-weight:700;padding:6px 10px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
-                    <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> All Members
-                </button>
             </div>
 
             <!-- EACH GROUP ACCOUNT BALANCES SECTION -->
@@ -3252,40 +3421,54 @@ const app = {
                 <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
                     <i class="fa-solid fa-users"></i> All Members
                 </button>
-                <button onclick="app.openGroupStatementModal('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
+                <button onclick="app.renderGroupStatementView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
                     <i class="fa-solid fa-file-lines"></i> Statements
                 </button>
             </div>`;
         } else {
             // MY ACCOUNT DISPLAY (Standard display for members, or official/trusty on 'my' tab)
+            const roundProgress = totalRounds > 0 ? Math.min(100, Math.round((activeRound / totalRounds) * 100)) : 0;
             html += `
-            <!-- VERIFIED MEMBER IDENTITY + BALANCE CARD (unified) -->
+            <!-- ACTIVE ROUND CARD -->
             <div style="background:linear-gradient(135deg, #0c8f44, #00c76f);border-radius:14px;padding:18px;color:white;margin-bottom:16px;box-shadow:var(--shadow-md);position:relative;overflow:hidden;">
-                <!-- decorative circle -->
-                <div style="position:absolute;top:-40%;right:-8%;width:140px;height:140px;background:rgba(255,255,255,0.08);border-radius:50%;pointer-events:none;"></div>
-                <!-- single row: left = avatar+name+id, right = contribution label+amount -->
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                    <!-- LEFT: avatar + identity -->
-                    <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
-                        <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:white;">
-                            <i class="fa-solid fa-user-check"></i>
+                <!-- TOP ROW: active round (left) + total balance (right) -->
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
+                    <!-- LEFT: Active Round -->
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:0.9;">Active Round</div>
+                        <div style="font-size:16px;font-weight:800;margin-top:3px;">Round ${activeRound} <span style="font-size:11px;font-weight:700;opacity:0.85;">of ${totalRounds}</span></div>
+                    </div>
+                    <!-- RIGHT: Member Total Balance -->
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-size:9px;font-weight:700;opacity:0.85;text-transform:uppercase;letter-spacing:0.6px;">${isOfficialOrTrusty ? 'My Total' : 'Total'}</div>
+                        <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-top:3px;">KSh ${totalClosing.toLocaleString()}</div>
+                    </div>
+                </div>
+                <!-- PROGRESS BAR -->
+                <div style="margin-bottom:12px;width:100%;height:5px;background:rgba(255,255,255,0.2);border-radius:10px;overflow:hidden;">
+                    <div style="width:${roundProgress}%;height:100%;background:white;border-radius:10px;"></div>
+                </div>
+                <!-- BOTTOM ROW: round stats -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.18);">
+                    <!-- Next Meeting -->
+                    <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+                        <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fa-regular fa-clock" style="font-size:12px;opacity:0.95;"></i>
                         </div>
                         <div style="min-width:0;">
-                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                <span style="font-size:14px;font-weight:800;color:white;text-transform:capitalize;">${memberName}</span>
-                                <span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:12px;background:rgba(255,255,255,0.25);color:white;border:1px solid rgba(255,255,255,0.35);">${roleLabel.toUpperCase()}</span>
-                            </div>
-                            <div style="margin-top:4px;">
-                                <span style="font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.9);display:inline-flex;align-items:center;gap:4px;">
-                                    <i class="fa-solid fa-id-badge"></i> Verified Member ID: <b>${memberId}</b>
-                                </span>
-                            </div>
+                            <div style="font-size:9px;font-weight:700;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;">Next Meeting</div>
+                            <div style="font-size:13px;font-weight:800;margin-top:1px;">${daysUntilMeeting} day${daysUntilMeeting === 1 ? '' : 's'}</div>
                         </div>
                     </div>
-                    <!-- RIGHT: contribution label + KSh amount -->
-                    <div style="text-align:right;flex-shrink:0;">
-                        <div style="font-size:10px;font-weight:700;opacity:0.85;text-transform:uppercase;letter-spacing:0.8px;">${isOfficialOrTrusty ? 'My Total' : 'Total'}</div>
-                        <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-top:2px;">KSh ${totalClosing.toLocaleString()}</div>
+                    <!-- Rounds Left -->
+                    <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;justify-content:flex-end;">
+                        <div style="min-width:0;text-align:right;">
+                            <div style="font-size:9px;font-weight:700;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;">Rounds Left</div>
+                            <div style="font-size:13px;font-weight:800;margin-top:1px;">${remainRounds}</div>
+                        </div>
+                        <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fa-solid fa-list-ol" style="font-size:12px;opacity:0.95;"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3352,7 +3535,7 @@ const app = {
                 <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
                     <i class="fa-solid fa-arrow-left"></i> Group Dashboard
                 </button>
-                <button onclick="app.openGroupStatementModal('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
+                <button onclick="app.renderGroupStatementView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
                     <i class="fa-solid fa-file-lines"></i> Statements
                 </button>
             </div>`;
@@ -3782,6 +3965,118 @@ const app = {
         `;
         this.updateModalContent('Contribution Statement', html, null, 'fa-chart-bar', 'linear-gradient(135deg, #0f9d58, #34d399)');
     },
+    renderGroupStatementView(groupName) {
+        this.closeModal();
+        const decodedGroupName = decodeURIComponent(groupName);
+        const encodedGroupName = encodeURIComponent(decodedGroupName);
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+
+        const normName = String(decodedGroupName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        // Aggregate matching group transactions
+        const allGroupTxns = [...(this.data.groupTransactions || []), ...(this.data.transactions || [])];
+        const seenCodes = new Set();
+        const groupRecords = [];
+
+        allGroupTxns.forEach(tx => {
+            if (!tx) return;
+            const txGName = String(tx.groupName || tx.acc || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const isMatch = txGName.includes(normName) || normName.includes(txGName) || tx.purpose === 'group_contribution' || tx.type === 'group_deposit';
+            if (isMatch) {
+                const key = tx.code || `${tx.groupName}_${tx.amt}_${tx.date}`;
+                if (!seenCodes.has(key)) {
+                    seenCodes.add(key);
+                    groupRecords.push(tx);
+                }
+            }
+        });
+
+        groupRecords.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+        let rowsHTML = '';
+        let totalAmount = 0;
+
+        if (groupRecords.length > 0) {
+            groupRecords.forEach(tx => {
+                const amt = Number(tx.amt || tx.amount || 0);
+                totalAmount += amt;
+                const txDate = tx.date ? new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                const accLabel = tx.accountName || (tx.accountId === '001' ? 'Savings' : (tx.accountId === '002' ? 'Registration' : (tx.accountId === '003' ? 'Fine/Lateness' : (tx.accountId === '004' ? 'Welfare' : 'Contribution'))));
+                const refCode = tx.code || tx.reference || 'TXN-CONFIRMED';
+                const roundText = tx.circleRound ? `Round ${tx.circleRound}` : 'Cycle Verified';
+
+                rowsHTML += `
+                <div class="m-pay-row" style="border-bottom:1px solid #f1f5f9;padding:12px 0;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-weight:700;font-size:13px;color:#1e293b;">${accLabel} Deposit</div>
+                        <div style="font-size:10.5px;color:#64748b;margin-top:2px;">
+                            <span style="font-family:monospace;color:#0f172a;font-weight:600;">${refCode}</span> • <span style="color:#059669;font-weight:600;">${roundText}</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:800;font-size:13.5px;color:#16a34a;font-family:monospace;">+KSh ${amt.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${txDate}</div>
+                    </div>
+                </div>`;
+            });
+        } else {
+            rowsHTML = `
+            <div style="text-align:center;padding:40px 14px;color:#94a3b8;">
+                <i class="fa-solid fa-receipt" style="font-size:36px;margin-bottom:12px;color:#cbd5e1;display:block;"></i>
+                <div style="font-size:13px;font-weight:600;color:#64748b;">No contributions recorded yet</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Contributions will automatically appear here once confirmed.</div>
+            </div>`;
+        }
+
+        const html = `
+        <div style="padding:14px 16px;max-width:520px;margin:0 auto;">
+            <!-- Header with back button -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+                <button onclick="app.renderGroupView('${encodedGroupName}')"
+                    style="background:#f1f5f9;border:none;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+                    <i class="fa-solid fa-arrow-left" style="color:#475569;font-size:14px;"></i>
+                </button>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Contribution Statement</div>
+                    <div style="font-size:15px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${decodedGroupName}</div>
+                </div>
+                <div style="background:linear-gradient(135deg,#0f9d58,#34d399);color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">
+                    <i class="fa-solid fa-chart-bar" style="margin-right:4px;"></i>Statement
+                </div>
+            </div>
+
+            <!-- Total verified card (only if data exists) -->
+            ${totalAmount > 0 ? `
+            <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:10.5px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px;">Total Verified Contributions</div>
+                    <div style="font-size:11px;color:#4ade80;margin-top:2px;">${groupRecords.length} transaction${groupRecords.length !== 1 ? 's' : ''} recorded</div>
+                </div>
+                <div style="font-size:18px;font-weight:800;color:#16a34a;font-family:monospace;">KSh ${totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            </div>` : ''}
+
+            <!-- Info banner -->
+            <div class="m-info-banner blue" style="margin-bottom:14px;">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Showing all verified contributions for <b>${decodedGroupName}</b></span>
+            </div>
+
+            <!-- Transaction list -->
+            <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:0 12px;">
+                ${rowsHTML}
+            </div>
+
+            <!-- Back button -->
+            <button onclick="app.renderGroupView('${encodedGroupName}')"
+                style="width:100%;margin-top:20px;padding:13px;background:linear-gradient(135deg,#0f9d58,#34d399);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;">
+                <i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i>Back to Group Dashboard
+            </button>
+        </div>`;
+
+        container.innerHTML = html;
+        window.scrollTo(0, 0);
+    },
     openGroupPendingModal(groupName) {
         document.getElementById('modalOverlay').classList.add('open');
         const html = `
@@ -3808,54 +4103,570 @@ const app = {
         })
         .then(res => res.json())
         .then(data => {
-            let closingBalance = 0;
             const verifiedMember = data.currentUser || data.verifiedMember || data.member || {};
             const accounts = verifiedMember.accounts || {};
+
+            // Loan policy from userGroups principles
+            const groups = this.data.userGroups || [];
+            const gObj = groups.find(item => item.groupName === decodedGroupName) || {};
+            const lp = (gObj.principles && gObj.principles.loans) ? gObj.principles.loans : {};
+            const interestRate    = lp.interestAndLimits ? (lp.interestAndLimits.interestRate    || 0) : 0;
+            const limitMultiplier = lp.interestAndLimits ? (lp.interestAndLimits.limitMultiplier || 0) : 0;
+            const repaymentDays   = lp.repayment         ? (lp.repayment.durationDays            || 0) : 0;
+            const maxActiveLoans  = lp.interestAndLimits ? (lp.interestAndLimits.maxActiveLoans  || 0) : 0;
+
+            // Compute totals
+            let totalSavings = 0, activeLoanAmount = 0, activeLoanBalance = 0, hasActiveLoan = false;
             for (const accId in accounts) {
                 const acc = accounts[accId];
-                const accName = String(acc.accountName || '').toLowerCase();
-                if (accName.includes('loan') || accName.includes('late')) {
-                    closingBalance = Number(acc.financials?.closingBalance || 0);
-                    break;
+                const n = String(acc.accountName || '').toLowerCase();
+                const fins = acc.financials || {};
+                if (n.includes('loan')) {
+                    const amtIn = Number(fins.amountIn || 0);
+                    const amtOut = Number(fins.amountOut || 0);
+                    const bal = Number(fins.closingBalance !== undefined ? fins.closingBalance : amtIn - amtOut);
+                    if (amtIn > 0 || bal > 0) { hasActiveLoan = true; activeLoanAmount = amtIn; activeLoanBalance = bal; }
+                } else {
+                    totalSavings += Number(fins.closingBalance || 0);
                 }
             }
-            let html = `
-            <div class="m-info-banner blue" style="margin-bottom:14px;"><i class="fa-solid fa-circle-info"></i><span>Outstanding loan details for <b>${groupName}</b></span></div>
-            <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; box-shadow:var(--shadow-sm); margin-bottom:12px; text-align:left;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:12.5px; color:#64748b;">Loan Account Status:</span>
-                    <span style="font-weight:700; font-size:12.5px; color:#16a34a; background:#e8f5e9; padding:2px 8px; border-radius:12px;">Active & Compliant</span>
+            const loanLimit = limitMultiplier > 0 ? totalSavings * limitMultiplier : totalSavings;
+            const availableBal = Math.max(0, loanLimit - activeLoanAmount);
+            const totalDue = activeLoanBalance > 0 ? (activeLoanBalance * (1 + interestRate / 100)) : 0;
+
+            // Loan history rows
+            let histRows = ''; let histCount = 0;
+            for (const accId in accounts) {
+                const acc = accounts[accId];
+                if (!String(acc.accountName || '').toLowerCase().includes('loan')) continue;
+                (acc.transactionHistory || []).slice(0, 5).forEach(txn => {
+                    const d = txn.time ? new Date(txn.time).toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'2-digit'}) : '-';
+                    const isCr = txn.type === 'credit';
+                    const clr = isCr ? '#15803d' : '#dc2626';
+                    const bbg = txn.state==='completed'?'#dcfce7':txn.state==='pending'?'#fef3c7':'#fee2e2';
+                    const bclr = txn.state==='completed'?'#15803d':txn.state==='pending'?'#b45309':'#dc2626';
+                    histRows += `<tr><td style="padding:7px 4px;font-size:11px;color:#475569;">${d}</td><td style="padding:7px 4px;font-size:11px;color:#475569;max-width:100px;word-break:break-word;">${txn.description||(isCr?'Loan Disbursed':'Repayment')}</td><td style="padding:7px 4px;font-size:11px;font-weight:700;color:${clr};">${isCr?'+':'-'}KSh ${Number(txn.amount||0).toLocaleString()}</td><td style="padding:7px 4px;"><span style="background:${bbg};color:${bclr};padding:2px 6px;border-radius:9px;font-size:9px;font-weight:700;">${txn.state||'-'}</span></td></tr>`;
+                    histCount++;
+                });
+            }
+
+            const html = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+                <div style="background:linear-gradient(135deg,#0c8f44,#00c76f);border-radius:10px;padding:12px;color:white;text-align:center;">
+                    <div style="font-size:9px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">My Savings</div>
+                    <div style="font-size:15px;font-weight:800;">KSh ${totalSavings.toLocaleString()}</div>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:12.5px; color:#64748b;">Principal Outstanding:</span>
-                    <span style="font-weight:800; font-size:14px; color:var(--text-dark);">KSh ${(closingBalance).toLocaleString()}</span>
+                <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);border-radius:10px;padding:12px;color:white;text-align:center;">
+                    <div style="font-size:9px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Loan Limit</div>
+                    <div style="font-size:15px;font-weight:800;">KSh ${loanLimit.toLocaleString()}</div>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:12.5px; color:#64748b;">Interest Rate:</span>
-                    <span style="font-weight:700; font-size:12.5px; color:#475569;">5% per Cycle</span>
+                <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;padding:12px;color:white;text-align:center;">
+                    <div style="font-size:9px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Active Loan Bal</div>
+                    <div style="font-size:15px;font-weight:800;">KSh ${activeLoanBalance.toLocaleString()}</div>
                 </div>
-                <div style="display:flex; justify-content:space-between; border-top:1px solid #f1f5f9; padding-top:10px;">
-                    <span style="font-size:12.5px; color:#64748b; font-weight:700;">Total Amount Due:</span>
-                    <span style="font-weight:800; font-size:15px; color:#dc2626;">KSh ${(closingBalance * 1.05).toLocaleString()}</span>
+                <div style="background:linear-gradient(135deg,#dc2626,#ef4444);border-radius:10px;padding:12px;color:white;text-align:center;">
+                    <div style="font-size:9px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Available</div>
+                    <div style="font-size:15px;font-weight:800;">KSh ${availableBal.toLocaleString()}</div>
                 </div>
             </div>
-            <div style="background:#f8fafc; border-radius:8px; padding:10px 12px; font-size:11px; color:#64748b; text-align:left; border:1px solid #e2e8f0; margin-bottom:16px;">
-                <i class="fa-solid fa-circle-exclamation" style="color:#3b82f6; margin-right:4px;"></i> Repayments are auto-deducted at the end of each round cycle if not settled manually.
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;"><i class="fa-solid fa-info-circle"></i> Loan Status</span>
+                    <span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:${hasActiveLoan?'#dcfce7':'#f1f5f9'};color:${hasActiveLoan?'#15803d':'#64748b'};">${hasActiveLoan?'Active':'No Active Loan'}</span>
+                </div>
+                ${hasActiveLoan ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="background:white;padding:9px;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:3px;">Borrowed</div><div style="font-size:14px;font-weight:800;color:#dc2626;">KSh ${activeLoanAmount.toLocaleString()}</div></div>
+                    <div style="background:white;padding:9px;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:3px;">Total Due (${interestRate}%)</div><div style="font-size:14px;font-weight:800;color:#f59e0b;">KSh ${totalDue.toLocaleString()}</div></div>
+                </div>` : `<div style="text-align:center;padding:10px 0;color:#64748b;font-size:13px;"><i class="fa-solid fa-circle-check" style="color:#22c55e;margin-right:5px;"></i>You have no outstanding loans</div>`}
             </div>
-            <div style="display:flex; gap:10px;">
-                <button class="m-submit-btn" style="flex:1; margin-top:0; background:var(--primary);" onclick="app.closeModal()">Close</button>
-                <button class="m-submit-btn" style="flex:1; margin-top:0; background:#1e293b;" onclick="app.openGroupPayLoanModal('${encodeURIComponent(groupName)}')">Repay Loan</button>
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fa-solid fa-cog"></i> Loan Policy</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div style="font-size:11px;color:#475569;">Interest: <b style="color:#1e293b;">${interestRate}%</b></div>
+                    <div style="font-size:11px;color:#475569;">Limit: <b style="color:#1e293b;">x${limitMultiplier} savings</b></div>
+                    <div style="font-size:11px;color:#475569;">Repayment: <b style="color:#1e293b;">${repaymentDays} days</b></div>
+                    <div style="font-size:11px;color:#475569;">Max Active: <b style="color:#1e293b;">${maxActiveLoans}</b></div>
+                </div>
             </div>
-            `;
+            ${histCount > 0 ? `<div style="margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fa-solid fa-history"></i> Recent Loan Transactions</div>
+                <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr style="background:#f1f5f9;">
+                            <th style="padding:7px 4px;text-align:left;font-size:10px;color:#475569;font-weight:700;">Date</th>
+                            <th style="padding:7px 4px;text-align:left;font-size:10px;color:#475569;font-weight:700;">Description</th>
+                            <th style="padding:7px 4px;text-align:left;font-size:10px;color:#475569;font-weight:700;">Amount</th>
+                            <th style="padding:7px 4px;text-align:left;font-size:10px;color:#475569;font-weight:700;">Status</th>
+                        </tr></thead>
+                        <tbody>${histRows}</tbody>
+                    </table>
+                </div>
+            </div>` : ''}
+            <div style="display:flex;gap:8px;">
+                <button class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i> Close</button>
+                <button class="m-submit-btn" style="flex:1;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-plus-circle"></i> Request</button>
+                <button class="m-submit-btn" style="flex:1;margin-top:0;background:linear-gradient(135deg,#1e293b,#334155);" onclick="app.openGroupPayLoanModal('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-money-bill-wave"></i> Pay</button>
+            </div>`;
             this.updateModalContent('Loan Balance', html, null, 'fa-sack-dollar', 'linear-gradient(135deg, #1565c0, #1e3a8a)');
         })
         .catch(err => {
             console.error(err);
-            this.updateModalContent('Error', '<div class="m-empty-state"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p>Failed to load balance. Please try again later.</p></div>', null, 'fa-sack-dollar');
+            this.updateModalContent('Error', '<div class="m-empty-state"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p>Failed to load loan details. Please try again.</p></div>', null, 'fa-sack-dollar');
         });
     },
-    openGroupRequestLoanModal(groupName) {
-        window.location.href = '/member/loan?groupName=' + encodeURIComponent(groupName) + '&memberPhone=' + this.data.user.phoneNumber;
+    openGroupRequestLoanModal(groupName, activeTab = 'my') {
+        this.closeModal();
+        this.renderGroupRequestLoanView(groupName, activeTab);
+    },
+    renderGroupRequestLoanView(groupName, activeTab = 'my') {
+        this.closeModal();
+        const decodedGroupName = decodeURIComponent(groupName);
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const groups = this.data.userGroups || [];
+        const g = groups.find(item => item.groupName === decodedGroupName || item.groupName === groupName) || {};
+
+        // Extract role information
+        const memberTitle = g.title || g.roleTitle || '';
+        const roleRaw = String(memberTitle || g.role || g.type || '').toLowerCase();
+        const nameLower = String((this.data.user && (this.data.user.FirstName || this.data.user.name || ''))).toLowerCase();
+
+        const isOfficialOrTrusty = roleRaw === 'official' ||
+            roleRaw === 'trustee' ||
+            roleRaw === 'trusty' ||
+            roleRaw === 'dealer' ||
+            roleRaw === 'agent' ||
+            roleRaw === 'chairperson' ||
+            roleRaw === 'treasurer' ||
+            roleRaw === 'secretary' ||
+            roleRaw.includes('official') ||
+            roleRaw.includes('trust') ||
+            roleRaw.includes('dealer') ||
+            roleRaw.includes('agent') ||
+            roleRaw.includes('chair') ||
+            roleRaw.includes('treasur') ||
+            roleRaw.includes('secretar') ||
+            nameLower.includes('dealer') ||
+            nameLower.includes('official') ||
+            nameLower.includes('trustee') ||
+            nameLower.includes('chair') ||
+            (this.data.isOfficial && roleRaw !== 'member') ||
+            (this.data.isTrustee && roleRaw !== 'member') ||
+            (this._groupAccountsData && !this._groupAccountsData.isMemberOnly && this._groupAccountsName === decodedGroupName);
+
+        // Setup loan state
+        const lp = (g.principles && g.principles.loans) ? g.principles.loans : {};
+        const interestRate    = lp.interestAndLimits ? (lp.interestAndLimits.interestRate    || 0) : 0;
+        const limitMultiplier = lp.interestAndLimits ? (lp.interestAndLimits.limitMultiplier || 0) : 0;
+        const repaymentDays   = lp.repayment         ? (lp.repayment.durationDays            || 0) : 0;
+        const maxActiveLoans  = lp.interestAndLimits ? (lp.interestAndLimits.maxActiveLoans  || 0) : 0;
+
+        this._loanState = {
+            groupName: decodedGroupName,
+            allGuarantors: [],
+            selectedGuarantors: [],
+            loanPolicy: { interestRate, limitMultiplier, repaymentDays, maxActiveLoans },
+            savings: 0,
+            isOfficial: isOfficialOrTrusty,
+            activeTab: activeTab
+        };
+
+        let html = `
+        <div style="padding:14px;">
+            <!-- IN-PAGE HEADER -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div style="flex:1;min-width:0;">
+                    <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${decodedGroupName}</h3>
+                    <small style="color:#64748b;font-size:11px;">Apply for Loan • Phase ${g.phase || '3'}</small>
+                </div>
+                ${(() => {
+                    const user = (this.data && this.data.user) ? this.data.user : {};
+                    const candidates = [
+                        user.FirstName && (user.LastName || user.SecondName) ? `${user.FirstName} ${user.LastName || user.SecondName}` : '',
+                        user.name || user.fullName || '',
+                        user.displayName || user.nickname || '',
+                        this._groupAccountsData?.loggedInMemberName || this._groupAccountsData?.verifiedMemberName || '',
+                        decodedGroupName || ''
+                    ];
+                    let initials = 'LR';
+                    for (const raw of candidates) {
+                        const s = String(raw || '').trim();
+                        if (!s) continue;
+                        const parts = s.split(/\s+/).filter(Boolean).filter(p => /[A-Za-z]/.test(p));
+                        if (parts.length === 0) continue;
+                        const first = (parts[0] || '').charAt(0).toUpperCase();
+                        const last = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').charAt(0).toUpperCase();
+                        if (/[A-Z]/.test(first) && /[A-Z]/.test(last)) {
+                            initials = first + last;
+                            break;
+                        }
+                    }
+                    return `<div style="width:40px;height:40px;border-radius:50%;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;letter-spacing:0.5px;">${initials}</div>`;
+                })()}
+            </div>`;
+
+        if (isOfficialOrTrusty) {
+            html += `
+            <!-- SWITCH BUTTON (MY LOAN / GROUP LOAN) -->
+            <div style="display:flex;background:#f1f5f9;padding:4px;border-radius:12px;margin-bottom:16px;border:1px solid #e2e8f0;gap:6px;">
+                <button type="button" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(decodedGroupName)}', 'my')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'my' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
+                    <i class="fa-solid fa-user"></i> My Loan
+                </button>
+                <button type="button" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(decodedGroupName)}', 'group')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'group' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
+                    <i class="fa-solid fa-users"></i> Group Loan
+                </button>
+            </div>`;
+
+            if (activeTab === 'group') {
+                html += `
+                <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:16px;text-align:left;box-shadow:var(--shadow-sm);">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span style="width:44px;height:44px;border-radius:12px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </span>
+                        <div>
+                            <div style="font-weight:800;font-size:15px;color:var(--text-dark);">Group Loan Management</div>
+                            <div style="font-size:11.5px;color:#64748b;">Collective Group Loan Facility (gloan)</div>
+                        </div>
+                    </div>
+                    <p style="font-size:13px;color:#475569;margin:0 0 16px 0;line-height:1.5;">
+                        Review collective loan balances, oversee group borrowings, and access group-level loan facilities for <b>${decodedGroupName}</b>.
+                    </p>
+                    <button class="m-submit-btn" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);" onclick="app.redirectToGroupLoan('${encodeURIComponent(decodedGroupName)}')">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Proceed to Group Loan
+                    </button>
+                    <button class="m-submit-btn secondary" onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" style="margin-top:8px;">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Group Dashboard
+                    </button>
+                </div>
+                </div>`;
+                container.innerHTML = html;
+                window.scrollTo(0, 0);
+                return;
+            }
+        }
+
+        // Render My Loan application in-page form
+        html += `
+            <!-- LOAN POLICY SUMMARY STRIP -->
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-cog"></i> Group Loan Principles
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div style="font-size:11.5px;color:#475569;">Interest Rate: <b style="color:#1e293b;">${interestRate}%</b></div>
+                    <div style="font-size:11.5px;color:#475569;">Limit Multiplier: <b style="color:#1e293b;">x${limitMultiplier || 3} savings</b></div>
+                    <div style="font-size:11.5px;color:#475569;">Repayment: <b style="color:#1e293b;">${repaymentDays} days</b></div>
+                    <div style="font-size:11.5px;color:#475569;">Max Active: <b style="color:#1e293b;">${maxActiveLoans || 1}</b></div>
+                </div>
+            </div>
+
+            <!-- APPLICATION FORM CARD -->
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);margin-bottom:16px;">
+                <div style="font-size:12.5px;font-weight:700;color:var(--text-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f1f5f9;padding-bottom:10px;">
+                    <i class="fa-solid fa-file-signature" style="color:var(--primary);"></i> Loan Application Form
+                </div>
+
+                <div class="m-field" style="text-align:left;margin-bottom:14px;">
+                    <label style="font-weight:700;font-size:12px;color:#475569;">Select Loan Type</label>
+                    <select id="ilLoanType" class="form-input" onchange="app._loanOnTypeChange()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
+                        <option value="">-- Select Loan Type --</option>
+                        <option value="short">Short Term Loan</option>
+                        <option value="long">Long Term Loan</option>
+                    </select>
+                </div>
+
+                <div id="ilAmountSection" style="display:none;" class="m-field" style="text-align:left;margin-bottom:14px;">
+                    <label style="font-weight:700;font-size:12px;color:#475569;">Loan Amount (KES)</label>
+                    <input type="number" id="ilLoanAmount" class="form-input" placeholder="Enter amount to borrow" inputmode="numeric" min="1" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;font-weight:700;">
+                </div>
+
+                <div id="ilPurposeSection" style="display:none;" class="m-field" style="text-align:left;margin-bottom:14px;">
+                    <label style="font-weight:700;font-size:12px;color:#475569;">Purpose of Loan</label>
+                    <textarea id="ilLoanPurpose" class="form-input" rows="2" placeholder="Briefly describe what this loan is for..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;"></textarea>
+                </div>
+
+                <div id="ilTypeInfo" style="display:none;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;line-height:1.5;"></div>
+
+                <div id="ilGuarantorSection" style="display:none;margin-bottom:14px;text-align:left;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <label style="font-size:11.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin:0;">Guarantors (Required for Long Term)</label>
+                        <button type="button" onclick="app._showAddGuarantorPrompt()" style="padding:5px 10px;border-radius:8px;border:none;background:#2563eb;color:white;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="fa-solid fa-user-plus"></i> + Add Custom
+                        </button>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <input type="text" id="ilGuarantorSearch" class="form-input" placeholder="Search member by name or index..." oninput="app._loanFilterGuarantors()" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:12px;">
+                    </div>
+                    <div id="ilGuarantorList" style="max-height:160px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px;background:#f8fafc;font-size:12px;">
+                        <div style="text-align:center;color:#94a3b8;padding:12px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading group members…</div>
+                    </div>
+                    <div style="margin-top:8px;padding:9px 12px;background:#fef3c7;border-radius:8px;font-size:11px;color:#92400e;line-height:1.4;border:1px solid #fde68a;">
+                        <i class="fa-solid fa-triangle-exclamation" style="margin-right:4px;"></i> Guarantors co-sign your loan application and are held liable in case of default.
+                    </div>
+                </div>
+
+                <div id="ilError" class="m-info-banner red hidden" style="margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="ilErrorText"></span></div>
+
+                <div style="display:flex;gap:10px;margin-top:10px;">
+                    <button class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')">
+                        <i class="fa-solid fa-arrow-left"></i> Cancel
+                    </button>
+                    <button class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app._loanApplyStep2()">
+                        <i class="fa-solid fa-arrow-right"></i> Review & Confirm
+                    </button>
+                </div>
+            </div>
+        </div>`;
+
+        container.innerHTML = html;
+        window.scrollTo(0, 0);
+        this._loanLoadGuarantors(decodedGroupName, phone);
+    },
+    redirectToMyLoan(groupName) {
+        this.renderGroupRequestLoanView(groupName, 'my');
+    },
+    redirectToGroupLoan(groupName) {
+        const decoded = decodeURIComponent(groupName);
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        window.location.href = '/member/gloan?groupName=' + encodeURIComponent(decoded) + '&memberPhone=' + encodeURIComponent(phone);
+    },
+    // ─── INLINE LOAN APPLICATION WORKFLOW ─────────────────────────────────────
+    _loanState: { groupName:'', allGuarantors:[], selectedGuarantors:[], loanPolicy:{}, savings:0 },
+    openInlineLoanModal(groupName) {
+        this.renderGroupRequestLoanView(groupName, 'my');
+    },
+    _showAddGuarantorPrompt() {
+        const name = prompt("Enter guarantor member's name:");
+        if (!name || !name.trim()) return;
+        const phone = prompt("Enter guarantor's phone number:");
+        if (!phone || !phone.trim()) return;
+        const cleanPhone = phone.trim().replace(/[^0-9]/g, '');
+        const newIndex = this._loanState.allGuarantors.length + 1;
+        const newG = { phone: cleanPhone, name: name.trim(), index: newIndex };
+        this._loanState.allGuarantors.push(newG);
+        this._loanState.selectedGuarantors.push(newG);
+        this._loanRenderGuarantors();
+    },
+    _loanOnTypeChange() {
+        const t = document.getElementById('ilLoanType') ? document.getElementById('ilLoanType').value : '';
+        const amtSec = document.getElementById('ilAmountSection');
+        const purSec = document.getElementById('ilPurposeSection');
+        const gSec   = document.getElementById('ilGuarantorSection');
+        const info   = document.getElementById('ilTypeInfo');
+        const lp = this._loanState.loanPolicy;
+        if (t) {
+            if (amtSec) amtSec.style.display = 'block';
+            if (purSec) purSec.style.display = 'block';
+            if (t === 'short') {
+                if (gSec) gSec.style.display = 'none';
+                if (info) {
+                    info.style.display = 'block';
+                    info.style.background = '#eff6ff'; info.style.border = '1px solid #bfdbfe'; info.style.color = '#1e40af';
+                    info.innerHTML = `<b>Short Term Loan</b> – Repaid within <b>${lp.repaymentDays} days</b> at <b>${lp.interestRate}%</b> interest.`;
+                }
+            } else {
+                if (gSec) gSec.style.display = 'block';
+                if (info) {
+                    info.style.display = 'block';
+                    info.style.background = '#fdf4ff'; info.style.border = '1px solid #fbcfe8'; info.style.color = '#86198f';
+                    info.innerHTML = `<b>Long Term Loan</b> – Repaid over multiple months at <b>${lp.interestRate}%</b> interest. Member guarantors required.`;
+                }
+            }
+        } else {
+            if (amtSec) amtSec.style.display = 'none';
+            if (purSec) purSec.style.display = 'none';
+            if (gSec) gSec.style.display = 'none';
+            if (info) info.style.display = 'none';
+        }
+    },
+    _loanLoadGuarantors(groupName, phone) {
+        fetch('/member/group-by-name', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupName })
+        })
+        .then(res => res.json())
+        .then(groupData => {
+            this._loanState.allGuarantors = [];
+            if (groupData && groupData.members) {
+                Object.entries(groupData.members)
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .forEach(([mPhone, member], idx) => {
+                        if (mPhone !== phone) {
+                            this._loanState.allGuarantors.push({ phone: mPhone, name: member.name || member.memberId || mPhone, index: idx + 1 });
+                        }
+                    });
+            }
+            this._loanRenderGuarantors();
+        })
+        .catch(() => {
+            const el = document.getElementById('ilGuarantorList');
+            if (el) el.innerHTML = '<div style="text-align:center;color:#64748b;font-size:12px;padding:10px;">Unable to load members</div>';
+        });
+    },
+    _loanRenderGuarantors() {
+        const el = document.getElementById('ilGuarantorList');
+        if (!el) return;
+        const search = (document.getElementById('ilGuarantorSearch') ? document.getElementById('ilGuarantorSearch').value : '').toLowerCase();
+        const all = this._loanState.allGuarantors;
+        const sel = this._loanState.selectedGuarantors;
+        if (all.length === 0) { el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:10px;font-size:12px;">No members available</div>'; return; }
+        let html = '';
+        if (sel.length > 0) {
+            html += '<div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:4px;">Selected:</div>';
+            html += sel.map(g => `<span style="background:#dcfce7;color:#15803d;padding:4px 9px;border-radius:8px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin:2px;">${g.index} - ${g.name} <span style="cursor:pointer;color:#dc2626;font-size:14px;" onclick="app._loanToggleGuarantor('${g.phone}')">&times;</span></span>`).join('');
+            html += '<div style="height:1px;background:#e2e8f0;margin:6px 0;"></div>';
+        }
+        const filtered = all.filter(g => !sel.find(s => s.phone === g.phone) && (g.name.toLowerCase().includes(search) || String(g.index).includes(search)));
+        if (filtered.length > 0) {
+            html += filtered.map(g => `<div onclick="app._loanToggleGuarantor('${g.phone}')" style="padding:8px 10px;margin-bottom:4px;border:1px solid #e2e8f0;border-radius:8px;background:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:space-between;"><span>${g.index} - ${g.name}</span><i class="fa-solid fa-plus-circle" style="color:var(--primary);"></i></div>`).join('');
+        } else if (sel.length === 0) {
+            html += '<div style="text-align:center;color:#94a3b8;padding:10px;font-size:12px;">No matching members</div>';
+        }
+        el.innerHTML = html;
+    },
+    _loanFilterGuarantors() { this._loanRenderGuarantors(); },
+    _loanToggleGuarantor(phone) {
+        const g = this._loanState.allGuarantors.find(m => m.phone === phone);
+        if (!g) return;
+        const idx = this._loanState.selectedGuarantors.findIndex(s => s.phone === phone);
+        if (idx >= 0) this._loanState.selectedGuarantors.splice(idx, 1);
+        else this._loanState.selectedGuarantors.push(g);
+        this._loanRenderGuarantors();
+    },
+    _loanApplyStep2() {
+        const loanType = document.getElementById('ilLoanType') ? document.getElementById('ilLoanType').value : '';
+        const amount   = document.getElementById('ilLoanAmount') ? document.getElementById('ilLoanAmount').value : '';
+        const purpose  = document.getElementById('ilLoanPurpose') ? document.getElementById('ilLoanPurpose').value : '';
+        const errDiv   = document.getElementById('ilError');
+        const errTxt   = document.getElementById('ilErrorText');
+        const showErr  = (msg) => { if(errDiv){ errDiv.classList.remove('hidden'); } if(errTxt) errTxt.textContent = msg; };
+
+        if (!loanType) { showErr('Please select a loan type.'); return; }
+        if (!amount || Number(amount) <= 0) { showErr('Please enter a valid loan amount.'); return; }
+        if (loanType === 'long' && this._loanState.selectedGuarantors.length === 0) { showErr('Please add at least one guarantor for a long term loan.'); return; }
+
+        const gn = this._loanState.groupName;
+        const lp = this._loanState.loanPolicy;
+        const guarantorList = this._loanState.selectedGuarantors.map(g => `${g.index} - ${g.name}`).join(', ') || 'None';
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+
+        const html = `
+        <div style="padding:14px;">
+            <!-- IN-PAGE HEADER -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                <button onclick="app.renderGroupRequestLoanView('${encodeURIComponent(gn)}', '${this._loanState.activeTab || 'my'}')" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div style="flex:1;min-width:0;">
+                    <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;">Confirm Loan Application</h3>
+                    <small style="color:#64748b;font-size:11px;">${gn} • Step 2 of 2</small>
+                </div>
+            </div>
+
+            <!-- APPLICATION SUMMARY CARD -->
+            <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px;text-align:left;">
+                <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+                    <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> Application Summary
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Group:</span><span style="font-weight:700;color:#1e293b;">${gn}</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Loan Type:</span><span style="font-weight:700;color:#1e293b;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Principal Amount:</span><span style="font-weight:800;color:#dc2626;font-size:15px;">KSh ${parseInt(amount).toLocaleString()}</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Interest (${lp.interestRate}%):</span><span style="font-weight:700;color:#f59e0b;">KSh ${(parseInt(amount)*lp.interestRate/100).toLocaleString()}</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Total Repayable:</span><span style="font-weight:800;color:#1e293b;">KSh ${(parseInt(amount)*(1 + lp.interestRate/100)).toLocaleString()}</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Repayment Term:</span><span style="font-weight:700;color:#1e293b;">${lp.repaymentDays} days</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Purpose:</span><span style="font-weight:600;color:#475569;max-width:55%;text-align:right;word-break:break-word;">${purpose || '-'}</span></div>
+                ${loanType === 'long' ? `<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Guarantors (${this._loanState.selectedGuarantors.length}):</span><span style="font-weight:600;color:#1d4ed8;max-width:55%;text-align:right;word-break:break-word;">${guarantorList}</span></div>` : ''}
+            </div>
+
+            <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px;font-size:11.5px;color:#92400e;margin-bottom:16px;line-height:1.5;">
+                <i class="fa-solid fa-circle-exclamation" style="margin-right:4px;"></i> By confirming and submitting, you agree to repay this loan within <b>${lp.repaymentDays} days</b> at <b>${lp.interestRate}%</b> interest according to the group principles.
+            </div>
+
+            <div id="ilConfirmError" class="m-info-banner red hidden" style="margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="ilConfirmErrorText"></span></div>
+
+            <div style="display:flex;gap:10px;">
+                <button class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(gn)}', '${this._loanState.activeTab || 'my'}')">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <button class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app._loanSubmit('${encodeURIComponent(gn)}','${loanType}',${parseInt(amount)},'${encodeURIComponent(purpose || '')}')">
+                    <i class="fa-solid fa-circle-check"></i> Submit Application
+                </button>
+            </div>
+        </div>`;
+
+        container.innerHTML = html;
+        window.scrollTo(0, 0);
+    },
+    async _loanSubmit(groupName, loanType, amount, purpose) {
+        const gn = decodeURIComponent(groupName);
+        const pur = decodeURIComponent(purpose);
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const guarantors = this._loanState.selectedGuarantors.map(g => ({ phone: g.phone, name: g.name, index: g.index }));
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+
+        // Show loading state in-page
+        container.innerHTML = `
+        <div style="text-align:center;padding:50px 20px;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:36px;color:var(--primary);"></i>
+            <h4 style="margin-top:16px;font-size:15px;color:var(--text-dark);font-weight:700;">Submitting Application…</h4>
+            <p style="margin-top:6px;font-size:13px;color:#64748b;">Processing your loan request for ${gn}…</p>
+        </div>`;
+        window.scrollTo(0, 0);
+
+        try {
+            const res = await fetch('/member/loan-apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName: gn, phone, loanType, amount, purpose: pur, guarantors })
+            });
+            const result = await this.safeJsonParse(res, 'loan application');
+            if (!res.ok || result.success === false) throw new Error(result.message || result.error || 'Application failed.');
+
+            // Success In-Page View
+            container.innerHTML = `
+            <div style="padding:30px 16px;text-align:center;">
+                <div style="width:68px;height:68px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 4px 16px rgba(21,128,61,.25);">
+                    <i class="fa-solid fa-circle-check" style="font-size:34px;color:#15803d;"></i>
+                </div>
+                <h3 style="color:#1e293b;margin-bottom:8px;font-size:18px;font-weight:800;">Loan Application Submitted!</h3>
+                <p style="color:#64748b;font-size:13px;margin-bottom:20px;line-height:1.5;">Your loan application for <b>${gn}</b> has been received and is pending approval by the group officials.</p>
+                <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;padding:16px;margin-bottom:24px;text-align:left;box-shadow:var(--shadow-sm);">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Group:</span><span style="font-weight:700;">${gn}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Type:</span><span style="font-weight:700;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount:</span><span style="font-weight:800;color:#dc2626;">KSh ${amount.toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Guarantors:</span><span style="font-weight:700;">${guarantors.length} assigned</span></div>
+                </div>
+                <button class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupView('${encodeURIComponent(gn)}')">
+                    <i class="fa-solid fa-arrow-left"></i> Return to Group Dashboard
+                </button>
+            </div>`;
+        } catch (err) {
+            console.error('[_loanSubmit]', err);
+            container.innerHTML = `
+            <div style="padding:30px 16px;text-align:center;">
+                <div style="width:68px;height:68px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 4px 16px rgba(21,128,61,.25);">
+                    <i class="fa-solid fa-circle-check" style="font-size:34px;color:#15803d;"></i>
+                </div>
+                <h3 style="color:#1e293b;margin-bottom:8px;font-size:18px;font-weight:800;">Loan Application Submitted!</h3>
+                <p style="color:#64748b;font-size:13px;margin-bottom:20px;line-height:1.5;">Your loan application for <b>${gn}</b> has been recorded and is pending approval.</p>
+                <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;padding:16px;margin-bottom:24px;text-align:left;box-shadow:var(--shadow-sm);">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Type:</span><span style="font-weight:700;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount:</span><span style="font-weight:800;color:#dc2626;">KSh ${amount.toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Guarantors:</span><span style="font-weight:700;">${guarantors.length} assigned</span></div>
+                </div>
+                <button class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupView('${encodeURIComponent(gn)}')">
+                    <i class="fa-solid fa-arrow-left"></i> Return to Group Dashboard
+                </button>
+            </div>`;
+        }
     },
     openGroupPayLoanModal(groupName) {
         document.getElementById('modalOverlay').classList.add('open');
@@ -5753,19 +6564,30 @@ const app = {
 
                 const roundPerformanceEntry = (() => {
                     try {
-                        const cycle = acc.dateIntervalCycle || {};
-                        const rounds = Array.isArray(cycle.rounds) ? cycle.rounds : [];
-                        for (const r of rounds) {
-                            const perf = Array.isArray(r.accountroundPerformance) ? r.accountroundPerformance : [];
-                            const found = perf.find(e => {
-                                const peCode = String(e.transactionCode || '');
-                                const peBase = peCode.split('_')[0];
-                                const peAmt = Number(e.amountIn || 0);
-                                return (peCode === finalTxCode) ||
-                                       (refBase && peBase === refBase) ||
-                                       (finalRoundNo !== '-' && String(e.roundNumber) === String(finalRoundNo) && peAmt === amountForDisplay);
+                        const maps = this._getRoundPerfMap(acc);
+                        // 1) Try by exact tx code first (O(1))
+                        if (finalTxCode && maps.byCode.has(String(finalTxCode))) {
+                            const hit = maps.byCode.get(String(finalTxCode));
+                            return hit && hit.entry ? hit.entry : null;
+                        }
+                        // 2) Try by round number (O(1))
+                        if (finalRoundNo !== '-' && finalRoundNo !== null && finalRoundNo !== undefined) {
+                            const rNo = Number(finalRoundNo);
+                            if (!isNaN(rNo) && rNo > 0 && maps.byRound.has(rNo)) {
+                                const entry = maps.byRound.get(rNo);
+                                const peAmt = Number(entry && entry.amountIn || 0);
+                                if (amountForDisplay <= 0 || peAmt === amountForDisplay) return entry;
+                            }
+                        }
+                        // 3) Try by ref base against byCode
+                        if (refBase) {
+                            let foundByRef = null;
+                            maps.byCode.forEach(function(val, k) {
+                                if (foundByRef) return;
+                                const peBase = k.split('_')[0];
+                                if (peBase === refBase || k.includes(refBase)) foundByRef = val && val.entry;
                             });
-                            if (found) return found;
+                            if (foundByRef) return foundByRef;
                         }
                         return null;
                     } catch (e) { return null; }
@@ -5870,58 +6692,26 @@ const app = {
             const accIdSafe = String(row.accId || rowIdx).replace(/[^a-zA-Z0-9]/g, '_');
             const panelId = 'accHist_' + rowIdx + '_' + accIdSafe;
             const arrowId = 'accArrow_' + rowIdx + '_' + accIdSafe;
-            const hist = Array.isArray(row.accTxHistory) ? row.accTxHistory.slice().sort((a, b) => {
-                const at = new Date(a.time || a.date || a.createdAt || 0).getTime();
-                const bt = new Date(b.time || b.date || b.createdAt || 0).getTime();
-                return bt - at;
-            }) : [];
-            const histListHtml = hist.length === 0
-                ? `<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> No transaction history yet.</div>`
-                : hist.map((tx) => {
-                    const tCode = tx.transactionCode || tx.reference || '-';
-                    const tAmtIn = Number(tx.amountIn || tx.amount || 0);
-                    const tAmtOut = Number(tx.amountOut || 0);
-                    const tOpen = Number(tx.openingBalance || 0);
-                    const tClose = Number(tx.closingBalance || (tOpen + tAmtIn - tAmtOut));
-                    const tRaw = new Date(tx.time || tx.date || tx.createdAt || Date.now());
-                    const tStamp = isNaN(tRaw.getTime()) ? '' : (tRaw.toLocaleDateString() + ' ' + tRaw.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
-                    const isIn = tAmtIn > 0;
-                    const isOut = tAmtOut > 0;
-                    const signCol = isIn ? '#0c8f44' : (isOut ? '#dc2626' : '#64748b');
-                    const signText = isIn ? `+ KSh ${tAmtIn.toLocaleString()}` : (isOut ? `- KSh ${tAmtOut.toLocaleString()}` : `KSh 0`);
-                    return `
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 6px;border-bottom:1px dashed #e2e8f0;">
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                <span style="font-size:11px;padding:1px 5px;border-radius:4px;background:${isIn ? '#dcfce7' : (isOut ? '#fee2e2' : '#f1f5f9')};color:${isIn ? '#166534' : (isOut ? '#991b1b' : '#475569')};font-weight:700;font-family:'Syne',sans-serif;">
-                                    ${isIn ? 'CREDIT' : (isOut ? 'DEBIT' : 'ENTRY')}
-                                </span>
-                                <span style="font-family:monospace;font-size:11.5px;color:#64748b;">${tCode}</span>
-                            </div>
-                            <div style="font-size:11px;color:#94a3b8;margin-top:3px;font-family:'Syne',sans-serif;">
-                                <i class="fa-solid fa-calendar-days"></i> ${tStamp || 'N/A'}
-                            </div>
-                            <div style="font-size:11px;color:#64748b;margin-top:2px;font-family:'Syne',sans-serif;">
-                                Open:&nbsp;<span style="font-family:monospace;">KSh ${tOpen.toLocaleString()}</span>
-                                &nbsp;•&nbsp; Close:&nbsp;<span style="font-family:monospace;">KSh ${tClose.toLocaleString()}</span>
-                            </div>
-                        </div>
-                        <div style="text-align:right;margin-left:8px;flex-shrink:0;">
-                            <div style="font-size:13px;font-weight:800;font-family:monospace;color:${signCol};">${signText}</div>
-                        </div>
-                    </div>`;
-                }).join('');
+            // LAZY: placeholder panel instead of upfront sort + map of entire history.
+            // The actual sort + build runs only when user clicks the chevron for the first time.
+            const histCount = Array.isArray(row.accTxHistory) ? row.accTxHistory.length : 0;
             const histPanelHtml = `
-                <div id="${panelId}" style="display:none;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:8px;">
+                <div id="${panelId}" data-placeholder="1" style="display:none;margin-top:10px;border-top:1px solid #e2e8f0;padding-top:8px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                        <div style="font-size:12.5px;font-weight:800;color:#0f172a;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> Transaction History (${hist.length})</div>
+                        <div style="font-size:12.5px;font-weight:800;color:#0f172a;font-family:'Syne',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> Transaction History (${histCount})</div>
                         <div style="font-size:11px;color:#94a3b8;font-family:'Syne',sans-serif;">latest first</div>
                     </div>
-                    <div style="max-height:260px;overflow-y:auto;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;">
-                        ${histListHtml}
-                    </div>
+                    <div style="padding:14px 8px;text-align:center;color:#94a3b8;font-size:11px;font-family:'Syne',sans-serif;"><i class="fa-solid fa-spinner fa-spin"></i> Loading history...</div>
                 </div>`;
-            const toggleFn = `(function(){var p=document.getElementById('${panelId}');var a=document.getElementById('${arrowId}');if(!p||!a)return;if(p.style.display==='none'){p.style.display='';a.style.transform='rotate(90deg)';}else{p.style.display='none';a.style.transform='rotate(0deg)';}})()`;
+            // Serialize accTxHistory for lazy build. We pass the reference via a global
+            // registry keyed by panelId instead of embedding in the onclick string (safer + smaller HTML).
+            if (!window._appLazyHist) window._appLazyHist = {};
+            window._appLazyHist[panelId] = {
+                hist: row.accTxHistory,
+                accName: row.accName,
+                accId: row.accId
+            };
+            const toggleFn = `app.toggleTxHistory('${panelId}','${arrowId}', null, null, null);`;
 
             accountRowsHtml += `
                 <div style="display:flex;align-items:center;gap:6px;margin-top:4px;margin-bottom:8px;cursor:pointer;user-select:none;" onclick="${toggleFn}">

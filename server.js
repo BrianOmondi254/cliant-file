@@ -161,6 +161,12 @@ app.use("/", tbankRoutes);
 app.use("/p", pRoutes);
 app.use("/general", generalRoutes);
 app.use("/member", memberRoutes);
+app.get("/mloan", (req, res) => {
+  res.redirect("/member/loan" + (req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""));
+});
+app.get("/gloan", (req, res) => {
+  res.redirect("/member/gloan" + (req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : ""));
+});
 app.use("/api/locations", locationsRoutes);
 app.use("/api/mpesa", mpesaRoutes);
 app.use("/api/payment/pesapal", pesapalRoutes);
