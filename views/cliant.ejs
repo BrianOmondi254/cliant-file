@@ -61,39 +61,42 @@
             transform: translateX(-50%);
             width: calc(100% - 4px);
             max-width: 540px;
-            background: rgba(2,44,34,0.95);
-            backdrop-filter: blur(12px);
+            background: #fff;
             display: flex;
-            padding: 10px 0 25px 0;
-            border-radius: 5px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            border: 1px solid rgba(15,157,88,0.3);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             z-index: 10000;
             overflow: hidden;
+            gap: 6px;
         }
-        .indicator {
-            position: absolute;
-            height: 3px;
-            bottom: 10px; left: 0;
-            background: linear-gradient(90deg, #00f2fe, #4facfe);
-            box-shadow: 0 0 15px rgba(0,242,254,0.6);
-            transition: 0.4s cubic-bezier(0.4,0,0.2,1);
-            z-index: 2;
-            border-radius: 3px 3px 0 0;
-        }
+        .indicator { display: none; }
         .nav-btn {
             flex: 1; text-align: center;
-            padding: 5px 0 10px 0;
+            padding: 8px 12px;
             font-size: 13px; font-weight: 600;
-            color: rgba(255,255,255,0.6);
+            color: var(--text-dark);
             cursor: pointer;
-            position: relative; z-index: 1;
+            position: relative;
             display: flex; align-items: center; justify-content: center;
             text-decoration: none;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 8px;
+            gap: 4px;
+            transition: background 0.2s, color 0.2s;
         }
-        .nav-btn:hover { color: #fff; }
-        .nav-btn.active { color: #00f2fe; text-shadow: 0 0 8px rgba(0,242,254,0.3); }
+        .nav-btn:hover { background: #e2e8f0; color: var(--text-dark); }
+        .nav-btn.active { background: var(--primary); color: #fff; }
+        .nav-btn.active:hover { background: #0a7a3b; color: #fff; }
         .nav-btn.out { color: var(--danger); }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #64748b;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
         /* ── HEADER STRIP ── */
         .app-header {
             background: linear-gradient(135deg, #0c8f44, #00c76f);
@@ -568,7 +571,6 @@
     <div id="mainContainer"></div>
     <!-- BOTTOM NAV -->
     <div class="top-nav">
-        <div class="indicator" id="navIndicator" style="width: <%= 100 / navLinks.length %>%; left: <%= activeIndex * (100 / navLinks.length) %>%;"></div>
         <% navLinks.forEach((link, index) => { %>
             <div class="nav-btn <%= link.name === 'Personal' ? 'active' : '' %> <%= link.name === 'Out' ? 'out' : '' %>"
                  onclick="moveIndicator(<%= index %>, <%= navLinks.length %>); <%= link.action %>">
