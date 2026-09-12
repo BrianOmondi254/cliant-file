@@ -885,32 +885,43 @@
         </div>
         <% pendingRequests.forEach(function(req) {
           const initials = req.memberName ? req.memberName.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase() : '?';
+          const statusLabel = (req.status || 'pending').toString();
+          const statusClass = statusLabel === 'approved' ? 'chip-active' : (statusLabel === 'rejected' ? 'chip-overdue' : 'chip-pending');
         %>
           <div class="request-card">
             <div class="request-top">
               <div class="request-avatar"><%= initials %></div>
               <div class="request-info">
-                <div class="request-name"><%= req.memberName %></div>
-                <div class="request-date"><i class="fas fa-calendar-alt" style="font-size:9px;margin-right:3px"></i><%= req.requestDate || 'Today' %></div>
+                <div class="request-name"><%= req.memberName || req.memberPhone || 'Member' %></div>
+                <div class="request-date">
+                  <i class="fas fa-phone" style="font-size:9px;margin-right:3px"></i><%= req.memberPhone || '—' %>
+                  &nbsp;·&nbsp;
+                  <span class="status-chip <%= statusClass %>" style="font-size:10px;padding:2px 7px;"><%= statusLabel %></span>
+                </div>
               </div>
               <div class="request-amount-box">
-                <div class="request-kes">KES <%= req.amount ? req.amount.toLocaleString() : '0' %></div>
-                <div class="request-term"><%= req.termMonths || '3' %> months</div>
+                <div class="request-kes">KES <%= req.amount != null ? Number(req.amount).toLocaleString() : '0' %></div>
+                <div class="request-term"><%= req.requestId || '' %></div>
               </div>
             </div>
             <div class="request-meta">
-              <div class="request-meta-tag"><i class="fas fa-tag"></i><%= req.purpose || 'General' %></div>
-              <div class="request-meta-tag"><i class="fas fa-percent"></i><%= group.interestRate || '5' %>% p.m.</div>
-              <div class="request-meta-tag"><i class="fas fa-coins"></i>Interest: KES <%= req.totalInterest ? req.totalInterest.toLocaleString() : '—' %></div>
+              <div class="request-meta-tag"><i class="fas fa-clock"></i>Requested: <%= req.requestDate || '—' %></div>
+              <div class="request-meta-tag"><i class="fas fa-calendar-check"></i>Pay by: <%= req.dueAtLabel || '—' %><%= req.durationDays ? ` (${req.durationDays} days)` : '' %></div>
+              <div class="request-meta-tag"><i class="fas fa-coins"></i>To pay: KES <%= req.amountToBePaid != null ? Number(req.amountToBePaid).toLocaleString() : '—' %></div>
+              <div class="request-meta-tag"><i class="fas fa-percent"></i>Interest: KES <%= req.totalInterest != null ? Number(req.totalInterest).toLocaleString() : '—' %></div>
+              <div class="request-meta-tag"><i class="fas fa-user-shield"></i>Processor: <%= req.processorName || req.processorPhone || '—' %></div>
+              <% if (req.rolledBalance) { %>
+                <div class="request-meta-tag"><i class="fas fa-redo"></i>Rolled: KES <%= Number(req.rolledBalance).toLocaleString() %></div>
+              <% } %>
             </div>
             <div class="request-actions">
-              <button class="btn-approve" onclick="approveLoan('<%= req._id || req.id %>')">
+              <button class="btn-approve" onclick="approveLoan('<%= req.requestId || req.id %>')">
                 <i class="fas fa-check"></i> Approve
               </button>
-              <button class="btn-reject" onclick="rejectLoan('<%= req._id || req.id %>')">
+              <button class="btn-reject" onclick="rejectLoan('<%= req.requestId || req.id %>')">
                 <i class="fas fa-times"></i> Reject
               </button>
-              <button class="btn-review" onclick="reviewLoan('<%= req._id || req.id %>')">
+              <button class="btn-review" onclick="reviewLoan('<%= req.requestId || req.id %>')">
                 <i class="fas fa-eye"></i>
               </button>
             </div>

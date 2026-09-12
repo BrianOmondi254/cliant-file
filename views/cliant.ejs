@@ -4221,6 +4221,10 @@ const app = {
     renderGroupRequestLoanView(groupName, activeTab = 'my') {
         this.closeModal();
         const decodedGroupName = decodeURIComponent(groupName);
+        if (activeTab === 'group') {
+            this.redirectToGroupLoan(decodedGroupName);
+            return;
+        }
         const container = document.getElementById('mainContainer');
         if (!container) return;
         const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
@@ -4316,38 +4320,10 @@ const app = {
                 <button type="button" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(decodedGroupName)}', 'my')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'my' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
                     <i class="fa-solid fa-user"></i> My Loan
                 </button>
-                <button type="button" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(decodedGroupName)}', 'group')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'group' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
+                <button type="button" onclick="app.redirectToGroupLoan('${encodeURIComponent(decodedGroupName)}')" style="flex:1;padding:10px 14px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;${activeTab === 'group' ? 'background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);border:1px solid #cbd5e1;' : 'background:transparent;color:#64748b;border:1px solid transparent;'}">
                     <i class="fa-solid fa-users"></i> Group Loan
                 </button>
             </div>`;
-
-            if (activeTab === 'group') {
-                html += `
-                <div style="background:white;border:1.5px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:16px;text-align:left;box-shadow:var(--shadow-sm);">
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                        <span style="width:44px;height:44px;border-radius:12px;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
-                            <i class="fa-solid fa-building-columns"></i>
-                        </span>
-                        <div>
-                            <div style="font-weight:800;font-size:15px;color:var(--text-dark);">Group Loan Management</div>
-                            <div style="font-size:11.5px;color:#64748b;">Collective Group Loan Facility (gloan)</div>
-                        </div>
-                    </div>
-                    <p style="font-size:13px;color:#475569;margin:0 0 16px 0;line-height:1.5;">
-                        Review collective loan balances, oversee group borrowings, and access group-level loan facilities for <b>${decodedGroupName}</b>.
-                    </p>
-                    <button class="m-submit-btn" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);" onclick="app.redirectToGroupLoan('${encodeURIComponent(decodedGroupName)}')">
-                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Proceed to Group Loan
-                    </button>
-                    <button class="m-submit-btn secondary" onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" style="margin-top:8px;">
-                        <i class="fa-solid fa-arrow-left"></i> Back to Group Dashboard
-                    </button>
-                </div>
-                </div>`;
-                container.innerHTML = html;
-                window.scrollTo(0, 0);
-                return;
-            }
         }
 
         // Render My Loan application in-page form
@@ -4433,7 +4409,481 @@ const app = {
     redirectToGroupLoan(groupName) {
         const decoded = decodeURIComponent(groupName);
         const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
-        window.location.href = '/member/gloan?groupName=' + encodeURIComponent(decoded) + '&memberPhone=' + encodeURIComponent(phone);
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+
+        const encoded = encodeURIComponent(decoded);
+        container.innerHTML = `<div style="padding:48px 20px;text-align:center;color:#64748b;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size:22px;margin-bottom:10px;display:block;"></i>
+            Loading group loans…
+        </div>`;
+        window.scrollTo(0, 0);
+
+        fetch('/member/gloan?groupName=' + encoded + '&memberPhone=' + encodeURIComponent(phone))
+            .then(r => {
+                if (!r.ok) throw new Error('Failed to load group loans');
+                return r.text();
+            })
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const wrapper = doc.querySelector('.page-wrapper');
+                if (!wrapper) throw new Error('Group loan view missing');
+
+                let styleText = '';
+                doc.querySelectorAll('style').forEach(s => {
+                    styleText += (s.textContent || '')
+                        .replace(/\*,\s*\*::before,\s*\*::after\s*\{[^}]*\}/g, '')
+                        .replace(/body\s*\{[^}]*\}/g, '')
+                        + '\n';
+                });
+                styleText += `
+                    #gloanEmbed { padding: 0; }
+                    #gloanEmbed .page-wrapper {
+                        width: 100%; max-width: none; min-height: auto;
+                        border-radius: 0; box-shadow: none; animation: none;
+                    }
+                    #gloanEmbed .header { display: none !important; }
+                `;
+
+                const oldHeader = wrapper.querySelector('.header');
+                if (oldHeader) oldHeader.remove();
+
+                const subHeader = `
+                <div style="padding:14px 14px 0;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <button type="button" onclick="app.renderGroupView('${encoded}')" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div style="flex:1;min-width:0;">
+                            <h3 style="font-size:15px;font-weight:700;color:var(--text-dark);margin:0;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Group Loans</h3>
+                            <small style="color:#64748b;font-size:11px;">${decoded}</small>
+                        </div>
+                        <button type="button" id="gloanGiveBtn" onclick="app.openGiveLoanPopup('${encoded}')" style="flex-shrink:0;padding:8px 12px;border-radius:10px;border:none;background:linear-gradient(135deg,#0c8f44,#34d399);color:white;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;box-shadow:0 2px 8px rgba(12,143,68,.25);">
+                            <i class="fa-solid fa-hand-holding-dollar"></i> Give Loan
+                        </button>
+                    </div>
+                    <div id="gloanTabsSwitch" style="display:flex;background:#f1f5f9;padding:4px;border-radius:12px;margin-bottom:8px;border:1px solid #e2e8f0;gap:6px;">
+                        <button type="button" onclick="app.renderGroupRequestLoanView('${encoded}', 'my')" style="flex:1;padding:10px 14px;border-radius:9px;border:1px solid transparent;background:transparent;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <i class="fa-solid fa-user"></i> My Loan
+                        </button>
+                        <button type="button" style="flex:1;padding:10px 14px;border-radius:9px;border:1px solid #cbd5e1;background:white;color:var(--text-dark);box-shadow:0 1px 4px rgba(0,0,0,0.1);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+                            <i class="fa-solid fa-users"></i> Group Loan
+                        </button>
+                    </div>
+                </div>`;
+
+                const oldStyle = document.getElementById('gloanEmbedStyles');
+                if (oldStyle) oldStyle.remove();
+
+                container.innerHTML =
+                    `<style id="gloanEmbedStyles">${styleText}</style>` +
+                    subHeader +
+                    `<div id="gloanEmbed">${wrapper.outerHTML}</div>`;
+
+                this._initGloanEmbed(decoded);
+                window.scrollTo(0, 0);
+            })
+            .catch(err => {
+                console.error(err);
+                container.innerHTML = `<div style="padding:40px 20px;text-align:center;">
+                    <div style="color:#ef4444;margin-bottom:12px;"><i class="fa-solid fa-circle-exclamation"></i> Could not load group loans.</div>
+                    <button class="m-submit-btn secondary" onclick="app.renderGroupView('${encoded}')">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Group Dashboard
+                    </button>
+                </div>`;
+            });
+    },
+    openGiveLoanPopup(encodedGroupName) {
+        const encoded = encodedGroupName || '';
+        const decoded = decodeURIComponent(encoded);
+        const html = `
+            <div style="text-align:left;">
+                <p style="font-size:12.5px;color:#64748b;margin:0 0 14px 0;line-height:1.4;">
+                    Disburse a group loan to a member of <b>${decoded}</b>.
+                </p>
+                <div class="m-field" style="margin-bottom:12px;">
+                    <label style="font-weight:700;font-size:12px;color:#475569;">Member Phone Number</label>
+                    <input type="tel" id="gloanGivePhone" class="form-input" placeholder="e.g. 0740415992" inputmode="tel" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;">
+                </div>
+                <div class="m-field" style="margin-bottom:12px;">
+                    <label style="font-weight:700;font-size:12px;color:#475569;">Amount (KES)</label>
+                    <input type="number" id="gloanGiveAmount" class="form-input" placeholder="Enter loan amount" inputmode="numeric" min="1" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:14px;font-weight:700;">
+                </div>
+                <div id="gloanGiveError" class="m-info-banner red hidden" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="gloanGiveErrorText"></span></div>
+                <div style="display:flex;gap:10px;margin-top:4px;">
+                    <button type="button" class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.closeModal()">
+                        <i class="fa-solid fa-xmark"></i> Cancel
+                    </button>
+                    <button type="button" id="gloanGiveContinueBtn" class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.submitGiveLoanForm('${encoded}')">
+                        <i class="fa-solid fa-arrow-right"></i> Continue
+                    </button>
+                </div>
+            </div>`;
+        this.updateModalContent('Give Loan', html, null, 'fa-hand-holding-dollar', 'linear-gradient(135deg, #0c8f44, #34d399)');
+        this.openModal();
+        setTimeout(() => {
+            const phone = document.getElementById('gloanGivePhone');
+            if (phone) phone.focus();
+        }, 50);
+    },
+    async submitGiveLoanForm(encodedGroupName) {
+        const phoneEl = document.getElementById('gloanGivePhone');
+        const amountEl = document.getElementById('gloanGiveAmount');
+        const err = document.getElementById('gloanGiveError');
+        const errText = document.getElementById('gloanGiveErrorText');
+        const btn = document.getElementById('gloanGiveContinueBtn');
+        const phone = (phoneEl && phoneEl.value || '').trim().replace(/\s+/g, '');
+        const amount = amountEl ? Number(amountEl.value) : 0;
+        const groupName = decodeURIComponent(encodedGroupName || '');
+
+        const showErr = (msg) => {
+            if (err) err.classList.remove('hidden');
+            if (errText) errText.textContent = msg;
+        };
+
+        if (!phone || phone.replace(/\D/g, '').length < 9) {
+            showErr('Enter a valid member phone number.');
+            if (phoneEl) phoneEl.focus();
+            return;
+        }
+        if (!amount || amount <= 0) {
+            showErr('Enter a valid loan amount.');
+            if (amountEl) amountEl.focus();
+            return;
+        }
+
+        // ── Self-loan guard ──────────────────────────────────────────
+        const loggedInPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const normalizeP = p => p.replace(/\D/g, '').replace(/^254/, '0').slice(-9);
+        if (loggedInPhone && normalizeP(phone) === normalizeP(loggedInPhone)) {
+            if (err) err.classList.remove('hidden');
+            if (errText) errText.innerHTML =
+                '<i class="fa-solid fa-ban" style="margin-right:5px;color:#dc2626;"></i>' +
+                '<b>Not allowed:</b> You cannot disburse a loan to yourself. Please enter another member\'s phone number.';
+            if (phoneEl) {
+                phoneEl.style.border = '1.5px solid #dc2626';
+                phoneEl.focus();
+            }
+            return;
+        }
+        if (phoneEl) phoneEl.style.border = '';
+        // ─────────────────────────────────────────────────────────────
+
+        if (err) err.classList.add('hidden');
+        const originalBtn = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying…';
+        }
+
+        try {
+            const res = await fetch('/member/verify-give-loan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName, phone, amount })
+            });
+            const data = await res.json();
+
+            if (!data || !data.success) {
+                showErr((data && data.message) || 'Verification failed.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtn || '<i class="fa-solid fa-arrow-right"></i> Continue';
+                }
+                return;
+            }
+
+            this._giveLoanState = {
+                groupName,
+                phone,
+                amount,
+                member: data.member || null,
+                loanPolicy: data.loanPolicy || null,
+                requestTime: new Date().toISOString()
+            };
+
+            const m = data.member || {};
+            const lp = data.loanPolicy || {};
+            const requestTimeIso = this._giveLoanState.requestTime;
+            const repaymentDays = Number(lp.repaymentDays || 0) || 0;
+            const interestRate = Number(lp.interestRate || 0) || 0;
+            const interestAmount = lp.interestAmount != null
+                ? Number(lp.interestAmount)
+                : Math.round(Number(amount) * (interestRate / 100) * 100) / 100;
+            const amountToPay = lp.amountRequestedToBePaid != null
+                ? Number(lp.amountRequestedToBePaid)
+                : Math.round(Number(amount) * (1 + interestRate / 100) * 100) / 100;
+
+            const fmtWhen = (iso) => {
+                try {
+                    const d = new Date(iso);
+                    if (Number.isNaN(d.getTime())) return '—';
+                    return d.toLocaleString(undefined, {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                } catch (_) {
+                    return '—';
+                }
+            };
+            const dueDate = new Date(requestTimeIso);
+            dueDate.setDate(dueDate.getDate() + repaymentDays);
+            const requestTimeLabel = fmtWhen(requestTimeIso);
+            const repayTimeLabel = fmtWhen(dueDate.toISOString());
+
+            const complianceRows = [
+                { label: 'Member Registered',  value: m.name || phone, pass: true },
+                { label: 'Waiting Period',     value: `${lp.waitingMonths || 0} month(s) elapsed`, pass: true },
+                { label: 'Request Time',       value: requestTimeLabel, pass: true },
+                { label: 'Opted Repay Time',   value: `${repayTimeLabel}${repaymentDays ? ` (${repaymentDays} days)` : ''}`, valueStyle: 'color:#b45309;font-weight:700;', pass: true },
+                { label: 'Interest Rate',      value: `${interestRate}%`, pass: true },
+                { label: 'Interest on Amount', value: `KES ${Number(interestAmount).toLocaleString()}`, valueStyle: 'color:#f59e0b;font-weight:700;', pass: true },
+                { label: 'Amount to be Paid',  value: `KES ${Number(amountToPay).toLocaleString()}`, valueStyle: 'color:#0c8f44;font-weight:800;', pass: true },
+                { label: 'Max Active Loans',   value: `${lp.maxActiveLoans || 1} allowed`, pass: true },
+            ];
+
+            const rowsHtml = complianceRows.map((r, i) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;${i < complianceRows.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : ''}">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:13px;"></i>
+                        <span style="font-size:12.5px;font-weight:600;color:#334155;">${r.label}</span>
+                    </div>
+                    <span style="font-size:12px;font-weight:500;${r.valueStyle || 'color:#64748b;'}">${r.value}</span>
+                </div>
+            `).join('');
+
+            const html = `
+                <div style="text-align:left;">
+
+                    <!-- Member badge -->
+                    <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+                        <div style="background:#10b981;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fa-solid fa-user-check" style="color:#fff;font-size:15px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;font-weight:700;color:#0f172a;">${m.name || phone}</div>
+                            <div style="font-size:11px;color:#64748b;margin-top:1px;">${m.memberId || phone} &nbsp;·&nbsp; <b style="color:#047857;">Verified</b></div>
+                        </div>
+                        <div style="margin-left:auto;text-align:right;">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;">Loan Amount</div>
+                            <div style="font-size:15px;font-weight:800;color:#0c8f44;">KES ${Number(amount).toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    <!-- Summary cards -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;">
+                            <div style="font-size:10px;color:#15803d;font-weight:700;text-transform:uppercase;">Member Savings</div>
+                            <div style="font-size:14px;font-weight:800;color:#0f172a;">KES ${Number(m.savings || 0).toLocaleString()}</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;">Group Balance</div>
+                            <div style="font-size:14px;font-weight:800;color:#0f172a;">KES ${Number(lp.groupClosingBalance || 0).toLocaleString()}</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;">Cover (×${lp.limitMultiplier || 1})</div>
+                            <div style="font-size:14px;font-weight:800;color:#0f172a;">KES ${Number(lp.amountCover || 0).toLocaleString()}</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;">Max Loan</div>
+                            <div style="font-size:14px;font-weight:800;color:#0f172a;">KES ${Number(lp.maxLoan || 0).toLocaleString()}</div>
+                        </div>
+                    </div>
+
+                    <!-- Compliance checklist (includes request time + interest) -->
+                    <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Compliance Confirmation</div>
+                    <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+                        ${rowsHtml}
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.closeModal()">
+                            <i class="fa-solid fa-xmark"></i> Cancel
+                        </button>
+                        <button type="button" id="gloanSubmitBtn" class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.confirmGiveLoanRequest()">
+                            <i class="fa-solid fa-check"></i> Done
+                        </button>
+                    </div>
+
+                </div>`;
+            this.updateModalContent('Give Loan – Verified', html, () => this.openGiveLoanPopup(encodedGroupName), 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #34d399)');
+            this.showToast('Member verified and eligible for this loan amount.', 'success');
+        } catch (e) {
+            console.error(e);
+            showErr('Network error. Please try again.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalBtn || '<i class="fa-solid fa-arrow-right"></i> Continue';
+            }
+        }
+    },
+    async confirmGiveLoanRequest() {
+        const state = this._giveLoanState;
+        if (!state || !state.groupName || !state.phone || !state.amount) {
+            this.showToast('Loan details missing. Please verify again.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('gloanSubmitBtn');
+        const originalBtn = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+        }
+
+        const processorPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const interestRate = Number(
+            (state.loanPolicy && state.loanPolicy.interestRate != null)
+                ? state.loanPolicy.interestRate
+                : 0
+        );
+        const amountDue = Math.round(Number(state.amount) * (1 + interestRate / 100) * 100) / 100;
+
+        try {
+            const res = await fetch('/member/request-give-loan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    groupName: state.groupName,
+                    memberPhone: state.phone,
+                    amount: state.amount,
+                    processorPhone,
+                    loggerPhone: processorPhone
+                })
+            });
+            const data = await res.json();
+
+            if (!data || !data.success) {
+                this.showToast((data && data.message) || 'Could not save loan request.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtn || '<i class="fa-solid fa-check"></i> Done';
+                }
+                return;
+            }
+
+            const req = data.request || {};
+            const tc = (req.status && req.status.timeCompliance) || {};
+            const due = tc.amountRequestedToBePaid != null ? tc.amountRequestedToBePaid : amountDue;
+            const dueAtRaw = tc.dueAt || '';
+            let dueAtLabel = '—';
+            if (dueAtRaw) {
+                try {
+                    const d = new Date(dueAtRaw);
+                    if (!Number.isNaN(d.getTime())) {
+                        dueAtLabel = d.toLocaleString(undefined, {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                } catch (_) {}
+            }
+            const durationLabel = tc.durationDays != null && tc.durationDays !== ''
+                ? `${tc.durationDays} day(s)`
+                : '—';
+
+            const html = `
+                <div style="text-align:center;padding:8px 0 4px;">
+                    <div style="width:64px;height:64px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        <i class="fa-solid fa-circle-check" style="font-size:30px;color:#15803d;"></i>
+                    </div>
+                    <h3 style="margin:0 0 6px;font-size:17px;font-weight:800;color:#0f172a;">Loan Request Submitted</h3>
+                    <p style="margin:0 0 16px;font-size:13px;color:#64748b;line-height:1.45;">
+                        Pending approval for <b>${state.groupName}</b>
+                    </p>
+                    <div style="text-align:left;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Request ID</span><span style="font-weight:700;">${req.requestId || '—'}</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Member</span><span style="font-weight:700;">${req.memberPhone || state.phone}</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount</span><span style="font-weight:800;color:#0c8f44;">KES ${Number(req.amount || state.amount).toLocaleString()}</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount to be paid</span><span style="font-weight:700;">KES ${Number(due).toLocaleString()}</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Repayment term</span><span style="font-weight:700;">${durationLabel}</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Due by</span><span style="font-weight:700;color:#b45309;">${dueAtLabel}</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Processor</span><span style="font-weight:700;">${(req.processor && req.processor.phone) || processorPhone || '—'}</span></div>
+                    </div>
+                    <button type="button" class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.closeModal()">
+                        <i class="fa-solid fa-check"></i> Close
+                    </button>
+                </div>`;
+            this.updateModalContent('Give Loan – Done', html, null, 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #34d399)');
+            this.showToast('Loan request saved as pending approval.', 'success');
+            this._giveLoanState = null;
+        } catch (e) {
+            console.error('[confirmGiveLoanRequest]', e);
+            this.showToast('Network error. Please try again.', 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalBtn || '<i class="fa-solid fa-check"></i> Done';
+            }
+        }
+    },
+    _initGloanEmbed(groupName) {
+        const root = document.getElementById('gloanEmbed');
+        if (!root) return;
+
+        root.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.tab;
+                root.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                root.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                const panel = root.querySelector('#' + target) || document.getElementById(target);
+                if (panel) panel.classList.add('active');
+            });
+        });
+
+        const bars = root.querySelectorAll('.perf-bar-fill');
+        if (bars.length) {
+            const savedWidths = Array.from(bars).map(b => b.style.width);
+            bars.forEach(b => { b.style.width = '0'; });
+            const perfObserver = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        bars.forEach((b, i) => { b.style.width = savedWidths[i]; });
+                        perfObserver.disconnect();
+                    }
+                });
+            }, { threshold: 0.2 });
+            const perfCard = root.querySelector('.perf-card');
+            if (perfCard) perfObserver.observe(perfCard);
+        }
+
+        root.querySelectorAll('.quick-link-btn[href^="#"]').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                const target = root.querySelector(link.getAttribute('href')) || document.querySelector(link.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        window.approveLoan = async (loanId) => {
+            if (!confirm('Approve this loan request?')) return;
+            try {
+                const res = await fetch(`/gaccount/loans/${loanId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupName })
+                });
+                if (res.ok) this.redirectToGroupLoan(groupName);
+                else alert('Approval failed. Please try again.');
+            } catch (e) { alert('Network error. Please try again.'); }
+        };
+        window.rejectLoan = async (loanId) => {
+            const reason = prompt('Reason for rejection (optional):') || '';
+            try {
+                const res = await fetch(`/gaccount/loans/${loanId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ groupName, reason })
+                });
+                if (res.ok) this.redirectToGroupLoan(groupName);
+                else alert('Rejection failed. Please try again.');
+            } catch (e) { alert('Network error. Please try again.'); }
+        };
+        window.reviewLoan = (loanId) => {
+            window.location.href = `/gaccount/loan-detail/${loanId}?groupName=${encodeURIComponent(groupName)}`;
+        };
     },
     // ─── INLINE LOAN APPLICATION WORKFLOW ─────────────────────────────────────
     _loanState: { groupName:'', allGuarantors:[], selectedGuarantors:[], loanPolicy:{}, savings:0 },
@@ -4552,8 +5002,48 @@ const app = {
         if (loanType === 'long' && this._loanState.selectedGuarantors.length === 0) { showErr('Please add at least one guarantor for a long term loan.'); return; }
 
         const gn = this._loanState.groupName;
-        const lp = this._loanState.loanPolicy;
+        const lp = this._loanState.loanPolicy || {};
+        const principal = Number(amount);
+        const interestRate = Number(lp.interestRate || 0) || 0;
+        const repaymentDays = Number(lp.repaymentDays || 0) || 0;
+        const interestAmt = Math.round(principal * (interestRate / 100) * 100) / 100;
+        const amountToPay = Math.round(principal * (1 + interestRate / 100) * 100) / 100;
+        const requestTimeIso = new Date().toISOString();
+        const dueDate = new Date(requestTimeIso);
+        dueDate.setDate(dueDate.getDate() + repaymentDays);
+
+        const fmtWhen = (iso) => {
+            try {
+                const d = new Date(iso);
+                if (Number.isNaN(d.getTime())) return '—';
+                return d.toLocaleString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (_) {
+                return '—';
+            }
+        };
+
+        const memberPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const u = (this.data && this.data.user) || {};
+        const memberName = [u.FirstName, u.SecondName || u.LastName].filter(Boolean).join(' ')
+            || u.name || u.fullName || memberPhone || 'Member';
+        const initials = String(memberName).split(/\s+/).filter(Boolean).map(w => w[0]).join('').substring(0, 2).toUpperCase() || '?';
         const guarantorList = this._loanState.selectedGuarantors.map(g => `${g.index} - ${g.name}`).join(', ') || 'None';
+        const requestTimeLabel = fmtWhen(requestTimeIso);
+        const repayTimeLabel = fmtWhen(dueDate.toISOString());
+
+        this._loanState.pendingApply = {
+            groupName: gn,
+            loanType,
+            amount: principal,
+            purpose: purpose || '',
+            requestTime: requestTimeIso,
+            memberPhone,
+            memberName
+        };
+
         const container = document.getElementById('mainContainer');
         if (!container) return;
 
@@ -4570,23 +5060,45 @@ const app = {
                 </div>
             </div>
 
-            <!-- APPLICATION SUMMARY CARD -->
+            <!-- APPLICATION SUMMARY (aligned with Loan Requests card) -->
             <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);margin-bottom:14px;text-align:left;">
                 <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
                     <i class="fa-solid fa-list-check" style="color:var(--primary);"></i> Application Summary
                 </div>
+
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                    <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#0c8f44,#34d399);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0;">${initials}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:14px;font-weight:700;color:#0f172a;">${memberName}</div>
+                        <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                            <i class="fa-solid fa-phone" style="font-size:9px;margin-right:3px;"></i>${memberPhone || '—'}
+                            &nbsp;·&nbsp;
+                            <span style="display:inline-block;background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">pending</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:16px;font-weight:800;color:#0c8f44;">KES ${principal.toLocaleString()}</div>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:1px;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</div>
+                    </div>
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 9px;font-size:11px;color:#475569;"><i class="fa-solid fa-clock" style="margin-right:4px;color:#64748b;"></i>Requested: <b style="color:#1e293b;">${requestTimeLabel}</b></div>
+                    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:6px 9px;font-size:11px;color:#9a3412;"><i class="fa-solid fa-calendar-check" style="margin-right:4px;"></i>Pay by: <b>${repayTimeLabel}${repaymentDays ? ` (${repaymentDays} days)` : ''}</b></div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 9px;font-size:11px;color:#475569;"><i class="fa-solid fa-coins" style="margin-right:4px;color:#64748b;"></i>To pay: <b style="color:#0c8f44;">KES ${amountToPay.toLocaleString()}</b></div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 9px;font-size:11px;color:#475569;"><i class="fa-solid fa-percent" style="margin-right:4px;color:#f59e0b;"></i>Interest (${interestRate}%): <b style="color:#f59e0b;">KES ${interestAmt.toLocaleString()}</b></div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 9px;font-size:11px;color:#475569;"><i class="fa-solid fa-user-shield" style="margin-right:4px;color:#64748b;"></i>Processor: <b style="color:#1e293b;">Awaiting official</b></div>
+                </div>
+
                 <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Group:</span><span style="font-weight:700;color:#1e293b;">${gn}</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Loan Type:</span><span style="font-weight:700;color:#1e293b;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Principal Amount:</span><span style="font-weight:800;color:#dc2626;font-size:15px;">KSh ${parseInt(amount).toLocaleString()}</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Interest (${lp.interestRate}%):</span><span style="font-weight:700;color:#f59e0b;">KSh ${(parseInt(amount)*lp.interestRate/100).toLocaleString()}</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Total Repayable:</span><span style="font-weight:800;color:#1e293b;">KSh ${(parseInt(amount)*(1 + lp.interestRate/100)).toLocaleString()}</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Repayment Term:</span><span style="font-weight:700;color:#1e293b;">${lp.repaymentDays} days</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Purpose:</span><span style="font-weight:600;color:#475569;max-width:55%;text-align:right;word-break:break-word;">${purpose || '-'}</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Status:</span><span style="font-weight:700;color:#b45309;">pending</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Payment Period:</span><span style="font-weight:700;color:#1e293b;">${repaymentDays || 0} days</span></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px;"><span style="color:#64748b;">Purpose:</span><span style="font-weight:600;color:#475569;max-width:55%;text-align:right;word-break:break-word;">${purpose || '—'}</span></div>
                 ${loanType === 'long' ? `<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Guarantors (${this._loanState.selectedGuarantors.length}):</span><span style="font-weight:600;color:#1d4ed8;max-width:55%;text-align:right;word-break:break-word;">${guarantorList}</span></div>` : ''}
             </div>
 
             <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px;font-size:11.5px;color:#92400e;margin-bottom:16px;line-height:1.5;">
-                <i class="fa-solid fa-circle-exclamation" style="margin-right:4px;"></i> By confirming and submitting, you agree to repay this loan within <b>${lp.repaymentDays} days</b> at <b>${lp.interestRate}%</b> interest according to the group principles.
+                <i class="fa-solid fa-circle-exclamation" style="margin-right:4px;"></i> By confirming and submitting, you agree to repay this loan within <b>${repaymentDays} days</b> at <b>${interestRate}%</b> interest according to the group principles.
             </div>
 
             <div id="ilConfirmError" class="m-info-banner red hidden" style="margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="ilConfirmErrorText"></span></div>
@@ -4595,7 +5107,7 @@ const app = {
                 <button class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(gn)}', '${this._loanState.activeTab || 'my'}')">
                     <i class="fa-solid fa-arrow-left"></i> Back
                 </button>
-                <button class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app._loanSubmit('${encodeURIComponent(gn)}','${loanType}',${parseInt(amount)},'${encodeURIComponent(purpose || '')}')">
+                <button id="ilSubmitBtn" class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app._loanSubmit('${encodeURIComponent(gn)}','${loanType}',${principal},'${encodeURIComponent(purpose || '')}')">
                     <i class="fa-solid fa-circle-check"></i> Submit Application
                 </button>
             </div>
@@ -4606,11 +5118,18 @@ const app = {
     },
     async _loanSubmit(groupName, loanType, amount, purpose) {
         const gn = decodeURIComponent(groupName);
-        const pur = decodeURIComponent(purpose);
+        const pur = decodeURIComponent(purpose || '');
         const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
-        const guarantors = this._loanState.selectedGuarantors.map(g => ({ phone: g.phone, name: g.name, index: g.index }));
+        const guarantors = (this._loanState.selectedGuarantors || []).map(g => ({ phone: g.phone, name: g.name, index: g.index }));
+        const lp = (this._loanState && this._loanState.loanPolicy) || {};
         const container = document.getElementById('mainContainer');
         if (!container) return;
+
+        const btn = document.getElementById('ilSubmitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…';
+        }
 
         // Show loading state in-page
         container.innerHTML = `
@@ -4622,48 +5141,91 @@ const app = {
         window.scrollTo(0, 0);
 
         try {
-            const res = await fetch('/member/loan-apply', {
+            // Same pendingApprovals.loan.requestLoan path as Give Loan (processor left empty for self-apply)
+            const res = await fetch('/member/request-give-loan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ groupName: gn, phone, loanType, amount, purpose: pur, guarantors })
+                body: JSON.stringify({
+                    groupName: gn,
+                    memberPhone: phone,
+                    amount: Number(amount),
+                    processorPhone: '',
+                    loggerPhone: '',
+                    loanType,
+                    purpose: pur,
+                    guarantors
+                })
             });
-            const result = await this.safeJsonParse(res, 'loan application');
-            if (!res.ok || result.success === false) throw new Error(result.message || result.error || 'Application failed.');
+            const result = await res.json();
+            if (!res.ok || !result || result.success === false) {
+                throw new Error((result && (result.message || result.error)) || 'Application failed.');
+            }
 
-            // Success In-Page View
+            const req = result.request || {};
+            const tc = (req.status && req.status.timeCompliance) || {};
+            const dueAtRaw = tc.dueAt || '';
+            let dueAtLabel = '—';
+            if (dueAtRaw) {
+                try {
+                    const d = new Date(dueAtRaw);
+                    if (!Number.isNaN(d.getTime())) {
+                        dueAtLabel = d.toLocaleString(undefined, {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                } catch (_) {}
+            }
+            let requestTimeLabel = '—';
+            if (req.requestTime) {
+                try {
+                    const d = new Date(req.requestTime);
+                    if (!Number.isNaN(d.getTime())) {
+                        requestTimeLabel = d.toLocaleString(undefined, {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                    }
+                } catch (_) {}
+            }
+
             container.innerHTML = `
             <div style="padding:30px 16px;text-align:center;">
                 <div style="width:68px;height:68px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 4px 16px rgba(21,128,61,.25);">
                     <i class="fa-solid fa-circle-check" style="font-size:34px;color:#15803d;"></i>
                 </div>
                 <h3 style="color:#1e293b;margin-bottom:8px;font-size:18px;font-weight:800;">Loan Application Submitted!</h3>
-                <p style="color:#64748b;font-size:13px;margin-bottom:20px;line-height:1.5;">Your loan application for <b>${gn}</b> has been received and is pending approval by the group officials.</p>
+                <p style="color:#64748b;font-size:13px;margin-bottom:20px;line-height:1.5;">Your loan application for <b>${gn}</b> is pending approval and will appear under Loan Requests.</p>
                 <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;padding:16px;margin-bottom:24px;text-align:left;box-shadow:var(--shadow-sm);">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Group:</span><span style="font-weight:700;">${gn}</span></div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Type:</span><span style="font-weight:700;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount:</span><span style="font-weight:800;color:#dc2626;">KSh ${amount.toLocaleString()}</span></div>
-                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Guarantors:</span><span style="font-weight:700;">${guarantors.length} assigned</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Request ID</span><span style="font-weight:700;">${req.requestId || '—'}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Member</span><span style="font-weight:700;">${req.memberPhone || phone}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Status</span><span style="font-weight:700;color:#b45309;">${(req.status && req.status.condition) || 'pending'}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount</span><span style="font-weight:800;color:#0c8f44;">KES ${Number(req.amount || amount).toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">To pay</span><span style="font-weight:700;">KES ${Number(tc.amountRequestedToBePaid != null ? tc.amountRequestedToBePaid : amount).toLocaleString()}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Requested</span><span style="font-weight:700;">${requestTimeLabel}</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Pay by</span><span style="font-weight:700;color:#b45309;">${dueAtLabel}${tc.durationDays ? ` (${tc.durationDays} days)` : ''}</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Type</span><span style="font-weight:700;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
                 </div>
-                <button class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupView('${encodeURIComponent(gn)}')">
-                    <i class="fa-solid fa-arrow-left"></i> Return to Group Dashboard
-                </button>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <button class="m-submit-btn secondary" style="margin-top:0;" onclick="app.renderGroupView('${encodeURIComponent(gn)}')">
+                        <i class="fa-solid fa-arrow-left"></i> Group Dashboard
+                    </button>
+                    <button class="m-submit-btn" style="margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.redirectToGroupLoan('${encodeURIComponent(gn)}')">
+                        <i class="fa-solid fa-bell"></i> View Loan Requests
+                    </button>
+                </div>
             </div>`;
         } catch (err) {
             console.error('[_loanSubmit]', err);
             container.innerHTML = `
             <div style="padding:30px 16px;text-align:center;">
-                <div style="width:68px;height:68px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 4px 16px rgba(21,128,61,.25);">
-                    <i class="fa-solid fa-circle-check" style="font-size:34px;color:#15803d;"></i>
+                <div style="width:68px;height:68px;background:#fee2e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size:34px;color:#dc2626;"></i>
                 </div>
-                <h3 style="color:#1e293b;margin-bottom:8px;font-size:18px;font-weight:800;">Loan Application Submitted!</h3>
-                <p style="color:#64748b;font-size:13px;margin-bottom:20px;line-height:1.5;">Your loan application for <b>${gn}</b> has been recorded and is pending approval.</p>
-                <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;padding:16px;margin-bottom:24px;text-align:left;box-shadow:var(--shadow-sm);">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Type:</span><span style="font-weight:700;">${loanType === 'short' ? 'Short Term' : 'Long Term'}</span></div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;"><span style="color:#64748b;">Amount:</span><span style="font-weight:800;color:#dc2626;">KSh ${amount.toLocaleString()}</span></div>
-                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:#64748b;">Guarantors:</span><span style="font-weight:700;">${guarantors.length} assigned</span></div>
-                </div>
-                <button class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupView('${encodeURIComponent(gn)}')">
-                    <i class="fa-solid fa-arrow-left"></i> Return to Group Dashboard
+                <h3 style="color:#1e293b;margin-bottom:8px;font-size:18px;font-weight:800;">Submission Failed</h3>
+                <p style="color:#64748b;font-size:13px;margin-bottom:20px;line-height:1.5;">${(err && err.message) || 'Could not submit loan application.'}</p>
+                <button class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(gn)}', 'my')">
+                    <i class="fa-solid fa-arrow-left"></i> Try Again
                 </button>
             </div>`;
         }

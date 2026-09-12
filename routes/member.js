@@ -8,6 +8,7 @@ const {
   updateMemberAccountInMongo,
   getMemberGroupFromMongo,
   saveMemberDataToMongo,
+  saveGeneralGroupToMongo,
   findOrCreateMemberGroup,
   findGroupNameInMongoGroupsCollection,
   findGroupNameInGroupsMembersCollection,
@@ -2466,41 +2467,182 @@ router.get("/gmember", (req, res) => {
   });
 });
 
-router.get("/gloan", (req, res) => {
+router.get("/gloan", async (req, res) => {
   const { groupName } = req.query;
   
   if (!groupName) {
     return res.redirect("/");
   }
-  
-  // Mock data for frontend-only operation
-  const mockGroup = { 
-    groupName,
-    interestRate: 5,
-    maxLoanTerm: 12,
-    penaltyRate: 2
-  };
+
+  const decodedGroupName = decodeURIComponent(String(groupName)).trim();
   const mockUser = req.session.user || { 
     name: "Mock User",
     memberName: "Mock User",
     phoneNumber: "254700000000"
   };
-  
+
+  let foundGroup = null;
+  let generalGroup = null;
+
+  // Prefer general Mongo groups (holds pendingApprovals)
+  try {
+    const mongoHit = await findGroupNameInMongoGroupsCollection(decodedGroupName);
+    if (mongoHit && mongoHit.group) foundGroup = mongoHit.group;
+  } catch (_) { /* ignore */ }
+
+  try {
+    const generalData = readJSON(generalFile, {});
+    const groupRef = findGroupInGeneral(generalData, decodedGroupName);
+    if (groupRef && groupRef.group) generalGroup = groupRef.group;
+  } catch (_) { /* ignore */ }
+
+  if (!foundGroup && generalGroup) foundGroup = generalGroup;
+
+  if (!foundGroup) {
+    try {
+      const { foundGroup: memberGroup } = await findGroupForMemberRoutes(decodedGroupName);
+      if (memberGroup) foundGroup = memberGroup;
+    } catch (_) { /* ignore */ }
+  }
+
+  const pickLoanRequests = (group) =>
+    (group &&
+      group.pendingApprovals &&
+      group.pendingApprovals.loan &&
+      Array.isArray(group.pendingApprovals.loan.requestLoan) &&
+      group.pendingApprovals.loan.requestLoan) ||
+    [];
+
+  // Prefer the source with more loan requests so UI stays in sync
+  const mongoReqs = pickLoanRequests(foundGroup);
+  const generalReqs = pickLoanRequests(generalGroup);
+  const rawRequests =
+    generalReqs.length > mongoReqs.length ? generalReqs : mongoReqs;
+  if (generalReqs.length > mongoReqs.length && generalGroup) {
+    foundGroup = generalGroup;
+  }
+
+  const fmtWhen = (iso) => {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "—";
+      return d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch (_) {
+      return "—";
+    }
+  };
+
+  const findPersonName = (group, phone) => {
+    if (!group || !phone) return "";
+    const target = normalizeKenyanPhone(phone);
+    for (const key of Object.keys(group)) {
+      if (!/^(trustee_|official_|member_)/.test(key)) continue;
+      const person = group[key];
+      if (!person || typeof person !== "object") continue;
+      if (normalizeKenyanPhone(person.phone || person.phoneNumber || "") === target) {
+        return person.name || person.memberId || phone;
+      }
+    }
+    const members = group.members || {};
+    for (const key of Object.keys(members)) {
+      const m = members[key];
+      if (!m || typeof m !== "object") continue;
+      const candidates = [key, m.memberId, m.phone, m.phoneNumber];
+      if (candidates.some((c) => c && normalizeKenyanPhone(c) === target)) {
+        return m.name || m.memberId || key;
+      }
+    }
+    return phone;
+  };
+
+  const pendingRequests = rawRequests.map((r) => {
+    const amount = Number(r.amount || 0);
+    const statusObj = r.status || {};
+    const tc = statusObj.timeCompliance || {};
+    const amountToBePaid = Number(
+      tc.amountRequestedToBePaid != null ? tc.amountRequestedToBePaid : amount
+    );
+    const durationDays = Number(tc.durationDays || 0) || 0;
+    const condition = statusObj.condition || "pending";
+    const processorPhone = (r.processor && r.processor.phone) || "";
+    const memberPhone = r.memberPhone || "";
+    const memberName = findPersonName(foundGroup, memberPhone) || memberPhone || "Member";
+    return {
+      id: r.requestId || "",
+      requestId: r.requestId || "",
+      memberPhone,
+      memberName,
+      amount,
+      status: condition,
+      amountToBePaid,
+      rolledBalance: Number(tc.rolledBalance || 0) || 0,
+      durationDays,
+      dueAt: tc.dueAt || "",
+      dueAtLabel: fmtWhen(tc.dueAt),
+      requestTime: r.requestTime || "",
+      requestDate: fmtWhen(r.requestTime),
+      processorPhone,
+      processorName: findPersonName(foundGroup, processorPhone) || processorPhone || "—",
+      approvalTime: (r.processor && r.processor.approvalTime) || "",
+      totalInterest: Math.max(0, Math.round((amountToBePaid - amount) * 100) / 100),
+      termMonths: durationDays > 0 ? Math.max(1, Math.round(durationDays / 30)) : 0,
+      purpose: "Give Loan"
+    };
+  });
+
+  // Newest first
+  pendingRequests.sort((a, b) => {
+    const ta = new Date(a.requestTime || 0).getTime();
+    const tb = new Date(b.requestTime || 0).getTime();
+    return tb - ta;
+  });
+
+  const interestRate =
+    (foundGroup &&
+      foundGroup.principles &&
+      ((foundGroup.principles.interestAndLimits &&
+        foundGroup.principles.interestAndLimits.interestRate) ||
+        (foundGroup.principles.loans &&
+          foundGroup.principles.loans.interestAndLimits &&
+          foundGroup.principles.loans.interestAndLimits.interestRate))) ||
+    0;
+
+  const groupClosing =
+    (foundGroup &&
+      foundGroup.groupFinancials &&
+      (foundGroup.groupFinancials.totalClosingBalance != null
+        ? foundGroup.groupFinancials.totalClosingBalance
+        : foundGroup.groupFinancials.closingBalance)) ||
+    0;
+
   res.render("gaccount/gloan", {
-    group: mockGroup,
+    group: {
+      groupName: (foundGroup && foundGroup.groupName) || decodedGroupName,
+      interestRate: Number(interestRate) || 0,
+      maxLoanTerm: 12,
+      penaltyRate: 2,
+      groupFinancials: (foundGroup && foundGroup.groupFinancials) || {}
+    },
     user: mockUser,
     loans: [],
     activeLoans: [],
     repaidLoans: [],
     totalLoans: 0,
-    loanFund: 0,
+    loanFund: Number(groupClosing) || 0,
     totalDisbursed: 0,
     totalRepaid: 0,
-    availableBalance: 0,
+    availableBalance: Number(groupClosing) || 0,
     overdueLoans: [],
     rolledLoans: [],
     expiredLoans: [],
-    pendingRequests: [],
+    pendingRequests,
     memberMaxLoan: 10000,
     memberSavings: 5000,
     memberOutstanding: 0,
@@ -2513,8 +2655,6 @@ router.get("/gloan", (req, res) => {
     rolledCt: 0,
     overdueCt: 0,
     expiredCt: 0,
-    totalRepaid: 0,
-    totalDisbursed: 0,
     transactions: []
   });
 });
@@ -3312,6 +3452,466 @@ router.get("/group-by-location", async (req, res) => {
 router.get("/region-summary", async (req, res) => {
   const regionTxn = await getRegionTransaction();
   res.json({ success: true, regionTransaction: regionTxn });
+});
+
+// POST /member/verify-give-loan
+// Verify phone is a group member, waiting period passed, savings target met, amount within limit.
+router.post("/verify-give-loan", async (req, res) => {
+  try {
+    const groupName = String(req.body.groupName || "").trim();
+    const phoneRaw = String(req.body.phone || "").trim();
+    const amount = Number(req.body.amount);
+
+    if (!groupName) {
+      return res.json({ success: false, message: "Group name is required." });
+    }
+    if (!phoneRaw) {
+      return res.json({ success: false, message: "Member phone number is required." });
+    }
+    if (!amount || amount <= 0) {
+      return res.json({ success: false, message: "Enter a valid loan amount." });
+    }
+
+    const targetPhone = normalizeKenyanPhone(phoneRaw);
+    if (!targetPhone || targetPhone.length < 9) {
+      return res.json({ success: false, message: "Enter a valid member phone number." });
+    }
+
+    // Resolve group (same sources as group-accounts-schema)
+    let foundGroup = null;
+    let foundInSource = null;
+
+    const jsonFound = findGroupInMemberJson(groupName);
+    if (jsonFound) {
+      foundGroup = jsonFound.group;
+      foundInSource = "member.json";
+    }
+
+    if (!foundGroup) {
+      try {
+        foundGroup = await getMemberGroupFromMongo(groupName);
+        if (foundGroup) foundInSource = "MemberGroup";
+      } catch (_) { /* ignore */ }
+    }
+
+    if (!foundGroup) {
+      try {
+        const regionalFound = await findGroupInGroupsMembersCollection(groupName);
+        if (regionalFound) {
+          foundGroup = regionalFound.group;
+          foundInSource = "groups-members";
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    if (!foundGroup) {
+      try {
+        const mongoHit = await findGroupNameInGroupsMembersCollection(groupName);
+        if (mongoHit && mongoHit.group) {
+          foundGroup = mongoHit.group;
+          foundInSource = "groups-members";
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    if (!foundGroup) {
+      return res.json({ success: false, message: `Group "${groupName}" was not found.` });
+    }
+
+    const members = foundGroup.members || {};
+    let memberKey = null;
+    let member = null;
+
+    for (const key of Object.keys(members)) {
+      const m = members[key];
+      if (!m || typeof m !== "object") continue;
+      const candidates = [
+        key,
+        m.memberId,
+        m.phone,
+        m.phoneNumber
+      ];
+      for (const c of candidates) {
+        if (c && normalizeKenyanPhone(c) === targetPhone) {
+          memberKey = key;
+          member = m;
+          break;
+        }
+      }
+      if (member) break;
+    }
+
+    // Also support legacy trustee_/official_/member_ keys
+    if (!member) {
+      for (const key of Object.keys(foundGroup)) {
+        if (!/^(trustee_|official_|member_)/.test(key)) continue;
+        const m = foundGroup[key];
+        if (!m || typeof m !== "object") continue;
+        const p = normalizeKenyanPhone(m.phone || m.memberId || m.phoneNumber || "");
+        if (p === targetPhone) {
+          memberKey = key;
+          member = m;
+          break;
+        }
+      }
+    }
+
+    if (!member) {
+      return res.json({
+        success: false,
+        verified: false,
+        message: "Phone number is not a registered member of this group."
+      });
+    }
+
+    const loans = (foundGroup.principles && foundGroup.principles.loans) ? foundGroup.principles.loans : {};
+    const limits = loans.interestAndLimits || {};
+    const waitingMonths = Number(loans.waitingDays || 0);
+    const savingTarget = Number(loans.savingTarget || 0);
+    const limitMultiplier = Number(limits.limitMultiplier || 1) || 1;
+
+    // Waiting period: waitingDays treated as months from principles/constitution start
+    const startRaw = foundGroup.principlesSetAt || foundGroup.createdAt || foundGroup.constitutionKeyGeneratedAt || null;
+    if (waitingMonths > 0 && startRaw) {
+      const start = new Date(startRaw);
+      if (!Number.isNaN(start.getTime())) {
+        const now = new Date();
+        const monthsElapsed =
+          (now.getFullYear() - start.getFullYear()) * 12 +
+          (now.getMonth() - start.getMonth()) -
+          (now.getDate() < start.getDate() ? 1 : 0);
+        if (monthsElapsed < waitingMonths) {
+          return res.json({
+            success: false,
+            verified: true,
+            waitingPeriodMet: false,
+            message: `Waiting period not met. Member must wait ${waitingMonths} month(s) from group start (${monthsElapsed < 0 ? 0 : monthsElapsed} elapsed).`
+          });
+        }
+      }
+    }
+
+    // Member savings (prefer Saving account 001, then memberFinancials)
+    const savingsAcc =
+      (member.accounts && (member.accounts["001"] || member.accounts["1"])) || null;
+    const savingsFins = (savingsAcc && savingsAcc.financials) || {};
+    const memberFins = member.memberFinancials || {};
+    const closingBal = Number(
+      savingsFins.closingBalance != null ? savingsFins.closingBalance :
+      memberFins.closingBalance != null ? memberFins.closingBalance : 0
+    );
+    const openingBal = Number(
+      savingsFins.openingBalance != null ? savingsFins.openingBalance :
+      memberFins.openingBalance != null ? memberFins.openingBalance : 0
+    );
+    const memberSavings = Math.max(closingBal, openingBal, 0);
+
+    // Saving target: empty/0 = compliant; else balance must be >= target
+    if (savingTarget > 0 && memberSavings < savingTarget) {
+      return res.json({
+        success: false,
+        verified: true,
+        waitingPeriodMet: true,
+        savingTargetMet: false,
+        memberSavings,
+        savingTarget,
+        message: `Savings target not met. Required KES ${savingTarget.toLocaleString()}, member has KES ${memberSavings.toLocaleString()}.`
+      });
+    }
+
+    // Group closing balance — amount × limitMultiplier must be less than this
+    const gf = foundGroup.groupFinancials || {};
+    const groupClosingBalance = Number(
+      gf.totalClosingBalance != null ? gf.totalClosingBalance :
+      gf.closingBalance != null ? gf.closingBalance :
+      gf.availableWithdrawalBalance != null ? gf.availableWithdrawalBalance : 0
+    );
+    const amountCover = amount * limitMultiplier;
+    const maxLoan = limitMultiplier > 0
+      ? Math.max(0, Math.floor((groupClosingBalance - 1) / limitMultiplier))
+      : 0;
+
+    if (!(groupClosingBalance > 0) || !(amountCover < groupClosingBalance)) {
+      return res.json({
+        success: false,
+        verified: true,
+        waitingPeriodMet: true,
+        savingTargetMet: true,
+        memberSavings,
+        limitMultiplier,
+        groupClosingBalance,
+        amountCover,
+        maxLoan,
+        message: `Loan cover (amount × ${limitMultiplier} = KES ${amountCover.toLocaleString()}) must be less than group closing balance (KES ${groupClosingBalance.toLocaleString()}). Max amount: KES ${maxLoan.toLocaleString()}.`
+      });
+    }
+
+    const interestAndLimits =
+      (foundGroup.principles && foundGroup.principles.interestAndLimits) ||
+      limits ||
+      {};
+
+    const repaymentFromLoans = loans.repayment && loans.repayment.durationDays;
+    const repaymentFromTop =
+      foundGroup.principles &&
+      foundGroup.principles.repayment &&
+      foundGroup.principles.repayment.durationDays;
+    const repaymentDays = Number(
+      repaymentFromLoans != null && repaymentFromLoans !== ""
+        ? repaymentFromLoans
+        : repaymentFromTop != null && repaymentFromTop !== ""
+          ? repaymentFromTop
+          : 0
+    ) || 0;
+
+    const interestRate = Number(
+      interestAndLimits.interestRate != null
+        ? interestAndLimits.interestRate
+        : limits.interestRate || 0
+    ) || 0;
+    const interestAmount = Math.round(amount * (interestRate / 100) * 100) / 100;
+    const amountRequestedToBePaid = Math.round(amount * (1 + interestRate / 100) * 100) / 100;
+
+    return res.json({
+      success: true,
+      verified: true,
+      waitingPeriodMet: true,
+      savingTargetMet: true,
+      amountWithinLimit: true,
+      groupName: foundGroup.groupName || groupName,
+      member: {
+        memberId: member.memberId || memberKey,
+        name: member.name || member.memberId || memberKey,
+        phone: member.memberId || memberKey,
+        savings: memberSavings,
+        openingBalance: openingBal,
+        closingBalance: closingBal
+      },
+      loanPolicy: {
+        waitingMonths,
+        savingTarget,
+        limitMultiplier,
+        interestRate,
+        interestAmount,
+        amountRequestedToBePaid,
+        repaymentDays,
+        maxActiveLoans: Number(
+          interestAndLimits.maxActiveLoans != null
+            ? interestAndLimits.maxActiveLoans
+            : limits.maxActiveLoans || 1
+        ),
+        groupClosingBalance,
+        amountCover,
+        maxLoan,
+        amount
+      },
+      source: foundInSource
+    });
+  } catch (err) {
+    console.error("[verify-give-loan]", err);
+    return res.status(500).json({ success: false, message: "Could not verify loan eligibility. Try again." });
+  }
+});
+
+function ensurePendingApprovals(group) {
+  if (!group.pendingApprovals || typeof group.pendingApprovals !== "object") {
+    group.pendingApprovals = {};
+  }
+  if (!group.pendingApprovals.member || typeof group.pendingApprovals.member !== "object") {
+    group.pendingApprovals.member = {};
+  }
+  if (!Array.isArray(group.pendingApprovals.member.requestTermination)) {
+    group.pendingApprovals.member.requestTermination = [];
+  }
+  if (!Array.isArray(group.pendingApprovals.member.replaceOfficial)) {
+    group.pendingApprovals.member.replaceOfficial = [];
+  }
+  if (!group.pendingApprovals.loan || typeof group.pendingApprovals.loan !== "object") {
+    group.pendingApprovals.loan = {};
+  }
+  if (!Array.isArray(group.pendingApprovals.loan.requestLoan)) {
+    group.pendingApprovals.loan.requestLoan = [];
+  }
+  return group;
+}
+
+function getGroupInterestRate(group) {
+  const p = group && group.principles ? group.principles : {};
+  const fromTop = p.interestAndLimits && p.interestAndLimits.interestRate;
+  const fromLoans =
+    p.loans && p.loans.interestAndLimits && p.loans.interestAndLimits.interestRate;
+  const rate = Number(fromTop != null ? fromTop : fromLoans != null ? fromLoans : 0);
+  return Number.isFinite(rate) ? rate : 0;
+}
+
+function getGroupRepaymentDurationDays(group) {
+  const p = group && group.principles ? group.principles : {};
+  const fromLoans = p.loans && p.loans.repayment && p.loans.repayment.durationDays;
+  const fromTop = p.repayment && p.repayment.durationDays;
+  const days = Number(fromLoans != null && fromLoans !== "" ? fromLoans : fromTop != null ? fromTop : 0);
+  return Number.isFinite(days) && days > 0 ? days : 0;
+}
+
+function calculateLoanDueAt(requestTimeIso, durationDays) {
+  const base = new Date(requestTimeIso || Date.now());
+  if (Number.isNaN(base.getTime())) {
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate() + (Number(durationDays) || 0));
+    return fallback.toISOString();
+  }
+  const due = new Date(base.getTime());
+  due.setDate(due.getDate() + (Number(durationDays) || 0));
+  return due.toISOString();
+}
+
+function buildLoanRequestId(existingRequests) {
+  const next = (Array.isArray(existingRequests) ? existingRequests.length : 0) + 1;
+  return "req_loan_" + String(next).padStart(3, "0");
+}
+
+function appendGiveLoanRequestToGroup(group, { memberPhone, amount, processorPhone, requestTime }) {
+  ensurePendingApprovals(group);
+  const list = group.pendingApprovals.loan.requestLoan;
+  const interestRate = getGroupInterestRate(group);
+  const durationDays = getGroupRepaymentDurationDays(group);
+  const principal = Number(amount);
+  const amountRequestedToBePaid = Math.round(principal * (1 + interestRate / 100) * 100) / 100;
+  const stampedRequestTime = requestTime || new Date().toISOString();
+  const dueAt = calculateLoanDueAt(stampedRequestTime, durationDays);
+
+  const loanRequest = {
+    requestId: buildLoanRequestId(list),
+    memberPhone,
+    amount: principal,
+    requestTime: stampedRequestTime,
+    status: {
+      condition: "pending",
+      amount: principal,
+      timeCompliance: {
+        amountRequestedToBePaid,
+        rolledBalance: 0,
+        durationDays,
+        dueAt
+      }
+    },
+    processor: {
+      phone: processorPhone || "",
+      approvalTime: ""
+    }
+  };
+
+  list.push(loanRequest);
+  group.updatedAt = new Date().toISOString();
+  return loanRequest;
+}
+
+// POST /member/request-give-loan
+// After verify: append pendingApprovals.loan.requestLoan without wiping other group data.
+router.post("/request-give-loan", async (req, res) => {
+  try {
+    const groupName = String(req.body.groupName || "").trim();
+    const memberPhoneRaw = String(req.body.memberPhone || req.body.phone || "").trim();
+    const processorPhoneRaw = String(req.body.processorPhone || req.body.loggerPhone || "").trim();
+    const amount = Number(req.body.amount);
+
+    if (!groupName) {
+      return res.json({ success: false, message: "Group name is required." });
+    }
+    if (!memberPhoneRaw) {
+      return res.json({ success: false, message: "Member phone number is required." });
+    }
+    if (!amount || amount <= 0) {
+      return res.json({ success: false, message: "Enter a valid loan amount." });
+    }
+
+    const memberPhone = normalizeKenyanPhone(memberPhoneRaw);
+    const processorPhone = normalizeKenyanPhone(processorPhoneRaw);
+    if (!memberPhone || memberPhone.length < 9) {
+      return res.json({ success: false, message: "Enter a valid member phone number." });
+    }
+    if (processorPhone && normalizeKenyanPhone(memberPhone) === processorPhone) {
+      return res.json({ success: false, message: "You cannot disburse a loan to yourself." });
+    }
+
+    const requestTime = new Date().toISOString();
+    let loanRequest = null;
+    let savedTo = [];
+
+    // 1) Path-scoped update on general.json (additive only)
+    try {
+      const generalData = readJSON(generalFile, {});
+      const groupRef = findGroupInGeneral(generalData, groupName);
+      if (groupRef && groupRef.group) {
+        loanRequest = appendGiveLoanRequestToGroup(groupRef.group, {
+          memberPhone,
+          amount,
+          processorPhone,
+          requestTime
+        });
+        writeJSON(generalFile, generalData);
+        savedTo.push("general.json");
+      }
+    } catch (e) {
+      console.error("[request-give-loan] general.json update failed:", e.message);
+    }
+
+    // 2) Path-scoped update on Mongo groups collection
+    try {
+      const mongoHit = await findGroupNameInMongoGroupsCollection(groupName);
+      if (mongoHit && mongoHit.group) {
+        const group = { ...mongoHit.group };
+        // Preserve any pendingApprovals already on Mongo if general.json was missing
+        if (!loanRequest) {
+          loanRequest = appendGiveLoanRequestToGroup(group, {
+            memberPhone,
+            amount,
+            processorPhone,
+            requestTime
+          });
+        } else {
+          // Mirror the same request object into Mongo without rebuilding id
+          ensurePendingApprovals(group);
+          const already = group.pendingApprovals.loan.requestLoan.find(
+            (r) => r && r.requestId === loanRequest.requestId
+          );
+          if (!already) {
+            group.pendingApprovals.loan.requestLoan.push({ ...loanRequest });
+            group.updatedAt = requestTime;
+          }
+        }
+
+        await saveGeneralGroupToMongo({
+          ...group,
+          county: mongoHit.county || group.county,
+          constituency: mongoHit.constituency || group.constituency,
+          ward: mongoHit.ward || group.ward
+        });
+        savedTo.push("mongo.groups");
+      }
+    } catch (e) {
+      console.error("[request-give-loan] mongo update failed:", e.message);
+    }
+
+    if (!loanRequest) {
+      return res.status(404).json({
+        success: false,
+        message: `Group "${groupName}" was not found.`
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Loan request submitted and pending approval.",
+      request: loanRequest,
+      savedTo
+    });
+  } catch (err) {
+    console.error("[request-give-loan]", err);
+    return res.status(500).json({
+      success: false,
+      message: "Could not submit loan request. Try again."
+    });
+  }
 });
 
 module.exports = router;
