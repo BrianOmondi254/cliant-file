@@ -2604,6 +2604,14 @@ router.get("/gloan", async (req, res) => {
     return tb - ta;
   });
 
+  const pendingOnly = pendingRequests.filter(
+    (r) => String(r.status || "pending").toLowerCase() === "pending"
+  );
+  const totalRequestedAmount = pendingOnly.reduce(
+    (sum, r) => sum + (Number(r.amount) || 0),
+    0
+  );
+  const totalLoanRequests = pendingOnly.length;
   const interestRate =
     (foundGroup &&
       foundGroup.principles &&
@@ -2634,7 +2642,8 @@ router.get("/gloan", async (req, res) => {
     loans: [],
     activeLoans: [],
     repaidLoans: [],
-    totalLoans: 0,
+    totalLoans: totalLoanRequests,
+    totalRequestedAmount,
     loanFund: Number(groupClosing) || 0,
     totalDisbursed: 0,
     totalRepaid: 0,
@@ -3910,6 +3919,231 @@ router.post("/request-give-loan", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Could not submit loan request. Try again."
+    });
+  }
+});
+
+// GET /member/my-loan-requests — loan requests for a member in a group
+router.get("/my-loan-requests", async (req, res) => {
+  try {
+    const groupName = decodeURIComponent(String(req.query.groupName || "").trim());
+    const phoneRaw = String(req.query.phone || req.query.memberPhone || "").trim();
+    if (!groupName) {
+      return res.json({ success: false, message: "groupName is required.", requests: [] });
+    }
+
+    const targetPhone = phoneRaw ? normalizeKenyanPhone(phoneRaw) : "";
+    let foundGroup = null;
+    let generalGroup = null;
+
+    try {
+      const mongoHit = await findGroupNameInMongoGroupsCollection(groupName);
+      if (mongoHit && mongoHit.group) foundGroup = mongoHit.group;
+    } catch (_) { /* ignore */ }
+
+    try {
+      const generalData = readJSON(generalFile, {});
+      const groupRef = findGroupInGeneral(generalData, groupName);
+      if (groupRef && groupRef.group) generalGroup = groupRef.group;
+    } catch (_) { /* ignore */ }
+
+    if (!foundGroup && generalGroup) foundGroup = generalGroup;
+
+    const pick = (g) =>
+      (g &&
+        g.pendingApprovals &&
+        g.pendingApprovals.loan &&
+        Array.isArray(g.pendingApprovals.loan.requestLoan) &&
+        g.pendingApprovals.loan.requestLoan) ||
+      [];
+
+    const mongoReqs = pick(foundGroup);
+    const generalReqs = pick(generalGroup);
+    const raw =
+      generalReqs.length > mongoReqs.length ? generalReqs : mongoReqs;
+    if (generalReqs.length > mongoReqs.length && generalGroup) foundGroup = generalGroup;
+
+    const now = Date.now();
+    const fmtWhen = (iso) => {
+      if (!iso) return "—";
+      try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return "—";
+        return d.toLocaleString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      } catch (_) {
+        return "—";
+      }
+    };
+
+    const requests = raw
+      .filter((r) => {
+        if (!targetPhone) return true;
+        return normalizeKenyanPhone(r.memberPhone || "") === targetPhone;
+      })
+      .map((r) => {
+        const statusObj = r.status || {};
+        const tc = statusObj.timeCompliance || {};
+        let condition = String(statusObj.condition || "pending").toLowerCase();
+        if (condition === "approved") condition = "active";
+        const dueMs = tc.dueAt ? new Date(tc.dueAt).getTime() : NaN;
+        if (
+          !Number.isNaN(dueMs) &&
+          dueMs < now &&
+          (condition === "pending" || condition === "active")
+        ) {
+          condition = "expired";
+        }
+        const amount = Number(r.amount || 0);
+        const amountToBePaid = Number(
+          tc.amountRequestedToBePaid != null ? tc.amountRequestedToBePaid : amount
+        );
+        return {
+          requestId: r.requestId || "",
+          memberPhone: r.memberPhone || "",
+          amount,
+          amountToBePaid,
+          status: condition,
+          requestTime: r.requestTime || "",
+          requestTimeLabel: fmtWhen(r.requestTime),
+          dueAt: tc.dueAt || "",
+          dueAtLabel: fmtWhen(tc.dueAt),
+          durationDays: Number(tc.durationDays || 0) || 0,
+          rolledBalance: Number(tc.rolledBalance || 0) || 0,
+          processorPhone: (r.processor && r.processor.phone) || "",
+          approvalTime: (r.processor && r.processor.approvalTime) || "",
+          approvalTimeLabel: fmtWhen(r.processor && r.processor.approvalTime)
+        };
+      })
+      .sort((a, b) => new Date(b.requestTime || 0) - new Date(a.requestTime || 0));
+
+    const counts = { pending: 0, active: 0, expired: 0, rejected: 0 };
+    requests.forEach((r) => {
+      if (counts[r.status] != null) counts[r.status] += 1;
+    });
+
+    return res.json({
+      success: true,
+      groupName: (foundGroup && foundGroup.groupName) || groupName,
+      counts,
+      requests
+    });
+  } catch (err) {
+    console.error("[my-loan-requests]", err);
+    return res.status(500).json({ success: false, message: "Could not load loan requests.", requests: [] });
+  }
+});
+
+// POST /member/cancel-loan-request — delete a pending loan request by requestId
+router.post("/cancel-loan-request", async (req, res) => {
+  try {
+    const groupName = String(req.body.groupName || "").trim();
+    const requestId = String(req.body.requestId || "").trim();
+    const phoneRaw = String(req.body.phone || req.body.memberPhone || "").trim();
+
+    if (!groupName || !requestId) {
+      return res.json({ success: false, message: "groupName and requestId are required." });
+    }
+
+    const memberPhone = phoneRaw ? normalizeKenyanPhone(phoneRaw) : "";
+    let removed = null;
+    let savedTo = [];
+
+    const removeFromList = (list) => {
+      if (!Array.isArray(list)) return { list: list || [], removed: null };
+      const idx = list.findIndex((r) => r && String(r.requestId) === requestId);
+      if (idx === -1) return { list, removed: null };
+      const item = list[idx];
+      const condition = String(
+        (item.status && item.status.condition) || item.status || "pending"
+      ).toLowerCase();
+      if (condition !== "pending") {
+        return { list, removed: null, blocked: true, reason: "Only pending loan requests can be cancelled." };
+      }
+      if (
+        memberPhone &&
+        normalizeKenyanPhone(item.memberPhone || "") &&
+        normalizeKenyanPhone(item.memberPhone || "") !== memberPhone
+      ) {
+        return { list, removed: null, blocked: true, reason: "You can only cancel your own loan request." };
+      }
+      const next = list.slice();
+      const [del] = next.splice(idx, 1);
+      return { list: next, removed: del };
+    };
+
+    // 1) general.json
+    try {
+      const generalData = readJSON(generalFile, {});
+      const groupRef = findGroupInGeneral(generalData, groupName);
+      if (groupRef && groupRef.group) {
+        ensurePendingApprovals(groupRef.group);
+        const result = removeFromList(groupRef.group.pendingApprovals.loan.requestLoan);
+        if (result.blocked) {
+          return res.json({ success: false, message: result.reason });
+        }
+        if (result.removed) {
+          groupRef.group.pendingApprovals.loan.requestLoan = result.list;
+          groupRef.group.updatedAt = new Date().toISOString();
+          removed = result.removed;
+          writeJSON(generalFile, generalData);
+          savedTo.push("general.json");
+        }
+      }
+    } catch (e) {
+      console.error("[cancel-loan-request] general.json failed:", e.message);
+    }
+
+    // 2) Mongo groups
+    try {
+      const mongoHit = await findGroupNameInMongoGroupsCollection(groupName);
+      if (mongoHit && mongoHit.group) {
+        const group = { ...mongoHit.group };
+        ensurePendingApprovals(group);
+        const result = removeFromList(group.pendingApprovals.loan.requestLoan);
+        if (result.blocked && !removed) {
+          return res.json({ success: false, message: result.reason });
+        }
+        if (result.removed) {
+          group.pendingApprovals.loan.requestLoan = result.list;
+          group.updatedAt = new Date().toISOString();
+          if (!removed) removed = result.removed;
+          await saveGeneralGroupToMongo({
+            ...group,
+            county: mongoHit.county || group.county,
+            constituency: mongoHit.constituency || group.constituency,
+            ward: mongoHit.ward || group.ward
+          });
+          savedTo.push("mongo.groups");
+        }
+      }
+    } catch (e) {
+      console.error("[cancel-loan-request] mongo failed:", e.message);
+    }
+
+    if (!removed) {
+      return res.status(404).json({
+        success: false,
+        message: `Pending loan request "${requestId}" was not found.`
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Pending loan request cancelled.",
+      removed,
+      savedTo
+    });
+  } catch (err) {
+    console.error("[cancel-loan-request]", err);
+    return res.status(500).json({
+      success: false,
+      message: "Could not cancel loan request. Try again."
     });
   }
 });

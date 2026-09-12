@@ -1,14 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Group Loans – <%= group ? group.groupName : 'Group' %></title>
+  <title>Group Loans â€“ <%= group ? group.groupName : 'Group' %></title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <style>
-    /* ─── Design Tokens ─────────────────────────────── */
+    /* â”€â”€â”€ Design Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     :root {
       --bg:          #f1f5f9;
       --surface:     #ffffff;
@@ -52,7 +52,7 @@
       font-size: 15px;
     }
 
-    /* ─── Page Shell ────────────────────────────────── */
+    /* â”€â”€â”€ Page Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .page-wrapper {
       width: calc(100% - 4px);
       max-width: 640px;
@@ -70,7 +70,7 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ─── Sticky Header ─────────────────────────────── */
+    /* â”€â”€â”€ Sticky Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .header {
       background: linear-gradient(135deg, #0f9d58 0%, #34d399 100%);
       padding: 16px 20px;
@@ -141,10 +141,10 @@
     }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
-    /* ─── Content Area ──────────────────────────────── */
+    /* â”€â”€â”€ Content Area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .content { padding: 18px; flex: 1; background: var(--bg); display: flex; flex-direction: column; gap: 20px; }
 
-    /* ─── Section Header ────────────────────────────── */
+    /* â”€â”€â”€ Section Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .section-head {
       display: flex;
       align-items: center;
@@ -165,116 +165,7 @@
     }
     .section-link:hover { text-decoration: underline; }
 
-    /* ─── Balance Hero Card ─────────────────────────── */
-    .balance-hero {
-      background: linear-gradient(135deg, #0f9d58 0%, #059669 50%, #0d9488 100%);
-      border-radius: var(--radius);
-      padding: 20px;
-      color: #fff;
-      position: relative;
-      overflow: hidden;
-    }
-    .balance-hero::before {
-      content: '';
-      position: absolute;
-      top: -40px; right: -40px;
-      width: 160px; height: 160px;
-      background: rgba(255,255,255,.08);
-      border-radius: 50%;
-    }
-    .balance-hero::after {
-      content: '';
-      position: absolute;
-      bottom: -20px; left: 30px;
-      width: 100px; height: 100px;
-      background: rgba(255,255,255,.05);
-      border-radius: 50%;
-    }
-    .balance-hero-label {
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .8px;
-      opacity: .85;
-      margin-bottom: 6px;
-    }
-    .balance-hero-amount {
-      font-family: 'Syne', sans-serif;
-      font-size: 34px; font-weight: 800;
-      letter-spacing: -1px;
-      line-height: 1;
-      position: relative; z-index: 1;
-    }
-    .balance-hero-amount span {
-      font-size: 15px; font-weight: 600;
-      opacity: .8;
-      vertical-align: top;
-      margin-top: 4px;
-      display: inline-block;
-      margin-right: 3px;
-    }
-    .balance-hero-meta {
-      font-size: 12px; opacity: .8;
-      margin-top: 6px; position: relative; z-index: 1;
-    }
-    .balance-hero-row {
-      display: flex; gap: 12px;
-      margin-top: 16px; position: relative; z-index: 1;
-    }
-    .balance-mini {
-      flex: 1;
-      background: rgba(255,255,255,.15);
-      border: 1px solid rgba(255,255,255,.22);
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
-    .balance-mini-label {
-      font-size: 10px; font-weight: 700;
-      opacity: .8; text-transform: uppercase; letter-spacing: .5px;
-    }
-    .balance-mini-val {
-      font-family: 'Syne', sans-serif;
-      font-size: 16px; font-weight: 800;
-      margin-top: 3px;
-    }
-
-    /* ─── Borrow CTA Card ───────────────────────────── */
-    .borrow-cta {
-      background: #fff;
-      border: 2px dashed #86efac;
-      border-radius: var(--radius);
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-    }
-    .borrow-cta:hover { border-color: var(--primary); background: #f0fdf4; }
-    .borrow-icon {
-      width: 48px; height: 48px;
-      border-radius: 50%;
-      background: var(--primary-lt);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; color: var(--primary);
-      flex-shrink: 0;
-    }
-    .borrow-text-label {
-      font-family: 'Syne', sans-serif;
-      font-size: 14px; font-weight: 700; color: var(--text);
-    }
-    .borrow-text-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .borrow-arrow {
-      margin-left: auto;
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      background: var(--primary-lt);
-      display: flex; align-items: center; justify-content: center;
-      color: var(--primary);
-      font-size: 13px;
-      flex-shrink: 0;
-    }
-
-    /* ─── Quick Stats Grid ──────────────────────────── */
+    /* --- Quick Stats Grid --- */
     .stats-grid-2x2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -289,6 +180,12 @@
       transition: transform .15s, box-shadow .15s;
     }
     .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+    .stat-card.stat-card-link {
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .stat-card.stat-card-link:active { transform: translateY(0); }
     .stat-icon {
       width: 40px; height: 40px;
       border-radius: 10px;
@@ -317,7 +214,7 @@
       margin-top: 3px;
     }
 
-    /* ─── Performance Bar ───────────────────────────── */
+    /* â”€â”€â”€ Performance Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .perf-card {
       background: #fff;
       border: 1px solid var(--border);
@@ -355,7 +252,7 @@
     .bar-blue   { background: linear-gradient(90deg, #1d4ed8, #60a5fa); }
     .bar-danger { background: linear-gradient(90deg, #ef4444, #f87171); }
 
-    /* ─── Due Loans Alert ───────────────────────────── */
+    /* â”€â”€â”€ Due Loans Alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .due-alert {
       background: #fff;
       border: 1px solid #fcd34d;
@@ -378,7 +275,7 @@
     .due-alert-kes { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: #b45309; }
     .due-alert-days { font-size: 10px; color: var(--danger); font-weight: 700; margin-top: 2px; }
 
-    /* ─── Loan Request Cards ────────────────────────── */
+    /* â”€â”€â”€ Loan Request Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .request-card {
       background: #fff;
       border: 1px solid var(--border);
@@ -473,7 +370,7 @@
     }
     .btn-review:hover { background: #dbeafe; }
 
-    /* ─── All Loans List ────────────────────────────── */
+    /* â”€â”€â”€ All Loans List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .loan-card {
       display: flex;
       align-items: center;
@@ -513,7 +410,7 @@
     }
     .loan-chip-wrap { margin-top: 4px; display: flex; justify-content: flex-end; }
 
-    /* ─── Status Chips ──────────────────────────────── */
+    /* â”€â”€â”€ Status Chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .status-chip {
       font-size: 10px; font-weight: 700;
       padding: 3px 9px;
@@ -529,7 +426,7 @@
     .chip-expired  { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
     .chip-approved { background: #ccfbf1; color: #0f766e; border: 1px solid #5eead4; }
 
-    /* ─── Transaction Statement ─────────────────────── */
+    /* â”€â”€â”€ Transaction Statement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .txn-card {
       display: flex;
       align-items: center;
@@ -564,7 +461,7 @@
     .txn-kes.credit { color: var(--primary); }
     .txn-type-label { font-size: 9px; font-weight: 700; color: var(--muted); margin-top: 2px; text-align: right; }
 
-    /* ─── Tab Navigation ────────────────────────────── */
+    /* â”€â”€â”€ Tab Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .tab-nav {
       display: flex;
       gap: 6px;
@@ -597,11 +494,11 @@
     }
     .tab-btn:not(.active):hover { background: var(--bg); }
 
-    /* ─── Tab Content ───────────────────────────────── */
+    /* â”€â”€â”€ Tab Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* ─── Progress Ring ─────────────────────────────── */
+    /* â”€â”€â”€ Progress Ring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .repayment-ring-wrap {
       display: flex;
       gap: 12px;
@@ -614,7 +511,7 @@
     .ring-name { font-size: 12px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 7px; }
     .ring-count { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800; color: var(--text); }
 
-    /* ─── Empty State ───────────────────────────────── */
+    /* â”€â”€â”€ Empty State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .empty-state {
       text-align: center;
       padding: 36px 20px;
@@ -623,36 +520,7 @@
     .empty-state i { font-size: 34px; margin-bottom: 10px; display: block; color: #cbd5e1; }
     .empty-state p { font-size: 13px; }
 
-    /* ─── Loan Eligibility Card ─────────────────────── */
-    .eligibility-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-    }
-    .eligibility-title {
-      font-family: 'Syne', sans-serif;
-      font-size: 13px; font-weight: 700;
-      color: var(--text);
-      margin-bottom: 14px;
-      display: flex; align-items: center; gap: 7px;
-    }
-    .eligibility-title i { color: var(--accent); }
-    .elig-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 9px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .elig-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .elig-key { font-size: 12px; color: var(--muted); font-weight: 500; }
-    .elig-val { font-size: 12px; font-weight: 700; color: var(--text); }
-    .elig-val.good { color: var(--primary); }
-    .elig-val.warn { color: #b45309; }
-    .elig-val.bad  { color: var(--danger); }
-
-    /* ─── Notice Banner ─────────────────────────────── */
+    /* --- Notice Banner --- */
     .notice-banner {
       background: var(--blue-lt);
       border: 1px solid #93c5fd;
@@ -667,23 +535,7 @@
     }
     .notice-banner i { font-size: 14px; flex-shrink: 0; }
 
-    /* ─── Interest Rate Badge ───────────────────────── */
-    .rate-strip {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .rate-badge {
-      background: var(--violet-lt);
-      border: 1px solid #c4b5fd;
-      color: var(--violet);
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-size: 11px; font-weight: 700;
-      display: flex; align-items: center; gap: 5px;
-    }
-
-    /* ─── Scroll to Section Links ───────────────────── */
+    /* --- Scroll to Section Links --- */
     .quick-links {
       display: flex;
       gap: 8px;
@@ -709,14 +561,13 @@
 
     @media (max-width: 380px) {
       .stats-grid-2x2 { grid-template-columns: 1fr; }
-      .balance-hero-row { flex-direction: column; }
     }
   </style>
 </head>
 <body>
 <div class="page-wrapper">
 
-  <!-- ══════════ HEADER ══════════ -->
+  <!-- â•â•â•â•â•â•â•â•â•â• HEADER â•â•â•â•â•â•â•â•â•â• -->
   <div class="header">
     <a href="javascript:void(0)" onclick="if(window.history.length > 1){ window.history.back(); } else { window.location.href='/personal'; }" class="header-back">
       <i class="fas fa-arrow-left"></i>
@@ -731,7 +582,7 @@
     </div>
   </div>
 
-  <!-- ══════════ CONTENT ══════════ -->
+  <!-- â•â•â•â•â•â•â•â•â•â• CONTENT â•â•â•â•â•â•â•â•â•â• -->
   <div class="content">
 
     <!-- Quick Nav Links -->
@@ -744,53 +595,22 @@
       <a class="quick-link-btn" href="#sec-statement"><i class="fas fa-file-alt"></i> Statement</a>
     </div>
 
-    <!-- ──── BALANCE HERO ──── -->
+    <!-- â”€â”€â”€â”€ BALANCE HERO â”€â”€â”€â”€ -->
     <div id="sec-balance">
       <div class="section-head">
         <div class="section-label">Loan Fund Overview</div>
       </div>
 
-      <div class="balance-hero">
-        <div class="balance-hero-label"><i class="fas fa-piggy-bank" style="margin-right:5px"></i>Total Loan Fund</div>
-        <div class="balance-hero-amount">
-          <span>KES</span><%= loanFund ? loanFund.toLocaleString() : '0' %>
-        </div>
-        <div class="balance-hero-meta">Group loan pool • Updated just now</div>
-        <div class="balance-hero-row">
-          <div class="balance-mini">
-            <div class="balance-mini-label"><i class="fas fa-arrow-up" style="margin-right:3px"></i>Disbursed</div>
-            <div class="balance-mini-val">KES <%= totalDisbursed ? totalDisbursed.toLocaleString() : '0' %></div>
-          </div>
-          <div class="balance-mini">
-            <div class="balance-mini-label"><i class="fas fa-coins" style="margin-right:3px"></i>Available</div>
-            <div class="balance-mini-val">KES <%= availableBalance ? availableBalance.toLocaleString() : '0' %></div>
-          </div>
-          <div class="balance-mini">
-            <div class="balance-mini-label"><i class="fas fa-undo" style="margin-right:3px"></i>Recovered</div>
-            <div class="balance-mini-val">KES <%= totalRepaid ? totalRepaid.toLocaleString() : '0' %></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Interest rates -->
-      <div style="margin-top:10px">
-        <div class="rate-strip">
-          <div class="rate-badge"><i class="fas fa-percent"></i> Monthly Rate: <%= group.interestRate || '5' %>%</div>
-          <div class="rate-badge"><i class="fas fa-calendar-alt"></i> Max Term: <%= group.maxLoanTerm || '12' %> months</div>
-          <div class="rate-badge"><i class="fas fa-times-circle"></i> Penalty: <%= group.penaltyRate || '2' %>%/mo</div>
-        </div>
-      </div>
-
       <!-- Stats grid -->
       <div style="margin-top:14px">
         <div class="stats-grid-2x2">
-          <div class="stat-card">
+          <a class="stat-card stat-card-link" href="#sec-requests" title="Go to Loan Requests">
             <div class="stat-icon si-green"><i class="fas fa-hand-holding-usd"></i></div>
             <div class="stat-body">
-              <div class="stat-value"><%= totalLoans || 0 %></div>
-              <div class="stat-label">Total Loans</div>
+              <div class="stat-value">KES <%= typeof totalRequestedAmount !== 'undefined' && totalRequestedAmount != null ? Number(totalRequestedAmount).toLocaleString() : '0' %></div>
+              <div class="stat-label">Pending Requests<%= typeof totalLoans !== 'undefined' && totalLoans ? ` (${totalLoans})` : '' %></div>
             </div>
-          </div>
+          </a>
           <div class="stat-card">
             <div class="stat-icon si-blue"><i class="fas fa-check-double"></i></div>
             <div class="stat-body">
@@ -830,46 +650,7 @@
       </div>
     </div>
 
-    <!-- ──── BORROW CTA ──── -->
-    <div id="sec-borrow">
-      <div class="section-head">
-        <div class="section-label">Available to Borrow</div>
-      </div>
-      <div class="eligibility-card" style="margin-bottom:10px">
-        <div class="eligibility-title"><i class="fas fa-star"></i> Your Loan Eligibility</div>
-        <div class="elig-row">
-          <div class="elig-key">Maximum you can borrow</div>
-          <div class="elig-val good">KES <%= memberMaxLoan ? memberMaxLoan.toLocaleString() : '0' %></div>
-        </div>
-        <div class="elig-row">
-          <div class="elig-key">Your savings (collateral)</div>
-          <div class="elig-val"><%= memberSavings ? 'KES ' + memberSavings.toLocaleString() : 'KES 0' %></div>
-        </div>
-        <div class="elig-row">
-          <div class="elig-key">Outstanding balance</div>
-          <div class="elig-val warn">KES <%= memberOutstanding ? memberOutstanding.toLocaleString() : '0' %></div>
-        </div>
-        <div class="elig-row">
-          <div class="elig-key">Loan score</div>
-          <div class="elig-val good"><%= loanScore || 'Excellent' %> <i class="fas fa-star" style="color:#f59e0b;font-size:10px"></i></div>
-        </div>
-        <div class="elig-row">
-          <div class="elig-key">Eligibility status</div>
-          <div class="elig-val good"><i class="fas fa-check-circle"></i> Eligible</div>
-        </div>
-      </div>
-
-      <div class="borrow-cta" onclick="alert('Loan application feature coming soon!')">
-        <div class="borrow-icon"><i class="fas fa-plus-circle"></i></div>
-        <div>
-          <div class="borrow-text-label">Apply for a Loan</div>
-          <div class="borrow-text-sub">Up to KES <%= memberMaxLoan ? memberMaxLoan.toLocaleString() : '0' %> available</div>
-        </div>
-        <div class="borrow-arrow"><i class="fas fa-chevron-right"></i></div>
-      </div>
-    </div>
-
-    <!-- ──── PENDING REQUESTS ──── -->
+    <!-- PENDING REQUESTS -->
     <div id="sec-requests">
       <div class="section-head">
         <div class="section-label">Loan Requests</div>
@@ -894,8 +675,8 @@
               <div class="request-info">
                 <div class="request-name"><%= req.memberName || req.memberPhone || 'Member' %></div>
                 <div class="request-date">
-                  <i class="fas fa-phone" style="font-size:9px;margin-right:3px"></i><%= req.memberPhone || '—' %>
-                  &nbsp;·&nbsp;
+                  <i class="fas fa-phone" style="font-size:9px;margin-right:3px"></i><%= req.memberPhone || 'â€”' %>
+                  &nbsp;Â·&nbsp;
                   <span class="status-chip <%= statusClass %>" style="font-size:10px;padding:2px 7px;"><%= statusLabel %></span>
                 </div>
               </div>
@@ -905,11 +686,11 @@
               </div>
             </div>
             <div class="request-meta">
-              <div class="request-meta-tag"><i class="fas fa-clock"></i>Requested: <%= req.requestDate || '—' %></div>
-              <div class="request-meta-tag"><i class="fas fa-calendar-check"></i>Pay by: <%= req.dueAtLabel || '—' %><%= req.durationDays ? ` (${req.durationDays} days)` : '' %></div>
-              <div class="request-meta-tag"><i class="fas fa-coins"></i>To pay: KES <%= req.amountToBePaid != null ? Number(req.amountToBePaid).toLocaleString() : '—' %></div>
-              <div class="request-meta-tag"><i class="fas fa-percent"></i>Interest: KES <%= req.totalInterest != null ? Number(req.totalInterest).toLocaleString() : '—' %></div>
-              <div class="request-meta-tag"><i class="fas fa-user-shield"></i>Processor: <%= req.processorName || req.processorPhone || '—' %></div>
+              <div class="request-meta-tag"><i class="fas fa-clock"></i>Requested: <%= req.requestDate || 'â€”' %></div>
+              <div class="request-meta-tag"><i class="fas fa-calendar-check"></i>Pay by: <%= req.dueAtLabel || 'â€”' %><%= req.durationDays ? ` (${req.durationDays} days)` : '' %></div>
+              <div class="request-meta-tag"><i class="fas fa-coins"></i>To pay: KES <%= req.amountToBePaid != null ? Number(req.amountToBePaid).toLocaleString() : 'â€”' %></div>
+              <div class="request-meta-tag"><i class="fas fa-percent"></i>Interest: KES <%= req.totalInterest != null ? Number(req.totalInterest).toLocaleString() : 'â€”' %></div>
+              <div class="request-meta-tag"><i class="fas fa-user-shield"></i>Processor: <%= req.processorName || req.processorPhone || 'â€”' %></div>
               <% if (req.rolledBalance) { %>
                 <div class="request-meta-tag"><i class="fas fa-redo"></i>Rolled: KES <%= Number(req.rolledBalance).toLocaleString() %></div>
               <% } %>
@@ -935,7 +716,7 @@
       <% } %>
     </div>
 
-    <!-- ──── DUE LOANS ──── -->
+    <!-- â”€â”€â”€â”€ DUE LOANS â”€â”€â”€â”€ -->
     <div id="sec-due">
       <div class="section-head">
         <div class="section-label">Due & Overdue Loans</div>
@@ -952,7 +733,7 @@
             <i class="fas fa-exclamation-circle due-alert-icon"></i>
             <div>
               <div class="due-alert-name"><%= loan.memberName %></div>
-              <div class="due-alert-detail">Due: <%= loan.dueDate || '—' %> &bull; <%= loan.purpose || 'Loan' %></div>
+              <div class="due-alert-detail">Due: <%= loan.dueDate || 'â€”' %> &bull; <%= loan.purpose || 'Loan' %></div>
             </div>
             <div class="due-alert-amount">
               <div class="due-kes" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#b45309">KES <%= loan.dueAmount ? loan.dueAmount.toLocaleString() : '0' %></div>
@@ -967,12 +748,12 @@
       <% } else { %>
         <div class="empty-state">
           <i class="fas fa-check-circle" style="color:#86efac"></i>
-          <p>No loans currently due — great!</p>
+          <p>No loans currently due â€” great!</p>
         </div>
       <% } %>
     </div>
 
-    <!-- ──── ALL LOANS WITH TABS ──── -->
+    <!-- â”€â”€â”€â”€ ALL LOANS WITH TABS â”€â”€â”€â”€ -->
     <div id="sec-all">
       <div class="section-head">
         <div class="section-label">All Loans</div>
@@ -1009,8 +790,8 @@
                 <div class="loan-name"><%= loan.memberName %></div>
                 <div class="loan-sub">
                   <span>KES <%= loan.amount ? loan.amount.toLocaleString() : '0' %></span>
-                  <span style="color:var(--faint)">•</span>
-                  <span><%= loan.termMonths || '—' %> months</span>
+                  <span style="color:var(--faint)">â€¢</span>
+                  <span><%= loan.termMonths || 'â€”' %> months</span>
                 </div>
               </div>
               <div class="loan-right">
@@ -1034,7 +815,7 @@
               <div class="loan-avatar" style="background:linear-gradient(135deg,#0f9d58,#34d399)"><%= initials %></div>
               <div class="loan-info">
                 <div class="loan-name"><%= loan.memberName %></div>
-                <div class="loan-sub"><span>Due: <%= loan.dueDate || '—' %></span></div>
+                <div class="loan-sub"><span>Due: <%= loan.dueDate || 'â€”' %></span></div>
               </div>
               <div class="loan-right">
                 <div class="loan-amount-val">KES <%= loan.balance ? loan.balance.toLocaleString() : '0' %></div>
@@ -1057,7 +838,7 @@
               <div class="loan-avatar" style="background:linear-gradient(135deg,#1d4ed8,#60a5fa)"><%= initials %></div>
               <div class="loan-info">
                 <div class="loan-name"><%= loan.memberName %></div>
-                <div class="loan-sub"><span>Repaid: <%= loan.repaidDate || '—' %></span></div>
+                <div class="loan-sub"><span>Repaid: <%= loan.repaidDate || 'â€”' %></span></div>
               </div>
               <div class="loan-right">
                 <div class="loan-amount-val">KES <%= loan.amount ? loan.amount.toLocaleString() : '0' %></div>
@@ -1103,7 +884,7 @@
               <div class="loan-avatar" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)"><%= initials %></div>
               <div class="loan-info">
                 <div class="loan-name"><%= loan.memberName %></div>
-                <div class="loan-sub"><span>Rolled on: <%= loan.rolledDate || '—' %></span></div>
+                <div class="loan-sub"><span>Rolled on: <%= loan.rolledDate || 'â€”' %></span></div>
               </div>
               <div class="loan-right">
                 <div class="loan-amount-val">KES <%= loan.balance ? loan.balance.toLocaleString() : '0' %></div>
@@ -1126,7 +907,7 @@
               <div class="loan-avatar" style="background:linear-gradient(135deg,#94a3b8,#cbd5e1)"><%= initials %></div>
               <div class="loan-info">
                 <div class="loan-name"><%= loan.memberName %></div>
-                <div class="loan-sub"><span>Expired: <%= loan.expiredDate || '—' %></span></div>
+                <div class="loan-sub"><span>Expired: <%= loan.expiredDate || 'â€”' %></span></div>
               </div>
               <div class="loan-right">
                 <div class="loan-amount-val">KES <%= loan.amount ? loan.amount.toLocaleString() : '0' %></div>
@@ -1140,7 +921,7 @@
       </div>
     </div>
 
-    <!-- ──── LOAN PERFORMANCE ──── -->
+    <!-- â”€â”€â”€â”€ LOAN PERFORMANCE â”€â”€â”€â”€ -->
     <div id="sec-performance">
       <div class="section-head">
         <div class="section-label">Loan Performance</div>
@@ -1167,35 +948,35 @@
         <div class="perf-row">
           <div class="perf-row-head">
             <div class="perf-row-label"><i class="fas fa-check-circle" style="color:#0f9d58"></i> Paid on Time</div>
-            <div class="perf-row-pct"><%= paidOnTimeCt %> loans · <%= pct(paidOnTimeCt) %>%</div>
+            <div class="perf-row-pct"><%= paidOnTimeCt %> loans Â· <%= pct(paidOnTimeCt) %>%</div>
           </div>
           <div class="perf-bar-bg"><div class="perf-bar-fill bar-green" style="width:<%= pct(paidOnTimeCt) %>%"></div></div>
         </div>
         <div class="perf-row">
           <div class="perf-row-head">
             <div class="perf-row-label"><i class="fas fa-play-circle" style="color:#1d4ed8"></i> Active / Ongoing</div>
-            <div class="perf-row-pct"><%= activeCt %> loans · <%= pct(activeCt) %>%</div>
+            <div class="perf-row-pct"><%= activeCt %> loans Â· <%= pct(activeCt) %>%</div>
           </div>
           <div class="perf-bar-bg"><div class="perf-bar-fill bar-blue" style="width:<%= pct(activeCt) %>%"></div></div>
         </div>
         <div class="perf-row">
           <div class="perf-row-head">
             <div class="perf-row-label"><i class="fas fa-exclamation-triangle" style="color:#b45309"></i> Paid Late</div>
-            <div class="perf-row-pct"><%= paidLateCt %> loans · <%= pct(paidLateCt) %>%</div>
+            <div class="perf-row-pct"><%= paidLateCt %> loans Â· <%= pct(paidLateCt) %>%</div>
           </div>
           <div class="perf-bar-bg"><div class="perf-bar-fill bar-amber" style="width:<%= pct(paidLateCt) %>%"></div></div>
         </div>
         <div class="perf-row">
           <div class="perf-row-head">
             <div class="perf-row-label"><i class="fas fa-sync-alt" style="color:#7c3aed"></i> Rolled Over</div>
-            <div class="perf-row-pct"><%= rolledCt %> loans · <%= pct(rolledCt) %>%</div>
+            <div class="perf-row-pct"><%= rolledCt %> loans Â· <%= pct(rolledCt) %>%</div>
           </div>
           <div class="perf-bar-bg"><div class="perf-bar-fill" style="width:<%= pct(rolledCt) %>%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
         </div>
         <div class="perf-row">
           <div class="perf-row-head">
             <div class="perf-row-label"><i class="fas fa-times-circle" style="color:#ef4444"></i> Overdue / Expired</div>
-            <div class="perf-row-pct"><%= overdueCt + expiredCt %> loans · <%= pct(overdueCt + expiredCt) %>%</div>
+            <div class="perf-row-pct"><%= overdueCt + expiredCt %> loans Â· <%= pct(overdueCt + expiredCt) %>%</div>
           </div>
           <div class="perf-bar-bg"><div class="perf-bar-fill bar-danger" style="width:<%= pct(overdueCt + expiredCt) %>%"></div></div>
         </div>
@@ -1213,7 +994,7 @@
       </div>
     </div>
 
-    <!-- ──── TRANSACTION STATEMENT ──── -->
+    <!-- â”€â”€â”€â”€ TRANSACTION STATEMENT â”€â”€â”€â”€ -->
     <div id="sec-statement">
 <div class="section-head">
   <div class="section-label">Loan Transaction Statement</div>
@@ -1238,11 +1019,11 @@
           <div class="txn-card">
             <div class="txn-icon <%= iconClass %>"><i class="fas <%= iconName %>"></i></div>
             <div class="txn-info">
-              <div class="txn-desc"><%= txn.memberName %> — <%= txn.description || typeLabel %></div>
-              <div class="txn-date"><i class="fas fa-calendar-alt" style="font-size:9px;margin-right:3px"></i><%= txn.date || '—' %></div>
+              <div class="txn-desc"><%= txn.memberName %> â€” <%= txn.description || typeLabel %></div>
+              <div class="txn-date"><i class="fas fa-calendar-alt" style="font-size:9px;margin-right:3px"></i><%= txn.date || 'â€”' %></div>
             </div>
             <div class="txn-amount">
-              <div class="txn-kes <%= amtClass %>"><%= isCredit ? '+' : isRoll ? '↺' : '-' %>KES <%= txn.amount ? txn.amount.toLocaleString() : '0' %></div>
+              <div class="txn-kes <%= amtClass %>"><%= isCredit ? '+' : isRoll ? 'â†º' : '-' %>KES <%= txn.amount ? txn.amount.toLocaleString() : '0' %></div>
               <div class="txn-type-label"><%= typeLabel %></div>
             </div>
           </div>
@@ -1259,14 +1040,14 @@
 </div><!-- /.page-wrapper -->
 
 <script>
-  /* ── Data injected from server ── */
+  /* â”€â”€ Data injected from server â”€â”€ */
   const groupName        = <%- JSON.stringify(group.groupName) %>;
   const loans            = <%- JSON.stringify(loans || []) %>;
   const group            = <%- JSON.stringify(group) %>;
   const pendingRequests  = <%- JSON.stringify(pendingRequests || []) %>;
   const transactions     = <%- JSON.stringify(transactions || []) %>;
 
-  /* ── Tab switching ── */
+  /* â”€â”€ Tab switching â”€â”€ */
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.tab;
@@ -1277,7 +1058,7 @@
     });
   });
 
-  /* ── Animate performance bars on scroll ── */
+  /* â”€â”€ Animate performance bars on scroll â”€â”€ */
   const bars = document.querySelectorAll('.perf-bar-fill');
   const savedWidths = Array.from(bars).map(b => b.style.width);
   bars.forEach(b => b.style.width = '0');
@@ -1292,7 +1073,7 @@
   const perfCard = document.querySelector('.perf-card');
   if (perfCard) perfObserver.observe(perfCard);
 
-  /* ── Loan approval actions ── */
+  /* â”€â”€ Loan approval actions â”€â”€ */
   async function approveLoan(loanId) {
     if (!confirm('Approve this loan request?')) return;
     try {
@@ -1323,8 +1104,8 @@
     window.location.href = `/gaccount/loan-detail/${loanId}?groupName=${encodeURIComponent(groupName)}`;
   }
 
-  /* ── Smooth scroll for quick links ── */
-  document.querySelectorAll('.quick-link-btn[href^="#"]').forEach(link => {
+  /* --- Smooth scroll for quick links + pending requests card --- */
+  document.querySelectorAll('.quick-link-btn[href^="#"], .stat-card-link[href^="#"]').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
       const target = document.querySelector(link.getAttribute('href'));

@@ -2870,6 +2870,9 @@ const app = {
             </div>
         </div>`;
         container.innerHTML = html;
+        // Warm loan balance + guarantor caches so Balance/Request open instantly
+        this._prefetchLoanBalance(g.groupName);
+        this._prefetchLoanGuarantors(g.groupName);
     },
     renderGroupAccountsPrimaryView(groupName, encodedAccNum) {
         const decodedGroupName = decodeURIComponent(groupName);
@@ -2907,6 +2910,11 @@ const app = {
                     if (mp && gn) {
                         const lsk = `cliant_grp_acct_${mp}_${gn.toLowerCase().replace(/\s+/g, '_')}`;
                         localStorage.removeItem(lsk);
+                        try {
+                            localStorage.removeItem(self._loanCacheKey(gn, mp));
+                            localStorage.removeItem(self._loanGuarantorCacheKey(gn, mp));
+                            localStorage.removeItem(self._gloanCacheKey(gn, mp));
+                        } catch (_) {}
                     }
                 } catch(e) {}
             });
@@ -4092,65 +4100,222 @@ const app = {
         `;
         this.updateModalContent('Pending Contributions', html, null, 'fa-clock', 'linear-gradient(135deg, #f59e0b, #fbbf24)');
     },
-    openGroupLoanBalanceModal(groupName) {
-        const decodedGroupName = decodeURIComponent(groupName);
-        document.getElementById('modalOverlay').classList.add('open');
-        this.updateModalContent('Loading Loan Details...', '<div style="text-align:center;padding:20px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--primary);"></i></div>', null, 'fa-sack-dollar');
-        fetch('/member/verified-groups-members', {
+    _loanCacheKey(groupName, phone) {
+        const g = String(groupName || '').toLowerCase().replace(/\s+/g, '_');
+        const p = String(phone || 'default').replace(/\D/g, '').slice(-9) || 'default';
+        return `cliant_loan_bal_${p}_${g}`;
+    },
+    _loanGuarantorCacheKey(groupName, phone) {
+        const g = String(groupName || '').toLowerCase().replace(/\s+/g, '_');
+        const p = String(phone || 'default').replace(/\D/g, '').slice(-9) || 'default';
+        return `cliant_loan_guar_${p}_${g}`;
+    },
+    _readLoanCache(groupName) {
+        try {
+            const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+            const raw = localStorage.getItem(this._loanCacheKey(groupName, phone));
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            return parsed;
+        } catch (_) {
+            return null;
+        }
+    },
+    _writeLoanCache(groupName, payload) {
+        try {
+            const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+            localStorage.setItem(this._loanCacheKey(groupName, phone), JSON.stringify({
+                ...payload,
+                updatedAt: Date.now()
+            }));
+        } catch (e) {
+            console.warn('[loan-cache] write failed:', e);
+        }
+    },
+    _prefetchLoanBalance(groupName) {
+        const gn = decodeURIComponent(groupName || '');
+        if (!gn) return;
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        if (!phone) return;
+        const cached = this._readLoanCache(gn);
+        const age = cached && cached.updatedAt ? (Date.now() - Number(cached.updatedAt)) : Infinity;
+        // Skip if fresher than 90s
+        if (age < 90 * 1000) return;
+        if (this._loanPrefetchInFlight === gn) return;
+        this._loanPrefetchInFlight = gn;
+        this._fetchLoanBalanceBundle(gn, phone)
+            .then(({ memberData, loanReqData }) => {
+                this._writeLoanCache(gn, { memberData, loanReqData });
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (this._loanPrefetchInFlight === gn) this._loanPrefetchInFlight = null;
+            });
+    },
+    _prefetchLoanGuarantors(groupName) {
+        const gn = decodeURIComponent(groupName || '');
+        if (!gn) return;
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const key = this._loanGuarantorCacheKey(gn, phone);
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.updatedAt && (Date.now() - Number(parsed.updatedAt)) < 5 * 60 * 1000) return;
+            }
+        } catch (_) {}
+        if (this._loanGuarPrefetchInFlight === gn) return;
+        this._loanGuarPrefetchInFlight = gn;
+        fetch('/member/group-by-name', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupName: decodedGroupName, phone: this.data.user.phoneNumber })
+            body: JSON.stringify({ groupName: gn })
         })
-        .then(res => res.json())
-        .then(data => {
-            const verifiedMember = data.currentUser || data.verifiedMember || data.member || {};
-            const accounts = verifiedMember.accounts || {};
-
-            // Loan policy from userGroups principles
-            const groups = this.data.userGroups || [];
-            const gObj = groups.find(item => item.groupName === decodedGroupName) || {};
-            const lp = (gObj.principles && gObj.principles.loans) ? gObj.principles.loans : {};
-            const interestRate    = lp.interestAndLimits ? (lp.interestAndLimits.interestRate    || 0) : 0;
-            const limitMultiplier = lp.interestAndLimits ? (lp.interestAndLimits.limitMultiplier || 0) : 0;
-            const repaymentDays   = lp.repayment         ? (lp.repayment.durationDays            || 0) : 0;
-            const maxActiveLoans  = lp.interestAndLimits ? (lp.interestAndLimits.maxActiveLoans  || 0) : 0;
-
-            // Compute totals
-            let totalSavings = 0, activeLoanAmount = 0, activeLoanBalance = 0, hasActiveLoan = false;
-            for (const accId in accounts) {
-                const acc = accounts[accId];
-                const n = String(acc.accountName || '').toLowerCase();
-                const fins = acc.financials || {};
-                if (n.includes('loan')) {
-                    const amtIn = Number(fins.amountIn || 0);
-                    const amtOut = Number(fins.amountOut || 0);
-                    const bal = Number(fins.closingBalance !== undefined ? fins.closingBalance : amtIn - amtOut);
-                    if (amtIn > 0 || bal > 0) { hasActiveLoan = true; activeLoanAmount = amtIn; activeLoanBalance = bal; }
-                } else {
-                    totalSavings += Number(fins.closingBalance || 0);
+            .then(res => res.json())
+            .then(groupData => {
+                const list = [];
+                if (groupData && groupData.members) {
+                    Object.entries(groupData.members)
+                        .sort((a, b) => a[0].localeCompare(b[0]))
+                        .forEach(([mPhone, member], idx) => {
+                            if (mPhone !== phone) {
+                                list.push({
+                                    phone: mPhone,
+                                    name: member.name || member.memberId || mPhone,
+                                    index: idx + 1
+                                });
+                            }
+                        });
                 }
-            }
-            const loanLimit = limitMultiplier > 0 ? totalSavings * limitMultiplier : totalSavings;
-            const availableBal = Math.max(0, loanLimit - activeLoanAmount);
-            const totalDue = activeLoanBalance > 0 ? (activeLoanBalance * (1 + interestRate / 100)) : 0;
+                try {
+                    localStorage.setItem(key, JSON.stringify({ members: list, updatedAt: Date.now() }));
+                } catch (_) {}
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (this._loanGuarPrefetchInFlight === gn) this._loanGuarPrefetchInFlight = null;
+            });
+    },
+    _patchLoanCacheRequests(groupName, mutator) {
+        const cached = this._readLoanCache(groupName) || { memberData: {}, loanReqData: { requests: [], counts: {} } };
+        const loanReqData = cached.loanReqData || { requests: [], counts: {} };
+        const requests = Array.isArray(loanReqData.requests) ? loanReqData.requests.slice() : [];
+        const nextRequests = mutator(requests) || requests;
+        const counts = { pending: 0, active: 0, expired: 0, rejected: 0 };
+        nextRequests.forEach(r => {
+            const s = String(r.status || 'pending').toLowerCase();
+            if (counts[s] != null) counts[s] += 1;
+        });
+        this._writeLoanCache(groupName, {
+            ...cached,
+            loanReqData: { ...loanReqData, requests: nextRequests, counts, success: true }
+        });
+        return nextRequests;
+    },
+    _buildLoanBalanceHtml(decodedGroupName, memberData, loanReqData) {
+        const verifiedMember = (memberData && (memberData.currentUser || memberData.verifiedMember || memberData.member)) || {};
+        const accounts = verifiedMember.accounts || {};
+        const myLoanRequests = (loanReqData && loanReqData.requests) || [];
+        const loanCounts = (loanReqData && loanReqData.counts) || {};
 
-            // Loan history rows
-            let histRows = ''; let histCount = 0;
-            for (const accId in accounts) {
-                const acc = accounts[accId];
-                if (!String(acc.accountName || '').toLowerCase().includes('loan')) continue;
-                (acc.transactionHistory || []).slice(0, 5).forEach(txn => {
-                    const d = txn.time ? new Date(txn.time).toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'2-digit'}) : '-';
-                    const isCr = txn.type === 'credit';
-                    const clr = isCr ? '#15803d' : '#dc2626';
-                    const bbg = txn.state==='completed'?'#dcfce7':txn.state==='pending'?'#fef3c7':'#fee2e2';
-                    const bclr = txn.state==='completed'?'#15803d':txn.state==='pending'?'#b45309':'#dc2626';
-                    histRows += `<tr><td style="padding:7px 4px;font-size:11px;color:#475569;">${d}</td><td style="padding:7px 4px;font-size:11px;color:#475569;max-width:100px;word-break:break-word;">${txn.description||(isCr?'Loan Disbursed':'Repayment')}</td><td style="padding:7px 4px;font-size:11px;font-weight:700;color:${clr};">${isCr?'+':'-'}KSh ${Number(txn.amount||0).toLocaleString()}</td><td style="padding:7px 4px;"><span style="background:${bbg};color:${bclr};padding:2px 6px;border-radius:9px;font-size:9px;font-weight:700;">${txn.state||'-'}</span></td></tr>`;
-                    histCount++;
-                });
-            }
+        const groups = this.data.userGroups || [];
+        const gObj = groups.find(item => item.groupName === decodedGroupName) || {};
+        const lp = (gObj.principles && gObj.principles.loans) ? gObj.principles.loans : {};
+        const interestRate    = lp.interestAndLimits ? (lp.interestAndLimits.interestRate    || 0) : 0;
+        const limitMultiplier = lp.interestAndLimits ? (lp.interestAndLimits.limitMultiplier || 0) : 0;
+        const repaymentDays   = lp.repayment         ? (lp.repayment.durationDays            || 0) : 0;
+        const maxActiveLoans  = lp.interestAndLimits ? (lp.interestAndLimits.maxActiveLoans  || 0) : 0;
 
-            const html = `
+        let totalSavings = 0, activeLoanAmount = 0, activeLoanBalance = 0, hasActiveLoan = false;
+        const memberFins = verifiedMember.memberFinancials || {};
+        for (const accId in accounts) {
+            const acc = accounts[accId];
+            const n = String(acc.accountName || '').toLowerCase();
+            const fins = acc.financials || {};
+            if (n.includes('loan')) {
+                const amtIn = Number(fins.amountIn || 0);
+                const amtOut = Number(fins.amountOut || 0);
+                const bal = Number(fins.closingBalance !== undefined ? fins.closingBalance : amtIn - amtOut);
+                if (amtIn > 0 || bal > 0) { hasActiveLoan = true; activeLoanAmount = amtIn; activeLoanBalance = bal; }
+            } else if (accId === '001' || accId === '1' || n.includes('saving')) {
+                totalSavings += Number(fins.amountIn != null ? fins.amountIn : 0);
+            }
+        }
+        if (!(totalSavings > 0) && memberFins.amountIn != null) {
+            totalSavings = Number(memberFins.amountIn) || 0;
+        }
+        const loanLimit = limitMultiplier > 0 ? totalSavings * limitMultiplier : totalSavings;
+        const availableBal = Math.max(0, loanLimit - activeLoanAmount);
+        const totalDue = activeLoanBalance > 0 ? (activeLoanBalance * (1 + interestRate / 100)) : 0;
+
+        const statusStyle = (st) => {
+            const s = String(st || '').toLowerCase();
+            if (s === 'active') return { bg: '#dcfce7', color: '#15803d', label: 'Active' };
+            if (s === 'pending') return { bg: '#fef3c7', color: '#b45309', label: 'Pending' };
+            if (s === 'expired') return { bg: '#fee2e2', color: '#dc2626', label: 'Expired' };
+            if (s === 'rejected') return { bg: '#f1f5f9', color: '#64748b', label: 'Rejected' };
+            return { bg: '#f1f5f9', color: '#64748b', label: s || 'Unknown' };
+        };
+
+        const pendingCt = Number(loanCounts.pending || 0);
+        const activeCt = Number(loanCounts.active || 0) + (hasActiveLoan ? 1 : 0);
+        const expiredCt = Number(loanCounts.expired || 0);
+        const rejectedCt = Number(loanCounts.rejected || 0);
+        const headerBadge = activeCt > 0
+            ? { bg: '#dcfce7', color: '#15803d', text: `${activeCt} Active` }
+            : pendingCt > 0
+                ? { bg: '#fef3c7', color: '#b45309', text: `${pendingCt} Pending` }
+                : { bg: '#f1f5f9', color: '#64748b', text: 'No Active Loan' };
+
+        let loanStatusListHtml = '';
+        if (myLoanRequests.length) {
+            loanStatusListHtml = myLoanRequests.map(req => {
+                const st = statusStyle(req.status);
+                const isPending = String(req.status || '').toLowerCase() === 'pending';
+                const cancelBtn = isPending
+                    ? `<button type="button" class="m-submit-btn secondary" style="margin-top:10px;width:100%;padding:8px 10px;font-size:12px;" onclick="app.cancelPendingLoanRequest('${encodeURIComponent(decodedGroupName)}','${String(req.requestId || '').replace(/'/g, '')}')"><i class="fa-solid fa-ban"></i> Cancel Request</button>`
+                    : '';
+                return `
+                <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;text-align:left;" data-loan-req="${String(req.requestId || '')}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+                        <div style="font-size:13px;font-weight:800;color:#0f172a;">KES ${Number(req.amount || 0).toLocaleString()}</div>
+                        <span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:${st.bg};color:${st.color};">${st.label}</span>
+                    </div>
+                    <div style="font-size:11px;color:#64748b;margin-bottom:2px;"><i class="fa-solid fa-hashtag" style="width:12px;"></i> ${req.requestId || '—'}</div>
+                    <div style="font-size:11px;color:#64748b;margin-bottom:2px;"><i class="fa-solid fa-clock" style="width:12px;"></i> Requested: ${req.requestTimeLabel || '—'}</div>
+                    <div style="font-size:11px;color:#64748b;margin-bottom:2px;"><i class="fa-solid fa-calendar-check" style="width:12px;"></i> Pay by: ${req.dueAtLabel || '—'}${req.durationDays ? ` (${req.durationDays} days)` : ''}</div>
+                    <div style="font-size:11px;color:#64748b;"><i class="fa-solid fa-coins" style="width:12px;"></i> To pay: KES ${Number(req.amountToBePaid || 0).toLocaleString()}</div>
+                    ${req.processorPhone ? `<div style="font-size:11px;color:#64748b;margin-top:2px;"><i class="fa-solid fa-user-shield" style="width:12px;"></i> Processor: ${req.processorPhone}</div>` : ''}
+                    ${req.approvalTimeLabel && req.approvalTimeLabel !== '—' ? `<div style="font-size:11px;color:#64748b;margin-top:2px;"><i class="fa-solid fa-check" style="width:12px;"></i> Approved: ${req.approvalTimeLabel}</div>` : ''}
+                    ${cancelBtn}
+                </div>`;
+            }).join('');
+        } else if (hasActiveLoan) {
+            loanStatusListHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div style="background:white;padding:9px;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:3px;">Borrowed</div><div style="font-size:14px;font-weight:800;color:#dc2626;">KSh ${activeLoanAmount.toLocaleString()}</div></div>
+                <div style="background:white;padding:9px;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:3px;">Total Due (${interestRate}%)</div><div style="font-size:14px;font-weight:800;color:#f59e0b;">KSh ${totalDue.toLocaleString()}</div></div>
+            </div>`;
+        } else {
+            loanStatusListHtml = `<div style="text-align:center;padding:10px 0;color:#64748b;font-size:13px;"><i class="fa-solid fa-circle-check" style="color:#22c55e;margin-right:5px;"></i>You have no loan requests yet</div>`;
+        }
+
+        let histRows = ''; let histCount = 0;
+        for (const accId in accounts) {
+            const acc = accounts[accId];
+            if (!String(acc.accountName || '').toLowerCase().includes('loan')) continue;
+            (acc.transactionHistory || []).slice(0, 5).forEach(txn => {
+                const d = txn.time ? new Date(txn.time).toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'2-digit'}) : '-';
+                const isCr = txn.type === 'credit';
+                const clr = isCr ? '#15803d' : '#dc2626';
+                const bbg = txn.state==='completed'?'#dcfce7':txn.state==='pending'?'#fef3c7':'#fee2e2';
+                const bclr = txn.state==='completed'?'#15803d':txn.state==='pending'?'#b45309':'#dc2626';
+                histRows += `<tr><td style="padding:7px 4px;font-size:11px;color:#475569;">${d}</td><td style="padding:7px 4px;font-size:11px;color:#475569;max-width:100px;word-break:break-word;">${txn.description||(isCr?'Loan Disbursed':'Repayment')}</td><td style="padding:7px 4px;font-size:11px;font-weight:700;color:${clr};">${isCr?'+':'-'}KSh ${Number(txn.amount||0).toLocaleString()}</td><td style="padding:7px 4px;"><span style="background:${bbg};color:${bclr};padding:2px 6px;border-radius:9px;font-size:9px;font-weight:700;">${txn.state||'-'}</span></td></tr>`;
+                histCount++;
+            });
+        }
+
+        return `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
                 <div style="background:linear-gradient(135deg,#0c8f44,#00c76f);border-radius:10px;padding:12px;color:white;text-align:center;">
                     <div style="font-size:9px;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">My Savings</div>
@@ -4170,14 +4335,17 @@ const app = {
                 </div>
             </div>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                     <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;"><i class="fa-solid fa-info-circle"></i> Loan Status</span>
-                    <span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:${hasActiveLoan?'#dcfce7':'#f1f5f9'};color:${hasActiveLoan?'#15803d':'#64748b'};">${hasActiveLoan?'Active':'No Active Loan'}</span>
+                    <span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:${headerBadge.bg};color:${headerBadge.color};">${headerBadge.text}</span>
                 </div>
-                ${hasActiveLoan ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                    <div style="background:white;padding:9px;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:3px;">Borrowed</div><div style="font-size:14px;font-weight:800;color:#dc2626;">KSh ${activeLoanAmount.toLocaleString()}</div></div>
-                    <div style="background:white;padding:9px;border-radius:8px;border:1px solid #e2e8f0;"><div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:3px;">Total Due (${interestRate}%)</div><div style="font-size:14px;font-weight:800;color:#f59e0b;">KSh ${totalDue.toLocaleString()}</div></div>
-                </div>` : `<div style="text-align:center;padding:10px 0;color:#64748b;font-size:13px;"><i class="fa-solid fa-circle-check" style="color:#22c55e;margin-right:5px;"></i>You have no outstanding loans</div>`}
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                    <span style="font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;padding:3px 8px;border-radius:999px;">Pending ${pendingCt}</span>
+                    <span style="font-size:10px;font-weight:700;background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:999px;">Active ${activeCt}</span>
+                    <span style="font-size:10px;font-weight:700;background:#fee2e2;color:#dc2626;padding:3px 8px;border-radius:999px;">Expired ${expiredCt}</span>
+                    <span style="font-size:10px;font-weight:700;background:#f1f5f9;color:#64748b;padding:3px 8px;border-radius:999px;">Rejected ${rejectedCt}</span>
+                </div>
+                ${loanStatusListHtml}
             </div>
             <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;">
                 <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;"><i class="fa-solid fa-cog"></i> Loan Policy</div>
@@ -4203,16 +4371,173 @@ const app = {
                 </div>
             </div>` : ''}
             <div style="display:flex;gap:8px;">
-                <button class="m-submit-btn secondary" style="flex:1;margin-top:0;" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i> Close</button>
                 <button class="m-submit-btn" style="flex:1;margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.renderGroupRequestLoanView('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-plus-circle"></i> Request</button>
                 <button class="m-submit-btn" style="flex:1;margin-top:0;background:linear-gradient(135deg,#1e293b,#334155);" onclick="app.openGroupPayLoanModal('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-money-bill-wave"></i> Pay</button>
             </div>`;
-            this.updateModalContent('Loan Balance', html, null, 'fa-sack-dollar', 'linear-gradient(135deg, #1565c0, #1e3a8a)');
-        })
-        .catch(err => {
-            console.error(err);
-            this.updateModalContent('Error', '<div class="m-empty-state"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p>Failed to load loan details. Please try again.</p></div>', null, 'fa-sack-dollar');
+    },
+    _renderLoanBalanceModal(decodedGroupName, memberData, loanReqData, opts = {}) {
+        let html = this._buildLoanBalanceHtml(decodedGroupName, memberData, loanReqData);
+        if (opts.fromCache || opts.refreshing) {
+            html = `<div data-loan-refreshing="1" style="display:flex;justify-content:flex-end;margin:-4px 0 8px;"><span style="font-size:10px;font-weight:600;color:#94a3b8;"><i class="fa-solid fa-rotate fa-spin"></i> Updating…</span></div>` + html;
+        }
+        this.updateModalContent('Loan Balance', html, null, 'fa-sack-dollar', 'linear-gradient(135deg, #0c8f44, #34d399)');
+    },
+    async _fetchLoanBalanceBundle(decodedGroupName, memberPhone) {
+        const [data, loanReqData] = await Promise.all([
+            fetch('/member/verified-groups-members', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName: decodedGroupName, phone: memberPhone })
+            }).then(res => res.json()),
+            fetch('/member/my-loan-requests?groupName=' + encodeURIComponent(decodedGroupName) + '&phone=' + encodeURIComponent(memberPhone))
+                .then(res => res.json())
+                .catch(() => ({ success: false, requests: [], counts: {} }))
+        ]);
+        return { memberData: data, loanReqData };
+    },
+    openGroupLoanBalanceModal(groupName) {
+        const decodedGroupName = decodeURIComponent(groupName);
+        const memberPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        document.getElementById('modalOverlay').classList.add('open');
+        this._loanBalanceOpenFor = decodedGroupName;
+
+        // Instant render from localStorage (SWR)
+        const cached = this._readLoanCache(decodedGroupName);
+        if (cached && (cached.memberData || cached.loanReqData)) {
+            this._renderLoanBalanceModal(
+                decodedGroupName,
+                cached.memberData || {},
+                cached.loanReqData || { requests: [], counts: {} },
+                { fromCache: true }
+            );
+        } else {
+            this.updateModalContent(
+                'Loan Balance',
+                '<div style="text-align:center;padding:28px 12px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:22px;color:var(--primary);"></i><p style="margin-top:10px;font-size:12px;color:#64748b;">Loading loan details…</p></div>',
+                null,
+                'fa-sack-dollar',
+                'linear-gradient(135deg, #0c8f44, #34d399)'
+            );
+        }
+
+        const age = cached && cached.updatedAt ? (Date.now() - Number(cached.updatedAt)) : Infinity;
+        // Fresh enough — skip network round-trip (still showed cache instantly)
+        if (cached && age < 20 * 1000) {
+            this._renderLoanBalanceModal(
+                decodedGroupName,
+                cached.memberData || {},
+                cached.loanReqData || { requests: [], counts: {} }
+            );
+            return;
+        }
+
+        // Background refresh — keep UI snappy
+        this._fetchLoanBalanceBundle(decodedGroupName, memberPhone)
+            .then(({ memberData, loanReqData }) => {
+                if (this._loanBalanceOpenFor !== decodedGroupName) return;
+                this._writeLoanCache(decodedGroupName, { memberData, loanReqData });
+                this._renderLoanBalanceModal(decodedGroupName, memberData, loanReqData, { refreshed: true });
+            })
+            .catch(err => {
+                console.error('[loan-balance]', err);
+                if (this._loanBalanceOpenFor !== decodedGroupName) return;
+                if (!cached) {
+                    this.updateModalContent('Error', '<div class="m-empty-state"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p>Failed to load loan details. Please try again.</p></div>', null, 'fa-sack-dollar', 'linear-gradient(135deg, #0c8f44, #34d399)');
+                } else {
+                    this.showToast('Showing cached loan data. Refresh failed.', 'error');
+                    this._renderLoanBalanceModal(
+                        decodedGroupName,
+                        cached.memberData || {},
+                        cached.loanReqData || { requests: [], counts: {} }
+                    );
+                }
+            });
+    },
+    async cancelPendingLoanRequest(groupName, requestId) {
+        const gn = decodeURIComponent(groupName || '');
+        const rid = String(requestId || '').trim();
+        if (!gn || !rid) {
+            this.showToast('Missing loan request details.', 'error');
+            return;
+        }
+        if (!confirm('Cancel this pending loan request? It will be removed permanently.')) return;
+
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+
+        // Optimistic UI + localStorage update (instant)
+        this._patchLoanCacheRequests(gn, (list) => list.filter(r => String(r.requestId) !== rid));
+        this._invalidateGloanCache(gn);
+        const card = document.querySelector(`[data-loan-req="${rid}"]`);
+        if (card) card.remove();
+        const cached = this._readLoanCache(gn);
+        if (cached) {
+            this._renderLoanBalanceModal(gn, cached.memberData || {}, cached.loanReqData || { requests: [], counts: {} });
+        }
+
+        try {
+            const res = await fetch('/member/cancel-loan-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ groupName: gn, requestId: rid, phone, memberPhone: phone })
+            });
+            const data = await res.json();
+            if (!data || !data.success) {
+                this.showToast((data && data.message) || 'Could not cancel loan request.', 'error');
+                // Re-sync from server
+                this.openGroupLoanBalanceModal(encodeURIComponent(gn));
+                return;
+            }
+            this.showToast('Pending loan request cancelled.', 'success');
+            this._invalidateGloanCache(gn);
+            // Quiet background sync to keep cache fresh
+            this._fetchLoanBalanceBundle(gn, phone).then(({ memberData, loanReqData }) => {
+                this._writeLoanCache(gn, { memberData, loanReqData });
+                if (this._loanBalanceOpenFor === gn) {
+                    this._renderLoanBalanceModal(gn, memberData, loanReqData);
+                }
+            }).catch(() => {});
+        } catch (e) {
+            console.error('[cancelPendingLoanRequest]', e);
+            this.showToast('Network error. Please try again.', 'error');
+            this.openGroupLoanBalanceModal(encodeURIComponent(gn));
+        }
+    },
+    _upsertLoanRequestInCache(groupName, request) {
+        if (!groupName || !request) return;
+        const fmtWhen = (iso) => {
+            if (!iso) return '—';
+            try {
+                const d = new Date(iso);
+                if (Number.isNaN(d.getTime())) return '—';
+                return d.toLocaleString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (_) { return '—'; }
+        };
+        const tc = (request.status && request.status.timeCompliance) || {};
+        const mapped = {
+            requestId: request.requestId || '',
+            memberPhone: request.memberPhone || '',
+            amount: Number(request.amount || 0),
+            amountToBePaid: Number(tc.amountRequestedToBePaid != null ? tc.amountRequestedToBePaid : request.amount || 0),
+            status: String((request.status && request.status.condition) || 'pending').toLowerCase(),
+            requestTime: request.requestTime || '',
+            requestTimeLabel: fmtWhen(request.requestTime),
+            dueAt: tc.dueAt || '',
+            dueAtLabel: fmtWhen(tc.dueAt),
+            durationDays: Number(tc.durationDays || 0) || 0,
+            rolledBalance: Number(tc.rolledBalance || 0) || 0,
+            processorPhone: (request.processor && request.processor.phone) || '',
+            approvalTime: (request.processor && request.processor.approvalTime) || '',
+            approvalTimeLabel: fmtWhen(request.processor && request.processor.approvalTime)
+        };
+        this._patchLoanCacheRequests(groupName, (list) => {
+            const next = list.filter(r => String(r.requestId) !== String(mapped.requestId));
+            next.unshift(mapped);
+            return next;
         });
+        this._invalidateGloanCache(groupName);
     },
     openGroupRequestLoanModal(groupName, activeTab = 'my') {
         this.closeModal();
@@ -4266,12 +4591,31 @@ const app = {
         const repaymentDays   = lp.repayment         ? (lp.repayment.durationDays            || 0) : 0;
         const maxActiveLoans  = lp.interestAndLimits ? (lp.interestAndLimits.maxActiveLoans  || 0) : 0;
 
+        // Seed savings / limits from loan cache when available (instant)
+        let cachedSavings = 0;
+        try {
+            const loanCached = this._readLoanCache(decodedGroupName);
+            const vm = loanCached && loanCached.memberData && (loanCached.memberData.currentUser || loanCached.memberData.verifiedMember || loanCached.memberData.member);
+            const accounts = (vm && vm.accounts) || {};
+            for (const accId in accounts) {
+                const acc = accounts[accId];
+                const n = String(acc.accountName || '').toLowerCase();
+                const fins = acc.financials || {};
+                if (accId === '001' || accId === '1' || n.includes('saving')) {
+                    cachedSavings += Number(fins.amountIn != null ? fins.amountIn : 0);
+                }
+            }
+            if (!(cachedSavings > 0) && vm && vm.memberFinancials && vm.memberFinancials.amountIn != null) {
+                cachedSavings = Number(vm.memberFinancials.amountIn) || 0;
+            }
+        } catch (_) {}
+
         this._loanState = {
             groupName: decodedGroupName,
             allGuarantors: [],
             selectedGuarantors: [],
             loanPolicy: { interestRate, limitMultiplier, repaymentDays, maxActiveLoans },
-            savings: 0,
+            savings: cachedSavings,
             isOfficial: isOfficialOrTrusty,
             activeTab: activeTab
         };
@@ -4339,6 +4683,10 @@ const app = {
                     <div style="font-size:11.5px;color:#475569;">Repayment: <b style="color:#1e293b;">${repaymentDays} days</b></div>
                     <div style="font-size:11.5px;color:#475569;">Max Active: <b style="color:#1e293b;">${maxActiveLoans || 1}</b></div>
                 </div>
+                ${cachedSavings > 0 ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid #dbeafe;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:11.5px;color:#475569;">My Savings</span>
+                    <span style="font-size:13px;font-weight:800;color:#0c8f44;">KES ${Number(cachedSavings).toLocaleString()}</span>
+                </div>` : ''}
             </div>
 
             <!-- APPLICATION FORM CARD -->
@@ -4406,50 +4754,47 @@ const app = {
     redirectToMyLoan(groupName) {
         this.renderGroupRequestLoanView(groupName, 'my');
     },
-    redirectToGroupLoan(groupName) {
-        const decoded = decodeURIComponent(groupName);
-        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
-        const container = document.getElementById('mainContainer');
-        if (!container) return;
-
-        const encoded = encodeURIComponent(decoded);
-        container.innerHTML = `<div style="padding:48px 20px;text-align:center;color:#64748b;">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size:22px;margin-bottom:10px;display:block;"></i>
-            Loading group loans…
-        </div>`;
-        window.scrollTo(0, 0);
-
-        fetch('/member/gloan?groupName=' + encoded + '&memberPhone=' + encodeURIComponent(phone))
-            .then(r => {
-                if (!r.ok) throw new Error('Failed to load group loans');
-                return r.text();
-            })
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const wrapper = doc.querySelector('.page-wrapper');
-                if (!wrapper) throw new Error('Group loan view missing');
-
-                let styleText = '';
-                doc.querySelectorAll('style').forEach(s => {
-                    styleText += (s.textContent || '')
-                        .replace(/\*,\s*\*::before,\s*\*::after\s*\{[^}]*\}/g, '')
-                        .replace(/body\s*\{[^}]*\}/g, '')
-                        + '\n';
-                });
-                styleText += `
-                    #gloanEmbed { padding: 0; }
-                    #gloanEmbed .page-wrapper {
-                        width: 100%; max-width: none; min-height: auto;
-                        border-radius: 0; box-shadow: none; animation: none;
-                    }
-                    #gloanEmbed .header { display: none !important; }
-                `;
-
-                const oldHeader = wrapper.querySelector('.header');
-                if (oldHeader) oldHeader.remove();
-
-                const subHeader = `
+    _gloanCacheKey(groupName, phone) {
+        const g = String(groupName || '').toLowerCase().replace(/\s+/g, '_');
+        const p = String(phone || 'default').replace(/\D/g, '').slice(-9) || 'default';
+        return `cliant_gloan_html_${p}_${g}`;
+    },
+    _readGloanCache(groupName) {
+        try {
+            const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+            const raw = localStorage.getItem(this._gloanCacheKey(groupName, phone));
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !parsed.wrapperHtml) return null;
+            // Drop after 30 minutes
+            if (parsed.updatedAt && Date.now() - Number(parsed.updatedAt) > 30 * 60 * 1000) {
+                localStorage.removeItem(this._gloanCacheKey(groupName, phone));
+                return null;
+            }
+            return parsed;
+        } catch (_) {
+            return null;
+        }
+    },
+    _writeGloanCache(groupName, payload) {
+        try {
+            const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+            localStorage.setItem(this._gloanCacheKey(groupName, phone), JSON.stringify({
+                ...payload,
+                updatedAt: Date.now()
+            }));
+        } catch (e) {
+            console.warn('[gloan-cache] write failed:', e);
+        }
+    },
+    _invalidateGloanCache(groupName) {
+        try {
+            const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+            localStorage.removeItem(this._gloanCacheKey(groupName, phone));
+        } catch (_) {}
+    },
+    _buildGloanSubHeader(encoded, decoded) {
+        return `
                 <div style="padding:14px 14px 0;">
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                         <button type="button" onclick="app.renderGroupView('${encoded}')" style="width:36px;height:36px;border-radius:50%;background:#f1f5f9;border:none;display:flex;align-items:center;justify-content:center;color:#475569;cursor:pointer;box-shadow:var(--shadow-sm);transition:all 0.2s;">
@@ -4472,20 +4817,96 @@ const app = {
                         </button>
                     </div>
                 </div>`;
+    },
+    _mountGloanEmbed(decoded, styleText, wrapperHtml, opts = {}) {
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
+        const encoded = encodeURIComponent(decoded);
+        const oldStyle = document.getElementById('gloanEmbedStyles');
+        if (oldStyle) oldStyle.remove();
+        const tip = opts.fromCache
+            ? `<div data-gloan-refreshing="1" style="padding:0 14px 6px;text-align:right;font-size:10px;font-weight:600;color:#94a3b8;"><i class="fa-solid fa-rotate fa-spin"></i> Updating…</div>`
+            : '';
+        container.innerHTML =
+            `<style id="gloanEmbedStyles">${styleText}</style>` +
+            this._buildGloanSubHeader(encoded, decoded) +
+            tip +
+            `<div id="gloanEmbed">${wrapperHtml}</div>`;
+        this._initGloanEmbed(decoded);
+        window.scrollTo(0, 0);
+    },
+    _parseGloanHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const wrapper = doc.querySelector('.page-wrapper');
+        if (!wrapper) throw new Error('Group loan view missing');
 
-                const oldStyle = document.getElementById('gloanEmbedStyles');
-                if (oldStyle) oldStyle.remove();
+        let styleText = '';
+        doc.querySelectorAll('style').forEach(s => {
+            styleText += (s.textContent || '')
+                .replace(/\*,\s*\*::before,\s*\*::after\s*\{[^}]*\}/g, '')
+                .replace(/body\s*\{[^}]*\}/g, '')
+                + '\n';
+        });
+        styleText += `
+            #gloanEmbed { padding: 0; }
+            #gloanEmbed .page-wrapper {
+                width: 100%; max-width: none; min-height: auto;
+                border-radius: 0; box-shadow: none; animation: none;
+            }
+            #gloanEmbed .header { display: none !important; }
+        `;
 
-                container.innerHTML =
-                    `<style id="gloanEmbedStyles">${styleText}</style>` +
-                    subHeader +
-                    `<div id="gloanEmbed">${wrapper.outerHTML}</div>`;
+        const oldHeader = wrapper.querySelector('.header');
+        if (oldHeader) oldHeader.remove();
+        return { styleText, wrapperHtml: wrapper.outerHTML };
+    },
+    redirectToGroupLoan(groupName) {
+        const decoded = decodeURIComponent(groupName);
+        const phone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+        const container = document.getElementById('mainContainer');
+        if (!container) return;
 
-                this._initGloanEmbed(decoded);
-                window.scrollTo(0, 0);
+        const encoded = encodeURIComponent(decoded);
+        this._gloanOpenFor = decoded;
+
+        // Instant mount from localStorage
+        const cached = this._readGloanCache(decoded);
+        if (cached && cached.wrapperHtml) {
+            this._mountGloanEmbed(decoded, cached.styleText || '', cached.wrapperHtml, { fromCache: true });
+        } else {
+            container.innerHTML = `<div style="padding:48px 20px;text-align:center;color:#64748b;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:22px;margin-bottom:10px;display:block;"></i>
+                Loading group loans…
+            </div>`;
+            window.scrollTo(0, 0);
+        }
+
+        const age = cached && cached.updatedAt ? (Date.now() - Number(cached.updatedAt)) : Infinity;
+        if (cached && age < 20 * 1000) {
+            this._mountGloanEmbed(decoded, cached.styleText || '', cached.wrapperHtml);
+            return;
+        }
+
+        fetch('/member/gloan?groupName=' + encoded + '&memberPhone=' + encodeURIComponent(phone))
+            .then(r => {
+                if (!r.ok) throw new Error('Failed to load group loans');
+                return r.text();
+            })
+            .then(html => {
+                if (this._gloanOpenFor !== decoded) return;
+                const parsed = this._parseGloanHtml(html);
+                this._writeGloanCache(decoded, parsed);
+                this._mountGloanEmbed(decoded, parsed.styleText, parsed.wrapperHtml);
             })
             .catch(err => {
                 console.error(err);
+                if (this._gloanOpenFor !== decoded) return;
+                if (cached && cached.wrapperHtml) {
+                    this.showToast('Showing cached group loans. Refresh failed.', 'error');
+                    this._mountGloanEmbed(decoded, cached.styleText || '', cached.wrapperHtml);
+                    return;
+                }
                 container.innerHTML = `<div style="padding:40px 20px;text-align:center;">
                     <div style="color:#ef4444;margin-bottom:12px;"><i class="fa-solid fa-circle-exclamation"></i> Could not load group loans.</div>
                     <button class="m-submit-btn secondary" onclick="app.renderGroupView('${encoded}')">
@@ -4808,6 +5229,8 @@ const app = {
                 </div>`;
             this.updateModalContent('Give Loan – Done', html, null, 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #34d399)');
             this.showToast('Loan request saved as pending approval.', 'success');
+            if (req && req.requestId) this._upsertLoanRequestInCache(state.groupName, req);
+            this._invalidateGloanCache(state.groupName);
             this._giveLoanState = null;
         } catch (e) {
             console.error('[confirmGiveLoanRequest]', e);
@@ -4849,7 +5272,7 @@ const app = {
             if (perfCard) perfObserver.observe(perfCard);
         }
 
-        root.querySelectorAll('.quick-link-btn[href^="#"]').forEach(link => {
+        root.querySelectorAll('.quick-link-btn[href^="#"], .stat-card-link[href^="#"]').forEach(link => {
             link.addEventListener('click', e => {
                 e.preventDefault();
                 const target = root.querySelector(link.getAttribute('href')) || document.querySelector(link.getAttribute('href'));
@@ -4935,6 +5358,23 @@ const app = {
         }
     },
     _loanLoadGuarantors(groupName, phone) {
+        const key = this._loanGuarantorCacheKey(groupName, phone);
+        const applyList = (list) => {
+            this._loanState.allGuarantors = Array.isArray(list) ? list.slice() : [];
+            this._loanRenderGuarantors();
+        };
+
+        // Instant from localStorage
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && Array.isArray(parsed.members) && parsed.members.length) {
+                    applyList(parsed.members);
+                }
+            }
+        } catch (_) {}
+
         fetch('/member/group-by-name', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -4942,21 +5382,26 @@ const app = {
         })
         .then(res => res.json())
         .then(groupData => {
-            this._loanState.allGuarantors = [];
+            const list = [];
             if (groupData && groupData.members) {
                 Object.entries(groupData.members)
                     .sort((a, b) => a[0].localeCompare(b[0]))
                     .forEach(([mPhone, member], idx) => {
                         if (mPhone !== phone) {
-                            this._loanState.allGuarantors.push({ phone: mPhone, name: member.name || member.memberId || mPhone, index: idx + 1 });
+                            list.push({ phone: mPhone, name: member.name || member.memberId || mPhone, index: idx + 1 });
                         }
                     });
             }
-            this._loanRenderGuarantors();
+            try {
+                localStorage.setItem(key, JSON.stringify({ members: list, updatedAt: Date.now() }));
+            } catch (_) {}
+            applyList(list);
         })
         .catch(() => {
-            const el = document.getElementById('ilGuarantorList');
-            if (el) el.innerHTML = '<div style="text-align:center;color:#64748b;font-size:12px;padding:10px;">Unable to load members</div>';
+            if (!(this._loanState.allGuarantors && this._loanState.allGuarantors.length)) {
+                const el = document.getElementById('ilGuarantorList');
+                if (el) el.innerHTML = '<div style="text-align:center;color:#64748b;font-size:12px;padding:10px;">Unable to load members</div>';
+            }
         });
     },
     _loanRenderGuarantors() {
@@ -5215,6 +5660,8 @@ const app = {
                     </button>
                 </div>
             </div>`;
+            if (req && req.requestId) this._upsertLoanRequestInCache(gn, req);
+            this._invalidateGloanCache(gn);
         } catch (err) {
             console.error('[_loanSubmit]', err);
             container.innerHTML = `
