@@ -420,8 +420,36 @@ const getGroupsForMemberFromGroupsCollection = async (phone) => {
             }
         }
     }
+    // Deduplicate groups by accountNumber/groupNumber first, fall back to case-insensitive groupName
+    const seenKeys = new Set();
+    const uniqueGroups = [];
+    for (const g of groups) {
+        if (!g) continue;
+        let key = '';
+        // Prefer structured identifiers for uniqueness
+        if (g.accountNumber) key = 'acc:' + String(g.accountNumber).trim().toLowerCase();
+        else if (g.groupNumber) key = 'grp:' + String(g.groupNumber).trim().toLowerCase();
+        // Fall back to a robust name-based key: county + constituency + ward + groupName (case-insensitive)
+        if (!key) {
+            const parts = [
+                g.county || '',
+                g.constituency || '',
+                g.ward || '',
+                g.groupName || ''
+            ].map(p => String(p).trim().toLowerCase()).join('|');
+            key = 'name:' + parts;
+        }
+        // If even the fallback is empty, use the raw groupName as last resort
+        if (!key || key === 'name:|||') {
+            key = 'raw:' + String(g.groupName || '').trim();
+        }
+        if (key && !seenKeys.has(key)) {
+            seenKeys.add(key);
+            uniqueGroups.push(g);
+        }
+    }
 
-    return groups;
+    return uniqueGroups;
 };
 
 const restructureData = (data) => {
@@ -860,26 +888,128 @@ router.post("/change-pin", async (req, res) => {
   }
 });
 
-/* 👤 Get User Name by Phone */
-router.get("/get-name", (req, res) => {
+/* 👤 Get User Name by Phone (MongoDB PersonalAccount first, then legacy data.json, then p_account/personal.json) */
+router.get("/get-name", async (req, res) => {
   try {
     const { phone } = req.query;
     if (!phone) return res.json({ success: false, message: "Phone required" });
-    
-    const usersFile = path.join(__dirname, "../data.json");
-    const users = readJSON(usersFile, []);
-    const usersFlat = flattenUsers(users);
-    const normalized = norm(phone);
-    const u = usersFlat.find(user => norm(user.phoneNumber) === normalized);
-    
-    if (u) {
-      const name = `${u.FirstName} ${u.MiddleName || ''} ${u.LastName}`.replace(/\s+/g, ' ').trim();
-      res.json({ success: true, name });
-    } else {
-      res.json({ success: false, message: "User not found" });
+
+    const ROLE_TOKENS = new Set([
+      'dealer','agent','trustee','trusty','official','chairperson','chairman','chairlady','chair',
+      'treasurer','secretary','member','admin','administrator','superadmin','super',
+      'manager','director','owner','founder','leader','head','patron','observer'
+    ]);
+    const cleanDisplayName = (raw) => {
+      let s = String(raw || '').trim();
+      if (!s) return '';
+      // 1. Strip leading/trailing role tokens (whole-word, case-insensitive), both standalone and joined
+      let words = s.split(/[\s_\-]+/).filter(Boolean);
+      // Strip trailing roles first (most common: "brian kisumu dealer")
+      while (words.length > 1 && ROLE_TOKENS.has(words[words.length - 1].toLowerCase())) words.pop();
+      // Strip leading roles just in case (defensive)
+      while (words.length > 1 && ROLE_TOKENS.has(words[0].toLowerCase())) words.shift();
+      // 2. Remove any role sub-word that might be attached (e.g. "DealerBrian" → won't happen since we split above)
+      s = words.join(' ').trim();
+      if (!s) return '';
+      // 3. Title-case: "brian kisumu" → "Brian Kisumu"
+      s = s.replace(/\w\S*/g, (w) => {
+        const first = w.charAt(0).toUpperCase();
+        const rest = w.slice(1).toLowerCase();
+        return first + rest;
+      });
+      // 4. Normalise spacing
+      s = s.replace(/\s+/g, ' ').trim();
+      return s;
+    };
+
+    const buildName = (rec) => {
+      if (!rec) return '';
+      // Prefer FirstName + LastName components (NEVER have role suffixes) over composite `name` field
+      const fn = rec.FirstName || rec.firstName || rec.first_name || '';
+      const mn = rec.MiddleName || rec.middleName || rec.SecondName || rec.secondName || '';
+      const ln = rec.LastName || rec.lastName || rec.last_name || '';
+      const parts = [fn, mn, ln].map(x => String(x || '').trim()).filter(Boolean);
+      if (parts.length > 0) {
+        const joined = parts.join(' ');
+        return cleanDisplayName(joined);
+      }
+      // Fallback: composite name field (MIGHT contain role tags → clean them)
+      const n1 = rec.name || rec.fullName || '';
+      if (n1 && String(n1).trim()) return cleanDisplayName(n1);
+      return '';
+    };
+
+    const targetNorm = norm(phone);
+
+    // 1. MongoDB PersonalAccount (authoritative)
+    try {
+      const mongoAcc = await findPersonalAccountByPhone(phone);
+      if (mongoAcc) {
+        let nm = buildName(mongoAcc);
+        if (!nm && mongoAcc.account && mongoAcc.account.personal) {
+          const ap = mongoAcc.account.personal;
+          nm = buildName(ap);
+        }
+        if (!nm && mongoAcc.account && mongoAcc.account.registration) {
+          nm = buildName(mongoAcc.account.registration);
+        }
+        if (nm) {
+          return res.json({ success: true, name: nm });
+        }
+      }
+    } catch (mongoErr) {
+      console.error("[get-name] MongoDB lookup error:", mongoErr.message);
     }
+
+    // 2. MongoDB users collection (getUserNameByPhone)
+    try {
+      const mongoName = await getUserNameByPhone(phone);
+      if (mongoName && String(mongoName).trim()) {
+        return res.json({ success: true, name: String(mongoName).trim() });
+      }
+    } catch (guErr) {
+      console.error("[get-name] getUserNameByPhone error:", guErr.message);
+    }
+
+    // 3. Legacy data.json flat users
+    try {
+      const usersFile = path.join(__dirname, "../data.json");
+      const users = readJSON(usersFile, []);
+      const usersFlat = flattenUsers(users);
+      const u = usersFlat.find(user => norm(user.phoneNumber) === targetNorm);
+      if (u) {
+        const nm = buildName(u);
+        if (nm) return res.json({ success: true, name: nm });
+      }
+    } catch (_) {}
+
+    // 4. Local p_account/personal.json fallback
+    try {
+      const pFile = path.join(__dirname, "../p_account/personal.json");
+      if (fs.existsSync(pFile)) {
+        const pData = JSON.parse(fs.readFileSync(pFile, 'utf8'));
+        const pAccounts = pData.personalAccounts || {};
+        let rec = null;
+        if (pAccounts[phone]) rec = pAccounts[phone];
+        if (!rec) {
+          for (const k of Object.keys(pAccounts)) {
+            const v = pAccounts[k];
+            if (!v) continue;
+            const kNorm = norm(k);
+            const pNorm = norm(v.phone || v.phoneNumber || '');
+            if (kNorm === targetNorm || pNorm === targetNorm) { rec = v; break; }
+          }
+        }
+        if (rec) {
+          const nm = buildName(rec);
+          if (nm) return res.json({ success: true, name: nm });
+        }
+      }
+    } catch (_) {}
+
+    return res.json({ success: false, message: "User not found" });
   } catch (err) {
-    console.error(err);
+    console.error("[get-name] error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });

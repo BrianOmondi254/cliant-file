@@ -17,7 +17,8 @@ const {
   deletePendingOfficerMessage,
   Agent,
   Dealer,
-  normalizePhone
+  normalizePhone,
+  findPersonalAccountByPhone
 } = require('../mongoose');
 
 const router = express.Router();
@@ -2808,76 +2809,380 @@ router.post("/add-member", (req, res) => {
 });
 
 
-// POST /request-add-member - Submit a request to add a new member
-router.post("/request-add-member", (req, res) => {
-  const { groupName, requesterPhone, newMemberName, newMemberPhone, reason, county, constituency, ward, idNumber, conformed } = req.body;
+
+// Helper to locate a group inside MongoDB 'groups' county documents & constituency arrays
+const locateMongoGroup = async (groupName) => {
+  try {
+    const ready = await ensureMongoReady();
+    if (!ready) return null;
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) return null;
+    const db = mongoose.connection.db;
+    if (!db) return null;
+
+    const col = db.collection("groups");
+    const targetNorm = String(groupName || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+    if (!targetNorm) return null;
+
+    const allDocs = await col.find({}).toArray();
+    for (const doc of allDocs) {
+      if (!doc) continue;
+      for (const key in doc) {
+        if (key === "_id" || key === "county" || key === "countyId" || key === "countryTransaction" || key === "syncedAt" || key === "createdAt" || key === "updatedAt") continue;
+        const items = doc[key];
+        if (!Array.isArray(items)) continue;
+        for (let idx = 0; idx < items.length; idx++) {
+          const item = items[idx];
+          if (item && typeof item === "object" && !Array.isArray(item)) {
+            const gName = String(item.groupName || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+            const gId = String(item.groupId || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+            const gAcc = String(item.accountNumber || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+            if (
+              gName === targetNorm ||
+              gId === targetNorm ||
+              gAcc === targetNorm ||
+              String(item.groupName || '').trim().toLowerCase() === String(groupName || '').trim().toLowerCase()
+            ) {
+              return {
+                doc,
+                constituencyKey: key,
+                itemIndex: idx,
+                group: item,
+                col
+              };
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[locateMongoGroup] Error:", err.message);
+  }
+  return null;
+};
+
+// POST /request-add-member - Submit a request to add a new member (updates MongoDB groups collection)
+router.post("/request-add-member", async (req, res) => {
+  const { groupName, requesterPhone, requesterName: reqName, requesterTitle: reqTitle, newMemberName, newMemberPhone, reason, idNumber, conformed } = req.body;
 
   if (!groupName || !newMemberPhone) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
   }
 
-  // Read from general.json
-  let generalData = readJSON(generalFile, {});
-  if (!generalData || Object.keys(generalData).length === 0) {
-    return res.status(404).json({ success: false, error: "No groups found in general.json" });
+  // 1. Verify candidate's phone against Personal Account collection
+  let personalAcc = null;
+  try {
+    personalAcc = await findPersonalAccountByPhone(newMemberPhone);
+  } catch (e) {
+    console.error("[request-add-member] Personal account lookup error:", e.message);
   }
 
-  // Find the target group
-  const groupRef = findGroupInGeneral(generalData, groupName);
-  if (!groupRef) {
-    return res.status(404).json({ success: false, error: "Group not found" });
+  // Local fallback if Mongo record syncing
+  if (!personalAcc) {
+    try {
+      const pFile = path.join(__dirname, "../p_account/personal.json");
+      if (fs.existsSync(pFile)) {
+        const pData = JSON.parse(fs.readFileSync(pFile, 'utf8'));
+        const pAccounts = pData.personalAccounts || {};
+        const targetNorm = normalizeKenyanPhone(newMemberPhone);
+        for (const k of Object.keys(pAccounts)) {
+          if (normalizeKenyanPhone(k) === targetNorm || normalizeKenyanPhone(pAccounts[k].phone) === targetNorm) {
+            personalAcc = pAccounts[k];
+            break;
+          }
+        }
+      }
+    } catch (_) {}
   }
 
-  const targetGroup = groupRef.group;
+  const cleanGroupName = decodeURIComponent(groupName || '').replace(/%20/g, ' ').trim();
+
+  if (!personalAcc) {
+    return res.status(400).json({
+      success: false,
+      error: `The phone number entered is not registered with T-Bank Investment. Member should register a personal account to qualify to be added to group ${cleanGroupName}.`
+    });
+  }
+
+  // 2. Locate target group in MongoDB groups collection
+  const located = await locateMongoGroup(groupName);
+  if (!located) {
+    return res.status(404).json({ success: false, error: "Group not found in MongoDB groups collection" });
+  }
+
+  const { doc, constituencyKey, itemIndex, group, col } = located;
 
   // Check if member already exists in the group
-  const memberKeys = Object.keys(targetGroup).filter(k =>
+  const memberKeys = Object.keys(group).filter(k =>
     k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
   );
-  const existingMember = memberKeys.find(key => {
-    const person = targetGroup[key];
+  let existingMember = memberKeys.find(key => {
+    const person = group[key];
     return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(newMemberPhone);
   });
 
-  if (existingMember) {
-    return res.status(400).json({ success: false, error: "Member already exists in this group" });
+  if (!existingMember && Array.isArray(group.members)) {
+    existingMember = group.members.find(m => m && m.phone && normalizeKenyanPhone(m.phone) === normalizeKenyanPhone(newMemberPhone));
+  } else if (!existingMember && group.members && typeof group.members === 'object') {
+    existingMember = Object.values(group.members).find(m => m && (m.phone || m.memberId) && normalizeKenyanPhone(m.phone || m.memberId) === normalizeKenyanPhone(newMemberPhone));
   }
 
-  // Initialize requests array if not exists
-  if (!targetGroup.requests) targetGroup.requests = {};
-  if (!targetGroup.requests.addMember) targetGroup.requests.addMember = [];
+  if (existingMember) {
+    return res.status(400).json({
+      success: false,
+      error: `Cannot process: the phone number ${newMemberPhone} is already a member within group ${cleanGroupName}.`
+    });
+  }
 
-  // Check for any existing request for this phone (any status)
-  const existingRequest = targetGroup.requests.addMember.find(r =>
-    normalizeKenyanPhone(r.newMemberPhone) === normalizeKenyanPhone(newMemberPhone)
+  const existingRequests = (group.requests && group.requests.addMember) || [];
+  const existingRequest = existingRequests.find(r =>
+    normalizeKenyanPhone(r.newMemberPhone) === normalizeKenyanPhone(newMemberPhone) && r.status === 'pending'
   );
   if (existingRequest) {
-    return res.status(400).json({ success: false, error: "A request already exists for this phone number (status: " + existingRequest.status + ")" });
+    return res.status(400).json({ success: false, error: "A pending request already exists for this phone number" });
   }
 
-   // Add the request
-   const newRequest = {
-     id: Date.now().toString(),
-     type: 'addMember',
-     requesterPhone: requesterPhone || '',
-     newMemberName,
-     newMemberPhone,
-     idNumber: idNumber || null,
-     reason: reason || '',
-     conformed: conformed === true || conformed === 'true', // Boolean flag
-     status: 'pending',
-     createdAt: new Date().toISOString()
-   };
+  // 3. Resolve processor (requester) details (name and title) from group
+  let processorName = reqName || '';
+  let processorTitle = reqTitle || '';
+  for (const k of memberKeys) {
+    const m = group[k];
+    if (m && m.phone && normalizeKenyanPhone(m.phone) === normalizeKenyanPhone(requesterPhone)) {
+      if (!processorName) processorName = m.name || '';
+      if (!processorTitle) {
+        processorTitle = m.title || (k.startsWith('trustee_') ? 'Chairperson' : (k.startsWith('official_') ? 'Official' : 'Member'));
+      }
+      break;
+    }
+  }
 
-  targetGroup.requests.addMember.push(newRequest);
+  if (!processorName && req.session?.user) {
+    processorName = `${req.session.user.FirstName || ''} ${req.session.user.LastName || ''}`.trim();
+  }
+  if (!processorName) processorName = 'Processor';
+  if (!processorTitle) processorTitle = 'Official';
 
-  // Write back to general.json
-  writeJSON(generalFile, generalData);
+  // 3. Extract verified member name from personal account ONLY (ignore client-provided names to prevent spoofing)
+  const buildVerifiedName = (acc) => {
+    if (!acc) return '';
+    const n1 = acc.name || acc.fullName || '';
+    if (n1) return n1;
+    const fn = acc.FirstName || acc.firstName || acc.first_name || '';
+    const mn = acc.MiddleName || acc.middleName || acc.SecondName || acc.secondName || '';
+    const ln = acc.LastName || acc.lastName || acc.last_name || '';
+    const combo = [fn, mn, ln].filter(Boolean).join(' ').trim();
+    return combo;
+  };
+  const verifiedMemberName = buildVerifiedName(personalAcc);
+  if (!verifiedMemberName) {
+    return res.status(400).json({
+      success: false,
+      error: `No verified personal account name could be resolved for phone ${newMemberPhone}. Please ensure the member's Personal Account profile is complete.`
+    });
+  }
+  const resolvedMemberName = verifiedMemberName;
 
-  res.json({ success: true, request: newRequest });
+  const newRequest = {
+    id: Date.now().toString(),
+    type: 'addMember',
+    requesterPhone: requesterPhone || '',
+    requesterName: processorName,
+    requesterTitle: processorTitle,
+    newMemberName: resolvedMemberName,
+    newMemberPhone: newMemberPhone || '',
+    idNumber: idNumber || personalAcc.idNumber || null,
+    reason: reason || '',
+    conformed: conformed === true || conformed === 'true',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    approverPhone: '',
+    approverName: '',
+    approvedAt: null
+  };
+
+  const fieldPrefix = `${constituencyKey}.${itemIndex}`;
+  const now = new Date().toISOString();
+
+  try {
+    if (!group.requests || !Array.isArray(group.requests.addMember)) {
+      await col.updateOne(
+        { _id: doc._id },
+        {
+          $set: {
+            [`${fieldPrefix}.requests.addMember`]: [newRequest],
+            [`${fieldPrefix}.updatedAt`]: now
+          }
+        }
+      );
+    } else {
+      await col.updateOne(
+        { _id: doc._id },
+        {
+          $push: {
+            [`${fieldPrefix}.requests.addMember`]: newRequest
+          },
+          $set: {
+            [`${fieldPrefix}.updatedAt`]: now
+          }
+        }
+      );
+    }
+    const messageContent = `${processorName} (${requesterPhone}, ${processorTitle}) has processed a request to add member ${resolvedMemberName} (${newMemberPhone}).`;
+    console.log(`[request-add-member] ${messageContent}`);
+    return res.json({ success: true, request: newRequest, message: messageContent });
+  } catch (err) {
+    console.error("[request-add-member] MongoDB update error:", err.message);
+    return res.status(500).json({ success: false, error: "Failed to save request to database" });
+  }
 });
 
-// GET /member-requests - Get pending requests for a group
+// POST /replace-official - Submit a request to replace an official (updates MongoDB groups collection)
+router.post("/replace-official", async (req, res) => {
+  const { groupName, requesterPhone, officialRole, currentOfficialName, currentOfficialPhone, newOfficialName, newOfficialPhone, newOfficialMemberNo, conformed } = req.body;
+
+  if (!groupName || !officialRole || !newOfficialPhone) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+
+  const located = await locateMongoGroup(groupName);
+  if (!located) {
+    return res.status(404).json({ success: false, error: "Group not found in MongoDB groups collection" });
+  }
+
+  const { doc, constituencyKey, itemIndex, group, col } = located;
+  ensurePendingApprovals(group);
+
+  const newRequest = {
+    id: Date.now().toString(),
+    type: 'replaceOfficial',
+    requesterPhone: requesterPhone || '',
+    officialRole: officialRole || '',
+    currentOfficialName: currentOfficialName || '',
+    currentOfficialPhone: currentOfficialPhone || '',
+    newOfficialName: newOfficialName || '',
+    newOfficialPhone: newOfficialPhone || '',
+    newOfficialMemberNo: newOfficialMemberNo || '',
+    conformed: conformed === true || conformed === 'true',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    approverPhone: '',
+    approverName: '',
+    approvedAt: null
+  };
+
+  const fieldPrefix = `${constituencyKey}.${itemIndex}`;
+  const now = new Date().toISOString();
+
+  try {
+    const existingList = (group.pendingApprovals && group.pendingApprovals.member && group.pendingApprovals.member.replaceOfficial) || [];
+    if (!Array.isArray(existingList)) {
+      await col.updateOne(
+        { _id: doc._id },
+        {
+          $set: {
+            [`${fieldPrefix}.pendingApprovals.member.replaceOfficial`]: [newRequest],
+            [`${fieldPrefix}.updatedAt`]: now
+          }
+        }
+      );
+    } else {
+      await col.updateOne(
+        { _id: doc._id },
+        {
+          $push: {
+            [`${fieldPrefix}.pendingApprovals.member.replaceOfficial`]: newRequest
+          },
+          $set: {
+            [`${fieldPrefix}.updatedAt`]: now
+          }
+        }
+      );
+    }
+    console.log(`[replace-official] Submitted replacement for '${officialRole}' in group '${groupName}' (Mongo groups)`);
+    return res.json({ success: true, request: newRequest });
+  } catch (err) {
+    console.error("[replace-official] MongoDB update error:", err.message);
+    return res.status(500).json({ success: false, error: "Failed to save replacement request to database" });
+  }
+});
+
+// POST /request-termination - Submit a request to terminate membership (updates MongoDB groups collection)
+router.post("/request-termination", async (req, res) => {
+  const { groupName, requesterPhone, conformed } = req.body;
+
+  if (!groupName || !requesterPhone) {
+    return res.status(400).json({ success: false, error: "Missing required fields" });
+  }
+
+  const located = await locateMongoGroup(groupName);
+  if (!located) {
+    return res.status(404).json({ success: false, error: "Group not found in MongoDB groups collection" });
+  }
+
+  const { doc, constituencyKey, itemIndex, group, col } = located;
+  ensurePendingApprovals(group);
+
+  const memberKeys = Object.keys(group).filter(k =>
+    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+  );
+  let requesterName = '';
+  for (const k of memberKeys) {
+    if (group[k] && group[k].phone && normalizeKenyanPhone(group[k].phone) === normalizeKenyanPhone(requesterPhone)) {
+      requesterName = group[k].name || '';
+      break;
+    }
+  }
+
+  const newRequest = {
+    id: Date.now().toString(),
+    type: 'requestTermination',
+    requesterPhone: requesterPhone || '',
+    requesterName: requesterName || '',
+    conformed: conformed === true || conformed === 'true',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    approverPhone: '',
+    approverName: '',
+    approvedAt: null
+  };
+
+  const fieldPrefix = `${constituencyKey}.${itemIndex}`;
+  const now = new Date().toISOString();
+
+  try {
+    const existingList = (group.pendingApprovals && group.pendingApprovals.member && group.pendingApprovals.member.requestTermination) || [];
+    if (!Array.isArray(existingList)) {
+      await col.updateOne(
+        { _id: doc._id },
+        {
+          $set: {
+            [`${fieldPrefix}.pendingApprovals.member.requestTermination`]: [newRequest],
+            [`${fieldPrefix}.updatedAt`]: now
+          }
+        }
+      );
+    } else {
+      await col.updateOne(
+        { _id: doc._id },
+        {
+          $push: {
+            [`${fieldPrefix}.pendingApprovals.member.requestTermination`]: newRequest
+          },
+          $set: {
+            [`${fieldPrefix}.updatedAt`]: now
+          }
+        }
+      );
+    }
+    console.log(`[request-termination] Submitted resignation for '${requesterPhone}' in group '${groupName}' (Mongo groups)`);
+    return res.json({ success: true, request: newRequest });
+  } catch (err) {
+    console.error("[request-termination] MongoDB update error:", err.message);
+    return res.status(500).json({ success: false, error: "Failed to save termination request to database" });
+  }
+});
+
+// GET /member-requests - Get pending requests for a group (reads from MongoDB groups collection)
 router.get("/member-requests", async (req, res) => {
   const { groupName } = req.query;
 
@@ -2885,98 +3190,60 @@ router.get("/member-requests", async (req, res) => {
     return res.status(400).json({ success: false, error: "groupName is required" });
   }
 
-  // Read from general.json
-  let generalData = readJSON(generalFile, {});
-  if (!generalData || Object.keys(generalData).length === 0) {
-    return res.status(404).json({ success: false, error: "No groups found" });
-  }
-
-  // Find the target group
-  const groupRef = findGroupInGeneral(generalData, groupName);
-  if (!groupRef) {
+  const located = await locateMongoGroup(groupName);
+  if (!located) {
     return res.status(404).json({ success: false, error: "Group not found" });
   }
 
-  const targetGroup = groupRef.group;
+  const targetGroup = located.group;
   const requests = targetGroup.requests || {};
+  const pendingApprovals = targetGroup.pendingApprovals || {};
+  const memberPending = pendingApprovals.member || {};
 
-   // Enrich addMember requests with requester's details from group membership
-   const enrichedAddMemberRequests = await Promise.all(
-     (requests.addMember || [])
-       .filter(r => r.status === 'pending')
-       .map(async (request) => {
-       const requesterPhone = request.requesterPhone;
-       
-       // Look up requester in group members (trustee_*, official_*, member_*)
-       const memberKeys = Object.keys(targetGroup).filter(k =>
-         k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-       );
-       
-       let requesterName = request.requesterName || '';
-       let requesterMemberIndex = '';
-       let requesterMemberNumber = '';
-       
-       if (requesterPhone) {
-         // 1. Try to find in group members first (to get index/memberNumber and name)
-         for (const key of memberKeys) {
-           const member = targetGroup[key];
-           if (member && member.phone && normalizeKenyanPhone(member.phone) === normalizeKenyanPhone(requesterPhone)) {
-             requesterName = member.name || requesterName;
-             requesterMemberIndex = member.index || '';
-             requesterMemberNumber = member.memberNumber || '';
-             break;
-           }
-         }
-         
-         // 2. If not found in group members, try to get name from data.json (users)
-         if (!requesterName) {
-           const dataFilePath = path.join(__dirname, "../data.json");
-           try {
-             if (fs.existsSync(dataFilePath)) {
-               const users = JSON.parse(fs.readFileSync(dataFilePath, "utf8"));
-               const user = users.find(u => normalizeKenyanPhone(u.phoneNumber) === normalizeKenyanPhone(requesterPhone));
-               if (user) {
-                 requesterName = [user.FirstName, user.MiddleName, user.LastName].filter(Boolean).join(' ');
-               }
-             }
-           } catch (e) {
-             console.error("Error looking up requester in data.json:", e);
-           }
-         }
-         
-          // 3. If still not found, try Agent collection
-          if (!requesterName) {
-            try {
-              const agent = await Agent.findOne({ phoneNumber: normalizePhone(requesterPhone) }).lean();
-              if (agent) {
-                requesterName = agent.name;
-              }
-            } catch (e) {
-              console.error("Error looking up requester in Agent collection:", e);
-            }
+  // Enrich addMember requests with requester's details from group membership
+  const enrichedAddMemberRequests = (requests.addMember || [])
+    .filter(r => r.status === 'pending')
+    .map((request) => {
+      const requesterPhone = request.requesterPhone;
+      const memberKeys = Object.keys(targetGroup).filter(k =>
+        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+      );
+      
+      let requesterName = request.requesterName || '';
+      let requesterMemberIndex = '';
+      let requesterMemberNumber = '';
+      
+      if (requesterPhone) {
+        for (const key of memberKeys) {
+          const member = targetGroup[key];
+          if (member && member.phone && normalizeKenyanPhone(member.phone) === normalizeKenyanPhone(requesterPhone)) {
+            requesterName = member.name || requesterName;
+            requesterMemberIndex = member.index || '';
+            requesterMemberNumber = member.memberNumber || '';
+            break;
           }
-       }
-       
-        return {
-          ...request,
-          requesterName,
-          requesterMemberIndex,
-          requesterMemberNumber
-        };
-      })
-   );
+        }
+      }
+      
+      return {
+        ...request,
+        requesterName,
+        requesterMemberIndex,
+        requesterMemberNumber
+      };
+    });
 
   res.json({
     success: true,
     requests: {
       addMember: enrichedAddMemberRequests,
-      roleChange: (requests.roleChange || []).filter(r => r.status === 'pending'),
-      termination: (requests.termination || []).filter(r => r.status === 'pending')
+      replaceOfficial: (memberPending.replaceOfficial || []).filter(r => r.status === 'pending'),
+      termination: (memberPending.requestTermination || requests.termination || []).filter(r => r.status === 'pending')
     }
   });
 });
 
-// POST /approve-member-request - Approve or reject member request
+// POST /approve-member-request - Approve or reject member request (updates MongoDB groups collection)
 router.post("/approve-member-request", async (req, res) => {
   const { groupName, requestId, action } = req.body;
 
@@ -2984,19 +3251,12 @@ router.post("/approve-member-request", async (req, res) => {
     return res.status(400).json({ success: false, error: "Missing required fields" });
   }
 
-  // Read from general.json
-  let generalData = readJSON(generalFile, {});
-  if (!generalData || Object.keys(generalData).length === 0) {
-    return res.status(404).json({ success: false, error: "No groups found" });
+  const located = await locateMongoGroup(groupName);
+  if (!located) {
+    return res.status(404).json({ success: false, error: "Group not found in MongoDB groups collection" });
   }
 
-  // Find target group in general.json
-  const groupRef = findGroupInGeneral(generalData, groupName);
-  if (!groupRef) {
-    return res.status(404).json({ success: false, error: "Group not found" });
-  }
-
-  const targetGroup = groupRef.group;
+  const { doc, constituencyKey, itemIndex, group: targetGroup, col } = located;
 
   if (!targetGroup.requests || !targetGroup.requests.addMember) {
     return res.status(404).json({ success: false, error: "No requests found" });
@@ -3015,7 +3275,6 @@ router.post("/approve-member-request", async (req, res) => {
     return res.status(401).json({ success: false, error: "Not logged in" });
   }
 
-  // Check if user is trustee or official in the group
   const isAuthorized = Object.keys(targetGroup).some(key => {
     if (key.startsWith('trustee_') || key.startsWith('official_')) {
       const member = targetGroup[key];
@@ -3028,119 +3287,56 @@ router.post("/approve-member-request", async (req, res) => {
     return res.status(403).json({ success: false, error: "Only trustees or officials can approve/reject member requests" });
   }
 
-  // Check if this member already exists in the group (prevent double processing)
-  const allMemberKeys = Object.keys(targetGroup).filter(k =>
-    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-  );
-  const existingMemberInGroup = allMemberKeys.find(key => {
-    const person = targetGroup[key];
-    return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(request.newMemberPhone);
-  });
-  if (existingMemberInGroup) {
-    return res.status(400).json({ success: false, error: "Member already exists in this group" });
-  }
+  const approverPhone = userPhone;
+  let approverName = req.session?.user?.FirstName ? `${req.session.user.FirstName} ${req.session.user.LastName || ''}`.trim() : 'System User';
 
-   if (action === 'approve') {
-      // === ADD NEW MEMBER TO GROUP ===
-      // Determine next member number based on existing members
-      const memberKeys = Object.keys(targetGroup).filter(k =>
-        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-      );
-      const nextIndex = memberKeys.length + 1;
-      const newMemberKey = `member_${nextIndex}`;
+  const fieldPrefix = `${constituencyKey}.${itemIndex}`;
+  const now = new Date().toISOString();
+  const mongoSetFields = {};
 
-      // Build new member object
-      const newMemberData = {
-        phone: request.newMemberPhone,
-        name: request.newMemberName,
-        id: request.id || null,
-        type: 'member',
-        index: String(nextIndex),
-        memberNumber: String(nextIndex).padStart(3, '0'), // "001", "002", etc.
-        idNumber: request.idNumber || null // Store ID number from request
-      };
+  if (action === 'approve') {
+    // Check if this member already exists in the group
+    const allMemberKeys = Object.keys(targetGroup).filter(k =>
+      k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+    );
+    const existingMemberInGroup = allMemberKeys.find(key => {
+      const person = targetGroup[key];
+      return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(request.newMemberPhone);
+    });
+    if (existingMemberInGroup) {
+      return res.status(400).json({ success: false, error: "Member already exists in this group" });
+    }
 
-      // Include regional info if present in request
-      if (request.county)     newMemberData.county = request.county;
-      if (request.constituency) newMemberData.constituency = request.constituency;
-      if (request.ward)    newMemberData.ward = request.ward;
+    const nextIndex = allMemberKeys.length + 1;
+    const newMemberKey = `member_${nextIndex}`;
 
-       // Reconstruct group with proper key ordering
-       // Goal: preserve original order, but ensure the member block is sorted and
-       // that 'requests' appears immediately after the member block (before principles)
-       const newGroup = {};
-       const allKeys = Object.keys(targetGroup);
-       
-       // Helper: extract numeric suffix from keys like "trustee_3", "member_10"
-       const getSuffixNum = (key) => {
-         const match = key.match(/_(\d+)$/);
-         return match ? parseInt(match[1], 10) : 0;
-       };
+    const newMemberData = {
+      phone: request.newMemberPhone,
+      name: request.newMemberName,
+      id: request.id || null,
+      type: 'member',
+      index: String(nextIndex),
+      memberNumber: String(nextIndex).padStart(3, '0'),
+      idNumber: request.idNumber || null
+    };
 
-       // Helper: determine if a key is a member-type key
-       const isMemberKey = (k) => k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_');
+    if (request.county) newMemberData.county = request.county;
+    if (request.constituency) newMemberData.constituency = request.constituency;
+    if (request.ward) newMemberData.ward = request.ward;
 
-       // Sort member keys by: type priority (trustee→official→member), then numeric suffix
-       const memberPriority = (k) => {
-         if (k.startsWith('trustee_')) return 0;
-         if (k.startsWith('official_')) return 1;
-         return 2; // member_
-       };
-       const existingMemberKeys = allKeys.filter(isMemberKey);
-       const allMemberKeys = [...existingMemberKeys, newMemberKey].sort((a, b) => {
-         const priA = memberPriority(a);
-         const priB = memberPriority(b);
-         if (priA !== priB) return priA - priB;
-         return getSuffixNum(a) - getSuffixNum(b);
-       });
+    request.status = 'approved';
+    request.approvedAt = now;
+    request.approverPhone = approverPhone;
+    request.approverName = approverName;
 
-       // Find the boundaries of the member block in the original key order
-       const firstMemberIdx = allKeys.findIndex(isMemberKey);
-       const lastMemberIdx = allKeys.reduce((last, k, idx) => isMemberKey(k) ? idx : last, -1);
+    mongoSetFields[`${fieldPrefix}.${newMemberKey}`] = newMemberData;
+    mongoSetFields[`${fieldPrefix}.requests.addMember.${requestIndex}`] = request;
+    mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
 
-       // Build the final key order array
-       const finalOrder = [];
-       // 1. Keys that appear before the member block (excluding 'requests' which we'll handle separately)
-       if (firstMemberIdx > 0) {
-         for (let i = 0; i < firstMemberIdx; i++) {
-           const k = allKeys[i];
-           if (k !== 'requests') finalOrder.push(k);
-         }
-       }
-       // 2. Insert the sorted member block (existing members + new member)
-       allMemberKeys.forEach(k => finalOrder.push(k));
-       // 3. Insert 'requests' immediately after members if it exists
-       if (targetGroup.requests !== undefined) {
-         finalOrder.push('requests');
-       }
-       // 4. Append the remaining keys that were originally after the member block (excluding 'requests')
-       if (lastMemberIdx >= 0) {
-         for (let i = lastMemberIdx + 1; i < allKeys.length; i++) {
-           const k = allKeys[i];
-           if (k !== 'requests') finalOrder.push(k);
-         }
-       }
-
-       // Populate newGroup according to the final order
-       finalOrder.forEach(k => {
-         if (k === newMemberKey) {
-           newGroup[k] = newMemberData;
-         } else if (isMemberKey(k)) {
-           newGroup[k] = targetGroup[k];
-         } else if (k === 'requests') {
-           newGroup.requests = targetGroup.requests;
-         } else {
-           newGroup[k] = targetGroup[k];
-         }
-       });
-
-       // Replace targetGroup contents with new ordered object
-       Object.keys(targetGroup).forEach(k => delete targetGroup[k]);
-       Object.assign(targetGroup, newGroup);
-
-      // Also add to member.json for financial tracking
-const memberFile = path.join(__dirname, "../tran_account/member.json");
-       let memberData = readJSON(memberFile, { groups: {} });
+    // Financial tracking in member.json
+    try {
+      const memberFile = path.join(__dirname, "../tran_account/member.json");
+      let memberData = readJSON(memberFile, { groups: {} });
       if (!memberData.groups) memberData.groups = {};
 
       let memberGroupKey = Object.keys(memberData.groups).find(k => memberData.groups[k].groupName && memberData.groups[k].groupName.trim() === groupName.trim());
@@ -3148,127 +3344,62 @@ const memberFile = path.join(__dirname, "../tran_account/member.json");
         const groupNum = Object.keys(memberData.groups).length + 1;
         memberGroupKey = "ACC" + groupNum;
         memberData.groups[memberGroupKey] = {
-          groupNumber: groupNum,
           groupName: groupName,
+          accountNumber: targetGroup.accountNumber || "254" + Date.now(),
           members: {}
         };
       }
 
-      const memberGroup = memberData.groups[memberGroupKey];
-      if (!memberGroup.members) memberGroup.members = {};
-
-      if (!memberGroup.members[request.newMemberPhone]) {
-        const defaultAccounts = {
-          "001": { accountId: "001", accountName: "Saving", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-          "002": { accountId: "002", accountName: "Registration", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-          "003": { accountId: "003", accountName: "latenes", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] },
-          "004": { accountId: "004", accountName: "welfare", expectedAmount: "100", financials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 }, transactionHistory: [] }
-        };
-        memberGroup.members[request.newMemberPhone] = {
-          memberId: request.newMemberPhone,
-          name: request.newMemberName,
-          role: 'member',
-          idNumber: request.idNumber || null, // Store ID number
-          memberFinancials: { openingBalance: 0, amountIn: 0, amountOut: 0, closingBalance: 0 },
-          accounts: defaultAccounts,
-          processedDeductions: [],
-          createdAt: new Date().toISOString()
-        };
-        writeJSON(memberFile, memberData);
-        submitMemberDataToMongo(memberData, 'add-member-request').catch(err => console.error('[Mongo] submit member failed:', err.message));
+      if (!memberData.groups[memberGroupKey].members) {
+        memberData.groups[memberGroupKey].members = {};
       }
 
-      // === GET APPROVER INFO ===
-      const approverPhone = req.session?.user?.phoneNumber || "Unknown";
-      let approverName = "System User";
-      
-      const dataFile = path.join(__dirname, "../data.json");
-      if (fs.existsSync(dataFile)) {
-        try {
-          const users = JSON.parse(fs.readFileSync(dataFile, "utf8"));
-          const foundUser = users.find(u => 
-            normalizeKenyanPhone(u.phoneNumber) === normalizeKenyanPhone(approverPhone)
-          );
-          if (foundUser) {
-            approverName = [foundUser.FirstName, foundUser.MiddleName, foundUser.LastName]
-              .filter(Boolean)
-              .join(' ');
-          }
-        } catch (e) {
-          console.error("Error looking up user in data.json:", e);
-        }
-      }
-      
-      if (approverName === "System User") {
-        try {
-          const foundAgent = await Agent.findOne({ phoneNumber: normalizePhone(approverPhone) }).lean();
-          if (foundAgent) approverName = foundAgent.name;
-        } catch (e) {
-          console.error("Error looking up agent in Agent collection:", e);
-        }
-      }
+      memberData.groups[memberGroupKey].members[request.newMemberPhone] = {
+        memberId: request.newMemberPhone,
+        accountNumber: memberData.groups[memberGroupKey].accountNumber,
+        memberFinancials: {
+          openingBalance: 0,
+          amountIn: 0,
+          amountOut: 0,
+          closingBalance: 0
+        },
+        accounts: {},
+        processedDeductions: [],
+        createdAt: now
+      };
 
-       request.approverPhone = approverPhone;
-        request.approverName = approverName;
-        request.status = 'approved';
-        request.approvedAt = new Date().toISOString();
-
-        // Update totalProposedMembers in the group (increment by 1)
-        const memberCount = Object.keys(targetGroup).filter(k =>
-          k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-        ).length;
-        targetGroup.totalProposedMembers = memberCount;
-     } else if (action === 'reject') {
-      // === RECORD WHO REJECTED ===
-      const approverPhone = req.session?.user?.phoneNumber || "Unknown";
-      let approverName = "System User";
-      
-      const dataFile = path.join(__dirname, "../data.json");
-      if (fs.existsSync(dataFile)) {
-        try {
-          const users = JSON.parse(fs.readFileSync(dataFile, "utf8"));
-          const foundUser = users.find(u => 
-            normalizeKenyanPhone(u.phoneNumber) === normalizeKenyanPhone(approverPhone)
-          );
-          if (foundUser) {
-            approverName = [foundUser.FirstName, foundUser.MiddleName, foundUser.LastName]
-              .filter(Boolean)
-              .join(' ');
-          }
-        } catch (e) {
-          console.error("Error looking up user in data.json:", e);
-        }
-      }
-      
-      if (approverName === "System User") {
-        try {
-          const foundAgent = await Agent.findOne({ phoneNumber: normalizePhone(approverPhone) }).lean();
-          if (foundAgent) approverName = foundAgent.name;
-        } catch (e) {
-          console.error("Error looking up agent in Agent collection:", e);
-        }
-      }
-      
-      request.approverPhone = approverPhone;
-      request.approverName = approverName;
-      request.status = 'rejected';
-      request.rejectedAt = new Date().toISOString();
+      writeJSON(memberFile, memberData);
+    } catch (finErr) {
+      console.error("[approve-member-request] member.json update notice:", finErr.message);
     }
+  } else {
+    // Reject
+    request.status = 'rejected';
+    request.rejectedAt = now;
+    request.approverPhone = approverPhone;
+    request.approverName = approverName;
 
-   // Write back to general.json
-   writeJSON(generalFile, generalData);
+    mongoSetFields[`${fieldPrefix}.requests.addMember.${requestIndex}`] = request;
+    mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
+  }
 
-   // Return updated request list to help frontend sync
-   const updatedRequests = targetGroup.requests || {};
-   res.json({ 
-     success: true, 
-     request,
-     requests: {
-       addMember: (updatedRequests.addMember || []).filter(r => r.status === 'pending'),
-       roleChange: (updatedRequests.roleChange || []).filter(r => r.status === 'pending'),
-       termination: (updatedRequests.termination || []).filter(r => r.status === 'pending')
-     }
-   });
+  try {
+    await col.updateOne({ _id: doc._id }, { $set: mongoSetFields });
+    console.log(`[approve-member-request] Successfully updated group '${groupName}' in Mongo groups (${action})`);
+    
+    // Return updated requests
+    const updatedAddMember = (targetGroup.requests.addMember || []).filter(r => r.status === 'pending');
+    res.json({
+      success: true,
+      request,
+      requests: {
+        addMember: updatedAddMember
+      }
+    });
+  } catch (dbErr) {
+    console.error("[approve-member-request] Mongo update error:", dbErr.message);
+    res.status(500).json({ success: false, error: "Database update failed" });
+  }
 });
 
 // GET /member/get-by-phone - Get member details by phone number from data.json
