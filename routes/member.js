@@ -3108,11 +3108,23 @@ router.post("/replace-official", async (req, res) => {
 
 // POST /request-termination - Submit a request to terminate membership (updates MongoDB groups collection)
 router.post("/request-termination", async (req, res) => {
-  const { groupName, requesterPhone, conformed } = req.body;
+  const { groupName, requesterPhone, targetMemberPhone, reason, conformed } = req.body;
 
   if (!groupName || !requesterPhone) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
   }
+
+  // Sanitize reason: strip HTML tags, trim whitespace, cap at 250 words
+  const sanitizeText = (str) => String(str || '').replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
+  const rawReason = sanitizeText(reason);
+  const reasonWords = rawReason.split(/\s+/).filter(Boolean);
+  if (!rawReason) {
+    return res.status(400).json({ success: false, error: "A reason for termination is required." });
+  }
+  if (reasonWords.length > 250) {
+    return res.status(400).json({ success: false, error: "Termination reason cannot exceed 250 words." });
+  }
+  const sanitizedReason = reasonWords.join(' ');
 
   const located = await locateMongoGroup(groupName);
   if (!located) {
@@ -3125,19 +3137,64 @@ router.post("/request-termination", async (req, res) => {
   const memberKeys = Object.keys(group).filter(k =>
     k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
   );
+
+  // Resolve requester details & role
   let requesterName = '';
+  let requesterRole = 'member';
   for (const k of memberKeys) {
-    if (group[k] && group[k].phone && normalizeKenyanPhone(group[k].phone) === normalizeKenyanPhone(requesterPhone)) {
-      requesterName = group[k].name || '';
+    const m = group[k];
+    if (m && m.phone && normalizeKenyanPhone(m.phone) === normalizeKenyanPhone(requesterPhone)) {
+      requesterName = m.name || '';
+      requesterRole = k.startsWith('trustee_') ? 'trustee' : (k.startsWith('official_') ? 'official' : 'member');
       break;
     }
   }
+
+  // Determine target phone (defaults to requester if not provided)
+  const resolvedTargetPhone = targetMemberPhone ? normalizeKenyanPhone(targetMemberPhone) : normalizeKenyanPhone(requesterPhone);
+  const isSelfTermination = resolvedTargetPhone === normalizeKenyanPhone(requesterPhone);
+
+  // Officials/trustees may terminate others; regular members may only terminate themselves
+  if (!isSelfTermination && requesterRole === 'member') {
+    return res.status(403).json({ success: false, error: "Only officials or trustees can terminate other members." });
+  }
+
+  // Resolve target member name
+  let targetMemberName = '';
+  for (const k of memberKeys) {
+    const m = group[k];
+    if (m && m.phone && normalizeKenyanPhone(m.phone) === resolvedTargetPhone) {
+      targetMemberName = m.name || '';
+      break;
+    }
+  }
+
+  // ── DUPLICATE CHECK ─────────────────────────────────────────────────────────
+  // Reject if a pending termination request already exists for this target member
+  const existingList = (group.pendingApprovals && group.pendingApprovals.member && group.pendingApprovals.member.requestTermination) || [];
+  if (Array.isArray(existingList)) {
+    const duplicate = existingList.find(r =>
+      r.status === 'pending' &&
+      normalizeKenyanPhone(r.targetMemberPhone || r.requesterPhone || '') === resolvedTargetPhone
+    );
+    if (duplicate) {
+      return res.status(400).json({
+        success: false,
+        error: `A termination request for this member is already pending approval. It cannot be submitted again until the existing request is resolved.`
+      });
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   const newRequest = {
     id: Date.now().toString(),
     type: 'requestTermination',
     requesterPhone: requesterPhone || '',
     requesterName: requesterName || '',
+    requesterRole,
+    targetMemberPhone: resolvedTargetPhone,
+    targetMemberName: targetMemberName || '',
+    reason: sanitizedReason,
     conformed: conformed === true || conformed === 'true',
     status: 'pending',
     createdAt: new Date().toISOString(),
@@ -3150,7 +3207,6 @@ router.post("/request-termination", async (req, res) => {
   const now = new Date().toISOString();
 
   try {
-    const existingList = (group.pendingApprovals && group.pendingApprovals.member && group.pendingApprovals.member.requestTermination) || [];
     if (!Array.isArray(existingList)) {
       await col.updateOne(
         { _id: doc._id },
@@ -3174,7 +3230,7 @@ router.post("/request-termination", async (req, res) => {
         }
       );
     }
-    console.log(`[request-termination] Submitted resignation for '${requesterPhone}' in group '${groupName}' (Mongo groups)`);
+    console.log(`[request-termination] Submitted termination for '${resolvedTargetPhone}' by '${requesterPhone}' in group '${groupName}'`);
     return res.json({ success: true, request: newRequest });
   } catch (err) {
     console.error("[request-termination] MongoDB update error:", err.message);
@@ -3243,9 +3299,9 @@ router.get("/member-requests", async (req, res) => {
   });
 });
 
-// POST /approve-member-request - Approve or reject member request (updates MongoDB groups collection)
+// POST /approve-member-request - Approve or reject member request (addMember, termination, replaceOfficial)
 router.post("/approve-member-request", async (req, res) => {
-  const { groupName, requestId, action } = req.body;
+  const { groupName, requestId, requestType, action } = req.body;
 
   if (!groupName || !requestId) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
@@ -3257,25 +3313,22 @@ router.post("/approve-member-request", async (req, res) => {
   }
 
   const { doc, constituencyKey, itemIndex, group: targetGroup, col } = located;
-
-  if (!targetGroup.requests || !targetGroup.requests.addMember) {
-    return res.status(404).json({ success: false, error: "No requests found" });
-  }
-
-  const requestIndex = targetGroup.requests.addMember.findIndex(r => r.id === requestId);
-  if (requestIndex === -1) {
-    return res.status(404).json({ success: false, error: "Request not found" });
-  }
-
-  const request = targetGroup.requests.addMember[requestIndex];
-
-  // Authorization: Check if logged-in user is a trustee or official of this group
   const userPhone = req.session?.user?.phoneNumber;
   if (!userPhone) {
     return res.status(401).json({ success: false, error: "Not logged in" });
   }
 
-  const isAuthorized = Object.keys(targetGroup).some(key => {
+  const fieldPrefix = `${constituencyKey}.${itemIndex}`;
+  const now = new Date().toISOString();
+  const mongoSetFields = {};
+  const approverPhone = userPhone;
+  let approverName = req.session?.user?.FirstName ? `${req.session.user.FirstName} ${req.session.user.LastName || ''}`.trim() : 'System User';
+
+  const memberKeys = Object.keys(targetGroup).filter(k =>
+    k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+  );
+
+  const isOfficialOrTrustee = Object.keys(targetGroup).some(key => {
     if (key.startsWith('trustee_') || key.startsWith('official_')) {
       const member = targetGroup[key];
       return member && member.phone && normalizeKenyanPhone(member.phone) === normalizeKenyanPhone(userPhone);
@@ -3283,122 +3336,189 @@ router.post("/approve-member-request", async (req, res) => {
     return false;
   });
 
-  if (!isAuthorized) {
-    return res.status(403).json({ success: false, error: "Only trustees or officials can approve/reject member requests" });
-  }
+  const isGroupMember = memberKeys.some(key => {
+    const member = targetGroup[key];
+    return member && member.phone && normalizeKenyanPhone(member.phone) === normalizeKenyanPhone(userPhone);
+  });
 
-  const approverPhone = userPhone;
-  let approverName = req.session?.user?.FirstName ? `${req.session.user.FirstName} ${req.session.user.LastName || ''}`.trim() : 'System User';
+  const termList = (targetGroup.pendingApprovals && targetGroup.pendingApprovals.member && targetGroup.pendingApprovals.member.requestTermination) || [];
+  const termIdx = termList.findIndex(r => r.id === requestId);
 
-  const fieldPrefix = `${constituencyKey}.${itemIndex}`;
-  const now = new Date().toISOString();
-  const mongoSetFields = {};
+  const replList = (targetGroup.pendingApprovals && targetGroup.pendingApprovals.member && targetGroup.pendingApprovals.member.replaceOfficial) || [];
+  const replIdx = replList.findIndex(r => r.id === requestId);
 
-  if (action === 'approve') {
-    // Check if this member already exists in the group
-    const allMemberKeys = Object.keys(targetGroup).filter(k =>
-      k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
-    );
-    const existingMemberInGroup = allMemberKeys.find(key => {
-      const person = targetGroup[key];
-      return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(request.newMemberPhone);
-    });
-    if (existingMemberInGroup) {
-      return res.status(400).json({ success: false, error: "Member already exists in this group" });
+  const addList = (targetGroup.requests && targetGroup.requests.addMember) || [];
+  const addIdx = addList.findIndex(r => r.id === requestId);
+
+  if (requestType === 'termination' || termIdx !== -1) {
+    if (!isOfficialOrTrustee) {
+      return res.status(403).json({ success: false, error: "Only trustees or officials can approve termination requests." });
     }
+    const idx = termIdx !== -1 ? termIdx : termList.findIndex(r => r.id === requestId);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Termination request not found." });
+    const reqItem = termList[idx];
 
-    const nextIndex = allMemberKeys.length + 1;
-    const newMemberKey = `member_${nextIndex}`;
+    reqItem.status = action === 'approve' ? 'approved' : 'rejected';
+    reqItem.approverPhone = approverPhone;
+    reqItem.approverName = approverName;
+    if (action === 'approve') reqItem.approvedAt = now;
+    else reqItem.rejectedAt = now;
 
-    const newMemberData = {
-      phone: request.newMemberPhone,
-      name: request.newMemberName,
-      id: request.id || null,
-      type: 'member',
-      index: String(nextIndex),
-      memberNumber: String(nextIndex).padStart(3, '0'),
-      idNumber: request.idNumber || null
-    };
-
-    if (request.county) newMemberData.county = request.county;
-    if (request.constituency) newMemberData.constituency = request.constituency;
-    if (request.ward) newMemberData.ward = request.ward;
-
-    request.status = 'approved';
-    request.approvedAt = now;
-    request.approverPhone = approverPhone;
-    request.approverName = approverName;
-
-    mongoSetFields[`${fieldPrefix}.${newMemberKey}`] = newMemberData;
-    mongoSetFields[`${fieldPrefix}.requests.addMember.${requestIndex}`] = request;
+    mongoSetFields[`${fieldPrefix}.pendingApprovals.member.requestTermination.${idx}`] = reqItem;
     mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
 
-    // Financial tracking in member.json
-    try {
-      const memberFile = path.join(__dirname, "../tran_account/member.json");
-      let memberData = readJSON(memberFile, { groups: {} });
-      if (!memberData.groups) memberData.groups = {};
+    if (action === 'approve') {
+      const targetPhoneNorm = normalizeKenyanPhone(reqItem.targetMemberPhone || reqItem.requesterPhone);
+      for (const k of memberKeys) {
+        if (targetGroup[k] && targetGroup[k].phone && normalizeKenyanPhone(targetGroup[k].phone) === targetPhoneNorm) {
+          mongoSetFields[`${fieldPrefix}.${k}.status`] = 'terminated';
+          mongoSetFields[`${fieldPrefix}.${k}.terminatedAt`] = now;
+          break;
+        }
+      }
+    }
+  } else if (requestType === 'replaceOfficial' || replIdx !== -1) {
+    if (!isGroupMember) {
+      return res.status(403).json({ success: false, error: "Only registered group members can vote/approve official replacements." });
+    }
+    const idx = replIdx !== -1 ? replIdx : replList.findIndex(r => r.id === requestId);
+    if (idx === -1) return res.status(404).json({ success: false, error: "Replace official request not found." });
+    const reqItem = replList[idx];
 
-      let memberGroupKey = Object.keys(memberData.groups).find(k => memberData.groups[k].groupName && memberData.groups[k].groupName.trim() === groupName.trim());
-      if (!memberGroupKey) {
-        const groupNum = Object.keys(memberData.groups).length + 1;
-        memberGroupKey = "ACC" + groupNum;
-        memberData.groups[memberGroupKey] = {
-          groupName: groupName,
-          accountNumber: targetGroup.accountNumber || "254" + Date.now(),
-          members: {}
-        };
+    reqItem.status = action === 'approve' ? 'approved' : 'rejected';
+    reqItem.approverPhone = approverPhone;
+    reqItem.approverName = approverName;
+    if (action === 'approve') reqItem.approvedAt = now;
+    else reqItem.rejectedAt = now;
+
+    mongoSetFields[`${fieldPrefix}.pendingApprovals.member.replaceOfficial.${idx}`] = reqItem;
+    mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
+
+    if (action === 'approve') {
+      const roleToMatch = (reqItem.officialRole || '').toLowerCase();
+      let foundKey = null;
+      for (const k of memberKeys) {
+        const item = targetGroup[k];
+        const titleLower = String(item.title || item.role || '').toLowerCase();
+        if (titleLower === roleToMatch || (roleToMatch.includes('chair') && titleLower.includes('chair')) || (roleToMatch.includes('secretary') && titleLower.includes('secretary')) || (roleToMatch.includes('treasurer') && titleLower.includes('treasurer'))) {
+          foundKey = k;
+          break;
+        }
+      }
+      if (foundKey) {
+        mongoSetFields[`${fieldPrefix}.${foundKey}.name`] = reqItem.newOfficialName;
+        mongoSetFields[`${fieldPrefix}.${foundKey}.phone`] = reqItem.newOfficialPhone;
+        if (reqItem.newOfficialMemberNo) {
+          mongoSetFields[`${fieldPrefix}.${foundKey}.memberNumber`] = reqItem.newOfficialMemberNo;
+        }
+      }
+    }
+  } else if (addIdx !== -1 || (targetGroup.requests && targetGroup.requests.addMember)) {
+    if (!isOfficialOrTrustee) {
+      return res.status(403).json({ success: false, error: "Only trustees or officials can approve/reject member requests" });
+    }
+    const requestIndex = addIdx !== -1 ? addIdx : targetGroup.requests.addMember.findIndex(r => r.id === requestId);
+    if (requestIndex === -1) {
+      return res.status(404).json({ success: false, error: "Request not found" });
+    }
+    const request = targetGroup.requests.addMember[requestIndex];
+
+    if (action === 'approve') {
+      const allMemberKeys = Object.keys(targetGroup).filter(k =>
+        k.startsWith('trustee_') || k.startsWith('official_') || k.startsWith('member_')
+      );
+      const existingMemberInGroup = allMemberKeys.find(key => {
+        const person = targetGroup[key];
+        return person && person.phone && normalizeKenyanPhone(person.phone) === normalizeKenyanPhone(request.newMemberPhone);
+      });
+      if (existingMemberInGroup) {
+        return res.status(400).json({ success: false, error: "Member already exists in this group" });
       }
 
-      if (!memberData.groups[memberGroupKey].members) {
-        memberData.groups[memberGroupKey].members = {};
-      }
+      const nextIndex = allMemberKeys.length + 1;
+      const newMemberKey = `member_${nextIndex}`;
 
-      memberData.groups[memberGroupKey].members[request.newMemberPhone] = {
-        memberId: request.newMemberPhone,
-        accountNumber: memberData.groups[memberGroupKey].accountNumber,
-        memberFinancials: {
-          openingBalance: 0,
-          amountIn: 0,
-          amountOut: 0,
-          closingBalance: 0
-        },
-        accounts: {},
-        processedDeductions: [],
-        createdAt: now
+      const newMemberData = {
+        phone: request.newMemberPhone,
+        name: request.newMemberName,
+        id: request.id || null,
+        type: 'member',
+        index: String(nextIndex),
+        memberNumber: String(nextIndex).padStart(3, '0'),
+        idNumber: request.idNumber || null
       };
 
-      writeJSON(memberFile, memberData);
-    } catch (finErr) {
-      console.error("[approve-member-request] member.json update notice:", finErr.message);
+      if (request.county) newMemberData.county = request.county;
+      if (request.constituency) newMemberData.constituency = request.constituency;
+      if (request.ward) newMemberData.ward = request.ward;
+
+      request.status = 'approved';
+      request.approvedAt = now;
+      request.approverPhone = approverPhone;
+      request.approverName = approverName;
+
+      mongoSetFields[`${fieldPrefix}.${newMemberKey}`] = newMemberData;
+      mongoSetFields[`${fieldPrefix}.requests.addMember.${requestIndex}`] = request;
+      mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
+
+      try {
+        const memberFile = path.join(__dirname, "../tran_account/member.json");
+        let memberData = readJSON(memberFile, { groups: {} });
+        if (!memberData.groups) memberData.groups = {};
+
+        let memberGroupKey = Object.keys(memberData.groups).find(k => memberData.groups[k].groupName && memberData.groups[k].groupName.trim() === groupName.trim());
+        if (!memberGroupKey) {
+          const groupNum = Object.keys(memberData.groups).length + 1;
+          memberGroupKey = "ACC" + groupNum;
+          memberData.groups[memberGroupKey] = {
+            groupName: groupName,
+            accountNumber: targetGroup.accountNumber || "254" + Date.now(),
+            members: {}
+          };
+        }
+
+        if (!memberData.groups[memberGroupKey].members) {
+          memberData.groups[memberGroupKey].members = {};
+        }
+
+        memberData.groups[memberGroupKey].members[request.newMemberPhone] = {
+          memberId: request.newMemberPhone,
+          accountNumber: memberData.groups[memberGroupKey].accountNumber,
+          memberFinancials: {
+            openingBalance: 0,
+            amountIn: 0,
+            amountOut: 0,
+            closingBalance: 0
+          },
+          accounts: {},
+          processedDeductions: [],
+          createdAt: now
+        };
+
+        writeJSON(memberFile, memberData);
+      } catch (finErr) {
+        console.error("[approve-member-request] member.json update notice:", finErr.message);
+      }
+    } else {
+      request.status = 'rejected';
+      request.rejectedAt = now;
+      request.approverPhone = approverPhone;
+      request.approverName = approverName;
+
+      mongoSetFields[`${fieldPrefix}.requests.addMember.${requestIndex}`] = request;
+      mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
     }
   } else {
-    // Reject
-    request.status = 'rejected';
-    request.rejectedAt = now;
-    request.approverPhone = approverPhone;
-    request.approverName = approverName;
-
-    mongoSetFields[`${fieldPrefix}.requests.addMember.${requestIndex}`] = request;
-    mongoSetFields[`${fieldPrefix}.updatedAt`] = now;
+    return res.status(404).json({ success: false, error: "Request not found." });
   }
 
   try {
     await col.updateOne({ _id: doc._id }, { $set: mongoSetFields });
-    console.log(`[approve-member-request] Successfully updated group '${groupName}' in Mongo groups (${action})`);
-    
-    // Return updated requests
-    const updatedAddMember = (targetGroup.requests.addMember || []).filter(r => r.status === 'pending');
-    res.json({
-      success: true,
-      request,
-      requests: {
-        addMember: updatedAddMember
-      }
-    });
+    console.log(`[approve-member-request] Successfully updated group '${groupName}' (${action})`);
+    return res.json({ success: true });
   } catch (dbErr) {
     console.error("[approve-member-request] Mongo update error:", dbErr.message);
-    res.status(500).json({ success: false, error: "Database update failed" });
+    return res.status(500).json({ success: false, error: "Database update failed" });
   }
 });
 

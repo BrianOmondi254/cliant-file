@@ -2467,7 +2467,7 @@
                         console.error('Error verifying PIN:', e);
                         errDiv.classList.remove('hidden');
                         errTxt.textContent = 'Server communication error.';
-                        return;
+                        resetSubmit(); return;
                     }
                     // Successfully processed!
                     this.data.balance = parseFloat(this.data.balance) - amt;
@@ -3556,7 +3556,7 @@
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">⏳</span>
                             <span style="font-size:13px;font-weight:600;">Pending</span>
                         </button>
-                        <button class="action-btn" onclick="" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
+                        <button class="action-btn" onclick="app.openGroupWithdrawModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">💵</span>
                             <span style="font-size:13px;font-weight:600;">Withdraw</span>
                         </button>
@@ -3598,11 +3598,6 @@
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">➕</span>
                             <span style="font-size:13px;font-weight:600;">Add Member</span>
                         </button>
-                        ${!isOfficialRole ? `
-                        <button class="action-btn" onclick="app.openGroupReplaceOfficialModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
-                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">🔄</span>
-                            <span style="font-size:13px;font-weight:600;">Official</span>
-                        </button>` : ''}
                         <button class="action-btn" onclick="app.openGroupTerminateModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">❌</span>
                             <span style="font-size:13px;font-weight:600;">Terminate</span>
@@ -3610,6 +3605,10 @@
                         <button class="action-btn" onclick="app.openGroupConstitutionModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
                             <span class="action-icon" style="font-size:18px;margin-bottom:2px;">📜</span>
                             <span style="font-size:13px;font-weight:600;">Constitution</span>
+                        </button>
+                        <button class="action-btn" onclick="app.openGroupApprovalsModal('${encodeURIComponent(g.groupName)}')" style="flex:1;margin-top:10px;border:1px solid #e2e8f0;display:flex;flex-direction:column;align-items:center;padding:5px;background:white;border-radius:8px;">
+                            <span class="action-icon" style="font-size:18px;margin-bottom:2px;">✅</span>
+                            <span style="font-size:13px;font-weight:600;">Approve</span>
                         </button>
                     </div>
                 </div>
@@ -3900,7 +3899,7 @@
                     const memberFinancials = verifiedMember.memberFinancials || {};
 
                     const accColors = {
-                        saving: { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank', grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
+                        saving: { bg: '#e8f5e9', color: '#0c8f44', icon: 'fa-piggy-bank', grad: 'linear-gradient(135deg, #0c8f44, #00c76f)' },
                         registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card', grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
                         late: { bg: '#ffebee', color: '#c62828', icon: 'fa-clock', grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
                         welfare: { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding', grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
@@ -4176,7 +4175,7 @@
             <!-- ACTION BUTTONS -->
             <div style="display:flex;gap:10px;">
                 <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
-                    <i class="fa-solid fa-arrow-left"></i> Group Dashboard
+                    <i class="fa-solid fa-arrow-left"></i> Back
                 </button>
                 <button onclick="app.openGroupAccountsModal('${encodeURIComponent(decodedGroupName)}', '${encodeURIComponent(accountNumber)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
                     <i class="fa-solid fa-users"></i> All Members
@@ -4293,7 +4292,7 @@
             <!-- ACTION BUTTONS -->
             <div style="display:flex;gap:10px;">
                 <button onclick="app.renderGroupView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn secondary" style="flex:1;margin-top:0;">
-                    <i class="fa-solid fa-arrow-left"></i> Group Dashboard
+                    <i class="fa-solid fa-arrow-left"></i> Back
                 </button>
                 <button onclick="app.renderGroupStatementView('${encodeURIComponent(decodedGroupName)}')" class="m-submit-btn" style="flex:1;margin-top:0;">
                     <i class="fa-solid fa-file-lines"></i> Statements
@@ -4379,7 +4378,7 @@
                             const roleRaw = data.loggedInMemberRole || (isMemberOnly ? 'member' : 'official');
                             const roleLabel = roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1);
                             const accColors = {
-                                saving: { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank', grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
+                                saving: { bg: '#e8f5e9', color: '#0c8f44', icon: 'fa-piggy-bank', grad: 'linear-gradient(135deg, #0c8f44, #00c76f)' },
                                 registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card', grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
                                 late: { bg: '#ffebee', color: '#c62828', icon: 'fa-clock', grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
                                 welfare: { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding', grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
@@ -4475,7 +4474,7 @@
                     const loggedInMemberName = data.loggedInMemberName || '';
                     const loggedInMemberId = data.loggedInMemberId || null;
                     const accColors = {
-                        saving: { bg: '#e8f5e9', color: '#2e7d32', icon: 'fa-piggy-bank', grad: 'linear-gradient(135deg,#2e7d32,#66bb6a)' },
+                        saving: { bg: '#e8f5e9', color: '#0c8f44', icon: 'fa-piggy-bank', grad: 'linear-gradient(135deg, #0c8f44, #00c76f)' },
                         registration: { bg: '#e3f2fd', color: '#1565c0', icon: 'fa-id-card', grad: 'linear-gradient(135deg,#1565c0,#42a5f5)' },
                         late: { bg: '#ffebee', color: '#c62828', icon: 'fa-clock', grad: 'linear-gradient(135deg,#c62828,#ef9a9a)' },
                         welfare: { bg: '#f3e5f5', color: '#6a1b9a', icon: 'fa-hands-holding', grad: 'linear-gradient(135deg,#6a1b9a,#ce93d8)' },
@@ -4830,7 +4829,7 @@
             <!-- Back button -->
             <button onclick="app.renderGroupView('${encodedGroupName}')"
                 style="width:100%;margin-top:20px;padding:13px;background:linear-gradient(135deg,#0f9d58,#34d399);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;">
-                <i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i>Back to Group Dashboard
+                <i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i>Back
             </button>
         </div>`;
 
@@ -4848,9 +4847,9 @@
             <h4 style="margin:0 0 6px;color:#1e293b;font-size:14px;">No Pending Balances</h4>
             <p style="margin:0;font-size:11.5px;color:#64748b;">You have cleared all pending expectations for this active cycle.</p>
         </div>
-        <button class="m-submit-btn" onclick="app.closeModal()">Done</button>
+        <button class="m-submit-btn" style="background:linear-gradient(135deg, #0c8f44, #00c76f);" onclick="app.closeModal()">Done</button>
         `;
-                    this.updateModalContent('Pending Contributions', html, null, 'fa-clock', 'linear-gradient(135deg, #f59e0b, #fbbf24)');
+                    this.updateModalContent('Pending Contributions', html, null, 'fa-clock', 'linear-gradient(135deg, #0c8f44, #00c76f)');
                 },
                 _loanCacheKey(groupName, phone) {
                     const g = String(groupName || '').toLowerCase().replace(/\s+/g, '_');
@@ -5662,7 +5661,7 @@
                             container.innerHTML = `<div style="padding:40px 20px;text-align:center;">
                     <div style="color:#ef4444;margin-bottom:12px;"><i class="fa-solid fa-circle-exclamation"></i> Could not load group loans.</div>
                     <button class="m-submit-btn secondary" onclick="app.renderGroupView('${encoded}')">
-                        <i class="fa-solid fa-arrow-left"></i> Back to Group Dashboard
+                        <i class="fa-solid fa-arrow-left"></i> Back
                     </button>
                 </div>`;
                         });
@@ -6405,7 +6404,7 @@
                 </div>
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
                     <button class="m-submit-btn secondary" style="margin-top:0;" onclick="app.renderGroupView('${encodeURIComponent(gn)}')">
-                        <i class="fa-solid fa-arrow-left"></i> Group Dashboard
+                        <i class="fa-solid fa-arrow-left"></i> Back
                     </button>
                     <button class="m-submit-btn" style="margin-top:0;background:linear-gradient(135deg,#0c8f44,#34d399);" onclick="app.redirectToGroupLoan('${encodeURIComponent(gn)}')">
                         <i class="fa-solid fa-bell"></i> View Loan Requests
@@ -6466,7 +6465,7 @@
                     const amt = parseFloat(amtInput);
                     if (isNaN(amt) || amt <= 0) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid positive amount.'; return; }
                     if (amt > parseFloat(this.data.balance)) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Insufficient wallet balance.'; return; }
-                    if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
+                    if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; resetSubmit(); return; }
                     try {
                         const res = await fetch('/personal/verify-pin', {
                             method: 'POST',
@@ -6477,7 +6476,7 @@
                         if (!verifyResult.success) {
                             errDiv.classList.remove('hidden');
                             errTxt.textContent = verifyResult.message || 'Incorrect PIN.';
-                            return;
+                            resetSubmit(); return;
                         }
                     } catch (e) {
                         console.error('Error verifying PIN:', e);
@@ -6523,10 +6522,43 @@
                     this.updateModalContent('Transaction Status', html, null, 'fa-circle-check', 'linear-gradient(135deg, #10b981, #059669)');
                     this.render();
                 },
+                switchMemberActionTab(mode, groupName) {
+                    if (mode === 'replace') {
+                        const decodedGroupName = decodeURIComponent(groupName).replace(/%20/g, ' ').trim();
+                        const groups = this.data.userGroups || [];
+                        const g = groups.find(item => (item.groupName || '').trim().toLowerCase() === decodedGroupName.toLowerCase() || item.groupName === groupName);
+                        const groupRole = String((g && g.role) || '').trim().toLowerCase();
+                        const roleTitle = String((g && g.roleTitle) || '').trim().toLowerCase();
+                        if (groupRole === 'official' || (roleTitle.includes('official') && groupRole !== 'trustee')) {
+                            const errDiv = document.getElementById('addMemberError');
+                            const errTxt = document.getElementById('addMemberErrorText');
+                            if (errDiv && errTxt) {
+                                errDiv.classList.remove('hidden');
+                                errTxt.textContent = 'Officials are not authorized to process official replacements. Only trustees may replace officials.';
+                            } else {
+                                alert('Officials are not authorized to process official replacements. Only trustees may replace officials.');
+                            }
+                            return;
+                        }
+                        this.openGroupReplaceOfficialModal(groupName);
+                    } else {
+                        this.openGroupAddMemberModal(groupName);
+                    }
+                },
                 openGroupAddMemberModal(groupName) {
                     document.getElementById('modalOverlay').classList.add('open');
                     const decodedGroupName = decodeURIComponent(groupName).replace(/%20/g, ' ').trim();
                     const html = `
+        <!-- Switch Tab: Add Member vs Replace Official -->
+        <div style="display:flex; gap:6px; margin-bottom:14px; padding:6px; background:#f1f5f9; border-radius:10px; border:1px solid #e2e8f0;">
+            <button id="memberActionTabAdd" type="button" onclick="app.switchMemberActionTab('add', '${encodeURIComponent(decodedGroupName)}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:linear-gradient(135deg, #0c8f44, #00c76f); color:white;">
+                <i class="fa-solid fa-user-plus" style="margin-right:4px;"></i>Add Member
+            </button>
+            <button id="memberActionTabReplace" type="button" onclick="app.switchMemberActionTab('replace', '${encodeURIComponent(decodedGroupName)}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:#fff; color:#475569; border:1px solid #e2e8f0;">
+                <i class="fa-solid fa-user-gear" style="margin-right:4px;"></i>Replace Official
+            </button>
+        </div>
+
         <div id="addMemberTopBanner" class="m-info-banner green" style="margin-bottom:14px;"><i class="fa-solid fa-user-plus"></i><span>Onboard and add a new active member to <b id="addMemberTargetGroup">${decodedGroupName}</b>.</span></div>
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Member Phone Number</label>
@@ -6570,7 +6602,7 @@
             </button>
         </div>
         `;
-                    this.updateModalContent('Add Member', html, null, 'fa-user-plus', 'linear-gradient(135deg, #0c8f44, #34d399)');
+                    this.updateModalContent('Add Member', html, null, 'fa-user-plus', 'linear-gradient(135deg, #0c8f44, #00c76f)');
                     this._addMemberVerifiedName = null;
                     this._addMemberVerified = false;
                 },
@@ -6891,6 +6923,16 @@
 
                     document.getElementById('modalOverlay').classList.add('open');
                     const html = `
+        <!-- Switch Tab: Add Member vs Replace Official -->
+        <div style="display:flex; gap:6px; margin-bottom:14px; padding:6px; background:#f1f5f9; border-radius:10px; border:1px solid #e2e8f0;">
+            <button id="memberActionTabAdd" type="button" onclick="app.switchMemberActionTab('add', '${encodeURIComponent(decodedGroupName)}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:#fff; color:#475569; border:1px solid #e2e8f0;">
+                <i class="fa-solid fa-user-plus" style="margin-right:4px;"></i>Add Member
+            </button>
+            <button id="memberActionTabReplace" type="button" onclick="app.switchMemberActionTab('replace', '${encodeURIComponent(decodedGroupName)}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:linear-gradient(135deg, #0c8f44, #00c76f); color:white;">
+                <i class="fa-solid fa-user-gear" style="margin-right:4px;"></i>Replace Official
+            </button>
+        </div>
+
         <div class="m-info-banner blue" style="margin-bottom:14px;"><i class="fa-solid fa-user-gear"></i><span>Replace a group official with a candidate selected from the members list.</span></div>
         <div class="m-field" style="text-align:left; margin-bottom:12px;">
             <label>Official Role</label>
@@ -6920,7 +6962,7 @@
         <div id="replaceOfficialError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="replaceOfficialErrorText"></span></div>
         <div style="display:flex; gap:10px;">
             <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.closeModal()">Cancel</button>
-            <button class="m-submit-btn" style="flex:2; margin-top:0;" onclick="app.processGroupReplaceOfficial('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-circle-check"></i> Save Replacement</button>
+            <button id="replaceOfficialSubmitBtn" class="m-submit-btn" style="flex:2; margin-top:0; background:linear-gradient(135deg, #0c8f44, #00c76f);" onclick="app.processGroupReplaceOfficial('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-circle-check"></i> Save Replacement</button>
         </div>
         `;
                     this.updateModalContent('Replace Official', html, null, 'fa-user-gear', 'linear-gradient(135deg, #0c8f44, #00c76f)');
@@ -6968,6 +7010,216 @@
                                 }
                             })
                             .catch(() => { });
+                    }
+                },
+                openGroupWithdrawModal(groupName) {
+                    const decodedGroupName = decodeURIComponent(groupName);
+                    const groups = this.data.userGroups || [];
+                    const g = groups.find(item => item.groupName === decodedGroupName || item.groupName === groupName);
+
+                    const memberList = [];
+                    if (g) {
+                        for (const key of Object.keys(g)) {
+                            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+                                const item = g[key];
+                                if (item && typeof item === 'object') {
+                                    const phone = item.phone || item.phoneNumber || '';
+                                    const name = item.name || item.fullName || (item.firstName ? `${item.firstName} ${item.secondName || ''}`.trim() : '') || phone;
+                                    const title = item.title || item.type || item.role || 'Member';
+                                    const memberNumber = item.memberNumber || '';
+                                    if (phone && !memberList.some(x => x.phone === phone)) {
+                                        memberList.push({ phone, name, title, memberNumber });
+                                    }
+                                }
+                            }
+                        }
+                        if (Array.isArray(g.members)) {
+                            g.members.forEach(m => {
+                                if (m && typeof m === 'object') {
+                                    const phone = m.phone || m.phoneNumber || m.memberId || '';
+                                    const name = m.name || m.fullName || phone;
+                                    const title = m.title || m.role || m.type || 'Member';
+                                    const memberNumber = m.memberNumber || '';
+                                    if (phone && !memberList.some(x => x.phone === phone)) {
+                                        memberList.push({ phone, name, title, memberNumber });
+                                    }
+                                }
+                            });
+                        } else if (g.members && typeof g.members === 'object') {
+                            Object.entries(g.members).forEach(([k, m]) => {
+                                if (m && typeof m === 'object') {
+                                    const phone = m.phone || m.phoneNumber || k || '';
+                                    const name = m.name || m.fullName || phone;
+                                    const title = m.title || m.role || m.type || 'Member';
+                                    const memberNumber = m.memberNumber || '';
+                                    if (phone && !memberList.some(x => x.phone === phone)) {
+                                        memberList.push({ phone, name, title, memberNumber });
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    this._withdrawMemberList = memberList;
+                    this._withdrawCurrentTab = 'dedicate';
+
+                    document.getElementById('modalOverlay').classList.add('open');
+
+                    const buildDedicateHtml = (memOptions) => `
+        <div id="withdrawDedicatePanel">
+            <div class="m-field" style="text-align:left; margin-bottom:12px;">
+                <label>Select Member</label>
+                <select id="withdrawMemberSelect" class="form-input" style="background:white;">
+                    <option value="" disabled selected>-- Select a member from group list --</option>
+                    ${memOptions}
+                </select>
+            </div>
+            <div class="m-field" style="text-align:left; margin-bottom:12px;">
+                <label>Withdrawal Amount (KES)</label>
+                <input type="number" id="withdrawAmountInput" class="form-input" placeholder="Enter amount" inputmode="numeric" min="0">
+            </div>
+            <div class="m-field" style="text-align:left; margin-bottom:16px;">
+                <label>Reason / Purpose</label>
+                <textarea id="withdrawReasonInput" class="form-input" placeholder="Enter withdrawal reason" rows="3" style="resize:vertical; min-height:70px;"></textarea>
+            </div>
+            <div id="withdrawError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="withdrawErrorText"></span></div>
+        </div>`;
+
+                    const buildDivideHtml = () => `
+        <div id="withdrawDividePanel" style="display:none;">
+            <div style="text-align:center; padding:24px 10px; color:#94a3b8;">
+                <i class="fa-solid fa-chart-pie" style="font-size:30px; margin-bottom:10px; display:block;"></i>
+                <p style="font-size:13px;">Divide Share mode — awaiting configuration.</p>
+            </div>
+        </div>`;
+
+                    let memberOptions = '';
+                    memberList.forEach(m => {
+                        const idLabel = m.memberNumber ? m.memberNumber : m.phone;
+                        const cleanName = (m.name || m.phone || '').trim();
+                        const baseLabel = `${cleanName} - ${idLabel}`;
+                        memberOptions += `<option value="${m.phone}">${baseLabel}</option>`;
+                    });
+
+                    const html = `
+        <div class="m-info-banner green" style="margin-bottom:14px;"><i class="fa-solid fa-hand-holding-dollar"></i><span>Process a group withdrawal for <b>${decodedGroupName}</b>.</span></div>
+
+        <!-- Shift/Toggle buttons at top below header/banner -->
+        <div style="display:flex; gap:6px; margin-bottom:14px; padding:8px; background:#f1f5f9; border-radius:12px; border:1px solid #e2e8f0;">
+            <button id="withdrawTabDedicate" type="button" onclick="app.switchWithdrawTab('dedicate')" style="flex:1; padding:10px 8px; border:none; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; background:linear-gradient(135deg, #0c8f44, #00c76f); color:white;">
+                <i class="fa-solid fa-user-check" style="margin-right:4px;"></i>Dedicate Withdrawal
+            </button>
+            <button id="withdrawTabDivide" type="button" onclick="app.switchWithdrawTab('divide')" style="flex:1; padding:10px 8px; border:none; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; background:#fff; color:#475569; border:1px solid #e2e8f0;">
+                <i class="fa-solid fa-chart-pie" style="margin-right:4px;"></i>Divide Share
+            </button>
+        </div>
+
+        ${buildDedicateHtml(memberOptions)}
+        ${buildDivideHtml()}
+
+        <div style="display:flex; gap:10px; margin-top:14px;">
+            <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.closeModal()">Cancel</button>
+            <button id="withdrawSubmitBtn" class="m-submit-btn" style="flex:2; margin-top:0; background:linear-gradient(135deg, #0c8f44, #00c76f);" onclick="app.processGroupWithdraw('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-circle-check"></i> Submit Withdrawal</button>
+        </div>
+        `;
+
+                    this.updateModalContent('Group Withdrawal', html, null, 'fa-hand-holding-dollar', 'linear-gradient(135deg, #0c8f44, #00c76f)');
+
+                    if (memberList.length === 0) {
+                        const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+                        fetch('/member/verified-groups-members', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ groupName: decodedGroupName, accountNumber: (g && g.accountNumber) || '', phone: myPhone, clientVersion: 0 })
+                        })
+                            .then(r => r.json())
+                            .then(freshData => {
+                                const freshMembers = (freshData && freshData.detail && freshData.detail.members) || [];
+                                const sel = document.getElementById('withdrawMemberSelect');
+                                if (sel && freshMembers.length > 0) {
+                                    let opts = '<option value="" disabled selected>-- Select a member from group list --</option>';
+                                    freshMembers.forEach(m => {
+                                        const idLabel = m.memberNumber || m.phone || m.memberId;
+                                        const cleanName = (m.name || m.phone || '').trim();
+                                        const baseLabel = `${cleanName} - ${idLabel}`;
+                                        opts += `<option value="${m.phone || m.memberId}">${baseLabel}</option>`;
+                                        if (this._withdrawMemberList && !this._withdrawMemberList.some(x => x.phone === (m.phone || m.memberId))) {
+                                            this._withdrawMemberList.push({ phone: m.phone || m.memberId, name: cleanName, title: m.title || 'Member', memberNumber: m.memberNumber || '' });
+                                        }
+                                    });
+                                    sel.innerHTML = opts;
+                                }
+                            })
+                            .catch(() => { });
+                    }
+                },
+                switchWithdrawTab(tab) {
+                    this._withdrawCurrentTab = tab;
+                    const dedicatePanel = document.getElementById('withdrawDedicatePanel');
+                    const dividePanel = document.getElementById('withdrawDividePanel');
+                    const tabDedicate = document.getElementById('withdrawTabDedicate');
+                    const tabDivide = document.getElementById('withdrawTabDivide');
+                    const submitBtn = document.getElementById('withdrawSubmitBtn');
+
+                    if (tab === 'dedicate') {
+                        if (dedicatePanel) dedicatePanel.style.display = '';
+                        if (dividePanel) dividePanel.style.display = 'none';
+                        if (tabDedicate) {
+                            tabDedicate.style.background = 'linear-gradient(135deg, #0c8f44, #00c76f)';
+                            tabDedicate.style.color = 'white';
+                            tabDedicate.style.border = 'none';
+                        }
+                        if (tabDivide) {
+                            tabDivide.style.background = '#fff';
+                            tabDivide.style.color = '#475569';
+                            tabDivide.style.border = '1px solid #e2e8f0';
+                        }
+                        if (submitBtn) submitBtn.style.display = '';
+                    } else {
+                        if (dedicatePanel) dedicatePanel.style.display = 'none';
+                        if (dividePanel) dividePanel.style.display = '';
+                        if (tabDivide) {
+                            tabDivide.style.background = 'linear-gradient(135deg,#7c3aed,#a78bfa)';
+                            tabDivide.style.color = 'white';
+                            tabDivide.style.border = 'none';
+                        }
+                        if (tabDedicate) {
+                            tabDedicate.style.background = '#fff';
+                            tabDedicate.style.color = '#475569';
+                            tabDedicate.style.border = '1px solid #e2e8f0';
+                        }
+                        if (submitBtn) submitBtn.style.display = 'none';
+                    }
+                },
+                async processGroupWithdraw(groupName) {
+                    if (this._withdrawCurrentTab !== 'dedicate') return;
+                    const memberSel = document.getElementById('withdrawMemberSelect');
+                    const amountInput = document.getElementById('withdrawAmountInput');
+                    const reasonInput = document.getElementById('withdrawReasonInput');
+                    const errDiv = document.getElementById('withdrawError');
+                    const errTxt = document.getElementById('withdrawErrorText');
+                    if (errDiv) errDiv.classList.add('hidden');
+
+                    const memberPhone = memberSel ? memberSel.value : '';
+                    const amountRaw = amountInput ? amountInput.value : '';
+                    const reason = reasonInput ? reasonInput.value.trim() : '';
+
+                    if (!memberPhone) {
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please select a member.'; }
+                        return;
+                    }
+                    if (!amountRaw) {
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter withdrawal amount.'; }
+                        return;
+                    }
+                    const amount = parseFloat(amountRaw);
+                    if (isNaN(amount) || amount <= 0) {
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a valid positive amount.'; }
+                        return;
+                    }
+                    if (!reason) {
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter withdrawal reason.'; }
+                        return;
                     }
                 },
                 getGroupOfficialRoles(g, memberList) {
@@ -7288,11 +7540,14 @@
                     const pin = document.getElementById('replaceOfficialPin').value;
                     const errDiv = document.getElementById('replaceOfficialError');
                     const errTxt = document.getElementById('replaceOfficialErrorText');
-                    if (isNewRoleMode && (!role || role.length < 2)) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a title for the new official role.'; return; }
-                    if (!role) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please select an official role.'; return; }
-                    if (!phone || phone.length < 10) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please select a member from the group list.'; return; }
-                    if (selectedOpt && selectedOpt.disabled) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Selected member is already assigned to this role. Please choose a different candidate.'; return; }
-                    if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
+                    const submitBtn = document.getElementById('replaceOfficialSubmitBtn');
+                    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing…'; }
+                    const resetSubmit = () => { if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Save Replacement'; } };
+                    if (isNewRoleMode && (!role || role.length < 2)) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a title for the new official role.'; resetSubmit(); return; }
+                    if (!role) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please select an official role.'; resetSubmit(); return; }
+                    if (!phone || phone.length < 10) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please select a member from the group list.'; resetSubmit(); return; }
+                    if (selectedOpt && selectedOpt.disabled) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Selected member is already assigned to this role. Please choose a different candidate.'; resetSubmit(); return; }
+                    if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; resetSubmit(); return; }
                     try {
                         const res = await fetch('/personal/verify-pin', {
                             method: 'POST',
@@ -7303,7 +7558,7 @@
                         if (!verifyResult.success) {
                             errDiv.classList.remove('hidden');
                             errTxt.textContent = verifyResult.message || 'Incorrect PIN.';
-                            return;
+                            resetSubmit(); return;
                         }
                     } catch (e) {
                         console.error(e);
@@ -7336,13 +7591,13 @@
                         if (!apiData.success) {
                             errDiv.classList.remove('hidden');
                             errTxt.textContent = apiData.error || 'Failed to submit replacement request.';
-                            return;
+                            resetSubmit(); return;
                         }
                     } catch (apiErr) {
                         console.error(apiErr);
                         errDiv.classList.remove('hidden');
                         errTxt.textContent = 'Server communication error submitting request.';
-                        return;
+                        resetSubmit(); return;
                     }
                     const html = `
         <div style="text-align:center;padding:20px 10px;">
@@ -7354,6 +7609,277 @@
             <button class="m-submit-btn" onclick="app.closeModal()">Finish</button>
         </div>`;
                     this.updateModalContent('Status Pending', html, null, 'fa-circle-check', 'linear-gradient(135deg, #10b981, #059669)');
+                },
+                openGroupApprovalsModal(groupNameEncoded, activeTab) {
+                    document.getElementById('modalOverlay').classList.add('open');
+                    const groupName = decodeURIComponent(groupNameEncoded);
+                    const cleanGroupName = groupName.replace(/%20/g, ' ').trim();
+                    const groups = this.data.userGroups || [];
+                    const g = groups.find(item => (item.groupName || '').trim().toLowerCase() === cleanGroupName.toLowerCase() || item.groupName === groupName);
+
+                    const roleRaw = String((g && (g.roleTitle || g.role)) || '').trim().toLowerCase();
+                    const isOfficialOrTrustee = roleRaw.includes('official') || roleRaw.includes('trustee') || roleRaw.includes('chair') || roleRaw.includes('secretary') || roleRaw.includes('treasurer');
+
+                    this.updateModalContent('Pending Approvals', '<div style="text-align:center;padding:36px 20px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:#0c8f44;"></i><p style="margin-top:10px;font-size:13px;color:#64748b;">Loading pending requests…</p></div>', null, 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #00c76f)');
+
+                    fetch('/member/member-requests?groupName=' + encodeURIComponent(cleanGroupName))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (!data || !data.success) {
+                                this.updateModalContent('Pending Approvals', '<div class="m-empty-state" style="padding:28px;"><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i><p style="margin-top:8px;font-size:13px;color:#64748b;">Failed to load pending requests.</p></div>', null, 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #00c76f)');
+                                return;
+                            }
+
+                            const requests = data.requests || {};
+                            const addList = requests.addMember || [];
+                            const termList = requests.termination || [];
+                            const replList = requests.replaceOfficial || [];
+
+                            this._pendingApprovalsData = { addList, termList, replList, cleanGroupName };
+
+                            let bodyHtml = '';
+
+                            if (isOfficialOrTrustee) {
+                                const currentTab = activeTab || (addList.length === 0 && termList.length > 0 ? 'termination' : 'addMember');
+                                this._currentApprovalsTab = currentTab;
+
+                                bodyHtml += `
+        <!-- Official Toggle Tabs -->
+        <div style="display:flex; gap:6px; margin-bottom:14px; padding:6px; background:#f1f5f9; border-radius:10px; border:1px solid #e2e8f0;">
+            <button id="approvalsTabAdd" type="button" onclick="app.switchApprovalsTab('addMember', '${encodeURIComponent(cleanGroupName)}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:${currentTab === 'addMember' ? 'linear-gradient(135deg, #0c8f44, #00c76f)' : '#fff'}; color:${currentTab === 'addMember' ? '#fff' : '#475569'}; border:${currentTab === 'addMember' ? 'none' : '1px solid #e2e8f0'};">
+                <i class="fa-solid fa-user-plus" style="margin-right:4px;"></i>Add Member (${addList.length})
+            </button>
+            <button id="approvalsTabTerm" type="button" onclick="app.switchApprovalsTab('termination', '${encodeURIComponent(cleanGroupName)}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:${currentTab === 'termination' ? 'linear-gradient(135deg, #0c8f44, #00c76f)' : '#fff'}; color:${currentTab === 'termination' ? '#fff' : '#475569'}; border:${currentTab === 'termination' ? 'none' : '1px solid #e2e8f0'};">
+                <i class="fa-solid fa-user-minus" style="margin-right:4px;"></i>Termination (${termList.length})
+            </button>
+        </div>
+`;
+
+                                if (currentTab === 'addMember') {
+                                    if (addList.length === 0) {
+                                        bodyHtml += `<div style="text-align:center;padding:24px 14px;background:#f8fafc;border-radius:10px;border:1px dashed #cbd5e1;color:#64748b;font-size:12.5px;margin-bottom:14px;"><i class="fa-solid fa-user-check" style="font-size:22px;color:#10b981;display:block;margin-bottom:6px;"></i>No pending Add Member requests awaiting approval.</div>`;
+                                    } else {
+                                        addList.forEach((reqItem, idx) => {
+                                            const candidateName = reqItem.newMemberName || 'Candidate';
+                                            const candidatePhone = reqItem.newMemberPhone || '—';
+                                            const reqBy = reqItem.requesterName || reqItem.requesterPhone || 'Official';
+                                            const reqTitle = reqItem.requesterTitle || 'Official';
+                                            const idNo = reqItem.idNumber ? (' • ID: ' + reqItem.idNumber) : '';
+                                            const timeStr = reqItem.createdAt ? new Date(reqItem.createdAt).toLocaleDateString() : '';
+
+                                            bodyHtml += `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #10b981; border-radius:10px; padding:12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                <div>
+                    <div style="font-weight:700; color:#0f172a; font-size:13.5px;">${candidateName}</div>
+                    <div style="font-size:11.5px; color:#10b981; font-weight:600;"><i class="fa-solid fa-phone" style="margin-right:4px;"></i>${candidatePhone}${idNo}</div>
+                </div>
+                <span style="font-size:10px; background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:12px; font-weight:600;">${timeStr}</span>
+            </div>
+            <div style="font-size:11px; color:#64748b; margin-bottom:10px;">Requested by: <b style="color:#334155;">${reqBy}</b> (${reqTitle})</div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="m-submit-btn" style="flex:1; margin-top:0; padding:7px 10px; font-size:11.5px; background:#fff; color:#dc2626; border:1px solid #fca5a5;" onclick="app.processApprovalAction('${encodeURIComponent(cleanGroupName)}', '${reqItem.id}', 'addMember', 'reject', this)">
+                    <i class="fa-solid fa-xmark" style="margin-right:4px;"></i>Reject
+                </button>
+                <button type="button" class="m-submit-btn" style="flex:2; margin-top:0; padding:7px 10px; font-size:11.5px; background:linear-gradient(135deg, #0c8f44, #00c76f); color:white;" onclick="app.processApprovalAction('${encodeURIComponent(cleanGroupName)}', '${reqItem.id}', 'addMember', 'approve', this)">
+                    <i class="fa-solid fa-check" style="margin-right:4px;"></i>Approve
+                </button>
+            </div>
+        </div>`;
+                                        });
+                                    }
+                                } else {
+                                    // Termination tab
+                                    if (termList.length === 0) {
+                                        bodyHtml += `<div style="text-align:center;padding:24px 14px;background:#f8fafc;border-radius:10px;border:1px dashed #cbd5e1;color:#64748b;font-size:12.5px;margin-bottom:14px;"><i class="fa-solid fa-shield-check" style="font-size:22px;color:#10b981;display:block;margin-bottom:6px;"></i>No pending Termination requests awaiting approval.</div>`;
+                                    } else {
+                                        termList.forEach((reqItem, idx) => {
+                                            const targetName = reqItem.targetMemberName || reqItem.targetMemberPhone || 'Member';
+                                            const targetPhone = reqItem.targetMemberPhone || reqItem.requesterPhone || '—';
+                                            const reqBy = reqItem.requesterName || reqItem.requesterPhone || 'Requester';
+                                            const reason = reqItem.reason || 'No specific reason provided.';
+                                            const timeStr = reqItem.createdAt ? new Date(reqItem.createdAt).toLocaleDateString() : '';
+
+                                            bodyHtml += `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #ef4444; border-radius:10px; padding:12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                <div>
+                    <div style="font-weight:700; color:#0f172a; font-size:13.5px;">${targetName}</div>
+                    <div style="font-size:11.5px; color:#ef4444; font-weight:600;"><i class="fa-solid fa-phone" style="margin-right:4px;"></i>${targetPhone}</div>
+                </div>
+                <span style="font-size:10px; background:#fef2f2; color:#b91c1c; padding:2px 8px; border-radius:12px; font-weight:700;">Termination</span>
+            </div>
+            <div style="font-size:11px; color:#64748b; margin-bottom:6px;">Submitted by: <b style="color:#334155;">${reqBy}</b> • ${timeStr}</div>
+            <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:6px 10px; font-size:11.5px; color:#92400e; margin-bottom:10px; line-height:1.5;">
+                <b style="display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; color:#b45309; margin-bottom:2px;">Reason:</b>
+                ${reason}
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="m-submit-btn" style="flex:1; margin-top:0; padding:7px 10px; font-size:11.5px; background:#fff; color:#64748b; border:1px solid #cbd5e1;" onclick="app.processApprovalAction('${encodeURIComponent(cleanGroupName)}', '${reqItem.id}', 'termination', 'reject', this)">
+                    <i class="fa-solid fa-xmark" style="margin-right:4px;"></i>Decline
+                </button>
+                <button type="button" class="m-submit-btn" style="flex:2; margin-top:0; padding:7px 10px; font-size:11.5px; background:linear-gradient(135deg, #dc2626, #ef4444); color:white;" onclick="app.processApprovalAction('${encodeURIComponent(cleanGroupName)}', '${reqItem.id}', 'termination', 'approve', this)">
+                    <i class="fa-solid fa-user-xmark" style="margin-right:4px;"></i>Approve Exit
+                </button>
+            </div>
+        </div>`;
+                                        });
+                                    }
+                                }
+                            } else {
+                                // Regular Member view: Replace Official list
+                                bodyHtml += `
+        <div class="m-info-banner blue" style="margin-bottom:14px;"><i class="fa-solid fa-users-gear"></i><span><b>Leadership Voting:</b> Review and ratify pending official replacement requests for <b>${cleanGroupName}</b>.</span></div>
+`;
+                                if (replList.length === 0) {
+                                    bodyHtml += `<div style="text-align:center;padding:24px 14px;background:#f8fafc;border-radius:10px;border:1px dashed #cbd5e1;color:#64748b;font-size:12.5px;margin-bottom:14px;"><i class="fa-solid fa-user-tie" style="font-size:22px;color:#0c8f44;display:block;margin-bottom:6px;"></i>No pending official replacement requests awaiting member approval.</div>`;
+                                } else {
+                                    replList.forEach((reqItem, idx) => {
+                                        const role = reqItem.officialRole || 'Official';
+                                        const curName = reqItem.currentOfficialName || 'Current Official';
+                                        const newName = reqItem.newOfficialName || reqItem.newOfficialPhone || 'Candidate';
+                                        const newPhone = reqItem.newOfficialPhone || '—';
+                                        const newNo = reqItem.newOfficialMemberNo ? (' • No: ' + reqItem.newOfficialMemberNo) : '';
+                                        const timeStr = reqItem.createdAt ? new Date(reqItem.createdAt).toLocaleDateString() : '';
+
+                                        bodyHtml += `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-left:4px solid #0c8f44; border-radius:10px; padding:12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                <span style="font-size:12px; font-weight:800; color:#0c8f44; background:#ecfdf5; padding:3px 8px; border-radius:6px; text-transform:uppercase;">Role: ${role}</span>
+                <span style="font-size:10.5px; color:#64748b;">${timeStr}</span>
+            </div>
+            <div style="font-size:12px; color:#475569; margin-bottom:4px;">Replacing: <b style="color:#0f172a;">${curName}</b></div>
+            <div style="font-size:12.5px; color:#065f46; font-weight:700; margin-bottom:10px;">
+                New Official: <span style="color:#047857;">${newName}</span> (${newPhone}${newNo})
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="m-submit-btn" style="flex:1; margin-top:0; padding:7px 10px; font-size:11.5px; background:#fff; color:#dc2626; border:1px solid #fca5a5;" onclick="app.processApprovalAction('${encodeURIComponent(cleanGroupName)}', '${reqItem.id}', 'replaceOfficial', 'reject', this)">
+                    <i class="fa-solid fa-xmark" style="margin-right:4px;"></i>Decline
+                </button>
+                <button type="button" class="m-submit-btn" style="flex:2; margin-top:0; padding:7px 10px; font-size:11.5px; background:linear-gradient(135deg, #0c8f44, #00c76f); color:white;" onclick="app.processApprovalAction('${encodeURIComponent(cleanGroupName)}', '${reqItem.id}', 'replaceOfficial', 'approve', this)">
+                    <i class="fa-solid fa-check-double" style="margin-right:4px;"></i>Ratify Replacement
+                </button>
+            </div>
+        </div>`;
+                                    });
+                                }
+                            }
+
+                            // Add PIN authorization at bottom
+                            bodyHtml += `
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-top:14px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+                <div style="font-size:12px; font-weight:700; color:#1e293b;">Personal PIN</div>
+                <div style="font-size:11px; color:#64748b;">Required to authorize actions</div>
+            </div>
+            <input type="password" id="approvalsAuthPin" class="form-input" placeholder="••••" maxlength="4" inputmode="numeric" style="letter-spacing:4px; font-weight:700; text-align:center; max-width:110px; margin-bottom:0;">
+        </div>
+        <div id="approvalsActionError" class="hidden m-info-banner red" style="margin-top:10px; margin-bottom:0;"><i class="fa-solid fa-triangle-exclamation"></i><span id="approvalsActionErrorText"></span></div>
+        <div style="margin-top:14px;">
+            <button class="m-submit-btn" style="background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; margin-top:0;" onclick="app.closeModal()">Close</button>
+        </div>`;
+
+                            this.updateModalContent('Pending Approvals', bodyHtml, null, 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #00c76f)');
+                        })
+                        .catch(err => {
+                            console.error('[openGroupApprovalsModal] Fetch error:', err);
+                            this.updateModalContent('Pending Approvals', '<div class="m-empty-state" style="padding:28px;"><i class="fa-solid fa-circle-exclamation" style="color:#ef4444;"></i><p style="margin-top:8px;font-size:13px;color:#64748b;">Connection error loading requests.</p></div>', null, 'fa-circle-check', 'linear-gradient(135deg, #0c8f44, #00c76f)');
+                        });
+                },
+                switchApprovalsTab(tabName, groupNameEncoded) {
+                    this.openGroupApprovalsModal(groupNameEncoded, tabName);
+                },
+                async processApprovalAction(groupNameEncoded, requestId, requestType, action, btnEl) {
+                    const cleanGroupName = decodeURIComponent(groupNameEncoded).replace(/%20/g, ' ').trim();
+                    const pinInput = document.getElementById('approvalsAuthPin');
+                    const pin = pinInput ? pinInput.value.trim() : '';
+                    const errDiv = document.getElementById('approvalsActionError');
+                    const errTxt = document.getElementById('approvalsActionErrorText');
+
+                    if (errDiv) errDiv.classList.add('hidden');
+
+                    if (!pin || pin.length < 4) {
+                        if (errDiv && errTxt) {
+                            errDiv.classList.remove('hidden');
+                            errTxt.textContent = 'Please enter your 4-digit Personal PIN below before proceeding.';
+                        }
+                        if (pinInput) pinInput.focus();
+                        return;
+                    }
+
+                    // Spin clicked button
+                    let prevBtnHtml = '';
+                    if (btnEl) {
+                        prevBtnHtml = btnEl.innerHTML;
+                        btnEl.disabled = true;
+                        btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing…';
+                    }
+
+                    const restoreBtn = () => {
+                        if (btnEl) {
+                            btnEl.disabled = false;
+                            btnEl.innerHTML = prevBtnHtml;
+                        }
+                    };
+
+                    // Verify PIN
+                    try {
+                        const vRes = await fetch('/personal/verify-pin', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pin })
+                        });
+                        const vData = await vRes.json();
+                        if (!vData || !vData.success) {
+                            if (errDiv && errTxt) {
+                                errDiv.classList.remove('hidden');
+                                errTxt.textContent = (vData && vData.message) || 'Incorrect Personal PIN.';
+                            }
+                            restoreBtn();
+                            return;
+                        }
+                    } catch (vErr) {
+                        console.error('[processApprovalAction] PIN verify error:', vErr);
+                        if (errDiv && errTxt) {
+                            errDiv.classList.remove('hidden');
+                            errTxt.textContent = 'Server communication error verifying PIN.';
+                        }
+                        restoreBtn();
+                        return;
+                    }
+
+                    // Submit approval / rejection
+                    try {
+                        const apiRes = await fetch('/member/approve-member-request', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                groupName: cleanGroupName,
+                                requestId: requestId,
+                                requestType: requestType,
+                                action: action
+                            })
+                        });
+                        const apiData = await apiRes.json();
+                        if (!apiData || !apiData.success) {
+                            if (errDiv && errTxt) {
+                                errDiv.classList.remove('hidden');
+                                errTxt.textContent = (apiData && apiData.error) || 'Failed to process request.';
+                            }
+                            restoreBtn();
+                            return;
+                        }
+
+                        // Re-open/refresh modal to show updated list
+                        this.openGroupApprovalsModal(encodeURIComponent(cleanGroupName), this._currentApprovalsTab);
+                    } catch (apiErr) {
+                        console.error('[processApprovalAction] API error:', apiErr);
+                        if (errDiv && errTxt) {
+                            errDiv.classList.remove('hidden');
+                            errTxt.textContent = 'Server communication error submitting decision.';
+                        }
+                        restoreBtn();
+                    }
                 },
                 openGroupConstitutionModal(groupNameEncoded) {
                     document.getElementById('modalOverlay').classList.add('open');
@@ -7370,29 +7896,191 @@
                     this.updateModalContent('Group Constitution & Plan', html, null, 'fa-file-lines', 'linear-gradient(135deg, #0c8f44, #34d399)');
                 },
                 openGroupTerminateModal(groupName) {
+                    const decodedGroupName = decodeURIComponent(groupName);
+                    const groups = this.data.userGroups || [];
+                    const g = groups.find(item => item.groupName === decodedGroupName || item.groupName === groupName);
+                    const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+                    const myName = (this.data && this.data.user && `${this.data.user.FirstName || ''} ${this.data.user.LastName || ''}`.trim()) || 'You';
+
+                    const roleRaw = String((g && (g.roleTitle || g.role)) || '').trim().toLowerCase();
+                    const isOfficialOrTrustee = roleRaw.includes('official') || roleRaw.includes('trustee') || roleRaw.includes('chair') || roleRaw.includes('secretary') || roleRaw.includes('treasurer');
+
+                    const memberList = [];
+                    if (g) {
+                        for (const key of Object.keys(g)) {
+                            if (key.startsWith('trustee_') || key.startsWith('official_') || key.startsWith('member_')) {
+                                const item = g[key];
+                                if (item && typeof item === 'object') {
+                                    const phone = item.phone || item.phoneNumber || '';
+                                    const name = item.name || item.fullName || (item.firstName ? `${item.firstName} ${item.secondName || ''}`.trim() : '') || phone;
+                                    const title = item.title || item.type || item.role || 'Member';
+                                    const memberNumber = item.memberNumber || '';
+                                    if (phone && !memberList.some(x => x.phone === phone)) {
+                                        memberList.push({ phone, name, title, memberNumber });
+                                    }
+                                }
+                            }
+                        }
+                        if (Array.isArray(g.members)) {
+                            g.members.forEach(m => {
+                                if (m && typeof m === 'object') {
+                                    const phone = m.phone || m.phoneNumber || m.memberId || '';
+                                    const name = m.name || m.fullName || phone;
+                                    const title = m.title || m.role || m.type || 'Member';
+                                    const memberNumber = m.memberNumber || '';
+                                    if (phone && !memberList.some(x => x.phone === phone)) {
+                                        memberList.push({ phone, name, title, memberNumber });
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    this._terminateMemberList = memberList;
+                    this._terminateTargetMode = 'self';
+
+                    let memberOptions = '<option value="" disabled selected>-- Select a member --</option>';
+                    memberList.forEach(m => {
+                        const idLabel = m.memberNumber ? m.memberNumber : m.phone;
+                        const cleanName = (m.name || m.phone || '').trim();
+                        const baseLabel = `${cleanName} - ${idLabel}`;
+                        const isSelf = String(m.phone).replace(/\D/g, '').slice(-9) === String(myPhone).replace(/\D/g, '').slice(-9);
+                        if (isSelf) return;
+                        memberOptions += `<option value="${m.phone}">${baseLabel}</option>`;
+                    });
+
                     document.getElementById('modalOverlay').classList.add('open');
                     const html = `
-        <div class="m-info-banner red" style="margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation"></i><span><b>Resignation Warning:</b> You are about to terminate your membership in <b>${groupName}</b>.</span></div>
-        <p style="font-size:12.5px; color:#475569; text-align:left; margin-bottom:16px; line-height:1.5;">
-            By continuing, you agree to settle all pending dues. All outstanding principal loans and accrued interest must be cleared. Your remaining savings will be credited back to your wallet.
+        <div class="m-info-banner red" style="margin-bottom:14px;"><i class="fa-solid fa-triangle-exclamation"></i><span><b>Resignation Warning:</b> Process membership termination for <b>${decodedGroupName}</b>.</span></div>
+
+        ${isOfficialOrTrustee ? `
+        <!-- Official Toggle: Self vs Other Member -->
+        <div style="display:flex; gap:6px; margin-bottom:14px; padding:6px; background:#f1f5f9; border-radius:10px; border:1px solid #e2e8f0;">
+            <button id="terminateTabSelf" type="button" onclick="app.switchTerminateTargetTab('self', '${myPhone}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:linear-gradient(135deg, #0c8f44, #00c76f); color:white;">
+                <i class="fa-solid fa-user-check" style="margin-right:4px;"></i>Terminate Self
+            </button>
+            <button id="terminateTabOther" type="button" onclick="app.switchTerminateTargetTab('other', '${myPhone}')" style="flex:1; padding:8px 6px; border:none; border-radius:7px; font-size:12px; font-weight:700; cursor:pointer; background:#fff; color:#475569; border:1px solid #e2e8f0;">
+                <i class="fa-solid fa-users" style="margin-right:4px;"></i>Other Member
+            </button>
+        </div>` : ''}
+
+        <div id="terminateMemberSelectContainer" class="${isOfficialOrTrustee ? 'hidden' : ''}" style="margin-bottom:14px;">
+            <div class="m-field" style="text-align:left;">
+                <label>Select Member to Terminate</label>
+                <select id="terminateMemberSelect" class="form-input" style="background:white;">
+                    ${memberOptions || `<option value="${myPhone}">${myName} - ${myPhone} (YOU)</option>`}
+                </select>
+            </div>
+        </div>
+
+        <p style="font-size:12.5px; color:#475569; text-align:left; margin-bottom:14px; line-height:1.5;">
+            By continuing, all outstanding principal loans and accrued interest must be settled. Remaining savings will be credited back to the member's wallet.
         </p>
+        <div class="m-field" style="text-align:left; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label style="margin-bottom:0;">Reason / Remarks for Termination</label>
+                <span id="terminateWordCount" style="font-size:11px; font-weight:700; color:#64748b;">0 / 250 words</span>
+            </div>
+            <textarea id="terminateReasonInput" class="form-input" placeholder="Enter reason for membership termination (max 250 words)" rows="3" style="resize:vertical; min-height:70px;" oninput="app.onTerminateReasonInput(this)"></textarea>
+        </div>
         <div class="m-field" style="text-align:left; margin-bottom:16px;">
-            <label>Personal PIN (Confirm Resignation)</label>
+            <label>Personal PIN (Confirm Authorization)</label>
             <input type="password" id="terminatePin" class="form-input" placeholder="••••" maxlength="4" inputmode="numeric" style="letter-spacing:4px; font-weight:700; text-align:center;">
         </div>
         <div id="terminateError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="terminateErrorText"></span></div>
         <div style="display:flex; gap:10px;">
             <button class="m-submit-btn" style="flex:1; margin-top:0; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;" onclick="app.closeModal()">Cancel</button>
-            <button class="m-submit-btn" style="flex:2; margin-top:0; background:#dc2626;" onclick="app.processGroupTerminate('${encodeURIComponent(groupName)}')"><i class="fa-solid fa-user-minus"></i> Confirm Terminate</button>
+            <button id="terminateConfirmBtn" class="m-submit-btn" style="flex:2; margin-top:0; background:linear-gradient(135deg, #0c8f44, #00c76f);" onclick="app.processGroupTerminate('${encodeURIComponent(decodedGroupName)}')"><i class="fa-solid fa-user-minus"></i> Confirm Terminate</button>
         </div>
         `;
-                    this.updateModalContent('Terminate Membership', html, null, 'fa-user-minus', 'linear-gradient(135deg, #f857a6, #ff5858)');
+                    this.updateModalContent('Terminate Membership', html, null, 'fa-user-minus', 'linear-gradient(135deg, #0c8f44, #00c76f)');
+                },
+                switchTerminateTargetTab(mode, myPhone) {
+                    this._terminateTargetMode = mode;
+                    const container = document.getElementById('terminateMemberSelectContainer');
+                    const tabSelf = document.getElementById('terminateTabSelf');
+                    const tabOther = document.getElementById('terminateTabOther');
+                    const selectEl = document.getElementById('terminateMemberSelect');
+
+                    if (mode === 'other') {
+                        if (container) container.classList.remove('hidden');
+                        if (tabOther) {
+                            tabOther.style.background = 'linear-gradient(135deg, #0c8f44, #00c76f)';
+                            tabOther.style.color = 'white';
+                            tabOther.style.border = 'none';
+                        }
+                        if (tabSelf) {
+                            tabSelf.style.background = '#fff';
+                            tabSelf.style.color = '#475569';
+                            tabSelf.style.border = '1px solid #e2e8f0';
+                        }
+                    } else {
+                        if (container) container.classList.add('hidden');
+                        if (selectEl && myPhone) {
+                            const cleanMy = String(myPhone).replace(/\D/g, '').slice(-9);
+                            for (let i = 0; i < selectEl.options.length; i++) {
+                                if (String(selectEl.options[i].value).replace(/\D/g, '').slice(-9) === cleanMy) {
+                                    selectEl.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                        if (tabSelf) {
+                            tabSelf.style.background = 'linear-gradient(135deg, #0c8f44, #00c76f)';
+                            tabSelf.style.color = 'white';
+                            tabSelf.style.border = 'none';
+                        }
+                        if (tabOther) {
+                            tabOther.style.background = '#fff';
+                            tabOther.style.color = '#475569';
+                            tabOther.style.border = '1px solid #e2e8f0';
+                        }
+                    }
+                },
+                onTerminateReasonInput(el) {
+                    if (!el) return;
+                    const text = el.value || '';
+                    const words = text.trim().split(/\s+/).filter(Boolean);
+                    if (words.length > 250) {
+                        el.value = words.slice(0, 250).join(' ');
+                    }
+                    const currentCount = Math.min(250, words.length);
+                    const counterEl = document.getElementById('terminateWordCount');
+                    if (counterEl) {
+                        counterEl.textContent = `${currentCount} / 250 words`;
+                        counterEl.style.color = currentCount >= 250 ? '#dc2626' : '#64748b';
+                    }
                 },
                 async processGroupTerminate(groupName) {
                     const pin = document.getElementById('terminatePin').value;
+                    const reasonInput = document.getElementById('terminateReasonInput');
+                    const memberSelect = document.getElementById('terminateMemberSelect');
                     const errDiv = document.getElementById('terminateError');
                     const errTxt = document.getElementById('terminateErrorText');
-                    if (!pin || pin.length < 4) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; return; }
+                    const confirmBtn = document.getElementById('terminateConfirmBtn');
+                    if (errDiv) errDiv.classList.add('hidden');
+
+                    // Spin the button immediately
+                    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying…'; }
+                    const resetBtn = () => { if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = '<i class="fa-solid fa-user-minus"></i> Confirm Terminate'; } };
+
+                    const reason = reasonInput ? reasonInput.value.trim() : '';
+                    const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
+                    const targetPhone = (this._terminateTargetMode === 'other' && memberSelect && memberSelect.value) ? memberSelect.value : myPhone;
+
+                    if (!reason) {
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter a detailed reason for termination.'; }
+                        resetBtn(); return;
+                    }
+
+                    const words = reason.split(/\s+/).filter(Boolean);
+                    if (words.length > 250) {
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Termination reason cannot exceed 250 words.'; }
+                        resetBtn(); return;
+                    }
+
+                    if (!pin || pin.length < 4) { if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Please enter your 4-digit PIN.'; } resetBtn(); return; }
+
                     try {
                         const res = await fetch('/personal/verify-pin', {
                             method: 'POST',
@@ -7401,50 +8089,106 @@
                         });
                         const verifyResult = await res.json();
                         if (!verifyResult.success) {
-                            errDiv.classList.remove('hidden');
-                            errTxt.textContent = verifyResult.message || 'Incorrect PIN.';
-                            return;
+                            if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = verifyResult.message || 'Incorrect PIN.'; }
+                            resetBtn(); return;
                         }
                     } catch (e) {
                         console.error(e);
-                        errDiv.classList.remove('hidden');
-                        errTxt.textContent = 'Server communication error.';
-                        return;
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Server communication error.'; }
+                        resetBtn(); return;
                     }
-                    const myPhone = (this.data && this.data.user && this.data.user.phoneNumber) || '';
                     const cleanGroupName = decodeURIComponent(groupName).replace(/%20/g, ' ').trim();
+
+                    // ── DUPLICATE CHECK: verify no pending termination already exists for this member ──
+                    try {
+                        const checkRes = await fetch(`/member/member-requests?groupName=${encodeURIComponent(cleanGroupName)}`);
+                        const checkData = await checkRes.json();
+                        if (checkData.success) {
+                            const termList = (checkData.requests && checkData.requests.termination) || [];
+                            const cleanTarget = String(targetPhone).replace(/\D/g, '').slice(-9);
+                            const alreadyPending = termList.find(r => r.status === 'pending' && String(r.targetMemberPhone || r.requesterPhone || '').replace(/\D/g, '').slice(-9) === cleanTarget);
+                            if (alreadyPending) {
+                                if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'A termination request for this member is already pending approval. It cannot be submitted again.'; }
+                                resetBtn(); return;
+                            }
+                        }
+                    } catch (_dupErr) { console.warn('Duplicate pre-check failed, backend will enforce:', _dupErr); }
+
+                    // Resolve target member display info
+                    const memberList = this._terminateMemberList || [];
+                    const targetMember = memberList.find(m => String(m.phone).replace(/\D/g,'').slice(-9) === String(targetPhone).replace(/\D/g,'').slice(-9));
+                    const targetName  = targetMember ? (targetMember.name || targetPhone) : targetPhone;
+                    const targetTitle = targetMember ? (targetMember.title || 'Member') : 'Member';
+                    const isSelf = String(targetPhone).replace(/\D/g,'').slice(-9) === String(myPhone).replace(/\D/g,'').slice(-9);
+                    const wordCount  = words.length;
+
+                    // Store payload for the actual submission step
+                    this._pendingTerminatePayload = { groupName: cleanGroupName, requesterPhone: myPhone, targetMemberPhone: targetPhone, reason, conformed: true };
+
+                    // Show confirmation screen (data does NOT go to DB yet)
+                    const confirmHtml = `
+        <div style="margin-bottom:14px;background:linear-gradient(135deg,#fff8e1,#fffde7);border:1.5px solid #f59e0b;border-radius:12px;padding:14px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <i class="fa-solid fa-shield-halved" style="font-size:20px;color:#b45309;"></i>
+                <span style="font-weight:700;color:#92400e;font-size:14px;">Review &amp; Confirm Termination</span>
+            </div>
+            <div style="font-size:12.5px;color:#78350f;line-height:1.8;">
+                <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="min-width:90px;font-weight:600;">Group:</span><span>${cleanGroupName}</span></div>
+                <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="min-width:90px;font-weight:600;">Member:</span><span>${targetName}${isSelf ? ' <b style=\"color:#b91c1c;\">(YOU)</b>' : ''}</span></div>
+                <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="min-width:90px;font-weight:600;">Role:</span><span>${targetTitle}</span></div>
+                <div style="display:flex;gap:8px;margin-bottom:5px;"><span style="min-width:90px;font-weight:600;">Phone:</span><span>${targetPhone}</span></div>
+                <div style="display:flex;gap:8px;"><span style="min-width:90px;font-weight:600;">Reason:</span><span style="font-style:italic;">${reason.length > 120 ? reason.substring(0,120)+'\u2026' : reason} <span style="color:#92400e;">(${wordCount} words)</span></span></div>
+            </div>
+        </div>
+        <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#7f1d1d;">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;color:#dc2626;"></i>
+            <b>This action is irreversible once approved.</b> The request will be saved as <b>Pending</b> and must be approved by the board. All outstanding loans must be cleared before approval.
+        </div>
+        <div id="terminateConfirmError" class="hidden m-info-banner red" style="margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i><span id="terminateConfirmErrorText"></span></div>
+        <div style="display:flex;gap:10px;">
+            <button class="m-submit-btn" style="flex:1;margin-top:0;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;" onclick="app.openGroupTerminateModal('${encodeURIComponent(cleanGroupName)}')"><i class="fa-solid fa-arrow-left"></i> Back</button>
+            <button id="terminateSubmitBtn" class="m-submit-btn" style="flex:2;margin-top:0;background:linear-gradient(135deg,#0c8f44,#00c76f);" onclick="app.submitGroupTerminate()"><i class="fa-solid fa-paper-plane"></i> Submit Request</button>
+        </div>`;
+                    this.updateModalContent('Confirm Termination', confirmHtml, null, 'fa-user-minus', 'linear-gradient(135deg,#0c8f44,#00c76f)');
+                },
+                async submitGroupTerminate() {
+                    const payload = this._pendingTerminatePayload;
+                    if (!payload) return;
+                    const errDiv   = document.getElementById('terminateConfirmError');
+                    const errTxt   = document.getElementById('terminateConfirmErrorText');
+                    const submitBtn = document.getElementById('terminateSubmitBtn');
+                    if (errDiv) errDiv.classList.add('hidden');
+                    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting\u2026'; }
                     try {
                         const apiRes = await fetch('/member/request-termination', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                groupName: cleanGroupName,
-                                requesterPhone: myPhone,
-                                conformed: true
-                            })
+                            body: JSON.stringify(payload)
                         });
                         const apiData = await apiRes.json();
                         if (!apiData.success) {
-                            errDiv.classList.remove('hidden');
-                            errTxt.textContent = apiData.error || 'Failed to submit resignation request.';
+                            if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = apiData.error || 'Failed to submit termination request.'; }
+                            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Request'; }
                             return;
                         }
                     } catch (apiErr) {
                         console.error(apiErr);
-                        errDiv.classList.remove('hidden');
-                        errTxt.textContent = 'Server communication error submitting request.';
+                        if (errDiv && errTxt) { errDiv.classList.remove('hidden'); errTxt.textContent = 'Server communication error. Please try again.'; }
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Request'; }
                         return;
                     }
-                    const html = `
+                    this._pendingTerminatePayload = null;
+                    const successHtml = `
         <div style="text-align:center;padding:20px 10px;">
-            <div style="width:56px;height:56px;background:#ffebee;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow: 0 4px 10px rgba(220,38,38,0.15);">
-                <i class="fa-solid fa-circle-exclamation" style="font-size:26px;color:#dc2626;"></i>
+            <div style="width:56px;height:56px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 4px 10px rgba(12,143,68,0.2);">
+                <i class="fa-solid fa-circle-check" style="font-size:26px;color:#0c8f44;"></i>
             </div>
-            <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Resignation Submitted</h3>
-            <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Your request to terminate membership in <b>${cleanGroupName}</b> has been queued for official board review.</p>
-            <button class="m-submit-btn" onclick="app.closeModal()">Finish</button>
+            <h3 style="color:#1e293b;margin-bottom:8px;font-size:16px;">Request Submitted</h3>
+            <p style="color:#6b7280;font-size:13px;margin-bottom:6px;">Your termination request has been queued for official board review.</p>
+            <p style="color:#6b7280;font-size:12px;margin-bottom:20px;">Status: <b style="color:#f59e0b;background:#fef3c7;padding:2px 10px;border-radius:20px;">\u23f3 Pending Approval</b></p>
+            <button class="m-submit-btn" style="background:linear-gradient(135deg,#0c8f44,#00c76f);" onclick="app.closeModal()">Done</button>
         </div>`;
-                    this.updateModalContent('Status Pending', html, null, 'fa-user-minus', 'linear-gradient(135deg, #f857a6, #ff5858)');
+                    this.updateModalContent('Request Submitted', successHtml, null, 'fa-circle-check', 'linear-gradient(135deg,#0c8f44,#00c76f)');
                 },
                 renderCreatePinView(container) {
                     container.innerHTML = `<div style="background:#fff;padding:2.5rem;border-radius:12px;text-align:center;max-width:450px;margin:20px auto;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
