@@ -1,5 +1,25 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
+let _bcryptLazy = null;
+const getBcrypt = () => {
+  if (_bcryptLazy === null) {
+    try { _bcryptLazy = require("bcrypt"); }
+    catch (_) { _bcryptLazy = false; }
+  }
+  return _bcryptLazy || null;
+};
+const isBcryptHash = (value) =>
+  typeof value === "string" &&
+  value.length >= 59 &&
+  value.length <= 60 &&
+  /^\$2[aby]?\$\d{1,2}\$/.test(value);
+const maskPhone = (p) => {
+  const s = String(p || "").trim();
+  if (!s || s.length < 7) return s;
+  const visibleHead = Math.min(3, Math.max(1, Math.floor(s.length / 4)));
+  const visibleTail = 2;
+  return s.slice(0, visibleHead) + "*".repeat(Math.max(3, s.length - visibleHead - visibleTail)) + s.slice(-visibleTail);
+};
 
 /**
  * Read MongoDB URL from environment (Render injects these — .env is local only).
@@ -49,6 +69,32 @@ let connectionPromise = null;
 
 const maskMongoUri = (uri) => String(uri).replace(/:([^:@/]+)@/, ":****@");
 
+const CREDENTIAL_FIELDS = [
+  "password",
+  "passkey",
+  "personalPin",
+  "startky",
+  "pin",
+  "secret",
+  "token",
+];
+const redactCredentials = (obj) => {
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map((o) => redactCredentials(o));
+  const out = { ...obj };
+  for (const k of Object.keys(out)) {
+    const keyLower = typeof k === "string" ? k.toLowerCase() : k;
+    if (CREDENTIAL_FIELDS.includes(k) || CREDENTIAL_FIELDS.some((s) => keyLower === s || keyLower.endsWith(s) || keyLower.startsWith(s))) {
+      delete out[k];
+      continue;
+    }
+    if (out[k] && typeof out[k] === "object" && !(out[k] instanceof Date) && !ArrayBuffer.isView(out[k])) {
+      out[k] = redactCredentials(out[k]);
+    }
+  }
+  return out;
+};
+
 /**
  * Ward Schema - Contains user data array matching data.json hierarchy
  */
@@ -56,18 +102,46 @@ const wardSchema = new mongoose.Schema({
   name: { type: String, required: true },
   data: [
     {
-      FirstName: { type: String, required: true },
-      MiddleName: { type: String },
-      LastName: { type: String, required: true },
-      email: { type: String, lowercase: true, trim: true },
-      phoneNumber: { type: String, required: true },
-      password: { type: String, required: true },
-      gender: { type: String },
-      ageBracket: { type: String },
-      idNumber: { type: String },
-      passkey: { type: String },
-      personalPin: { type: String },
-      startky: { type: String },
+      FirstName: { type: String, required: true, maxlength: 80 },
+      MiddleName: { type: String, maxlength: 80 },
+      LastName: { type: String, required: true, maxlength: 80 },
+      email: {
+        type: String,
+        lowercase: true,
+        trim: true,
+        maxlength: 200,
+        match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
+      },
+      phoneNumber: { type: String, required: true, maxlength: 30 },
+      password: {
+        type: String,
+        required: true,
+        select: false,
+        minlength: 59,
+        maxlength: 60,
+        validate: {
+          validator: (v) => typeof v === "string" && /^\$2[aby]?\$\d{1,2}\$/.test(v),
+          message: "Password must be a bcrypt hash",
+        },
+      },
+      gender: { type: String, maxlength: 20 },
+      ageBracket: { type: String, maxlength: 20 },
+      idNumber: { type: String, maxlength: 30 },
+      passkey: {
+        type: String,
+        select: false,
+        maxlength: 60,
+      },
+      personalPin: {
+        type: String,
+        select: false,
+        maxlength: 60,
+      },
+      startky: {
+        type: String,
+        select: false,
+        maxlength: 60,
+      },
       createdAt: { type: Date, default: Date.now },
       lastLogin: { type: Date },
     },
@@ -275,6 +349,54 @@ const TbankSettings =
   mongoose.models.TbankSettings ||
   mongoose.model("TbankSettings", tbankSettingsSchema, "tbank");
 
+const sanitizeObjectKeys = (raw, opts = {}) => {
+  if (!raw || typeof raw !== "object") return raw;
+  if (Array.isArray(raw)) return raw.map((v) => sanitizeObjectKeys(v, opts));
+  const allowlist = Array.isArray(opts.allowlist) ? new Set(opts.allowlist) : null;
+  const out = {};
+  for (const key of Object.keys(raw)) {
+    if (typeof key !== "string") continue;
+    if (key.includes(".") || key.startsWith("$")) continue;
+    if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+    if (allowlist && !allowlist.has(key)) continue;
+    const val = raw[key];
+    if (val && typeof val === "object" && !(val instanceof Date) && !ArrayBuffer.isView(val)) {
+      out[key] = sanitizeObjectKeys(val, {});
+    } else {
+      out[key] = val;
+    }
+  }
+  return out;
+};
+
+/**
+ * Typed registrationData sub-schema — replaces Schema.Types.Mixed so
+ * credentials & PII fields are explicitly declared and validated.
+ */
+const registrationDataSchema = new mongoose.Schema(
+  {
+    FirstName: { type: String, default: "" },
+    MiddleName: { type: String, default: "" },
+    LastName: { type: String, default: "" },
+    name: { type: String, default: "" },
+    email: { type: String, lowercase: true, trim: true, default: "" },
+    phoneNumber: { type: String, default: "" },
+    idNumber: { type: String, default: "" },
+    gender: { type: String, default: "" },
+    ageBracket: { type: String, default: "" },
+    password: { type: String, select: false },
+    startky: { type: String, select: false },
+    orderId: { type: String },
+    orderTrackingId: { type: String },
+    merchantReference: { type: String },
+    paymentMethod: { type: String },
+    verificationNonce: { type: String },
+    checkoutRequestId: { type: String },
+    receiptNumber: { type: String },
+  },
+  { _id: false, strict: false, toObject: { minimize: false } }
+);
+
 
 /**
  * PendingAccount leaf record (stored inside ward.data[]). Contains all
@@ -294,7 +416,7 @@ const pendingAccountRecordSchema = new mongoose.Schema(
     paymentAccount: { type: String },
     confirmationCode: { type: String },
     verificationNonce: { type: String },
-    registrationData: { type: mongoose.Schema.Types.Mixed, default: {} },
+    registrationData: { type: registrationDataSchema, default: () => ({}) },
     status: { type: String, default: "INITIATED" },
     createdAt: { type: Date, default: Date.now },
     completedAt: { type: Date },
@@ -433,7 +555,7 @@ const getAllPendingFlattened = async (opts = {}) => {
  *             orderId or orderTrackingId.
  */
 const savePendingAccountToMongo = async (pendingData, opts = {}) => {
-  const { county, constituency, ward, ...leafFields } = pendingData;
+  const { county, constituency, ward, ...leafFields } = pendingData || {};
   if (!county) {
     throw new Error("savePendingAccountToMongo: county is required");
   }
@@ -442,6 +564,32 @@ const savePendingAccountToMongo = async (pendingData, opts = {}) => {
   }
   if (!ward) {
     throw new Error("savePendingAccountToMongo: ward is required");
+  }
+
+  const PENDING_LEAF_ALLOWLIST = [
+    "orderId",
+    "orderTrackingId",
+    "merchantReference",
+    "amount",
+    "chargedAmount",
+    "currency",
+    "statusCode",
+    "paymentStatusDescription",
+    "paymentMethod",
+    "paymentAccount",
+    "confirmationCode",
+    "verificationNonce",
+    "registrationData",
+    "status",
+    "createdAt",
+    "completedAt",
+  ];
+  const sanitizedLeaf = sanitizeObjectKeys(leafFields || {}, { allowlist: PENDING_LEAF_ALLOWLIST });
+  if (sanitizedLeaf.registrationData !== undefined) {
+    sanitizedLeaf.registrationData = sanitizeObjectKeys(sanitizedLeaf.registrationData || {});
+  }
+  if (sanitizedLeaf.statusCode !== undefined) {
+    sanitizedLeaf.statusCode = sanitizeObjectKeys(sanitizedLeaf.statusCode);
   }
 
   let countyDoc = await PendingAccount.findOne({ county });
@@ -466,7 +614,7 @@ const savePendingAccountToMongo = async (pendingData, opts = {}) => {
   }
 
   const wardRef = countyDoc.constituencies[consIdx].wards[wardIdx];
-  const leaf = { ...leafFields };
+  const leaf = { ...sanitizedLeaf };
   if (!leaf.createdAt) leaf.createdAt = new Date();
 
   let matchIdx = -1;
@@ -483,12 +631,20 @@ const savePendingAccountToMongo = async (pendingData, opts = {}) => {
     const existing = wardRef.data[matchIdx];
     const existingId = existing._id;
     const existingCreated = existing.createdAt;
-    wardRef.data[matchIdx] = {
-      ...(existing.toObject ? existing.toObject() : existing),
+    const existingRaw = existing.toObject ? existing.toObject() : { ...existing };
+    const merged = {
+      ...existingRaw,
       ...leaf,
       _id: existingId,
       createdAt: existingCreated || leaf.createdAt,
     };
+    if (existingRaw.registrationData || leaf.registrationData) {
+      merged.registrationData = {
+        ...sanitizeObjectKeys(existingRaw.registrationData || {}),
+        ...sanitizeObjectKeys(leaf.registrationData || {}),
+      };
+    }
+    wardRef.data[matchIdx] = merged;
   } else {
     wardRef.data.push(leaf);
   }
@@ -669,6 +825,7 @@ const updatePendingRecord = async (predicate, setFields = {}) => {
   try {
     const ready = await ensureMongoReady();
     if (!ready) return null;
+    const safeSetFields = sanitizeObjectKeys(setFields);
     const docs = await PendingAccount.find({});
     for (const countyDoc of docs) {
       let matchedFlat = null;
@@ -684,8 +841,8 @@ const updatePendingRecord = async (predicate, setFields = {}) => {
               ward: ward.name,
             };
             if (predicate(flat)) {
-              Object.keys(setFields).forEach((k) => {
-                r[k] = setFields[k];
+              Object.keys(safeSetFields).forEach((k) => {
+                r[k] = safeSetFields[k];
               });
               matchedFlat = {
                 ...(r.toObject ? r.toObject() : { ...r }),
@@ -742,33 +899,53 @@ const upsertPendingAccount = async (data) => {
   const fullName = regData.name || [FirstName, MiddleName, LastName].filter(Boolean).join(" ");
   const phoneNumber = String(data.phoneNumber || regData.phoneNumber || regData.PhoneNumber || regData.phone || "").trim();
   const email = data.email || regData.email || "";
-  const password = data.password || regData.password || "";
+  const rawPassword = data.password || regData.password || "";
   const idNumber = data.idNumber || regData.idNumber || "";
   const gender = data.gender || regData.gender || "";
   const ageBracket = data.ageBracket || regData.ageBracket || "";
-  const passkey = data.passkey || regData.passkey || "";
-  const startky = data.startky || regData.startky || "";
+  const rawStartky = data.startky || regData.startky || "";
+
+  let securedPassword = rawPassword;
+  if (rawPassword && !isBcryptHash(rawPassword)) {
+    const bcrypt = getBcrypt();
+    if (bcrypt) {
+      try { securedPassword = await bcrypt.hash(String(rawPassword), 10); }
+      catch (_) { securedPassword = ""; }
+    } else {
+      securedPassword = "";
+    }
+  }
+  let securedStartky = rawStartky;
+  if (rawStartky && !isBcryptHash(rawStartky)) {
+    const bcrypt = getBcrypt();
+    if (bcrypt) {
+      try { securedStartky = await bcrypt.hash(String(rawStartky), 10); }
+      catch (_) { securedStartky = ""; }
+    } else {
+      securedStartky = "";
+    }
+  }
 
   const cleanedRegData = {
-    ...regData,
     FirstName,
     MiddleName,
     LastName,
     name: fullName,
     email,
-    password,
+    password: securedPassword || undefined,
     phoneNumber,
     idNumber,
     gender,
     ageBracket,
-    passkey,
-    startky,
+    startky: securedStartky || undefined,
   };
 
   // Remove regional block from registrationData since county, constituency, ward are in document hierarchy
   delete cleanedRegData.county;
   delete cleanedRegData.constituency;
   delete cleanedRegData.ward;
+  // Ensure passkey is NEVER persisted in pending records (it belongs only in tbank compliance settings)
+  delete cleanedRegData.passkey;
 
   const matchKeys = [];
   if (data.orderId) matchKeys.push((r) => r.orderId === data.orderId);
@@ -837,7 +1014,23 @@ const Message =
 const saveMessageToMongo = async (message) => {
   if (mongoose.connection.readyState !== 1) return false;
   try {
-    await Message.create(message);
+    const MESSAGE_ALLOWLIST = [
+      "groupName",
+      "to",
+      "type",
+      "title",
+      "content",
+      "key",
+      "broadcast",
+      "roles",
+      "meta",
+      "status",
+      "createdAt",
+    ];
+    const safe = sanitizeObjectKeys(message || {}, { allowlist: MESSAGE_ALLOWLIST });
+    if (safe.meta !== undefined) safe.meta = sanitizeObjectKeys(safe.meta);
+    if (Array.isArray(safe.roles)) safe.roles = safe.roles.filter((r) => typeof r === "string").map((r) => String(r).slice(0, 64));
+    await Message.create(safe);
     return true;
   } catch (e) {
     console.error("[messages] saveMessageToMongo error:", e.message);
@@ -866,7 +1059,7 @@ const PendingOfficerMessageSchema = new mongoose.Schema(
     phone: { type: String, required: true, unique: true, index: true },
     name: { type: String, default: "" },
     dept: { type: String, default: "" },
-    passkey: { type: String, default: "" },
+    passkey: { type: String, default: "", select: false },
     processorName: { type: String, default: "" },
     processorPhone: { type: String, default: "" },
     timestamp: { type: Number, required: true },
@@ -893,13 +1086,26 @@ const savePendingOfficerMessage = async ({
 }) => {
   if (mongoose.connection.readyState !== 1) return null;
   try {
+    let securedPasskey = passkey || "";
+    if (securedPasskey && !isBcryptHash(securedPasskey)) {
+      const bcrypt = getBcrypt();
+      if (bcrypt) {
+        try {
+          securedPasskey = await bcrypt.hash(String(securedPasskey), 10);
+        } catch (_) {
+          securedPasskey = "";
+        }
+      } else {
+        securedPasskey = "";
+      }
+    }
     const result = await PendingOfficerMessage.updateOne(
       { phone: normalizePhone(phone) },
       {
         $set: {
           name,
           dept,
-          passkey: passkey || "",
+          passkey: securedPasskey,
           processorName: processorName || "",
           processorPhone: processorPhone || "",
           timestamp: timestamp || Date.now(),
@@ -945,6 +1151,62 @@ const deletePendingOfficerMessage = async (phone) => {
   }
 };
 
+const TBANK_ALLOWED_TOP_LEVEL = [
+  "compliance",
+  "lastSelectedAuthOption",
+  "lastSelectedAuthOptionHistory",
+];
+
+const sanitizeTbankSettings = (raw) => {
+  const result = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
+
+  for (const topKey of TBANK_ALLOWED_TOP_LEVEL) {
+    if (!(topKey in raw)) continue;
+    const value = raw[topKey];
+    if (topKey === "lastSelectedAuthOptionHistory") {
+      if (Array.isArray(value)) {
+        result[topKey] = value
+          .filter(x => x && typeof x === "object" && !Array.isArray(x))
+          .map(entry => {
+            const clean = {};
+            for (const k of Object.keys(entry)) {
+              if (typeof k !== "string") continue;
+              if (k.includes(".") || k.startsWith("$") || k === "__proto__" || k === "constructor" || k === "prototype") continue;
+              clean[k] = entry[k];
+            }
+            return clean;
+          });
+      }
+      continue;
+    }
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const cleanSub = {};
+      for (const subKey of Object.keys(value)) {
+        if (typeof subKey !== "string") continue;
+        if (subKey.includes(".") || subKey.startsWith("$") || subKey === "__proto__" || subKey === "constructor" || subKey === "prototype") continue;
+        const subVal = value[subKey];
+        if (subVal && typeof subVal === "object" && !Array.isArray(subVal)) {
+          const cleanLeaf = {};
+          for (const leafKey of Object.keys(subVal)) {
+            if (typeof leafKey !== "string") continue;
+            if (leafKey.includes(".") || leafKey.startsWith("$") || leafKey === "__proto__" || leafKey === "constructor" || leafKey === "prototype") continue;
+            cleanLeaf[leafKey] = subVal[leafKey];
+          }
+          cleanSub[subKey] = cleanLeaf;
+        } else {
+          cleanSub[subKey] = subVal;
+        }
+      }
+      result[topKey] = cleanSub;
+    } else {
+      result[topKey] = value;
+    }
+  }
+
+  return result;
+};
+
 /**
  * Save tbank settings to MongoDB
  */
@@ -954,11 +1216,19 @@ const saveTbankSettings = async (settings) => {
   if (!db) return false;
 
   try {
+    const cleaned = sanitizeTbankSettings(settings);
+    const payload = { ...cleaned, updatedAt: new Date().toISOString() };
+    for (const k of Object.keys(payload)) {
+      if (typeof k !== "string" || k.includes(".") || k.startsWith("$")) {
+        delete payload[k];
+      }
+    }
+
     await db
       .collection("tbank")
       .updateOne(
         {},
-        { $set: { ...settings, updatedAt: new Date().toISOString() } },
+        { $set: payload },
         { upsert: true },
       );
     return true;
@@ -1388,6 +1658,79 @@ const createPerformanceIndexes = async () => {
       results.push(results2.join(", "));
     } catch (e) {
       results.push(`groups-members index error: ${e.message}`);
+    }
+
+    const countiesCol = db.collection("counties");
+    try {
+      const ciCollation2 = { locale: "en", strength: 2 };
+      const idx2 = await countiesCol.createIndex(
+        { "constituencies.wards.data.phoneNumber": 1 },
+        { background: true, name: "ward_data_phoneNumber_ci", collation: ciCollation2 }
+      );
+      results.push(`counties: ${idx2}`);
+    } catch (e) {
+      results.push(`counties index error: ${e.message}`);
+    }
+
+    const paCol = db.collection("personalaccounts");
+    try {
+      const ciCollation3 = { locale: "en", strength: 2 };
+      const idxPromises3 = [];
+      idxPromises3.push(
+        paCol.createIndex(
+          { "constituencies.wards.data.phone": 1 },
+          { background: true, name: "ward_data_phone_ci", collation: ciCollation3 }
+        ).then(r => `pa_leaf:${r}`)
+      );
+      idxPromises3.push(
+        paCol.createIndex(
+          { phone: 1 },
+          { background: true, sparse: true, name: "top_level_phone_sparse" }
+        ).then(r => `pa_top:${r}`)
+      );
+      idxPromises3.push(
+        paCol.createIndex(
+          { "account.personal.accountNumber": 1 },
+          { background: true, sparse: true, name: "account_personal_accountNumber_sparse" }
+        ).then(r => `pa_acc:${r}`)
+      );
+      const settled3 = await Promise.allSettled(idxPromises3);
+      const results3 = settled3
+        .filter(s => s.status === "fulfilled")
+        .map(s => s.value)
+        .concat(settled3.filter(s => s.status === "rejected").map(s => `idx_err:${String(s.reason && s.reason.message || s.reason).slice(0,80)}`));
+      results.push(results3.join(", "));
+    } catch (e) {
+      results.push(`personalaccounts index error: ${e.message}`);
+    }
+
+    const pendingCol = db.collection("pendingaccounts");
+    try {
+      const pendingIdx = await pendingCol.createIndex(
+        { createdAt: 1 },
+        {
+          background: true,
+          name: "pending_createdAt_ttl_initiated",
+          expireAfterSeconds: 3600,
+          partialFilterExpression: { status: "INITIATED" },
+        }
+      );
+      results.push(`pending_ttl:${pendingIdx}`);
+    } catch (e) {
+      results.push(`pending ttl error: ${e.message}`);
+    }
+
+    try {
+      const cutoff = new Date(Date.now() - 2 * 3600 * 1000);
+      const dr = await pendingCol.deleteMany({
+        status: "INITIATED",
+        createdAt: { $lt: cutoff },
+      });
+      if (dr && typeof dr.deletedCount === "number" && dr.deletedCount > 0) {
+        results.push(`pending_cleanup:${dr.deletedCount}`);
+      }
+    } catch (e) {
+      results.push(`pending cleanup err: ${e.message}`);
     }
 
     console.log("[Index] Performance indexes ensured:", results.join(", "));
@@ -1911,6 +2254,47 @@ const findPersonalAccountByPhone = async (phone) => {
     ];
 
     const db = mongoose.connection.db;
+    const ciCollation = { locale: "en", strength: 2 };
+
+    // 0. NEW: Indexed fast-path — narrow to the single county doc that has this phone
+    try {
+      if (db) {
+        const paCol = db.collection("personalaccounts");
+        const narrowDoc = await paCol
+          .findOne(
+            { "constituencies.wards.data.phone": { $in: phoneVariants } },
+            { collation: ciCollation }
+          );
+        if (narrowDoc) {
+          const countyName = narrowDoc.county;
+          for (const consItem of narrowDoc.constituencies || []) {
+            const consName = consItem.name;
+            for (const wardItem of consItem.wards || []) {
+              const wardName = wardItem.name;
+              for (const rec of wardItem.data || []) {
+                const recObj = rec && rec.toObject ? rec.toObject() : { ...rec };
+                if (
+                  normalizePhone(recObj.phone) === target ||
+                  phoneVariants.includes(String(recObj.phone || ""))
+                ) {
+                  return {
+                    ...recObj,
+                    county: countyName,
+                    constituency: consName,
+                    ward: wardName,
+                  };
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (fastErr) {
+      console.warn(
+        "[findPersonalAccountByPhone] indexed fast-path failed, continuing fallbacks:",
+        fastErr.message
+      );
+    }
 
     // 1. Direct collection query on personalaccounts (flat documents)
     const directDoc = await db.collection("personalaccounts").findOne({
@@ -1934,7 +2318,7 @@ const findPersonalAccountByPhone = async (phone) => {
       return directDoc2;
     }
 
-    // 3. Hierarchical search across PersonalAccount county structures
+    // 3. Hierarchical search across PersonalAccount county structures (full fallback)
     const cursor = PersonalAccount.find({}).cursor();
     for await (const doc of cursor) {
       const flat = flattenPersonalAccountDoc(doc);
@@ -2070,6 +2454,7 @@ const updatePersonalRecord = async (predicate, setFields = {}) => {
   try {
     const ready = await ensureMongoReady();
     if (!ready) return null;
+    const safeSetFields = sanitizeObjectKeys(setFields);
     const docs = await PersonalAccount.find({});
     for (const countyDoc of docs) {
       let matchedFlat = null;
@@ -2085,7 +2470,7 @@ const updatePersonalRecord = async (predicate, setFields = {}) => {
               ward: ward.name,
             };
             if (predicate(flat)) {
-              Object.keys(setFields).forEach((k) => { r[k] = setFields[k]; });
+              Object.keys(safeSetFields).forEach((k) => { r[k] = safeSetFields[k]; });
               r.updatedAt = new Date();
               matchedFlat = {
                 ...(r.toObject ? r.toObject() : { ...r }),
@@ -2136,7 +2521,7 @@ const agentSchema = new mongoose.Schema({
   constituency: { type: String },
   ward: { type: String },
   isBlocked: { type: Boolean, default: false },
-  passkey: { type: String },
+  passkey: { type: String, select: false },
   createdAt: { type: Date, default: Date.now },
   groupsTotal: [{ type: mongoose.Schema.Types.Mixed }],
   totalMembers: { type: Number, default: 0 },
@@ -2158,8 +2543,8 @@ const dealerSchema = new mongoose.Schema({
   ward: { type: String },
   name: { type: String },
   isBlocked: { type: Boolean, default: false },
-  pin: { type: String },
-  passkey: { type: String },
+  pin: { type: String, select: false },
+  passkey: { type: String, select: false },
   createdAt: { type: Date, default: Date.now },
   stats: {
     agent_creation: { type: Number, default: 0 },
@@ -2180,7 +2565,7 @@ const adminSchema = new mongoose.Schema({
   department: { type: String, required: true },
   processNumber: { type: String },
   dateOfProcess: { type: Date, default: Date.now },
-  pin: { type: String, default: null },
+  pin: { type: String, default: null, select: false },
   pinCreatedAt: { type: Date, default: null },
   status: { type: String, default: "active" },
   createdAt: { type: Date, default: Date.now },
@@ -2418,22 +2803,91 @@ const getAllUsersFlattened = async () => {
 /**
  * Find user by phone in counties collection (normalized match)
  */
-const findUserInCounties = async (phoneNumber) => {
+const findUserInCounties = async (phoneNumber, opts = {}) => {
+  const includeCredentials = Boolean(opts.includeCredentials);
   const target = normalizePhone(phoneNumber);
   if (!target) return null;
 
-  const counties = await County.find({}).lean();
+  const rawPhone = String(phoneNumber || "").trim();
+  const phoneVariants = [
+    rawPhone,
+    target,
+    `0${target}`,
+    `254${target}`,
+    `+254${target}`,
+  ];
+  const ciCollation = { locale: "en", strength: 2 };
+
+  try {
+    const db = mongoose.connection.db;
+    if (db) {
+      const countiesCol = db.collection("counties");
+      const projection = includeCredentials
+        ? {}
+        : {
+            "constituencies.wards.data.password": 0,
+            "constituencies.wards.data.passkey": 0,
+            "constituencies.wards.data.personalPin": 0,
+            "constituencies.wards.data.startky": 0,
+          };
+      const narrowDoc = await countiesCol
+        .findOne(
+          { "constituencies.wards.data.phoneNumber": { $in: phoneVariants } },
+          { collation: ciCollation, projection }
+        );
+      if (narrowDoc) {
+        const countyName = narrowDoc.county;
+        for (const consItem of narrowDoc.constituencies || []) {
+          const consName = consItem.name;
+          for (const wardItem of consItem.wards || []) {
+            const wardName = wardItem.name;
+            for (const user of wardItem.data || []) {
+              if (
+                normalizePhone(user.phoneNumber) === target ||
+                phoneVariants.includes(String(user.phoneNumber || ""))
+              ) {
+                const result = {
+                  ...user,
+                  county: countyName,
+                  constituency: consName,
+                  ward: wardName,
+                };
+                return includeCredentials ? result : redactCredentials(result);
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (fastErr) {
+    console.warn(
+      "[findUserInCounties] indexed fast-path failed, falling back:",
+      fastErr.message
+    );
+  }
+
+  const countiesQuery = County.find({});
+  if (includeCredentials) {
+    countiesQuery.select(
+      "+constituencies.wards.data.password " +
+      "+constituencies.wards.data.passkey " +
+      "+constituencies.wards.data.personalPin " +
+      "+constituencies.wards.data.startky"
+    );
+  }
+  const counties = await countiesQuery.lean();
   for (const countyItem of counties) {
     for (const consItem of countyItem.constituencies || []) {
       for (const wardItem of consItem.wards || []) {
         for (const user of wardItem.data || []) {
           if (normalizePhone(user.phoneNumber) === target) {
-            return {
+            const result = {
               ...user,
               county: countyItem.county,
               constituency: consItem.name,
               ward: wardItem.name,
             };
+            return includeCredentials ? result : redactCredentials(result);
           }
         }
       }
@@ -2445,14 +2899,15 @@ const findUserInCounties = async (phoneNumber) => {
 /**
  * Find user by phone number in MongoDB (counties + legacy users collection)
  */
-const findUserByPhone = async (phoneNumber) => {
+const findUserByPhone = async (phoneNumber, opts = {}) => {
+  const includeCredentials = Boolean(opts.includeCredentials);
   try {
     const ready = await ensureMongoReady();
     if (!ready) {
       throw new Error("MongoDB not connected");
     }
 
-    let user = await findUserInCounties(phoneNumber);
+    let user = await findUserInCounties(phoneNumber, { includeCredentials });
     if (user) return user;
 
     const target = normalizePhone(phoneNumber);
@@ -2460,11 +2915,18 @@ const findUserByPhone = async (phoneNumber) => {
 
     const db = mongoose.connection.db;
     if (db) {
-      const legacy = await db.collection("users").find({}).toArray();
-      user =
+      const legacyCol = db.collection("users");
+      const projection = includeCredentials
+        ? {}
+        : { password: 0, passkey: 0, personalPin: 0, startky: 0 };
+      const legacy = await legacyCol.find({}, { projection }).toArray();
+      const found =
         legacy.find((u) => normalizePhone(u.phoneNumber) === target) || null;
+      if (found) {
+        return includeCredentials ? { ...found } : redactCredentials({ ...found });
+      }
     }
-    return user;
+    return null;
   } catch (error) {
     console.error(`❌ Error finding user: ${error.message}`);
     throw error;
@@ -2528,7 +2990,86 @@ const updateLastLogin = async (phoneNumber) => {
  */
 const saveUserToMongoDB = async (userData) => {
   try {
-    const { county, constituency, ward, ...userInfo } = userData;
+    const { county, constituency, ward } = userData || {};
+
+    const ALLOWED_USER_KEYS = [
+      "FirstName",
+      "MiddleName",
+      "LastName",
+      "email",
+      "phoneNumber",
+      "password",
+      "gender",
+      "ageBracket",
+      "idNumber",
+      "passkey",
+      "personalPin",
+      "startky",
+      "createdAt",
+      "lastLogin",
+    ];
+    const pickAllowed = (src) => {
+      const out = {};
+      if (!src || typeof src !== "object") return out;
+      for (const k of ALLOWED_USER_KEYS) {
+        if (k in src) out[k] = src[k];
+      }
+      return out;
+    };
+    const userInfo = pickAllowed(userData || {});
+
+    const rawPassword = userInfo.password;
+    if (
+      rawPassword &&
+      !isBcryptHash(rawPassword) &&
+      typeof rawPassword === "string" &&
+      rawPassword.length > 0
+    ) {
+      const bcrypt = getBcrypt();
+      if (bcrypt) {
+        try {
+          userInfo.password = await bcrypt.hash(String(rawPassword), 10);
+        } catch (_) {
+          userInfo.password = "";
+        }
+      } else {
+        throw new Error(
+          "Password requires bcrypt dependency unavailable — cannot store plaintext password",
+        );
+      }
+    }
+    const rawPin = userInfo.personalPin;
+    if (
+      rawPin &&
+      !isBcryptHash(rawPin) &&
+      typeof rawPin === "string" &&
+      rawPin.length > 0
+    ) {
+      const bcrypt = getBcrypt();
+      if (bcrypt) {
+        try {
+          userInfo.personalPin = await bcrypt.hash(String(rawPin), 10);
+        } catch (_) {
+          userInfo.personalPin = "";
+        }
+      }
+    }
+    const rawStartky = userInfo.startky;
+    if (
+      rawStartky &&
+      !isBcryptHash(rawStartky) &&
+      typeof rawStartky === "string" &&
+      rawStartky.length > 0
+    ) {
+      const bcrypt = getBcrypt();
+      if (bcrypt) {
+        try {
+          userInfo.startky = await bcrypt.hash(String(rawStartky), 10);
+        } catch (_) {
+          userInfo.startky = "";
+        }
+      }
+    }
 
     // Find or create county
     let countyDoc = await County.findOne({ county });
@@ -2569,16 +3110,22 @@ const saveUserToMongoDB = async (userData) => {
     });
 
     await countyDoc.save();
-    console.log(
-      `✅ User saved to MongoDB (hierarchical): ${userInfo.phoneNumber}`,
-    );
+    if (!isProduction) {
+      console.log(
+        `✅ User saved to MongoDB (hierarchical): ${maskPhone(userInfo.phoneNumber)}`,
+      );
+    }
 
     return countyDoc;
   } catch (error) {
     if (error.message === "Phone number already registered") {
-      console.error(
-        `❌ Phone number already registered: ${userData.phoneNumber}`,
-      );
+      if (!isProduction) {
+        console.error(
+          `❌ Phone number already registered: ${maskPhone(
+            userData && userData.phoneNumber,
+          )}`,
+        );
+      }
       throw error;
     }
     console.error(`❌ Error saving user to MongoDB: ${error.message}`);
@@ -2711,35 +3258,38 @@ const migratePinsFromJSON = async () => {
 
   for (const localUser of usersWithPin) {
     const { phoneNumber, personalPin } = localUser;
+    const maskedPhone = maskPhone(phoneNumber);
 
     try {
       const dbUser = await findUserByPhone(phoneNumber);
 
       if (!dbUser) {
-        console.log(`⚠️  ${phoneNumber} — Not found in MongoDB, skipping`);
+        if (!isProduction) console.log(`⚠️  ${maskedPhone} — Not found in MongoDB, skipping`);
         skipped++;
         continue;
       }
 
       if (dbUser.personalPin) {
-        console.log(
-          `⏭️  ${phoneNumber} — Already has PIN in MongoDB, skipping`,
-        );
+        if (!isProduction) {
+          console.log(
+            `⏭️  ${maskedPhone} — Already has PIN in MongoDB, skipping`,
+          );
+        }
         skipped++;
         continue;
       }
 
       let hashedPin = personalPin;
       if (!personalPin.startsWith("$2")) {
-        console.log(`🔐 ${phoneNumber} — Plaintext PIN detected, hashing...`);
+        if (!isProduction) console.log(`🔐 ${maskedPhone} — Plaintext PIN detected, hashing...`);
         hashedPin = await bcrypt.hash(personalPin, 10);
       }
 
       await updateUserPassword(phoneNumber, hashedPin, true); // isPin = true
-      console.log(`✅ ${phoneNumber} — PIN migrated to MongoDB`);
+      if (!isProduction) console.log(`✅ ${maskedPhone} — PIN migrated to MongoDB`);
       migrated++;
     } catch (err) {
-      console.error(`❌ ${phoneNumber} — Error: ${err.message}`);
+      if (!isProduction) console.error(`❌ ${maskedPhone} — Error: ${err.message}`);
       errors++;
     }
   }
@@ -2770,20 +3320,26 @@ const phoneVariants = (p) => {
   ].filter(Boolean)));
 };
 
-const findAgentByPhone = async (phone) => {
+const findAgentByPhone = async (phone, opts = {}) => {
+  const includeCredentials = Boolean(opts.includeCredentials);
   try {
     if (!phone) return null;
-    return await Agent.findOne({ phoneNumber: { $in: phoneVariants(phone) } }).lean();
+    const q = Agent.findOne({ phoneNumber: { $in: phoneVariants(phone) } });
+    if (includeCredentials) q.select("+passkey");
+    return await q.lean();
   } catch (e) {
     console.error("findAgentByPhone error:", e.message);
     return null;
   }
 };
 
-const findDealerByPhone = async (phone) => {
+const findDealerByPhone = async (phone, opts = {}) => {
+  const includeCredentials = Boolean(opts.includeCredentials);
   try {
     if (!phone) return null;
-    return await Dealer.findOne({ phoneNumber: { $in: phoneVariants(phone) } }).lean();
+    const q = Dealer.findOne({ phoneNumber: { $in: phoneVariants(phone) } });
+    if (includeCredentials) q.select("+pin +passkey");
+    return await q.lean();
   } catch (e) {
     console.error("findDealerByPhone error:", e.message);
     return null;
@@ -4049,6 +4605,7 @@ const applyAtomicGroupMemberContribution = async ({
       }
 
       // Synchronize regional blocks asynchronously via high-throughput batch queue
+      const verifiedTotal = verifiedLines.reduce((s, l) => s + l.amount, 0);
       try {
         enqueueRegionalTransaction({
           txRef,
@@ -4105,7 +4662,6 @@ const applyAtomicGroupMemberContribution = async ({
       );
 
       // Send confirmation notification message
-      const verifiedTotal = verifiedLines.reduce((s, l) => s + l.amount, 0);
       const accountsSummary = verifiedLines.map(l => l.resolvedAccountName).join(", ");
       await saveMessageToMongo({
         to: mPhone,

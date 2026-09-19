@@ -1764,7 +1764,7 @@ router.post("/login", async (req, res) => {
 
   // 1️⃣ Find user in MongoDB counties collection (primary registry)
   try {
-    user = await findUserByPhone(loginPhone);
+    user = await findUserByPhone(loginPhone, { includeCredentials: true });
     if (user) {
       console.log("   ✅ User found in MongoDB:", user.FirstName, user.LastName);
     }
@@ -1845,8 +1845,8 @@ router.post("/login", async (req, res) => {
   let mongoDealer = null;
   try {
     [mongoAgent, mongoDealer] = await Promise.all([
-      findAgentByPhone(loginPhone),
-      findDealerByPhone(loginPhone),
+      findAgentByPhone(loginPhone, { includeCredentials: true }),
+      findDealerByPhone(loginPhone, { includeCredentials: true }),
     ]);
   } catch (dbErr) {
     console.error("MongoDB agent/dealer lookup error during login:", dbErr.message);

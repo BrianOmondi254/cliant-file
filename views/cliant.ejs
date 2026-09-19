@@ -4309,38 +4309,220 @@
                 renderGroupPlan(group) {
                     const p = group.principles;
                     if (!p) return '<p style="color:#94a3b8;font-style:italic;">No constitution or plan has been set for this group yet. Contact the chairperson to initialize the group principles.</p>';
-                    const lines = [];
+                    const sections = [];
+                    let secNum = 0;
+
+                    const hdrColor = '#1e293b';
+                    const borderColor = '#cbd5e1';
+                    const textColor = '#334155';
+                    const hdrBg = '#f1f5f9';
+                    const cellBg = '#ffffff';
+
+                    const toLetter = (n) => {
+                        let s = '';
+                        n = n - 1;
+                        while (n >= 0) {
+                            s = String.fromCharCode(97 + (n % 26)) + s;
+                            n = Math.floor(n / 26) - 1;
+                        }
+                        return s;
+                    };
+                    let subIdx = 0;
+                    const sub = () => {
+                        subIdx++;
+                        return toLetter(subIdx);
+                    };
+                    const resetSub = () => { subIdx = 0; };
+                    const para = (label, value, desc) => {
+                        const tag = secNum + '.' + sub();
+                        const head = '<b>' + tag + ' ' + label + ':</b> ' + (value ? '<b>' + value + '</b>' : '');
+                        return '<p style="margin:0 0 8px 0;font-size:12px;color:' + textColor + ';line-height:1.7;text-align:justify;">' + head + (desc ? ' &mdash; ' + desc : '') + '</p>';
+                    };
+
                     if (p.intervals) {
+                        secNum++;
+                        resetSub();
                         const int = p.intervals;
-                        lines.push(`<b style="color:#0c8f44;">📅 Meeting Schedule:</b> ${(int.frequency || 'N/A').charAt(0).toUpperCase() + (int.frequency || '').slice(1)} on every ${(int.period || '').toLowerCase()}. Cycle lasts ${(int.endSavingPeriod || '1 year').replace('-', ' ')}.`);
+                        const freq = int.frequency || 'N/A';
+                        const freqLabel = freq.charAt(0).toUpperCase() + freq.slice(1);
+                        const period = (int.period || '').toLowerCase();
+                        const cycle = (int.endSavingPeriod || '1 year').replace(/-/g, ' ');
+                        let when = [];
+                        if (freq === 'weekly') when.push('every ' + (int.dayOfWeek || period));
+                        if (freq === 'monthly') {
+                            if (int.weekOfMonth) when.push(int.weekOfMonth);
+                            if (int.dayOfWeek) when.push(int.dayOfWeek);
+                        }
+                        if (freq === 'yearly') {
+                            if (int.month) when.push(int.month);
+                            if (int.weekOfMonth) when.push(int.weekOfMonth);
+                            if (int.dayOfWeek) when.push(int.dayOfWeek);
+                        }
+                        const whenText = when.length ? when.join(' / ') : 'every ' + (period || 'cycle');
+                        const body =
+                            para('Contribution Frequency', freqLabel, 'members meet on ' + whenText + '.') +
+                            para('Saving Cycle Duration', cycle, 'after this period ends, profits are calculated and benefits distributed according to the distribution model.') +
+                            para('Attendance and Punctuality', 'Required', 'all members must attend or arrange contributions on the scheduled days; failure to meet on time may result in applicable fines or penalties as defined in the accounts section.');
+                        sections.push(`
+<div style="margin-bottom:12px;border:1px solid ${borderColor};background:${cellBg};page-break-inside:avoid;">
+  <div style="padding:8px 12px;background:${hdrBg};border-bottom:1px solid ${borderColor};">
+    <div style="font-size:13px;font-weight:700;color:${hdrColor};">${secNum}. MEETING SCHEDULE &amp; DURATION</div>
+  </div>
+  <div style="padding:12px 14px;">${body}</div>
+</div>`);
                     }
-                    if (p.otherContributions && p.otherContributions.length > 0) {
-                        lines.push(`<b style="color:#9333ea;">💰 Contribution Accounts:</b>`);
-                        p.otherContributions.forEach(c => {
-                            lines.push(`&nbsp;&nbsp;▸ ${c.accountName} (${c.accountNumber}): KSh ${Number(c.expectedAmount || 0).toLocaleString()} expected per member.`);
-                        });
-                    }
-                    if (p.distribution) {
-                        const d = p.distribution;
-                        lines.push(`<b style="color:#dc2626;">📊 Profit Distribution:</b> Model: <b>${d.model || 'performance'}</b>. Officials get ${d.officialPct || 0}%, Performance share ${d.performancePct || 0}%.`);
-                        if (d.targetAccountName) lines.push(`&nbsp;&nbsp;▸ Accumulates into <b>${d.targetAccountName}</b> pool.`);
-                    }
-                    if (p.balancing && p.balancing.benefitAccounts) {
-                        lines.push(`<b style="color:#0891b2;">⚖️ Benefits & Fines:</b> ${p.balancing.benefitAccounts.join(', ')}.`);
-                    }
-                    if (p.loans) {
-                        const l = p.loans;
-                        lines.push(`<b style="color:#f59e0b;">🏦 Loans:</b> Qualified after ${l.duration?.days || 30} days. Interest: ${l.interestAndLimits?.interestRate || 0}%. Max limit: x${l.interestAndLimits?.limitMultiplier || 3} of savings.`);
-                        if (l.repayment) lines.push(`&nbsp;&nbsp;▸ Repayment: ${l.repayment.durationDays || 30} days, max ${l.repayment.maxRollovers || 3} rollovers via ${l.repayment.rolloverMethod || 'fixed'} scale.`);
-                    }
+
                     if (p.governance) {
+                        secNum++;
+                        resetSub();
                         const g = p.governance;
-                        lines.push(`<b style="color:#64748b;">🛡️ Governance:</b> Fast changes need ${g.fastNotificationThreshold || 60}% quorum. Major edits need ${g.editAccountThreshold || 75}% consensus.`);
+                        const fastT = g.fastNotificationThreshold || 60;
+                        const editT = g.editAccountThreshold || 75;
+                        const removeT = g.memberRemovalThreshold || g.editAccountThreshold || 75;
+                        const requireNote = g.requireRemovalNote ? '; a written note is required when proposing removal' : '';
+                        const body =
+                            para('Fast or Minor Edits Threshold', fastT + '% quorum', 'used for quick or minor constitution adjustments, for example rescheduling a single meeting.') +
+                            para('Major Constitution Edits Threshold', editT + '% consensus', 'applies when changing contribution amounts, accounts, loan terms, or any core rules of the group.') +
+                            para('Member Removal Threshold', removeT + '% majority vote', 'required to remove any registered member from the group' + requireNote + '.') +
+                            para('Voting Principle', 'One-member-one-vote', 'quorum is always calculated from registered active members of the group.');
+                        sections.push(`
+<div style="margin-bottom:12px;border:1px solid ${borderColor};background:${cellBg};page-break-inside:avoid;">
+  <div style="padding:8px 12px;background:${hdrBg};border-bottom:1px solid ${borderColor};">
+    <div style="font-size:13px;font-weight:700;color:${hdrColor};">${secNum}. GOVERNANCE &amp; VOTING RULES</div>
+  </div>
+  <div style="padding:12px 14px;">${body}</div>
+</div>`);
                     }
-                    if (lines.length === 0) {
+
+                    if (p.otherContributions && p.otherContributions.length > 0) {
+                        secNum++;
+                        resetSub();
+                        const accs = p.otherContributions;
+                        const paras = [];
+                        paras.push(para('Account Summary', accs.length + ' defined accounts', 'each member must pay the defined amounts every contribution round as specified below.'));
+                        let regPara = '';
+                        let savingPara = '';
+                        accs.forEach((c) => {
+                            const name = (c.accountName || '').toLowerCase();
+                            const amt = Number(c.expectedAmount || 0);
+                            const amtStr = 'KSh ' + amt.toLocaleString();
+                            const isReg = name.includes('regist');
+                            const isSaving = name.includes('saving');
+                            const isFine = name.includes('fine');
+                            const isLate = name.includes('late') || name.includes('latene');
+                            const isWelfare = name.includes('welfare');
+                            let desc = 'Mandatory contribution per meeting round.';
+                            const label = c.accountName + ' (' + c.accountNumber + ')';
+                            if (isReg && amt > 0) {
+                                desc = 'Every new member must pay this one-time registration fee to join; it is non-refundable and used for group administration costs, collected only during the new member onboarding process.';
+                                regPara = para('Group Member Registration', amtStr + ' per new member', desc);
+                            } else if (isSaving) {
+                                desc = 'This is the core member account; savings determine loan eligibility (maximum loan size) and profit-share weight under performance-based distribution models.';
+                                savingPara = para('Core Savings Account', amtStr + ' per member per round', desc);
+                            } else if (isFine) {
+                                desc = 'Applied whenever a member commits a rule breach, such as non-attendance at meetings or other constitution violations.';
+                            } else if (isLate) {
+                                desc = 'Penalty charged whenever a contribution is paid late or a scheduled meeting is missed without prior arrangement.';
+                            } else if (isWelfare) {
+                                desc = 'Pooled support fund used for member emergencies, funerals, or other member welfare support as decided by the group.';
+                            }
+                            paras.push(para(label, amtStr, desc));
+                        });
+                        const body = paras.join('') + (savingPara || '') + (regPara || '');
+                        sections.push(`
+<div style="margin-bottom:12px;border:1px solid ${borderColor};background:${cellBg};page-break-inside:avoid;">
+  <div style="padding:8px 12px;background:${hdrBg};border-bottom:1px solid ${borderColor};">
+    <div style="font-size:13px;font-weight:700;color:${hdrColor};">${secNum}. CONTRIBUTION ACCOUNTS &amp; FEES</div>
+  </div>
+  <div style="padding:12px 14px;">${body}</div>
+</div>`);
+                    }
+
+                    if (p.loans) {
+                        secNum++;
+                        resetSub();
+                        const l = p.loans;
+                        const qualDays = l.duration?.days || 30;
+                        const intRate = l.interestAndLimits?.interestRate || 0;
+                        const limMult = l.interestAndLimits?.limitMultiplier || 3;
+                        const basis = l.interestAndLimits?.limitBasis || 'savings';
+                        const basisLabel = basis === 'total' ? 'total contributions' : 'personal savings';
+                        const repayDays = l.repayment?.durationDays || 30;
+                        const maxRoll = l.repayment?.maxRollovers || 3;
+                        const rollMethod = (l.repayment?.rolloverMethod || 'fixed');
+                        const rollLabel = rollMethod === 'recount' ? 'the full period is re-counted from rollover date' : 'extension is applied by fixed-date schedule';
+                        const qualType = l.qualifyType || 'duration';
+                        let qualVal = '';
+                        let qualDesc = '';
+                        if (qualType === 'duration') {
+                            qualVal = 'Duration-based, ' + qualDays + ' days';
+                            qualDesc = 'member must have participated ' + qualDays + ' days from the first saving activation date.';
+                        } else if (qualType === 'saving') {
+                            qualVal = 'Saving-based';
+                            qualDesc = 'member must have saved at least KSh ' + Number(l.qualifySavingTarget || 0).toLocaleString() + ' in their savings balance.';
+                        } else if (qualType === 'both') {
+                            qualVal = 'Duration + Saving combined';
+                            qualDesc = 'member must satisfy both conditions: ' + qualDays + ' days participation and at least KSh ' + Number(l.qualifySavingTarget || 0).toLocaleString() + ' in savings balance.';
+                        } else {
+                            qualVal = 'Standard (no wait)';
+                            qualDesc = 'member is immediately eligible after the first contribution, no waiting period or target saving required.';
+                        }
+                        const body =
+                            para('Loan Qualification Rule', qualVal, qualDesc) +
+                            para('Loan Interest Rate', intRate + '% of principal', 'deducted from the principal loan amount at the point of disbursement.') +
+                            para('Maximum Loan Size', 'Up to x' + limMult, 'calculated as ' + limMult + ' times the member\'s current ' + basisLabel + ' balance.') +
+                            para('Repayment Duration', repayDays + ' days', 'the full loan principal plus interest must be cleared within ' + repayDays + ' days from disbursement.') +
+                            para('Rollover Extensions', 'Maximum ' + maxRoll + ' rollovers', 'each extension ' + rollLabel + '; rollovers may incur additional charges or interest.') +
+                            para('Default and Penalty Policy', 'Penalties apply on default', 'unpaid loans incur penalties; rollovers extend the repayment window but may be subject to additional interest if exceeded.');
+                        sections.push(`
+<div style="margin-bottom:12px;border:1px solid ${borderColor};background:${cellBg};page-break-inside:avoid;">
+  <div style="padding:8px 12px;background:${hdrBg};border-bottom:1px solid ${borderColor};">
+    <div style="font-size:13px;font-weight:700;color:${hdrColor};">${secNum}. LOAN POLICY &amp; TERMS</div>
+  </div>
+  <div style="padding:12px 14px;">${body}</div>
+</div>`);
+                    }
+
+                    if (p.distribution || (p.balancing && p.balancing.benefitAccounts)) {
+                        secNum++;
+                        resetSub();
+                        const paras = [];
+                        if (p.distribution) {
+                            const d = p.distribution;
+                            const model = d.model || 'performance';
+                            const offPct = d.officialPct || 0;
+                            const perfPct = d.performancePct || 0;
+                            const target = d.targetAccountName;
+                            const modelLabel = model === 'equal' ? 'Equal Share' : 'Performance-Based';
+                            const equalDesc = model === 'equal'
+                                ? 'net profits are divided equally among all active members, regardless of individual contribution level.'
+                                : 'profits are distributed proportionally to each member\'s individual savings; higher savings earn a larger share.';
+                            paras.push(para('Distribution Model', modelLabel, equalDesc));
+                            paras.push(para('Officials Share of Profit', offPct + '% of net profit', 'allocated to group officials as compensation for administrative service rendered during the cycle.'));
+                            paras.push(para('Performance Members Share of Profit', perfPct + '% of net profit', 'distributed to registered active members per the ' + modelLabel + ' formula defined above.'));
+                            if (target) {
+                                paras.push(para('Benefit Pool Account', target, 'all cycle profits accumulate into this central pool account until the final cycle-end payout date.'));
+                            }
+                        }
+                        if (p.balancing && p.balancing.benefitAccounts) {
+                            const accs = p.balancing.benefitAccounts;
+                            paras.push(para('Benefit Source Accounts', accs.join(', '), 'account balances listed above are summed at end of cycle into the net-profit pool and distributed as group or member welfare.'));
+                        }
+                        paras.push(para('Due-Balance Deduction Policy', 'Owed amounts deducted before payout', 'any member with outstanding due-balances at cycle-end will have owed amounts deducted from their benefit share before any remaining benefit is disbursed.'));
+                        const body = paras.join('');
+                        sections.push(`
+<div style="margin-bottom:12px;border:1px solid ${borderColor};background:${cellBg};page-break-inside:avoid;">
+  <div style="padding:8px 12px;background:${hdrBg};border-bottom:1px solid ${borderColor};">
+    <div style="font-size:13px;font-weight:700;color:${hdrColor};">${secNum}. PROFIT DISTRIBUTION, BENEFITS &amp; DEDUCTIONS</div>
+  </div>
+  <div style="padding:12px 14px;">${body}</div>
+</div>`);
+                    }
+
+                    if (sections.length === 0) {
                         return '<p style="color:#94a3b8;font-style:italic;">Constitution details are incomplete. Only basic group info available.</p>';
                     }
-                    return `<ul style="margin:0;padding-left:18px;">${lines.map(l => `<li style="margin-bottom:6px;">${l}</li>`).join('')}</ul>`;
+                    return `<div style="font-family:'Inter',Arial,sans-serif;color:${textColor};">${sections.join('')}</div>`;
                 },
                 openGroupAccountsModal(groupName, encodedAccNum) {
                     const accountNumber = encodedAccNum ? decodeURIComponent(encodedAccNum) : '';

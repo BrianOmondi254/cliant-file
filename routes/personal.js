@@ -523,7 +523,7 @@ router.get("/", async (req, res) => {
         console.error("[personal] groups collection membership lookup error:", e.message);
         return [];
       }),
-      findUserByPhone(phone).catch((e) => {
+      findUserByPhone(phone, { includeCredentials: true }).catch((e) => {
         console.error("Error finding user in DB for PIN check:", e.message);
         return null;
       }),
@@ -780,7 +780,7 @@ router.post("/verify-pin", async (req, res) => {
       return res.status(400).json({ success: false, message: "PIN required" });
     }
 
-    let user = await findUserByPhone(phone);
+    let user = await findUserByPhone(phone, { includeCredentials: true });
     if (!user) {
       // Fallback to data.json (hierarchical)
       const usersFile = path.join(__dirname, "../data.json");
